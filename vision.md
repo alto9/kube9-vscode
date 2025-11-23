@@ -8,6 +8,8 @@ kube9 VS Code Extension brings visual Kubernetes cluster management directly int
 
 **Why kube9-vscode exists**: Kubernetes management shouldn't require context switching between IDE and terminal, or between different tools. Developers need Kubernetes operations integrated seamlessly into their workflow, with progressive enhancement from basic resource management to AI-powered insights.
 
+**Important Note**: kube9-vscode is an **aspect** of the kube9 ecosystem, not the core. The kube9-operator does the major work - collecting metrics, managing insights, and enabling Pro tier features. The VS Code extension provides a convenient interface for VS Code users, offering powerful free Kubernetes management features. However, for users who don't use VS Code but want to access operator outputs and insights, a separate web-based UI (kube9-ui) is needed.
+
 ## Long-Term Vision
 
 ### The Developer Experience We're Building
@@ -259,7 +261,7 @@ kube9-vscode will become the **default Kubernetes management tool for VS Code us
 
 ### Platform Expansion
 - Extend to other IDEs (JetBrains, Neovim, Emacs)
-- Browser-based version for non-IDE users
+- **Note**: Browser-based UI is now a separate project (kube9-ui) - see kube9-ui vision
 - CLI tool that complements VS Code extension
 - Mobile app for cluster monitoring on-the-go
 
