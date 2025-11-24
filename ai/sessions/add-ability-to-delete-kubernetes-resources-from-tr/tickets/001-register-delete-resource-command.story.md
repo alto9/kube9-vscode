@@ -4,7 +4,7 @@ session_id: add-ability-to-delete-kubernetes-resources-from-tr
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec]
 diagram_id: []
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -32,11 +32,11 @@ This is the foundation for the delete functionality. Users need to see "Delete R
 
 ## Acceptance Criteria
 
-- [ ] Right-clicking on any resource in the tree view shows "Delete Resource" option
-- [ ] Context menu item appears for Pods, Deployments, Services, ConfigMaps, Secrets, and all other resources
-- [ ] Clicking "Delete Resource" shows placeholder message
-- [ ] Command receives correct tree item data including resourceType, resourceName, and namespace
-- [ ] No errors in VS Code extension host console
+- [x] Right-clicking on any resource in the tree view shows "Delete Resource" option
+- [x] Context menu item appears for Pods, Deployments, Services, ConfigMaps, Secrets, and all other resources
+- [x] Clicking "Delete Resource" shows placeholder message
+- [x] Command receives correct tree item data including resourceType, resourceName, and namespace
+- [x] No errors in VS Code extension host console
 
 ## Dependencies
 
