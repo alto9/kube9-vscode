@@ -8,7 +8,7 @@ import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
-import { showDeleteConfirmation, executeKubectlDelete } from './commands/deleteResource';
+import { showDeleteConfirmation, executeKubectlDelete, DeleteResult } from './commands/deleteResource';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -525,13 +525,13 @@ function registerCommands(): void {
                     const contextName = treeItem.resourceData.context.name;
                     
                     // Execute deletion
-                    const success = await executeKubectlDelete(
+                    const result: DeleteResult = await executeKubectlDelete(
                         confirmation,
                         kubeconfigPath,
                         contextName
                     );
                     
-                    if (success) {
+                    if (result.success) {
                         // Show success notification
                         const resourceDisplay = namespace
                             ? `${resourceType} '${resourceName}' in namespace '${namespace}'`
@@ -540,8 +540,10 @@ function registerCommands(): void {
                             ? `Successfully force deleted ${resourceDisplay}`
                             : `Successfully deleted ${resourceDisplay}`;
                         vscode.window.showInformationMessage(successMessage);
-                        
-                        // Refresh tree view to reflect the deletion
+                    }
+                    
+                    // Refresh tree view if indicated (for success or not found errors)
+                    if (result.shouldRefresh) {
                         getClusterTreeProvider().refresh();
                     }
                 } else {

@@ -4,7 +4,7 @@ session_id: add-ability-to-delete-kubernetes-resources-from-tr
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec]
 diagram_id: []
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -42,13 +42,13 @@ kubectl delete can fail for many reasons. Users need clear, actionable error mes
 
 ## Acceptance Criteria
 
-- [ ] RBAC permission denied shows clear permission error
-- [ ] Resource not found shows info message (not error)
-- [ ] Timeout suggests force delete option
-- [ ] Network errors show connection failure message
-- [ ] Error messages are user-friendly and actionable
-- [ ] Action buttons (Force Delete, Retry) work as expected
-- [ ] Generic errors display kubectl output for debugging
+- [x] RBAC permission denied shows clear permission error
+- [x] Resource not found shows info message (not error)
+- [x] Timeout suggests force delete option
+- [x] Network errors show connection failure message
+- [x] Error messages are user-friendly and actionable
+- [x] Action buttons (Force Delete, Retry) work as expected
+- [x] Generic errors display kubectl output for debugging
 
 ## Dependencies
 

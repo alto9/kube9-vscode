@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { KubectlError } from '../kubernetes/KubectlError';
 
 /**
  * Options for deleting a Kubernetes resource.
@@ -18,6 +17,16 @@ export interface DeleteResourceOptions {
  */
 interface ForceDeleteQuickPickItem extends vscode.QuickPickItem {
     isForceDelete: boolean;
+}
+
+/**
+ * Result of error handling for delete operations.
+ */
+export interface DeleteErrorResult {
+    errorType: 'rbac' | 'notfound' | 'timeout' | 'network' | 'generic';
+    message: string;
+    shouldRefresh: boolean;
+    actionButtons: string[];
 }
 
 /**
@@ -163,19 +172,128 @@ const KUBECTL_TIMEOUT_MS = 30000;
 const execFileAsync = promisify(execFile);
 
 /**
+ * Handles kubectl delete errors by parsing stderr and detecting specific error types.
+ * Returns structured error information with user-friendly messages and action buttons.
+ * 
+ * @param error - The error from execFile/child_process
+ * @param options - Delete options including resource type and name
+ * @returns DeleteErrorResult with error type, message, refresh flag, and action buttons
+ */
+function handleDeleteError(
+    error: unknown,
+    options: DeleteResourceOptions
+): DeleteErrorResult {
+    const err = error as { 
+        killed?: boolean; 
+        signal?: string; 
+        code?: string | number; 
+        stderr?: Buffer | string;
+        stdout?: Buffer | string;
+        message?: string;
+    };
+
+    // Extract stderr and stdout for analysis
+    const stderr = err.stderr 
+        ? (Buffer.isBuffer(err.stderr) ? err.stderr.toString() : err.stderr).trim()
+        : '';
+    const stdout = err.stdout
+        ? (Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout).trim()
+        : '';
+    const errorMessage = err.message || 'Unknown error';
+    const details = stderr || stdout || errorMessage;
+    const lowerDetails = details.toLowerCase();
+
+    // Detect timeout (killed by timeout or SIGTERM)
+    if (err.killed || err.signal === 'SIGTERM') {
+        return {
+            errorType: 'timeout',
+            message: `Deletion timed out. Resource may be stuck due to finalizers. Try force delete option.`,
+            shouldRefresh: true, // Refresh to show resource in Terminating state
+            actionButtons: ['Force Delete']
+        };
+    }
+
+    // Detect RBAC/permission errors
+    if (
+        lowerDetails.includes('forbidden') ||
+        lowerDetails.includes('user cannot delete') ||
+        lowerDetails.includes('permission denied') ||
+        lowerDetails.includes('access denied') ||
+        lowerDetails.includes('not authorized')
+    ) {
+        return {
+            errorType: 'rbac',
+            message: `Permission denied: You don't have permission to delete this ${options.resourceType}. Check your RBAC permissions.`,
+            shouldRefresh: false, // Don't refresh - resource still exists
+            actionButtons: []
+        };
+    }
+
+    // Detect resource not found errors
+    if (
+        lowerDetails.includes('notfound') ||
+        lowerDetails.includes('not found') ||
+        lowerDetails.includes('does not exist')
+    ) {
+        return {
+            errorType: 'notfound',
+            message: `Resource not found: ${options.resourceType} ${options.resourceName} may have been deleted already.`,
+            shouldRefresh: true, // Refresh to sync current state
+            actionButtons: []
+        };
+    }
+
+    // Detect network/cluster connection errors
+    if (
+        lowerDetails.includes('connection refused') ||
+        lowerDetails.includes('could not resolve') ||
+        lowerDetails.includes('no such host') ||
+        lowerDetails.includes('connection timed out') ||
+        lowerDetails.includes('unreachable') ||
+        lowerDetails.includes('dial tcp') ||
+        lowerDetails.includes('unable to connect') ||
+        lowerDetails.includes('network') ||
+        lowerDetails.includes('connect: connection refused')
+    ) {
+        return {
+            errorType: 'network',
+            message: `Deletion failed: Unable to connect to cluster. Check your connection and try again.`,
+            shouldRefresh: false, // Don't refresh - connection issue, resource may still exist
+            actionButtons: ['Retry']
+        };
+    }
+
+    // Generic error - show kubectl stderr message
+    return {
+        errorType: 'generic',
+        message: `Failed to delete ${options.resourceType} ${options.resourceName}: ${details}`,
+        shouldRefresh: false,
+        actionButtons: []
+    };
+}
+
+/**
+ * Result of kubectl delete operation.
+ */
+export interface DeleteResult {
+    success: boolean;
+    shouldRefresh: boolean;
+}
+
+/**
  * Executes kubectl delete command to delete a Kubernetes resource.
  * Shows progress indication and handles errors appropriately.
  * 
  * @param options - Delete options including resource type, name, namespace, and force flag
  * @param kubeconfigPath - Path to the kubeconfig file
  * @param contextName - Name of the kubectl context to use
- * @returns Promise resolving to true if deletion succeeded, false otherwise
+ * @returns Promise resolving to DeleteResult with success status and refresh indication
  */
 export async function executeKubectlDelete(
     options: DeleteResourceOptions,
     kubeconfigPath: string,
     contextName: string
-): Promise<boolean> {
+): Promise<DeleteResult> {
     const progressTitle = options.forceDelete
         ? `Force deleting ${options.resourceType} ${options.resourceName}...`
         : `Deleting ${options.resourceType} ${options.resourceName}...`;
@@ -224,21 +342,46 @@ export async function executeKubectlDelete(
                 );
 
                 // Deletion succeeded
-                return true;
+                return { success: true, shouldRefresh: true };
             } catch (error: unknown) {
-                // kubectl failed - create structured error for detailed handling
-                const kubectlError = KubectlError.fromExecError(error, contextName);
+                // Handle error using specialized delete error handler
+                const errorResult = handleDeleteError(error, options);
                 
                 // Log error details for debugging
-                console.error(`Failed to delete ${options.resourceType} ${options.resourceName}: ${kubectlError.getDetails()}`);
+                console.error(`Failed to delete ${options.resourceType} ${options.resourceName}: ${errorResult.message}`);
                 
-                // Show error notification to user
-                vscode.window.showErrorMessage(
-                    `Failed to delete ${options.resourceType} ${options.resourceName}: ${kubectlError.getUserMessage()}`
-                );
-                
-                // Return failure status
-                return false;
+                // Show appropriate notification based on error type
+                let userSelection: string | undefined;
+                if (errorResult.errorType === 'notfound') {
+                    // Show info message for not found (not an error)
+                    await vscode.window.showInformationMessage(errorResult.message);
+                } else {
+                    // Show error message with action buttons if available
+                    if (errorResult.actionButtons.length > 0) {
+                        userSelection = await vscode.window.showErrorMessage(
+                            errorResult.message,
+                            ...errorResult.actionButtons
+                        );
+                    } else {
+                        await vscode.window.showErrorMessage(errorResult.message);
+                    }
+                }
+
+                // Handle action button clicks
+                if (userSelection === 'Force Delete') {
+                    // Retry deletion with force delete enabled
+                    const forceOptions: DeleteResourceOptions = {
+                        ...options,
+                        forceDelete: true
+                    };
+                    return await executeKubectlDelete(forceOptions, kubeconfigPath, contextName);
+                } else if (userSelection === 'Retry') {
+                    // Retry same deletion operation
+                    return await executeKubectlDelete(options, kubeconfigPath, contextName);
+                }
+
+                // Return failure status with refresh indication
+                return { success: false, shouldRefresh: errorResult.shouldRefresh };
             }
         }
     );
