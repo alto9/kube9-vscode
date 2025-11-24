@@ -4,7 +4,7 @@ session_id: add-ability-to-delete-kubernetes-resources-from-tr
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec]
 diagram_id: []
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---

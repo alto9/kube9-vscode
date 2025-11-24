@@ -8,7 +8,7 @@ import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
-import { showDeleteConfirmation, executeKubectlDelete, DeleteResult } from './commands/deleteResource';
+import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -544,7 +544,24 @@ function registerCommands(): void {
                     
                     // Refresh tree view if indicated (for success or not found errors)
                     if (result.shouldRefresh) {
-                        getClusterTreeProvider().refresh();
+                        const treeProvider = getClusterTreeProvider();
+                        
+                        // Try selective refresh by refreshing only the affected category
+                        // This preserves tree expansion state better than full refresh
+                        const categoryItem = createCategoryTreeItemForRefresh(
+                            resourceType,
+                            treeItem.resourceData
+                        );
+                        
+                        if (categoryItem) {
+                            // Use selective refresh for the specific category
+                            treeProvider.refreshItem(categoryItem);
+                            console.log(`Selectively refreshed category for ${resourceType}`);
+                        } else {
+                            // Fall back to full refresh if category cannot be determined
+                            treeProvider.refresh();
+                            console.log(`Full tree refresh triggered for ${resourceType}`);
+                        }
                     }
                 } else {
                     console.log('User cancelled deletion');

@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { ClusterTreeItem } from '../tree/ClusterTreeItem';
+import { TreeItemData } from '../tree/TreeItemTypes';
+import { TreeItemFactory } from '../tree/TreeItemFactory';
 
 /**
  * Options for deleting a Kubernetes resource.
@@ -270,6 +273,99 @@ function handleDeleteError(
         shouldRefresh: false,
         actionButtons: []
     };
+}
+
+/**
+ * Maps a Kubernetes resource type to its corresponding tree category/subcategory type.
+ * Returns the category type that should be refreshed after deleting this resource.
+ * 
+ * @param resourceType - The Kubernetes resource type (e.g., "Deployment", "Pod", "ConfigMap")
+ * @returns The tree item category type (e.g., "deployments", "configmaps") or undefined if mapping not found
+ */
+export function getCategoryTypeForResource(resourceType: string): string | undefined {
+    // Normalize resource type to handle case variations
+    const normalizedType = resourceType.toLowerCase();
+    
+    // Map resource types to their category/subcategory types
+    const resourceToCategoryMap: { [key: string]: string } = {
+        // Workload resources
+        'deployment': 'deployments',
+        'statefulset': 'statefulsets',
+        'daemonset': 'daemonsets',
+        'cronjob': 'cronjobs',
+        'pod': 'workloads', // Pods can be under multiple subcategories, refresh workloads category
+        
+        // Storage resources
+        'persistentvolume': 'persistentVolumes',
+        'persistentvolumeclaim': 'persistentVolumeClaims',
+        'storageclass': 'storageClasses',
+        
+        // Configuration resources
+        'configmap': 'configmaps',
+        'secret': 'secrets',
+        
+        // Cluster resources
+        'node': 'nodes',
+        'namespace': 'namespaces',
+        
+        // Custom resources
+        'customresourcedefinition': 'customResources',
+        'crd': 'customResources',
+    };
+    
+    return resourceToCategoryMap[normalizedType];
+}
+
+/**
+ * Constructs a category tree item for selective tree refresh after resource deletion.
+ * Creates the appropriate category tree item based on the resource type and resource data.
+ * 
+ * @param resourceType - The Kubernetes resource type that was deleted (e.g., "Deployment", "Pod")
+ * @param resourceData - The tree item data containing cluster context information
+ * @returns A ClusterTreeItem for the category that should be refreshed, or undefined if category cannot be determined
+ */
+export function createCategoryTreeItemForRefresh(
+    resourceType: string,
+    resourceData: TreeItemData
+): ClusterTreeItem | undefined {
+    const categoryType = getCategoryTypeForResource(resourceType);
+    
+    if (!categoryType) {
+        return undefined;
+    }
+    
+    // Create the appropriate category tree item based on category type
+    switch (categoryType) {
+        case 'nodes':
+            return TreeItemFactory.createNodesCategory(resourceData);
+        case 'namespaces':
+            return TreeItemFactory.createNamespacesCategory(resourceData);
+        case 'workloads':
+            return TreeItemFactory.createWorkloadsCategory(resourceData);
+        case 'deployments':
+        case 'statefulsets':
+        case 'daemonsets':
+        case 'cronjobs':
+            // For subcategories, we need to create the parent workloads category
+            // since subcategories are children of workloads
+            return TreeItemFactory.createWorkloadsCategory(resourceData);
+        case 'storage':
+        case 'persistentVolumes':
+        case 'persistentVolumeClaims':
+        case 'storageClasses':
+            // For storage subcategories, create the parent storage category
+            return TreeItemFactory.createStorageCategory(resourceData);
+        case 'configmaps':
+        case 'secrets':
+            // For configuration subcategories, create the parent configuration category
+            return TreeItemFactory.createConfigurationCategory(resourceData);
+        case 'customResources':
+            return TreeItemFactory.createCustomResourcesCategory(resourceData);
+        case 'helm':
+            return TreeItemFactory.createHelmCategory(resourceData);
+        default:
+            return undefined;
+    }
 }
 
 /**
