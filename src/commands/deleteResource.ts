@@ -16,10 +16,21 @@ export interface DeleteResourceOptions {
 }
 
 /**
- * Interface for force delete quick pick item
+ * OutputChannel for delete operation logging.
+ * Created lazily on first use.
  */
-interface ForceDeleteQuickPickItem extends vscode.QuickPickItem {
-    isForceDelete: boolean;
+let deleteOutputChannel: vscode.OutputChannel | undefined;
+
+/**
+ * Gets or creates the OutputChannel for delete operation logging.
+ * 
+ * @returns The OutputChannel instance
+ */
+function getDeleteOutputChannel(): vscode.OutputChannel {
+    if (!deleteOutputChannel) {
+        deleteOutputChannel = vscode.window.createOutputChannel('kube9 Delete Operations');
+    }
+    return deleteOutputChannel;
 }
 
 /**
@@ -76,85 +87,44 @@ export async function showDeleteConfirmation(
     namespace: string | undefined
 ): Promise<DeleteResourceOptions | undefined> {
     try {
-        // Step 1: Show QuickPick for force delete option
-        const namespaceDisplay = namespace || 'Cluster-scoped';
         const resourceInfo = namespace 
             ? `${resourceType} '${resourceName}' in namespace '${namespace}'`
             : `${resourceType} '${resourceName}' (cluster-scoped)`;
 
-        const forceDeleteItem: ForceDeleteQuickPickItem = {
-            label: '$(check) Force delete (removes finalizers)',
-            description: 'Use this for resources stuck in terminating state. This skips graceful deletion and removes finalizers.',
-            isForceDelete: true,
-            picked: false  // Not selected by default
-        };
-
         const warningMessage = generateWarningMessage(resourceType);
-        const quickPick = vscode.window.createQuickPick<ForceDeleteQuickPickItem>();
-        quickPick.title = `Delete ${resourceType}?`;
-        quickPick.placeholder = `${resourceInfo}\n\n⚠️ ${warningMessage}\n\nPress Enter to continue or select force delete option`;
-        quickPick.items = [forceDeleteItem];
-        quickPick.canSelectMany = true;  // Allow toggling the checkbox-like item
-        quickPick.ignoreFocusOut = true;  // Make it modal-like
-
-        // Track force delete state
-        let forceDeleteSelected = false;
-
-        // Show QuickPick and wait for user selection
-        const quickPickPromise = new Promise<boolean | undefined>((resolve) => {
-            // Update force delete state when selection changes
-            quickPick.onDidChangeSelection((items) => {
-                forceDeleteSelected = items.some(item => item.isForceDelete === true);
-            });
-
-            quickPick.onDidAccept(() => {
-                quickPick.dispose();
-                resolve(forceDeleteSelected);
-            });
-
-            quickPick.onDidHide(() => {
-                quickPick.dispose();
-                resolve(undefined);  // User cancelled QuickPick (ESC key)
-            });
-        });
-
-        quickPick.show();
-        const forceDeleteResult = await quickPickPromise;
-
-        // If user cancelled QuickPick (ESC), return undefined
-        if (forceDeleteResult === undefined) {
-            return undefined;
-        }
-
-        const forceDelete = forceDeleteResult || false;
-
-        // Step 2: Show warning message with Delete/Cancel buttons
-        const baseMessage = namespace
-            ? `Are you sure you want to delete ${resourceType} '${resourceName}' in namespace '${namespace}'?`
-            : `Are you sure you want to delete ${resourceType} '${resourceName}'?`;
         
+        // Create a clear, single confirmation dialog with all options
+        const baseMessage = `Are you sure you want to delete ${resourceInfo}?`;
         const message = `${baseMessage}\n\n⚠️ ${warningMessage}`;
 
         const deleteButton = 'Delete';
-        const cancelButton = 'Cancel';
+        const forceDeleteButton = 'Force Delete';
 
         const action = await vscode.window.showWarningMessage(
             message,
             { modal: true },
             deleteButton,
-            cancelButton
+            forceDeleteButton
         );
 
-        // If user clicked Delete, return options; otherwise return undefined
+        // Handle user selection
         if (action === deleteButton) {
             return {
                 resourceType,
                 resourceName,
                 namespace,
-                forceDelete
+                forceDelete: false
+            };
+        } else if (action === forceDeleteButton) {
+            return {
+                resourceType,
+                resourceName,
+                namespace,
+                forceDelete: true
             };
         }
 
+        // User cancelled or closed dialog
         return undefined;
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -419,9 +389,10 @@ export async function executeKubectlDelete(
                     args.push('--grace-period=0', '--force');
                 }
 
-                // Add output format and cluster context flags
+                // Add cluster context flags
+                // Note: kubectl delete doesn't support --output flag, only -o name is supported
+                // We don't need output for delete operations anyway
                 args.push(
-                    '--output=json',
                     `--kubeconfig=${kubeconfigPath}`,
                     `--context=${contextName}`
                 );
@@ -442,6 +413,41 @@ export async function executeKubectlDelete(
             } catch (error: unknown) {
                 // Handle error using specialized delete error handler
                 const errorResult = handleDeleteError(error, options);
+                
+                // Get output channel for logging
+                const outputChannel = getDeleteOutputChannel();
+                
+                // Log error details to Output panel
+                const timestamp = new Date().toISOString();
+                const resourceDisplay = options.namespace
+                    ? `${options.resourceType} '${options.resourceName}' in namespace '${options.namespace}'`
+                    : `${options.resourceType} '${options.resourceName}'`;
+                
+                outputChannel.appendLine(`[${timestamp}] Failed to delete ${resourceDisplay}`);
+                outputChannel.appendLine(`Error Type: ${errorResult.errorType}`);
+                outputChannel.appendLine(`Message: ${errorResult.message}`);
+                
+                // Log additional error details if available
+                const err = error as { 
+                    stderr?: Buffer | string;
+                    stdout?: Buffer | string;
+                    message?: string;
+                };
+                if (err.stderr) {
+                    const stderr = Buffer.isBuffer(err.stderr) ? err.stderr.toString() : err.stderr;
+                    outputChannel.appendLine(`Stderr: ${stderr}`);
+                }
+                if (err.stdout) {
+                    const stdout = Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout;
+                    outputChannel.appendLine(`Stdout: ${stdout}`);
+                }
+                if (err.message) {
+                    outputChannel.appendLine(`Error Message: ${err.message}`);
+                }
+                outputChannel.appendLine(''); // Empty line for readability
+                
+                // Show output channel if it's not already visible
+                outputChannel.show(true);
                 
                 // Log error details for debugging
                 console.error(`Failed to delete ${options.resourceType} ${options.resourceName}: ${errorResult.message}`);
