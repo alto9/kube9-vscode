@@ -4,7 +4,7 @@ session_id: add-ability-to-delete-kubernetes-resources-from-tr
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec]
 diagram_id: []
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 15
 ---
@@ -32,12 +32,12 @@ Resources stuck in "Terminating" state due to finalizers need force deletion to 
 
 ## Acceptance Criteria
 
-- [ ] Force delete checkbox has helpful tooltip
-- [ ] When force delete is checked, kubectl command includes --grace-period=0 --force
-- [ ] Progress message shows "Force deleting..." for force deletions
-- [ ] Success notification indicates force deletion was used
-- [ ] Standard deletions still work without force flags
-- [ ] Force deletions bypass finalizers as expected
+- [x] Force delete checkbox has helpful tooltip
+- [x] When force delete is checked, kubectl command includes --grace-period=0 --force
+- [x] Progress message shows "Force deleting..." for force deletions
+- [x] Success notification indicates force deletion was used
+- [x] Standard deletions still work without force flags
+- [x] Force deletions bypass finalizers as expected
 
 ## Dependencies
 

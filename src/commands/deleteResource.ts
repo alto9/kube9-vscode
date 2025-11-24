@@ -72,7 +72,7 @@ export async function showDeleteConfirmation(
 
         const forceDeleteItem: ForceDeleteQuickPickItem = {
             label: '$(check) Force delete (removes finalizers)',
-            description: 'Use --grace-period=0 --force flags',
+            description: 'Use this for resources stuck in terminating state. This skips graceful deletion and removes finalizers.',
             isForceDelete: true,
             picked: false  // Not selected by default
         };
@@ -176,10 +176,14 @@ export async function executeKubectlDelete(
     kubeconfigPath: string,
     contextName: string
 ): Promise<boolean> {
+    const progressTitle = options.forceDelete
+        ? `Force deleting ${options.resourceType} ${options.resourceName}...`
+        : `Deleting ${options.resourceType} ${options.resourceName}...`;
+
     return await vscode.window.withProgress(
         {
             location: vscode.ProgressLocation.Notification,
-            title: `Deleting ${options.resourceType} ${options.resourceName}...`,
+            title: progressTitle,
             cancellable: false
         },
         async () => {
@@ -196,14 +200,17 @@ export async function executeKubectlDelete(
                     args.push('-n', options.namespace);
                 }
 
+                // Add force delete flags if forceDelete is enabled
+                if (options.forceDelete) {
+                    args.push('--grace-period=0', '--force');
+                }
+
                 // Add output format and cluster context flags
                 args.push(
                     '--output=json',
                     `--kubeconfig=${kubeconfigPath}`,
                     `--context=${contextName}`
                 );
-
-                // Note: forceDelete flag is ignored in this story (handled in story 005)
 
                 // Execute kubectl delete command
                 await execFileAsync(

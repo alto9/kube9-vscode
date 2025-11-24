@@ -536,9 +536,10 @@ function registerCommands(): void {
                         const resourceDisplay = namespace
                             ? `${resourceType} '${resourceName}' in namespace '${namespace}'`
                             : `${resourceType} '${resourceName}'`;
-                        vscode.window.showInformationMessage(
-                            `Successfully deleted ${resourceDisplay}`
-                        );
+                        const successMessage = confirmation.forceDelete
+                            ? `Successfully force deleted ${resourceDisplay}`
+                            : `Successfully deleted ${resourceDisplay}`;
+                        vscode.window.showInformationMessage(successMessage);
                         
                         // Refresh tree view to reflect the deletion
                         getClusterTreeProvider().refresh();
