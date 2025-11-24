@@ -4,7 +4,7 @@ session_id: add-ability-to-delete-kubernetes-resources-from-tr
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec]
 diagram_id: []
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -39,12 +39,12 @@ Different resource types have different consequences when deleted. Users should 
 
 ## Acceptance Criteria
 
-- [ ] Each resource type shows appropriate warning message
-- [ ] Deployment deletion shows Pod recreation warning
-- [ ] Service deletion shows connectivity warning
-- [ ] ConfigMap/Secret deletions show dependency warnings
-- [ ] Generic message shown for unsupported resource types
-- [ ] Warnings are clearly visible in confirmation dialog
+- [x] Each resource type shows appropriate warning message
+- [x] Deployment deletion shows Pod recreation warning
+- [x] Service deletion shows connectivity warning
+- [x] ConfigMap/Secret deletions show dependency warnings
+- [x] Generic message shown for unsupported resource types
+- [x] Warnings are clearly visible in confirmation dialog
 
 ## Dependencies
 

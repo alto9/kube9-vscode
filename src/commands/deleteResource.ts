@@ -18,6 +18,35 @@ interface ForceDeleteQuickPickItem extends vscode.QuickPickItem {
 }
 
 /**
+ * Generates a context-aware warning message based on the resource type being deleted.
+ * 
+ * @param resourceType - The type of Kubernetes resource (e.g., "Deployment", "Pod", "Service")
+ * @returns A warning message specific to the resource type, or a generic message for unknown types
+ */
+function generateWarningMessage(resourceType: string): string {
+    switch (resourceType) {
+        case 'Deployment':
+            return 'Deleting this Deployment will also delete its managed Pods. Pods may be recreated if controlled by a ReplicaSet.';
+        case 'StatefulSet':
+            return 'Deleting this StatefulSet will delete its Pods in reverse order. Associated PersistentVolumeClaims will NOT be deleted.';
+        case 'DaemonSet':
+            return 'Deleting this DaemonSet will remove Pods from all nodes where it is running.';
+        case 'Service':
+            return 'This will remove the network endpoint for this Service. Dependent applications may lose connectivity.';
+        case 'ConfigMap':
+            return 'Pods using this ConfigMap may fail to start or lose configuration data.';
+        case 'Secret':
+            return 'Applications using this Secret will lose access to credentials and sensitive data.';
+        case 'PersistentVolumeClaim':
+            return 'Deleting this PVC may delete the underlying PersistentVolume depending on the reclaim policy.';
+        case 'Pod':
+            return 'This Pod will be permanently deleted. If managed by a controller, it may be recreated.';
+        default:
+            return 'This resource will be permanently deleted.';
+    }
+}
+
+/**
  * Shows a confirmation dialog for deleting a Kubernetes resource.
  * Displays resource details and provides a force delete option.
  * 
@@ -45,9 +74,10 @@ export async function showDeleteConfirmation(
             picked: false  // Not selected by default
         };
 
+        const warningMessage = generateWarningMessage(resourceType);
         const quickPick = vscode.window.createQuickPick<ForceDeleteQuickPickItem>();
         quickPick.title = `Delete ${resourceType}?`;
-        quickPick.placeholder = `${resourceInfo}\n\nPress Enter to continue or select force delete option`;
+        quickPick.placeholder = `${resourceInfo}\n\n⚠️ ${warningMessage}\n\nPress Enter to continue or select force delete option`;
         quickPick.items = [forceDeleteItem];
         quickPick.canSelectMany = true;  // Allow toggling the checkbox-like item
         quickPick.ignoreFocusOut = true;  // Make it modal-like
@@ -84,9 +114,11 @@ export async function showDeleteConfirmation(
         const forceDelete = forceDeleteResult || false;
 
         // Step 2: Show warning message with Delete/Cancel buttons
-        const message = namespace
+        const baseMessage = namespace
             ? `Are you sure you want to delete ${resourceType} '${resourceName}' in namespace '${namespace}'?`
             : `Are you sure you want to delete ${resourceType} '${resourceName}'?`;
+        
+        const message = `${baseMessage}\n\n⚠️ ${warningMessage}`;
 
         const deleteButton = 'Delete';
         const cancelButton = 'Cancel';
