@@ -8,6 +8,7 @@ import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
+import { showDeleteConfirmation } from './commands/deleteResource';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -479,6 +480,55 @@ function registerCommands(): void {
     );
     context.subscriptions.push(viewResourceYAMLFromPaletteCmd);
     disposables.push(viewResourceYAMLFromPaletteCmd);
+    
+    // Register delete resource command
+    const deleteResourceCmd = vscode.commands.registerCommand(
+        'kube9.deleteResource',
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                // Extract resource information from tree item
+                if (!treeItem || !treeItem.resourceData) {
+                    throw new Error('Invalid tree item: missing resource data');
+                }
+                
+                // Extract resource type from contextValue (e.g., "Pod" from "resource:Pod")
+                const resourceType = extractKindFromContextValue(treeItem.contextValue);
+                
+                // Extract resource name
+                const resourceName = treeItem.resourceData.resourceName || treeItem.label as string;
+                
+                // Extract namespace
+                const namespace = treeItem.resourceData.namespace;
+                
+                console.log('Delete resource command invoked:', {
+                    resourceType,
+                    resourceName,
+                    namespace
+                });
+                
+                // Show confirmation dialog
+                const confirmation = await showDeleteConfirmation(
+                    resourceType,
+                    resourceName,
+                    namespace
+                );
+                
+                // If user confirmed deletion, log the options (actual deletion will be implemented in later stories)
+                if (confirmation) {
+                    console.log('User confirmed deletion:', confirmation);
+                    // TODO: Implement actual deletion in later stories
+                } else {
+                    console.log('User cancelled deletion');
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to execute delete resource command:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to delete resource: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(deleteResourceCmd);
+    disposables.push(deleteResourceCmd);
     
     // Register open dashboard command
     const openDashboardCmd = vscode.commands.registerCommand(
