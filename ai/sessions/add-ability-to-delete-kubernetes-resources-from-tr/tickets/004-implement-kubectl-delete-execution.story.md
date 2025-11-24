@@ -4,7 +4,7 @@ session_id: add-ability-to-delete-kubernetes-resources-from-tr
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec]
 diagram_id: []
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -37,13 +37,13 @@ Once users confirm deletion, we need to execute `kubectl delete <resource-type> 
 
 ## Acceptance Criteria
 
-- [ ] Confirmed deletions trigger kubectl delete command
-- [ ] Progress indicator shows "Deleting..." message
-- [ ] kubectl command includes correct resource type, name, and namespace
-- [ ] Cluster-scoped resources omit namespace flag
-- [ ] Success notification appears after successful deletion
-- [ ] Operation times out after 30 seconds
-- [ ] Uses existing kubectl utilities for consistency
+- [x] Confirmed deletions trigger kubectl delete command
+- [x] Progress indicator shows "Deleting..." message
+- [x] kubectl command includes correct resource type, name, and namespace
+- [x] Cluster-scoped resources omit namespace flag
+- [x] Success notification appears after successful deletion
+- [x] Operation times out after 30 seconds
+- [x] Uses existing kubectl utilities for consistency
 
 ## Dependencies
 

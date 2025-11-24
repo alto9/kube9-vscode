@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import { KubectlError } from '../kubernetes/KubectlError';
 
 /**
  * Options for deleting a Kubernetes resource.
@@ -147,5 +150,90 @@ export async function showDeleteConfirmation(
         vscode.window.showErrorMessage(`Failed to show delete confirmation: ${errorMessage}`);
         return undefined;
     }
+}
+
+/**
+ * Timeout for kubectl delete commands in milliseconds.
+ */
+const KUBECTL_TIMEOUT_MS = 30000;
+
+/**
+ * Promisified version of execFile for async/await usage.
+ */
+const execFileAsync = promisify(execFile);
+
+/**
+ * Executes kubectl delete command to delete a Kubernetes resource.
+ * Shows progress indication and handles errors appropriately.
+ * 
+ * @param options - Delete options including resource type, name, namespace, and force flag
+ * @param kubeconfigPath - Path to the kubeconfig file
+ * @param contextName - Name of the kubectl context to use
+ * @returns Promise resolving to true if deletion succeeded, false otherwise
+ */
+export async function executeKubectlDelete(
+    options: DeleteResourceOptions,
+    kubeconfigPath: string,
+    contextName: string
+): Promise<boolean> {
+    return await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: `Deleting ${options.resourceType} ${options.resourceName}...`,
+            cancellable: false
+        },
+        async () => {
+            try {
+                // Build kubectl command arguments
+                const args: string[] = [
+                    'delete',
+                    options.resourceType.toLowerCase(),
+                    options.resourceName
+                ];
+
+                // Add namespace flag only for namespaced resources
+                if (options.namespace) {
+                    args.push('-n', options.namespace);
+                }
+
+                // Add output format and cluster context flags
+                args.push(
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                );
+
+                // Note: forceDelete flag is ignored in this story (handled in story 005)
+
+                // Execute kubectl delete command
+                await execFileAsync(
+                    'kubectl',
+                    args,
+                    {
+                        timeout: KUBECTL_TIMEOUT_MS,
+                        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+                        env: { ...process.env }
+                    }
+                );
+
+                // Deletion succeeded
+                return true;
+            } catch (error: unknown) {
+                // kubectl failed - create structured error for detailed handling
+                const kubectlError = KubectlError.fromExecError(error, contextName);
+                
+                // Log error details for debugging
+                console.error(`Failed to delete ${options.resourceType} ${options.resourceName}: ${kubectlError.getDetails()}`);
+                
+                // Show error notification to user
+                vscode.window.showErrorMessage(
+                    `Failed to delete ${options.resourceType} ${options.resourceName}: ${kubectlError.getUserMessage()}`
+                );
+                
+                // Return failure status
+                return false;
+            }
+        }
+    );
 }
 

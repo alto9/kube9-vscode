@@ -8,7 +8,7 @@ import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
-import { showDeleteConfirmation } from './commands/deleteResource';
+import { showDeleteConfirmation, executeKubectlDelete } from './commands/deleteResource';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -513,10 +513,36 @@ function registerCommands(): void {
                     namespace
                 );
                 
-                // If user confirmed deletion, log the options (actual deletion will be implemented in later stories)
+                // If user confirmed deletion, execute the deletion
                 if (confirmation) {
-                    console.log('User confirmed deletion:', confirmation);
-                    // TODO: Implement actual deletion in later stories
+                    // Get kubeconfig path from tree provider
+                    const kubeconfigPath = getClusterTreeProvider().getKubeconfigPath();
+                    if (!kubeconfigPath) {
+                        throw new Error('Kubeconfig path not available');
+                    }
+                    
+                    // Get context name from tree item
+                    const contextName = treeItem.resourceData.context.name;
+                    
+                    // Execute deletion
+                    const success = await executeKubectlDelete(
+                        confirmation,
+                        kubeconfigPath,
+                        contextName
+                    );
+                    
+                    if (success) {
+                        // Show success notification
+                        const resourceDisplay = namespace
+                            ? `${resourceType} '${resourceName}' in namespace '${namespace}'`
+                            : `${resourceType} '${resourceName}'`;
+                        vscode.window.showInformationMessage(
+                            `Successfully deleted ${resourceDisplay}`
+                        );
+                        
+                        // Refresh tree view to reflect the deletion
+                        getClusterTreeProvider().refresh();
+                    }
                 } else {
                     console.log('User cancelled deletion');
                 }
