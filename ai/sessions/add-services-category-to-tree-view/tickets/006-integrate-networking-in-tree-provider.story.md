@@ -3,7 +3,7 @@ story_id: integrate-networking-in-tree-provider
 session_id: add-services-category-to-tree-view
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec, services-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
