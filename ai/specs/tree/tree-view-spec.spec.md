@@ -65,6 +65,7 @@ graph TD
    - Namespaces
    - Workloads
    - Storage
+   - Networking
    - Helm
    - Configuration
    - Custom Resources
@@ -166,6 +167,31 @@ Reports (category)
 - Data Collection report item is a placeholder with no functionality
 - Clicking Data Collection should display a placeholder message indicating future functionality
 
+### Networking Category Structure
+
+#### Display Logic
+- **Position**: Networking category appears after Storage and before Helm in the category list
+- **Visibility**: Always visible when cluster is expanded
+- **Purpose**: Groups networking-related Kubernetes resources
+
+#### Networking Menu Structure
+```
+Networking (category)
+  └── Services (subcategory)
+      └── Individual service items (namespace/name format)
+```
+
+#### Implementation Details
+- Networking category follows the same expandable pattern as other categories (e.g., Configuration, Storage)
+- Services subcategory follows the same pattern as other subcategories (e.g., Configuration → ConfigMaps)
+- Services are displayed in "namespace/name" format for clarity
+- Service type (ClusterIP, NodePort, LoadBalancer, ExternalName) is shown in the description
+- Each service item displays a network icon (globe or link ThemeIcon)
+- Services support all standard context menu actions (View YAML, Edit, Delete, Describe, Copy Name, Copy YAML)
+- Double-clicking a service opens the YAML editor
+- Tooltips show comprehensive service information (Cluster IP, External IP, Ports, Selectors, Endpoints count)
+- Future: Ingress resources will be added as another subcategory under Networking
+
 ### Namespace Listing
 - Namespaces are queried using `kubectl get namespaces --output=json`
 - "All Namespaces" is a special tree item that appears first
@@ -245,8 +271,12 @@ Reports (category)
 
 #### For Resource Items (Deployments, Pods, Services, etc.)
 - **View YAML**: Opens YAML editor for the resource in a new tab
+- **Edit**: Opens YAML editor in edit mode for the resource
+- **Delete**: Deletes the resource from the cluster (with confirmation)
+- **Describe**: Shows detailed resource information
+- **Copy Name**: Copies resource name to clipboard
+- **Copy YAML**: Copies resource YAML to clipboard
 - **Refresh**: Refreshes this resource's data
-- **Delete Resource**: Deletes the resource from the cluster (with confirmation)
 
 #### Context Menu Registration
 ```typescript
