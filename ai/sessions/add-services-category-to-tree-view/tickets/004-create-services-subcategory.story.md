@@ -3,7 +3,7 @@ story_id: create-services-subcategory
 session_id: add-services-category-to-tree-view
 feature_id: [tree-view-navigation]
 spec_id: [services-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
