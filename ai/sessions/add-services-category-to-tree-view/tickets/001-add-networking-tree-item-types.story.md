@@ -3,7 +3,7 @@ story_id: add-networking-tree-item-types
 session_id: add-services-category-to-tree-view
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec, services-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 15
 ---
@@ -34,11 +34,11 @@ This is the foundation story that adds the type definitions needed for the Netwo
 
 ## Acceptance Criteria
 
-- [ ] `'networking'` type added to TreeItemType union
-- [ ] `'services'` type added to TreeItemType union
-- [ ] `'service'` type added to TreeItemType union
-- [ ] Documentation comments updated to reflect new types
-- [ ] TypeScript compilation succeeds without errors
+- [x] `'networking'` type added to TreeItemType union
+- [x] `'services'` type added to TreeItemType union
+- [x] `'service'` type added to TreeItemType union
+- [x] Documentation comments updated to reflect new types
+- [x] TypeScript compilation succeeds without errors
 
 ## Dependencies
 
