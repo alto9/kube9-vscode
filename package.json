@@ -83,6 +83,11 @@
         "category": "Kube9"
       },
       {
+        "command": "kube9.deleteResource",
+        "title": "Delete Resource",
+        "category": "kube9"
+      },
+      {
         "command": "kube9.openDashboard",
         "title": "Open Dashboard",
         "category": "kube9"
@@ -111,6 +116,11 @@
           "command": "kube9.viewResourceYAML",
           "when": "view == kube9ClusterView && viewItem =~ /^resource/",
           "group": "kube9@1"
+        },
+        {
+          "command": "kube9.deleteResource",
+          "when": "view == kube9ClusterView && viewItem =~ /^resource/",
+          "group": "kube9@2"
         }
       ]
     },

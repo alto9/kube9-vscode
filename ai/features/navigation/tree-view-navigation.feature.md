@@ -308,4 +308,124 @@ Scenario: Multiple webviews show correct button states
   Then both webviews should update their button states accordingly
   And "staging" button becomes disabled with checkmark
   And "production" button becomes enabled without checkmark
+
+Scenario: Delete resource from context menu
+  Given a user has expanded "Workloads" and then "Deployments"
+  When they right-click on a deployment named "nginx-deployment"
+  Then they should see a context menu with "Delete Resource" option
+  When they click "Delete Resource"
+  Then a confirmation dialog should appear
+
+Scenario: Confirmation dialog shows resource details
+  Given a user has triggered delete on a deployment "nginx-deployment" in namespace "production"
+  When the confirmation dialog appears
+  Then it should display the resource type "Deployment"
+  And it should display the resource name "nginx-deployment"
+  And it should display the namespace "production"
+  And it should show a "Delete" confirmation button
+  And it should show a "Cancel" button
+
+Scenario: Confirmation dialog shows warning for managed pods
+  Given a user has triggered delete on a deployment "nginx-deployment"
+  When the confirmation dialog appears
+  Then it should display a warning message
+  And the warning should state "Deleting this Deployment will also delete its managed Pods"
+  And the warning should state "Pods may be recreated if controlled by a ReplicaSet"
+
+Scenario: Force delete checkbox for stuck resources
+  Given a user has triggered delete on any resource
+  When the confirmation dialog appears
+  Then it should show a checkbox labeled "Force delete (removes finalizers)"
+  And the checkbox should be unchecked by default
+  And hovering over the checkbox should show a tooltip
+  And the tooltip should explain "Use this for resources stuck in terminating state"
+
+Scenario: Successfully deleting a resource
+  Given a user has confirmed deletion of deployment "nginx-deployment"
+  And the "Force delete" checkbox is unchecked
+  When the deletion is initiated
+  Then a progress indicator should appear with message "Deleting nginx-deployment..."
+  And kubectl delete deployment nginx-deployment -n production should be executed
+  And when kubectl completes successfully
+  Then a success notification should display "Successfully deleted Deployment nginx-deployment"
+  And the tree view should automatically refresh
+  And the deleted deployment should no longer appear in the tree
+
+Scenario: Force deleting a stuck resource
+  Given a user has confirmed deletion of a pod "stuck-pod"
+  And the "Force delete" checkbox is checked
+  When the deletion is initiated
+  Then kubectl delete pod stuck-pod -n production --grace-period=0 --force should be executed
+  And a progress indicator should show "Force deleting stuck-pod..."
+  And when kubectl completes successfully
+  Then a success notification should display "Successfully force deleted Pod stuck-pod"
+  And the tree view should automatically refresh
+
+Scenario: Canceling resource deletion
+  Given a user has triggered delete on a service "api-service"
+  When the confirmation dialog appears
+  And they click the "Cancel" button
+  Then the dialog should close
+  And no kubectl delete command should be executed
+  And the resource should remain in the tree view unchanged
+
+Scenario: Handling RBAC permission denied
+  Given a user has confirmed deletion of deployment "protected-deployment"
+  When kubectl delete is executed
+  And kubectl returns an error "Error from server (Forbidden): User cannot delete deployments"
+  Then the progress indicator should disappear
+  And an error notification should display "Permission denied: You don't have permission to delete this Deployment"
+  And the tree view should not refresh
+  And the deployment should remain in the tree view
+
+Scenario: Handling resource not found
+  Given a user has confirmed deletion of pod "already-deleted-pod"
+  When kubectl delete is executed
+  And kubectl returns an error "Error from server (NotFound): pods 'already-deleted-pod' not found"
+  Then the progress indicator should disappear
+  And an info notification should display "Resource not found: Pod already-deleted-pod may have been deleted already"
+  And the tree view should automatically refresh to sync current state
+
+Scenario: Handling finalizer blocking deletion
+  Given a user has confirmed deletion without force option
+  When kubectl delete is executed
+  And the resource has finalizers preventing deletion
+  And kubectl command hangs or times out
+  Then the progress indicator should show a timeout message
+  And an error notification should display "Deletion blocked: Resource has finalizers. Try force delete option"
+  And the tree view should refresh to show resource in "Terminating" state
+
+Scenario: Handling kubectl command failure
+  Given a user has confirmed deletion of any resource
+  When kubectl delete is executed
+  And kubectl fails with a network or cluster connectivity error
+  Then the progress indicator should disappear
+  And an error notification should display "Deletion failed: Unable to connect to cluster"
+  And the tree view should not refresh
+  And the user should be able to retry the operation
+
+Scenario: Deleting different resource types
+  Given a user has the tree view expanded
+  When they delete a "Pod" resource
+  Then the warning should mention "This Pod will be permanently deleted"
+  When they delete a "Service" resource
+  Then the warning should mention "This will remove the network endpoint for this Service"
+  When they delete a "ConfigMap" resource
+  Then the warning should mention "Pods using this ConfigMap may fail to start"
+  When they delete a "Secret" resource
+  Then the warning should mention "Applications using this Secret will lose access to credentials"
+
+Scenario: Delete option available for all resource types
+  Given a user has expanded any resource category
+  When they right-click on any individual resource (Pod, Deployment, Service, ConfigMap, Secret, PVC, etc)
+  Then they should see "Delete Resource" in the context menu
+  And the delete option should be available regardless of resource type
+
+Scenario: Tree view refresh after deletion shows updated state
+  Given a user has successfully deleted deployment "test-deployment"
+  When the tree view automatically refreshes
+  Then the "Deployments" category should reload
+  And "test-deployment" should not appear in the list
+  And other deployments should remain visible and unchanged
+  And the tree expansion state should be preserved
 ```

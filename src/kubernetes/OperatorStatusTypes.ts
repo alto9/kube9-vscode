@@ -34,6 +34,23 @@ export enum OperatorStatusMode {
 }
 
 /**
+ * Collection statistics for operator status
+ */
+export interface CollectionStats {
+    /** Total number of successful collections across all types */
+    totalSuccessCount: number;
+    
+    /** Total number of failed collections across all types */
+    totalFailureCount: number;
+    
+    /** Number of collections currently stored locally */
+    collectionsStoredCount: number;
+    
+    /** ISO 8601 timestamp of most recent successful collection, null if no collections yet */
+    lastSuccessTime: string | null;
+}
+
+/**
  * Operator status as returned by the kube9-operator-status ConfigMap.
  * Matches the operator's OperatorStatus interface.
  */
@@ -64,5 +81,8 @@ export interface OperatorStatus {
     
     /** Optional: Server-provided cluster ID (pro tier only) */
     clusterId?: string;
+    
+    /** Collection statistics */
+    collectionStats: CollectionStats;
 }
 

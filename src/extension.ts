@@ -8,6 +8,7 @@ import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
+import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -479,6 +480,101 @@ function registerCommands(): void {
     );
     context.subscriptions.push(viewResourceYAMLFromPaletteCmd);
     disposables.push(viewResourceYAMLFromPaletteCmd);
+    
+    // Register delete resource command
+    const deleteResourceCmd = vscode.commands.registerCommand(
+        'kube9.deleteResource',
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                // Extract resource information from tree item
+                if (!treeItem || !treeItem.resourceData) {
+                    throw new Error('Invalid tree item: missing resource data');
+                }
+                
+                // Extract resource type from contextValue (e.g., "Pod" from "resource:Pod")
+                const resourceType = extractKindFromContextValue(treeItem.contextValue);
+                
+                // Extract resource name
+                const resourceName = treeItem.resourceData.resourceName || treeItem.label as string;
+                
+                // Extract namespace
+                const namespace = treeItem.resourceData.namespace;
+                
+                console.log('Delete resource command invoked:', {
+                    resourceType,
+                    resourceName,
+                    namespace
+                });
+                
+                // Show confirmation dialog
+                const confirmation = await showDeleteConfirmation(
+                    resourceType,
+                    resourceName,
+                    namespace
+                );
+                
+                // If user confirmed deletion, execute the deletion
+                if (confirmation) {
+                    // Get kubeconfig path from tree provider
+                    const kubeconfigPath = getClusterTreeProvider().getKubeconfigPath();
+                    if (!kubeconfigPath) {
+                        throw new Error('Kubeconfig path not available');
+                    }
+                    
+                    // Get context name from tree item
+                    const contextName = treeItem.resourceData.context.name;
+                    
+                    // Execute deletion
+                    const result: DeleteResult = await executeKubectlDelete(
+                        confirmation,
+                        kubeconfigPath,
+                        contextName
+                    );
+                    
+                    if (result.success) {
+                        // Show success notification
+                        const resourceDisplay = namespace
+                            ? `${resourceType} '${resourceName}' in namespace '${namespace}'`
+                            : `${resourceType} '${resourceName}'`;
+                        const successMessage = confirmation.forceDelete
+                            ? `Successfully force deleted ${resourceDisplay}`
+                            : `Successfully deleted ${resourceDisplay}`;
+                        vscode.window.showInformationMessage(successMessage);
+                    }
+                    
+                    // Refresh tree view if indicated (for success or not found errors)
+                    if (result.shouldRefresh) {
+                        const treeProvider = getClusterTreeProvider();
+                        
+                        // Try selective refresh by refreshing only the affected category
+                        // This preserves tree expansion state better than full refresh
+                        const categoryItem = createCategoryTreeItemForRefresh(
+                            resourceType,
+                            treeItem.resourceData
+                        );
+                        
+                        if (categoryItem) {
+                            // Use selective refresh for the specific category
+                            treeProvider.refreshItem(categoryItem);
+                            console.log(`Selectively refreshed category for ${resourceType}`);
+                        } else {
+                            // Fall back to full refresh if category cannot be determined
+                            treeProvider.refresh();
+                            console.log(`Full tree refresh triggered for ${resourceType}`);
+                        }
+                    }
+                } else {
+                    console.log('User cancelled deletion');
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to execute delete resource command:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to delete resource: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(deleteResourceCmd);
+    disposables.push(deleteResourceCmd);
     
     // Register open dashboard command
     const openDashboardCmd = vscode.commands.registerCommand(

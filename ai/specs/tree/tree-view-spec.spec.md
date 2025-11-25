@@ -267,6 +267,11 @@ Reports (category)
       "command": "kube9.viewResourceYAML",
       "when": "view == kube9TreeView && viewItem =~ /^resource/",
       "group": "kube9@1"
+    },
+    {
+      "command": "kube9.deleteResource",
+      "when": "view == kube9TreeView && viewItem =~ /^resource/",
+      "group": "kube9@2"
     }
   ]
 }
@@ -308,6 +313,14 @@ Reports (category)
 - **Invalid Namespace**: Warn user if selected namespace doesn't exist, suggest clearing selection
 - **Permission Denied**: Show error if user lacks permission to modify kubeconfig
 - **External Conflicts**: Detect and notify if context changed externally during operation
+
+### Resource Deletion Errors
+- **RBAC Permission Denied**: Display user-friendly message "Permission denied: You don't have permission to delete this {resourceType}"
+- **Resource Not Found**: Show info message "Resource not found: {resourceType} {name} may have been deleted already", trigger tree refresh
+- **Finalizer Blocking**: Display error "Deletion blocked: Resource has finalizers. Try force delete option", show resource in Terminating state
+- **Network/Cluster Error**: Show error "Deletion failed: Unable to connect to cluster", do not refresh tree, allow retry
+- **Timeout**: Display timeout message after 30 seconds, suggest force delete option if applicable
+- **kubectl Process Error**: Parse stderr for specific error messages and display contextual help
 
 ## Testing Strategy
 
@@ -355,3 +368,236 @@ Reports (category)
 - Reports menu expansion and navigation
 - Data Collection placeholder display
 - Reports category updates when operator status changes
+- Delete resource confirmation dialog display
+- Delete resource with confirmation
+- Cancel delete operation
+- Force delete resource with finalizers
+- Delete error handling (RBAC, not found, finalizers)
+- Tree refresh after successful deletion
+
+## Delete Resource Operation
+
+### Overview
+
+The delete resource operation allows users to remove Kubernetes resources directly from the tree view with proper confirmation, progress indication, and error handling.
+
+### Delete Confirmation Dialog
+
+#### Structure
+```typescript
+interface DeleteResourceOptions {
+  resourceType: string;      // e.g., "Deployment", "Pod", "Service"
+  resourceName: string;      // Name of the resource
+  namespace: string;         // Namespace containing the resource (empty for cluster-scoped)
+  forceDelete: boolean;      // Whether to use --grace-period=0 --force flags
+}
+
+interface DeleteConfirmationDialog {
+  title: string;             // "Delete {resourceType}?"
+  message: string;           // "Are you sure you want to delete {resourceType} '{name}' in namespace '{namespace}'?"
+  warningMessage?: string;   // Context-specific warning based on resource type
+  showForceCheckbox: boolean; // Always true - checkbox for force delete option
+  confirmButtonText: string;  // "Delete" or "Force Delete"
+  cancelButtonText: string;   // "Cancel"
+}
+```
+
+#### Warning Messages by Resource Type
+
+Generate context-aware warnings based on resource type:
+
+| Resource Type | Warning Message |
+|---------------|----------------|
+| Deployment | "Deleting this Deployment will also delete its managed Pods. Pods may be recreated if controlled by a ReplicaSet." |
+| StatefulSet | "Deleting this StatefulSet will delete its Pods in reverse order. Associated PersistentVolumeClaims will NOT be deleted." |
+| DaemonSet | "Deleting this DaemonSet will remove Pods from all nodes where it is running." |
+| Service | "This will remove the network endpoint for this Service. Dependent applications may lose connectivity." |
+| ConfigMap | "Pods using this ConfigMap may fail to start or lose configuration data." |
+| Secret | "Applications using this Secret will lose access to credentials and sensitive data." |
+| PersistentVolumeClaim | "Deleting this PVC may delete the underlying PersistentVolume depending on the reclaim policy." |
+| Pod | "This Pod will be permanently deleted. If managed by a controller, it may be recreated." |
+| Namespace | "This will delete ALL resources in this namespace. This action cannot be undone." |
+
+For other resource types, use generic warning: "This resource will be permanently deleted."
+
+#### Force Delete Checkbox
+
+- **Label**: "Force delete (removes finalizers)"
+- **Default State**: Unchecked
+- **Tooltip**: "Use this for resources stuck in terminating state. This skips graceful deletion and removes finalizers."
+- **Behavior**: When checked, adds `--grace-period=0 --force` flags to kubectl delete command
+
+### kubectl Command Construction
+
+#### Standard Delete
+```bash
+kubectl delete <resourceType> <resourceName> -n <namespace> --output=json
+```
+
+#### Force Delete
+```bash
+kubectl delete <resourceType> <resourceName> -n <namespace> --grace-period=0 --force --output=json
+```
+
+#### Cluster-Scoped Resources
+For cluster-scoped resources (Nodes, PersistentVolumes, etc.), omit the `-n <namespace>` flag:
+```bash
+kubectl delete <resourceType> <resourceName> --output=json
+```
+
+### Progress Indication
+
+#### Implementation
+```typescript
+interface DeleteProgress {
+  phase: 'confirming' | 'deleting' | 'completed' | 'failed';
+  message: string;
+  showSpinner: boolean;
+}
+```
+
+#### Progress Messages
+- **Confirming**: No progress indicator (dialog is modal)
+- **Deleting**: "Deleting {resourceType} {name}..." (with spinner)
+- **Force Deleting**: "Force deleting {resourceType} {name}..." (with spinner)
+- **Completed**: Success notification, no spinner
+- **Failed**: Error notification, no spinner
+
+#### Timeout Handling
+- Set timeout to 30 seconds for delete operations
+- If timeout occurs, show error: "Deletion timed out. Resource may be stuck due to finalizers. Try force delete option."
+- Do not automatically retry on timeout
+
+### Success Handling
+
+#### Success Notification
+```typescript
+vscode.window.showInformationMessage(
+  `Successfully deleted ${resourceType} ${resourceName}`
+);
+```
+
+#### Tree Refresh
+- Trigger automatic tree refresh after successful deletion
+- Refresh only the affected resource category (not entire tree)
+- Preserve tree expansion state where possible
+- If resource was last in category, collapse that category
+
+### Error Detection and Handling
+
+#### RBAC Permission Denied
+**Detection**: kubectl stderr contains "Forbidden" or "User cannot delete"
+**Response**:
+```typescript
+vscode.window.showErrorMessage(
+  `Permission denied: You don't have permission to delete this ${resourceType}. Check your RBAC permissions.`
+);
+```
+**Behavior**: Do not refresh tree, resource remains visible
+
+#### Resource Not Found
+**Detection**: kubectl stderr contains "NotFound" or "not found"
+**Response**:
+```typescript
+vscode.window.showInformationMessage(
+  `Resource not found: ${resourceType} ${resourceName} may have been deleted already.`
+);
+```
+**Behavior**: Trigger tree refresh to sync current state
+
+#### Finalizer Blocking Deletion
+**Detection**: kubectl command hangs beyond timeout OR resource shows in "Terminating" state
+**Response**:
+```typescript
+vscode.window.showErrorMessage(
+  `Deletion blocked: Resource has finalizers preventing deletion. Try the force delete option.`,
+  'Force Delete'
+).then(selection => {
+  if (selection === 'Force Delete') {
+    // Re-open dialog with force checkbox pre-checked
+  }
+});
+```
+**Behavior**: Refresh tree to show "Terminating" state
+
+#### Network/Cluster Connection Error
+**Detection**: kubectl fails with connection error or cannot reach cluster
+**Response**:
+```typescript
+vscode.window.showErrorMessage(
+  `Deletion failed: Unable to connect to cluster. Check your connection and try again.`,
+  'Retry'
+).then(selection => {
+  if (selection === 'Retry') {
+    // Retry the delete operation
+  }
+});
+```
+**Behavior**: Do not refresh tree, allow user to retry
+
+#### Generic kubectl Error
+**Detection**: kubectl exits with non-zero code and unrecognized error message
+**Response**:
+```typescript
+vscode.window.showErrorMessage(
+  `Deletion failed: ${stderrMessage}`
+);
+```
+**Behavior**: Do not refresh tree
+
+### Command Registration
+
+#### Extension Activation
+```typescript
+// In extension.ts activate() function
+context.subscriptions.push(
+  vscode.commands.registerCommand('kube9.deleteResource', async (treeItem) => {
+    const options: DeleteResourceOptions = {
+      resourceType: treeItem.resourceType,
+      resourceName: treeItem.name,
+      namespace: treeItem.resourceNamespace || '',
+      forceDelete: false
+    };
+    
+    await deleteResourceWorkflow(options);
+  })
+);
+```
+
+#### Delete Workflow
+```typescript
+async function deleteResourceWorkflow(options: DeleteResourceOptions): Promise<void> {
+  // 1. Show confirmation dialog
+  const confirmed = await showDeleteConfirmation(options);
+  if (!confirmed) return;
+  
+  // 2. Show progress indicator
+  await vscode.window.withProgress({
+    location: vscode.ProgressLocation.Notification,
+    title: `Deleting ${options.resourceType} ${options.resourceName}`,
+    cancellable: false
+  }, async (progress) => {
+    // 3. Execute kubectl delete
+    const result = await executeKubectlDelete(options);
+    
+    // 4. Handle result
+    if (result.success) {
+      vscode.window.showInformationMessage(
+        `Successfully deleted ${options.resourceType} ${options.resourceName}`
+      );
+      // 5. Refresh tree view
+      await refreshTreeView();
+    } else {
+      handleDeleteError(result.error, options);
+    }
+  });
+}
+```
+
+### Performance Considerations
+
+- **Async Execution**: Run kubectl delete asynchronously to avoid blocking UI
+- **Selective Refresh**: Only refresh affected resource category, not entire tree
+- **Timeout Protection**: Set 30-second timeout to prevent infinite hangs
+- **Process Cleanup**: Ensure kubectl processes are properly terminated on timeout or error
+- **State Preservation**: Maintain tree expansion state during refresh when possible

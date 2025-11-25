@@ -93,7 +93,13 @@ suite('OperatorStatusQuery Test Suite', () => {
                 lastUpdate: new Date().toISOString(),
                 registered: false,
                 apiKeyConfigured: false,
-                error: null
+                error: null,
+                collectionStats: {
+                    totalSuccessCount: 0,
+                    totalFailureCount: 0,
+                    collectionsStoredCount: 0,
+                    lastSuccessTime: null
+                }
             };
             mockGetStatusResponse = {
                 status: operatorStatus,
@@ -121,7 +127,13 @@ suite('OperatorStatusQuery Test Suite', () => {
                 registered: true,
                 apiKeyConfigured: true,
                 error: null,
-                clusterId: 'cluster-123'
+                clusterId: 'cluster-123',
+                collectionStats: {
+                    totalSuccessCount: 0,
+                    totalFailureCount: 0,
+                    collectionsStoredCount: 0,
+                    lastSuccessTime: null
+                }
             };
             mockGetStatusResponse = {
                 status: operatorStatus,
@@ -148,7 +160,13 @@ suite('OperatorStatusQuery Test Suite', () => {
                 lastUpdate: new Date().toISOString(),
                 registered: false,
                 apiKeyConfigured: false,
-                error: 'Operator is experiencing issues'
+                error: 'Operator is experiencing issues',
+                collectionStats: {
+                    totalSuccessCount: 0,
+                    totalFailureCount: 0,
+                    collectionsStoredCount: 0,
+                    lastSuccessTime: null
+                }
             };
             mockGetStatusResponse = {
                 status: operatorStatus,
@@ -173,7 +191,13 @@ suite('OperatorStatusQuery Test Suite', () => {
                 lastUpdate: new Date().toISOString(),
                 registered: false,
                 apiKeyConfigured: false,
-                error: null
+                error: null,
+                collectionStats: {
+                    totalSuccessCount: 0,
+                    totalFailureCount: 0,
+                    collectionsStoredCount: 0,
+                    lastSuccessTime: null
+                }
             };
             mockGetStatusResponse = {
                 status: operatorStatus,
@@ -197,7 +221,13 @@ suite('OperatorStatusQuery Test Suite', () => {
                 lastUpdate: new Date().toISOString(),
                 registered: true,
                 apiKeyConfigured: false,
-                error: null
+                error: null,
+                collectionStats: {
+                    totalSuccessCount: 0,
+                    totalFailureCount: 0,
+                    collectionsStoredCount: 0,
+                    lastSuccessTime: null
+                }
             };
             mockGetStatusResponse = {
                 status: operatorStatus,
@@ -221,7 +251,13 @@ suite('OperatorStatusQuery Test Suite', () => {
                 lastUpdate: new Date().toISOString(),
                 registered: false,
                 apiKeyConfigured: false,
-                error: 'Critical error detected'
+                error: 'Critical error detected',
+                collectionStats: {
+                    totalSuccessCount: 0,
+                    totalFailureCount: 0,
+                    collectionsStoredCount: 0,
+                    lastSuccessTime: null
+                }
             };
             mockGetStatusResponse = {
                 status: operatorStatus,
@@ -289,7 +325,13 @@ suite('OperatorStatusQuery Test Suite', () => {
                 lastUpdate: new Date().toISOString(),
                 registered: false,
                 apiKeyConfigured: false,
-                error: null
+                error: null,
+                collectionStats: {
+                    totalSuccessCount: 0,
+                    totalFailureCount: 0,
+                    collectionsStoredCount: 0,
+                    lastSuccessTime: null
+                }
             };
             mockGetStatusResponse = {
                 status: operatorStatus,

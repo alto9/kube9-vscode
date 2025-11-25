@@ -5,6 +5,8 @@ import { getAIRecommendations } from './AIRecommendationsQuery';
 import { DashboardDataProvider } from './DashboardDataProvider';
 import { DashboardRefreshManager } from './RefreshManager';
 import { getOperatorDashboardStatus } from './OperatorStatusQuery';
+import { OperatorStatusClient } from '../services/OperatorStatusClient';
+import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
 
 /**
  * Interface for storing panel information.
@@ -261,16 +263,24 @@ export class OperatedDashboardPanel {
                 contextName
             );
 
-            // Handle case where operator data is not available
-            if (!operatorData) {
-                throw new Error('Operator dashboard data not available');
-            }
-
             // Construct dashboard data with operator metrics
-            const dashboardData: {
+            let dashboardData: {
                 namespaceCount: number;
-                workloads: typeof operatorData.workloads;
-                nodes: typeof operatorData.nodes;
+                workloads: {
+                    deployments: number;
+                    statefulsets: number;
+                    daemonsets: number;
+                    replicasets: number;
+                    jobs: number;
+                    cronjobs: number;
+                    pods: number;
+                };
+                nodes: {
+                    totalNodes: number;
+                    readyNodes: number;
+                    cpuCapacity: string;
+                    memoryCapacity: string;
+                };
                 operatorMetrics: {
                     collectorsRunning: number;
                     dataPointsCollected: number;
@@ -280,19 +290,74 @@ export class OperatedDashboardPanel {
                 hasApiKey: boolean;
                 conditionalContentType: string;
                 aiRecommendations?: Array<{id: string; type: string; severity: string; title: string; description: string}>;
-            } = {
-                namespaceCount: operatorData.namespaceCount,
-                workloads: operatorData.workloads,
-                nodes: operatorData.nodes,
-                operatorMetrics: {
-                    collectorsRunning: operatorData.operatorMetrics.collectorsRunning,
-                    dataPointsCollected: operatorData.operatorMetrics.dataPointsCollected,
-                    lastCollectionTime: operatorData.operatorMetrics.lastCollectionTime.toISOString()
-                },
-                lastUpdated: operatorData.lastUpdated.toISOString(),
-                hasApiKey: panelInfo?.operatorStatus.hasApiKey || false,
-                conditionalContentType: conditionalContentType
             };
+
+            // If operator data is available, use it
+            if (operatorData) {
+                dashboardData = {
+                    namespaceCount: operatorData.namespaceCount,
+                    workloads: operatorData.workloads,
+                    nodes: operatorData.nodes,
+                    operatorMetrics: {
+                        collectorsRunning: operatorData.operatorMetrics.collectorsRunning,
+                        dataPointsCollected: operatorData.operatorMetrics.dataPointsCollected,
+                        lastCollectionTime: operatorData.operatorMetrics.lastCollectionTime.toISOString()
+                    },
+                    lastUpdated: operatorData.lastUpdated.toISOString(),
+                    hasApiKey: panelInfo?.operatorStatus.hasApiKey || false,
+                    conditionalContentType: conditionalContentType
+                };
+            } else {
+                // Fallback: Operator ConfigMap doesn't exist yet, query kubectl directly
+                console.log(`Operator ConfigMap not found, falling back to kubectl queries for context ${contextName}`);
+                
+                const [namespaceCount, workloads, nodes] = await Promise.allSettled([
+                    DashboardDataProvider.getNamespaceCount(kubeconfigPath, contextName),
+                    DashboardDataProvider.getWorkloadCounts(kubeconfigPath, contextName),
+                    DashboardDataProvider.getNodeInfo(kubeconfigPath, contextName)
+                ]);
+                
+                // Get collection stats from operator status
+                const operatorStatusClient = new OperatorStatusClient();
+                const operatorStatus = await operatorStatusClient.getStatus(kubeconfigPath, contextName, false);
+                
+                // Extract collection stats if operator is installed
+                const collectionStats = (operatorStatus.mode !== OperatorStatusMode.Basic && operatorStatus.status?.collectionStats)
+                    ? operatorStatus.status.collectionStats
+                    : {
+                        totalSuccessCount: 0,
+                        totalFailureCount: 0,
+                        collectionsStoredCount: 0,
+                        lastSuccessTime: null
+                    };
+
+                dashboardData = {
+                    namespaceCount: namespaceCount.status === 'fulfilled' ? namespaceCount.value : 0,
+                    workloads: workloads.status === 'fulfilled' ? workloads.value : {
+                        deployments: 0,
+                        statefulsets: 0,
+                        daemonsets: 0,
+                        replicasets: 0,
+                        jobs: 0,
+                        cronjobs: 0,
+                        pods: 0
+                    },
+                    nodes: nodes.status === 'fulfilled' ? nodes.value : {
+                        totalNodes: 0,
+                        readyNodes: 0,
+                        cpuCapacity: 'N/A',
+                        memoryCapacity: 'N/A'
+                    },
+                    operatorMetrics: {
+                        collectorsRunning: 0, // Not tracked individually anymore
+                        dataPointsCollected: collectionStats.totalSuccessCount,
+                        lastCollectionTime: collectionStats.lastSuccessTime || new Date().toISOString()
+                    },
+                    lastUpdated: new Date().toISOString(),
+                    hasApiKey: panelInfo?.operatorStatus.hasApiKey || false,
+                    conditionalContentType: conditionalContentType
+                };
+            }
 
             // Only query AI recommendations if we're showing that panel
             if (conditionalContentType === 'ai-recommendations') {
