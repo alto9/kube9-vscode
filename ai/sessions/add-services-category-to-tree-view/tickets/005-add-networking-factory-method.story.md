@@ -3,7 +3,7 @@ story_id: add-networking-factory-method
 session_id: add-services-category-to-tree-view
 feature_id: [tree-view-navigation]
 spec_id: [services-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 10
 ---
@@ -36,11 +36,11 @@ This factory method follows the same pattern as other category factory methods (
 
 ## Acceptance Criteria
 
-- [ ] `createNetworkingCategory()` method exists in `TreeItemFactory`
-- [ ] Method returns properly configured `ClusterTreeItem` with type `'networking'`
-- [ ] Networking category has appropriate icon and tooltip
-- [ ] Code follows the same pattern as other category factory methods
-- [ ] TypeScript compilation succeeds without errors
+- [x] `createNetworkingCategory()` method exists in `TreeItemFactory`
+- [x] Method returns properly configured `ClusterTreeItem` with type `'networking'`
+- [x] Networking category has appropriate icon and tooltip
+- [x] Code follows the same pattern as other category factory methods
+- [x] TypeScript compilation succeeds without errors
 
 ## Dependencies
 
