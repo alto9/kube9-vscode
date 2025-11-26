@@ -3,7 +3,7 @@ story_id: update-service-kind-mapping
 session_id: add-services-category-to-tree-view
 feature_id: [tree-view-navigation]
 spec_id: [services-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 10
 ---
@@ -36,11 +36,11 @@ The `extractKindFromContextValue()` and `getApiVersionForKind()` functions need 
 
 ## Acceptance Criteria
 
-- [ ] `extractKindFromContextValue()` correctly extracts 'Service' from 'resource:Service'
-- [ ] `getApiVersionForKind('Service')` returns 'v1'
-- [ ] Context menu "View YAML" works for Service resources
-- [ ] YAML editor opens and displays Service YAML correctly
-- [ ] TypeScript compilation succeeds without errors
+- [x] `extractKindFromContextValue()` correctly extracts 'Service' from 'resource:Service'
+- [x] `getApiVersionForKind('Service')` returns 'v1'
+- [x] Context menu "View YAML" works for Service resources
+- [x] YAML editor opens and displays Service YAML correctly
+- [x] TypeScript compilation succeeds without errors
 
 ## Dependencies
 
