@@ -252,6 +252,39 @@ export class YAMLEditorManager {
     }
 
     /**
+     * Pauses conflict checking for a resource during save operations.
+     * 
+     * @param resource - The resource identifier
+     */
+    public pauseConflictChecking(resource: ResourceIdentifier): void {
+        const resourceKey = this.getResourceKey(resource);
+        this.conflictDetector.pauseConflictChecking(resourceKey);
+    }
+    
+    /**
+     * Resumes conflict checking for a resource after save operations.
+     * 
+     * @param resource - The resource identifier
+     */
+    public resumeConflictChecking(resource: ResourceIdentifier): void {
+        const resourceKey = this.getResourceKey(resource);
+        this.conflictDetector.resumeConflictChecking(resourceKey);
+    }
+    
+    /**
+     * Updates the resource version for a resource after a successful save.
+     * This prevents false conflict detection after the user saves their changes.
+     * 
+     * @param resource - The resource identifier
+     * @param newResourceVersion - The new resource version from the cluster
+     * @param newContent - The new content from the cluster (optional)
+     */
+    public async updateResourceVersionAfterSave(resource: ResourceIdentifier, newResourceVersion: string, newContent?: string): Promise<void> {
+        const resourceKey = this.getResourceKey(resource);
+        this.conflictDetector.updateResourceVersion(resourceKey, newResourceVersion, newContent);
+    }
+    
+    /**
      * Disposes of the manager and cleans up all tracked editors.
      * Should be called during extension deactivation.
      */

@@ -129,44 +129,59 @@ export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
         content: Uint8Array,
         options: { create: boolean; overwrite: boolean }
     ): Promise<void> {
-        // Parse resource to validate URI format
-        const resource = parseResourceFromUri(uri);
-        
-        // Convert content to string
-        const yamlContent = Buffer.from(content).toString('utf-8');
-        
-        console.log(`[YAML Save] Starting save operation for ${resource.kind}/${resource.name} (${yamlContent.length} bytes) [options: ${JSON.stringify(options)}]`);
-        
-        // Create a temporary document-like object for the save handler
-        // This allows us to reuse the handleSave logic which expects a TextDocument
-        const document: vscode.TextDocument = {
-            uri,
-            getText: () => yamlContent,
-            // Other TextDocument properties are not used by handleSave
-        } as vscode.TextDocument;
-        
-        // Handle save using YAMLSaveHandler
-        // This performs validation, dry-run, and actual kubectl apply
-        const saveSuccess = await this.saveHandler.handleSave(document);
-        
-        if (!saveSuccess) {
-            // Save failed - error messages already shown by saveHandler
-            // Throwing FileSystemError.Unavailable tells VS Code to:
-            // 1. Keep the editor open
-            // 2. Maintain the dirty indicator
-            // 3. Allow user to retry saving
-            console.log(`[YAML Save] Save failed for ${resource.kind}/${resource.name} - editor will remain open`);
+        try {
+            // Parse resource to validate URI format
+            const resource = parseResourceFromUri(uri);
+            
+            // Convert content to string
+            const yamlContent = Buffer.from(content).toString('utf-8');
+            
+            console.log(`[YAML Save] Starting save operation for ${resource.kind}/${resource.name} (${yamlContent.length} bytes) [options: ${JSON.stringify(options)}]`);
+            
+            // Create a temporary document-like object for the save handler
+            // This allows us to reuse the handleSave logic which expects a TextDocument
+            const document: vscode.TextDocument = {
+                uri,
+                getText: () => yamlContent,
+                // Other TextDocument properties are not used by handleSave
+            } as vscode.TextDocument;
+            
+            // Handle save using YAMLSaveHandler
+            // This performs validation, dry-run, and actual kubectl apply
+            const saveSuccess = await this.saveHandler.handleSave(document);
+            
+            if (!saveSuccess) {
+                // Save failed - error messages already shown by saveHandler
+                // Throwing FileSystemError.Unavailable tells VS Code to:
+                // 1. Keep the editor open
+                // 2. Maintain the dirty indicator
+                // 3. Allow user to retry saving
+                console.log(`[YAML Save] Save failed for ${resource.kind}/${resource.name} - editor will remain open`);
+                // Throw FileSystemError.Unavailable to tell VS Code to keep editor open
+                // Error messages are already shown by saveHandler
+                throw vscode.FileSystemError.Unavailable(uri);
+            }
+            
+            // Notify file system watchers that the file changed
+            // This updates VS Code's internal state and clears the dirty indicator
+            this._emitter.fire([{
+                type: vscode.FileChangeType.Changed,
+                uri
+            }]);
+            
+            console.log(`[YAML Save] Successfully saved ${resource.kind}/${resource.name} - dirty indicator cleared`);
+        } catch (error) {
+            // If it's already a FileSystemError, re-throw it
+            if (error instanceof vscode.FileSystemError) {
+                throw error;
+            }
+            
+            // Otherwise, wrap unexpected errors
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[YAML Save] Unexpected error during save: ${errorMessage}`);
+            // Throw FileSystemError.Unavailable - error details are logged above
             throw vscode.FileSystemError.Unavailable(uri);
         }
-        
-        // Notify file system watchers that the file changed
-        // This updates VS Code's internal state and clears the dirty indicator
-        this._emitter.fire([{
-            type: vscode.FileChangeType.Changed,
-            uri
-        }]);
-        
-        console.log(`[YAML Save] Successfully saved ${resource.kind}/${resource.name} - dirty indicator cleared`);
     }
 
     /**
