@@ -8,7 +8,24 @@ export class Uri {
         return new Uri(path);
     }
 
+    static parse(value: string): Uri {
+        return new Uri(value);
+    }
+
+    static joinPath(base: Uri, ...pathSegments: string[]): Uri {
+        const pathParts = [base.path, ...pathSegments].filter(p => p);
+        return new Uri(pathParts.join('/'));
+    }
+
     constructor(public readonly path: string) {}
+    
+    get fsPath(): string {
+        return this.path;
+    }
+    
+    get scheme(): string {
+        return 'file';
+    }
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -42,6 +59,11 @@ export enum ViewColumn {
     Nine = 9,
     Active = -1,
     Beside = -2
+}
+
+export enum EndOfLine {
+    LF = 1,
+    CRLF = 2
 }
 /* eslint-enable @typescript-eslint/naming-convention */
 
@@ -171,11 +193,148 @@ export interface TreeDataProvider<T> {
 }
 
 /**
+ * Mock OutputChannel interface
+ */
+export interface OutputChannel {
+    name: string;
+    append(value: string): void;
+    appendLine(value: string): void;
+    clear(): void;
+    show(preserveFocus?: boolean): void;
+    hide(): void;
+    dispose(): void;
+}
+
+/**
+ * Mock OutputChannel implementation
+ */
+class MockOutputChannel implements OutputChannel {
+    private content: string[] = [];
+
+    constructor(public readonly name: string) {}
+
+    append(value: string): void {
+        this.content.push(value);
+    }
+
+    appendLine(value: string): void {
+        this.content.push(value);
+    }
+
+    clear(): void {
+        this.content = [];
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    show(_preserveFocus?: boolean): void {
+        // Mock - no-op
+    }
+
+    hide(): void {
+        // Mock - no-op
+    }
+
+    dispose(): void {
+        this.content = [];
+    }
+
+    _getContent(): string {
+        return this.content.join('');
+    }
+}
+
+/**
+ * Mock WebviewPanel implementation
+ */
+class MockWebviewPanel implements WebviewPanel {
+    private disposed = false;
+    private _visible = true;
+    private _active = true;
+    private disposeEmitter = new EventEmitter<void>();
+    private viewStateEmitter = new EventEmitter<{ readonly webviewPanel: WebviewPanel; readonly visible: boolean; readonly active: boolean }>();
+
+    constructor(
+        public readonly viewType: string,
+        public title: string,
+        public readonly viewColumn: ViewColumn | undefined,
+        public readonly webview: Webview
+    ) {}
+
+    get visible(): boolean {
+        return this._visible;
+    }
+
+    get active(): boolean {
+        return this._active;
+    }
+
+    get onDidDispose(): Event<void> {
+        return this.disposeEmitter.event;
+    }
+
+    get onDidChangeViewState(): Event<{ readonly webviewPanel: WebviewPanel; readonly visible: boolean; readonly active: boolean }> {
+        return this.viewStateEmitter.event;
+    }
+
+    dispose(): void {
+        if (!this.disposed) {
+            this.disposed = true;
+            this._visible = false;
+            this._active = false;
+            this.disposeEmitter.fire();
+        }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    reveal(_viewColumn?: ViewColumn, _preserveFocus?: boolean): void {
+        this._visible = true;
+        this._active = true;
+        this.viewStateEmitter.fire({ webviewPanel: this, visible: this._visible, active: this._active });
+    }
+}
+
+/**
+ * Mock Webview implementation
+ */
+class MockWebview implements Webview {
+    public html: string = '';
+    public options: { enableScripts: boolean; retainContextWhenHidden?: boolean; localResourceRoots?: Uri[] };
+    private messageEmitter = new EventEmitter<unknown>();
+
+    constructor(options: { enableScripts: boolean; retainContextWhenHidden?: boolean; localResourceRoots?: Uri[] }) {
+        this.options = options;
+    }
+
+    get onDidReceiveMessage(): Event<unknown> {
+        return this.messageEmitter.event;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    postMessage(_message: unknown): Thenable<boolean> {
+        return Promise.resolve(true);
+    }
+
+    asWebviewUri(localResource: Uri): Uri {
+        return localResource;
+    }
+
+    get cspSource(): string {
+        return 'vscode-webview';
+    }
+
+    _fireMessage(message: unknown): void {
+        this.messageEmitter.fire(message);
+    }
+}
+
+/**
  * Mock window API
  */
 const errorMessages: string[] = [];
 const warningMessages: string[] = [];
 const infoMessages: string[] = [];
+const outputChannels: Map<string, OutputChannel> = new Map();
+const webviewPanels: WebviewPanel[] = [];
 
 export const window = {
     showErrorMessage: (message: string, ...items: string[]) => {
@@ -189,6 +348,23 @@ export const window = {
     showInformationMessage: (message: string, ...items: string[]) => {
         infoMessages.push(message);
         return Promise.resolve(items[0]);
+    },
+    createOutputChannel: (name: string): OutputChannel => {
+        if (!outputChannels.has(name)) {
+            outputChannels.set(name, new MockOutputChannel(name));
+        }
+        return outputChannels.get(name)!;
+    },
+    createWebviewPanel: (
+        viewType: string,
+        title: string,
+        viewColumn: ViewColumn,
+        options: { enableScripts: boolean; retainContextWhenHidden?: boolean; localResourceRoots?: Uri[] }
+    ): WebviewPanel => {
+        const webview = new MockWebview(options);
+        const panel = new MockWebviewPanel(viewType, title, viewColumn, webview);
+        webviewPanels.push(panel);
+        return panel;
     },
     withProgress: async <R>(
         options: { location: ProgressLocation; title?: string; cancellable?: boolean },
@@ -209,7 +385,8 @@ export const window = {
         errorMessages.length = 0;
         warningMessages.length = 0;
         infoMessages.length = 0;
-    }
+    },
+    _getWebviewPanels: () => [...webviewPanels]
 };
 
 /**
@@ -251,14 +428,149 @@ class WorkspaceConfiguration {
 const mockConfiguration = new WorkspaceConfiguration();
 
 /**
+ * Mock TextDocument interface
+ */
+export interface TextDocument {
+    readonly uri: Uri;
+    readonly fileName: string;
+    readonly isUntitled: boolean;
+    readonly languageId: string;
+    readonly version: number;
+    readonly isDirty: boolean;
+    readonly isClosed: boolean;
+    save(): Thenable<boolean>;
+    getText(): string;
+    getText(range: unknown): string;
+    lineAt(line: number): { lineNumber: number; text: string; range: unknown; rangeIncludingLineBreak: unknown; firstNonWhitespaceCharacterIndex: number; isEmptyOrWhitespace: boolean };
+    lineCount: number;
+}
+
+/**
+ * Mock Webview interface
+ */
+export interface Webview {
+    html: string;
+    options: { enableScripts: boolean; retainContextWhenHidden?: boolean; localResourceRoots?: Uri[] };
+    onDidReceiveMessage: Event<unknown>;
+    postMessage(message: unknown): Thenable<boolean>;
+    asWebviewUri(localResource: Uri): Uri;
+    cspSource: string;
+}
+
+/**
+ * Mock WebviewPanel interface
+ */
+export interface WebviewPanel {
+    readonly viewType: string;
+    readonly title: string;
+    readonly webview: Webview;
+    readonly viewColumn: ViewColumn | undefined;
+    readonly visible: boolean;
+    readonly active: boolean;
+    readonly onDidDispose: Event<void>;
+    readonly onDidChangeViewState: Event<{ readonly webviewPanel: WebviewPanel; readonly visible: boolean; readonly active: boolean }>;
+    dispose(): void;
+    reveal(viewColumn?: ViewColumn, preserveFocus?: boolean): void;
+}
+
+/**
+ * Mock Position class for text editor positions
+ */
+export class Position {
+    constructor(
+        public readonly line: number,
+        public readonly character: number
+    ) {}
+}
+
+/**
+ * Mock Range class for text editor ranges
+ */
+export class Range {
+    constructor(
+        public readonly start: Position,
+        public readonly end: Position
+    ) {}
+
+    static fromPositions(start: Position, end: Position): Range {
+        return new Range(start, end);
+    }
+
+    isEmpty: boolean = false;
+}
+
+/**
+ * Mock Selection class for text editor selections
+ */
+export class Selection extends Range {
+    constructor(
+        anchorLine: number,
+        anchorCharacter: number,
+        activeLine: number,
+        activeCharacter: number
+    ) {
+        super(
+            new Position(anchorLine, anchorCharacter),
+            new Position(activeLine, activeCharacter)
+        );
+    }
+
+    get anchor(): Position {
+        return this.start;
+    }
+
+    get active(): Position {
+        return this.end;
+    }
+}
+
+/**
  * Mock workspace API
  */
+const workspaceEventEmitter = new EventEmitter<TextDocument>();
+
 export const workspace = {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     getConfiguration: (_section?: string) => {
         return mockConfiguration;
     },
-    _getConfiguration: () => mockConfiguration
+    onDidCloseTextDocument: workspaceEventEmitter.event,
+    _getConfiguration: () => mockConfiguration,
+    _fireDidCloseTextDocument: (document: TextDocument) => {
+        workspaceEventEmitter.fire(document);
+    }
+};
+
+/**
+ * Mock commands API
+ */
+const commandHandlers: Map<string, (...args: unknown[]) => Thenable<unknown>> = new Map();
+
+export const commands = {
+    executeCommand: <T = unknown>(command: string, ...rest: unknown[]): Thenable<T> => {
+        const handler = commandHandlers.get(command);
+        if (handler) {
+            return handler(...rest) as Thenable<T>;
+        }
+        // Default behavior: throw error for unregistered commands (for testing)
+        return Promise.reject(new Error(`Command '${command}' is not registered`));
+    },
+    registerCommand: (command: string, callback: (...args: unknown[]) => unknown): { dispose(): void } => {
+        commandHandlers.set(command, async (...args: unknown[]) => {
+            return await callback(...args);
+        });
+        return {
+            dispose: () => {
+                commandHandlers.delete(command);
+            }
+        };
+    },
+    _registerCommand: (command: string, handler: (...args: unknown[]) => Thenable<unknown>): void => {
+        commandHandlers.set(command, handler);
+    },
+    _unregisterCommand: (command: string): void => {
+        commandHandlers.delete(command);
+    }
 };
 
 /**
@@ -273,12 +585,17 @@ const vscodeModule = {
     TreeItemCollapsibleState,
     ProgressLocation,
     ViewColumn,
+    EndOfLine,
     ThemeColor,
     ThemeIcon,
     TreeItem,
+    Position,
+    Range,
+    Selection,
     EventEmitter,
     window,
-    workspace
+    workspace,
+    commands
 };
 /* eslint-enable @typescript-eslint/naming-convention */
 
@@ -295,12 +612,17 @@ if (typeof module !== 'undefined' && module.exports) {
         TreeItemCollapsibleState,
         ProgressLocation,
         ViewColumn,
+        EndOfLine,
         ThemeColor,
         ThemeIcon,
         TreeItem,
+        Position,
+        Range,
+        Selection,
         EventEmitter,
         window,
-        workspace
+        workspace,
+        commands
     });
     /* eslint-enable @typescript-eslint/naming-convention */
 }

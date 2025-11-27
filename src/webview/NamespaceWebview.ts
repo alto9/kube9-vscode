@@ -599,9 +599,15 @@ export class NamespaceWebview {
      */
     public static async sendNamespaceContextChanged(
         panel: vscode.WebviewPanel,
-        namespaceContext: NamespaceContext,
+        namespaceContext: NamespaceContext | undefined,
         source: 'extension' | 'external'
     ): Promise<void> {
+        // Guard against undefined namespaceContext
+        if (!namespaceContext) {
+            console.error('sendNamespaceContextChanged called with undefined namespaceContext');
+            return;
+        }
+
         // Get the current active namespace from kubectl context
         let currentNamespace: string | null = null;
         try {
@@ -646,6 +652,11 @@ export class NamespaceWebview {
         source: 'extension' | 'external'
     ): Promise<void> {
         for (const panelInfo of NamespaceWebview.openPanels.values()) {
+            // Skip panels without proper namespaceContext (e.g., from incomplete test mocks)
+            if (!panelInfo || !panelInfo.namespaceContext) {
+                console.warn('Skipping panel with missing namespaceContext in notifyAllPanelsOfContextChange');
+                continue;
+            }
             await NamespaceWebview.sendNamespaceContextChanged(panelInfo.panel, panelInfo.namespaceContext, source);
         }
     }

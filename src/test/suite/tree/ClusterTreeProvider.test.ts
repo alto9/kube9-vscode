@@ -87,11 +87,12 @@ suite('ClusterTreeProvider Test Suite', () => {
             
             const categories = await provider.getChildren(clusterItem);
             
-            // Should have 7 categories
-            assert.strictEqual(categories.length, 7);
-            assert.strictEqual(categories[0].label, 'Nodes');
-            assert.strictEqual(categories[1].label, 'Namespaces');
-            assert.strictEqual(categories[2].label, 'Workloads');
+            // Should have 9 categories (Dashboard, Nodes, Namespaces, Workloads, Services, ConfigMaps, Secrets, PersistentVolumes, StorageClasses, CronJobs)
+            assert.strictEqual(categories.length, 9);
+            assert.strictEqual(categories[0].label, 'Dashboard');
+            assert.strictEqual(categories[1].label, 'Nodes');
+            assert.strictEqual(categories[2].label, 'Namespaces');
+            assert.strictEqual(categories[3].label, 'Workloads');
         });
 
         test('Should return empty array for category with no data', async () => {
