@@ -73,6 +73,25 @@ export class TreeItemFactory {
     }
 
     /**
+     * Creates the Networking category tree item.
+     * Displays networking subcategories (Services).
+     * 
+     * @param resourceData Cluster context and cluster information
+     * @returns Configured Networking category tree item
+     */
+    static createNetworkingCategory(resourceData: TreeItemData): ClusterTreeItem {
+        const item = new ClusterTreeItem(
+            'Networking',
+            'networking',
+            vscode.TreeItemCollapsibleState.Collapsed,
+            resourceData
+        );
+        item.iconPath = new vscode.ThemeIcon('globe');
+        item.tooltip = 'View networking resources (Services, Ingress, etc.)';
+        return item;
+    }
+
+    /**
      * Creates the Workloads category tree item.
      * Displays workload subcategories (Deployments, StatefulSets, DaemonSets, CronJobs).
      * 

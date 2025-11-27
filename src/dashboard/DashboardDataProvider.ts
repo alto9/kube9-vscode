@@ -14,6 +14,22 @@ const KUBECTL_TIMEOUT_MS = 5000;
 const execFileAsync = promisify(execFile);
 
 /**
+ * Type for the kubectl execution function.
+ * Used internally and exposed for testing.
+ */
+export type KubectlExecFn = (
+    command: string,
+    args: string[],
+    options: { timeout?: number; maxBuffer?: number; env?: NodeJS.ProcessEnv }
+) => Promise<{ stdout: string; stderr: string }>;
+
+/**
+ * Internal kubectl execution function.
+ * Can be overridden via _setExecFn for testing.
+ */
+let kubectlExecFn: KubectlExecFn = execFileAsync;
+
+/**
  * Interface for kubectl namespace list response.
  */
 interface NamespaceListResponse {
@@ -98,7 +114,7 @@ export class DashboardDataProvider {
     ): Promise<number> {
         try {
             // Execute kubectl get namespaces with JSON output
-            const { stdout } = await execFileAsync(
+            const { stdout } = await kubectlExecFn(
                 'kubectl',
                 [
                     'get',
@@ -154,7 +170,7 @@ export class DashboardDataProvider {
         const results = await Promise.allSettled(
             queries.map(async ({ key, resource }) => {
                 try {
-                    const { stdout } = await execFileAsync(
+                    const { stdout } = await kubectlExecFn(
                         'kubectl',
                         [
                             'get',
@@ -218,7 +234,7 @@ export class DashboardDataProvider {
     ): Promise<NodeInfo> {
         try {
             // Execute kubectl get nodes with JSON output
-            const { stdout } = await execFileAsync(
+            const { stdout } = await kubectlExecFn(
                 'kubectl',
                 [
                     'get',
@@ -496,6 +512,30 @@ export class DashboardDataProvider {
         }
 
         return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+    }
+
+    /**
+     * Set the kubectl execution function for testing purposes.
+     * This allows tests to mock kubectl responses without complex require interception.
+     * 
+     * @param fn - The mock execution function, or null to restore default
+     * @internal
+     */
+    public static _setExecFn(fn: KubectlExecFn | null): void {
+        if (fn === null) {
+            kubectlExecFn = execFileAsync;
+        } else {
+            kubectlExecFn = fn;
+        }
+    }
+
+    /**
+     * Reset the kubectl execution function to the default.
+     * 
+     * @internal
+     */
+    public static _resetExecFn(): void {
+        kubectlExecFn = execFileAsync;
     }
 }
 

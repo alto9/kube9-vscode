@@ -418,6 +418,56 @@ export class ConflictDetector {
     }
     
     /**
+     * Temporarily disables conflict checking for a resource during save operations.
+     * This prevents false conflict detection while saving.
+     * 
+     * @param resourceKey - The unique key for this resource
+     */
+    public pauseConflictChecking(resourceKey: string): void {
+        const state = this.resourceStates.get(resourceKey);
+        if (state) {
+            state.conflictCheckingDisabled = true;
+            console.log(`Conflict checking paused for ${resourceKey} during save`);
+        }
+    }
+    
+    /**
+     * Resumes conflict checking for a resource after save operations.
+     * 
+     * @param resourceKey - The unique key for this resource
+     */
+    public resumeConflictChecking(resourceKey: string): void {
+        const state = this.resourceStates.get(resourceKey);
+        if (state) {
+            state.conflictCheckingDisabled = false;
+            console.log(`Conflict checking resumed for ${resourceKey} after save`);
+        }
+    }
+    
+    /**
+     * Updates the resource version for a resource after a successful save.
+     * This prevents false conflict detection after the user saves their changes.
+     * 
+     * @param resourceKey - The unique key for this resource
+     * @param newResourceVersion - The new resource version from the cluster
+     * @param newContent - The new content from the cluster (optional)
+     */
+    public updateResourceVersion(resourceKey: string, newResourceVersion: string, newContent?: string): void {
+        const state = this.resourceStates.get(resourceKey);
+        
+        if (state) {
+            console.log(`Updating resource version for ${resourceKey}: ${state.resourceVersion} -> ${newResourceVersion}`);
+            state.resourceVersion = newResourceVersion;
+            state.lastChecked = new Date();
+            if (newContent !== undefined) {
+                state.content = newContent;
+            }
+        } else {
+            console.warn(`Cannot update resource version for ${resourceKey}: resource not being monitored`);
+        }
+    }
+    
+    /**
      * Disposes of all monitoring intervals.
      * Should be called when the extension deactivates.
      */

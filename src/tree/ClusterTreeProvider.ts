@@ -17,6 +17,8 @@ import { StorageCategory } from './categories/StorageCategory';
 import { PersistentVolumesSubcategory } from './categories/storage/PersistentVolumesSubcategory';
 import { PersistentVolumeClaimsSubcategory } from './categories/storage/PersistentVolumeClaimsSubcategory';
 import { StorageClassesSubcategory } from './categories/storage/StorageClassesSubcategory';
+import { NetworkingCategory } from './categories/networking/NetworkingCategory';
+import { ServicesSubcategory } from './categories/networking/ServicesSubcategory';
 import { ConfigurationCategory } from './categories/ConfigurationCategory';
 import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubcategory';
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
@@ -156,6 +158,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             TreeItemFactory.createNamespacesCategory(clusterElement.resourceData),
             TreeItemFactory.createWorkloadsCategory(clusterElement.resourceData),
             TreeItemFactory.createStorageCategory(clusterElement.resourceData),
+            TreeItemFactory.createNetworkingCategory(clusterElement.resourceData),
             TreeItemFactory.createHelmCategory(clusterElement.resourceData),
             TreeItemFactory.createConfigurationCategory(clusterElement.resourceData),
             TreeItemFactory.createCustomResourcesCategory(clusterElement.resourceData)
@@ -203,6 +206,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'storageClasses' ||
                type === 'persistentVolume' ||
                type === 'persistentVolumeClaim' ||
+               type === 'networking' ||
+               type === 'services' ||
                type === 'helm' || 
                type === 'configuration' || 
                type === 'configmaps' ||
@@ -318,6 +323,18 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             case 'storage':
                 return StorageCategory.getStorageSubcategories(
                     categoryElement.resourceData
+                );
+            
+            case 'networking':
+                return NetworkingCategory.getNetworkingSubcategories(
+                    categoryElement.resourceData
+                );
+            
+            case 'services':
+                return ServicesSubcategory.getServiceItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
             
             case 'persistentVolumes':

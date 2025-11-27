@@ -28,11 +28,12 @@ Scenario: Connecting to a cluster
 Scenario: Expanding a cluster shows resource categories
   Given a user has connected to a cluster
   When they expand a cluster in the tree view
-  Then they should see 7 resource-type categories in this order:
+  Then they should see 8 resource-type categories in this order:
     | Nodes             |
     | Namespaces        |
     | Workloads         |
     | Storage           |
+    | Networking        |
     | Helm              |
     | Configuration     |
     | Custom Resources  |
@@ -157,11 +158,109 @@ Scenario: Viewing Secrets
   Then they should see a list of all secrets
   And clicking on a secret should not perform any action at this point
 
-Scenario: Viewing Custom Resource Definitions
+Scenario: Expanding Networking category
   Given a user has expanded a cluster showing resource categories
-  When they expand the "Custom Resources" category
-  Then they should see a list of all Custom Resource Definitions (CRDs)
-  And clicking on a CRD should not perform any action at this point
+  When they expand the "Networking" category
+  Then they should see 1 subcategory:
+    | Services |
+
+Scenario: Viewing Services
+  Given a user has expanded the "Networking" category
+  When they expand "Services"
+  Then they should see a list of all services
+  And each service should display in the format "namespace/name"
+  And each service should show its service type (ClusterIP, NodePort, LoadBalancer, or ExternalName) in the description
+  And each service should have a network icon
+
+Scenario: Viewing service details in tooltip
+  Given a user has expanded "Services" and sees a list of services
+  When they hover over a service item
+  Then the tooltip should display:
+    | Service name        |
+    | Namespace           |
+    | Service type        |
+    | Cluster IP          |
+    | External IP (if applicable) |
+    | Ports (port:targetPort/protocol) |
+    | Selectors           |
+    | Endpoints count     |
+
+Scenario: Opening service YAML editor by double-click
+  Given a user has expanded "Services" and sees a list of services
+  When they double-click on a service named "api-service" in namespace "production"
+  Then a YAML editor should open in a new tab
+  And the editor should display the full service configuration
+  And the editor title should show "api-service (Service) - production"
+
+Scenario: Viewing service YAML from context menu
+  Given a user has expanded "Services" and sees a list of services
+  When they right-click on a service
+  Then they should see "View YAML" in the context menu
+  When they click "View YAML"
+  Then a YAML editor should open in a new tab
+  And the editor should display the full service configuration
+
+Scenario: Editing service from context menu
+  Given a user has expanded "Services" and sees a list of services
+  When they right-click on a service
+  Then they should see "Edit" in the context menu
+  When they click "Edit"
+  Then a YAML editor should open in edit mode
+  And the user should be able to modify the service configuration
+  And the user should be able to save changes
+
+Scenario: Deleting service from context menu
+  Given a user has expanded "Services" and sees a list of services
+  When they right-click on a service named "api-service"
+  Then they should see "Delete" in the context menu
+  When they click "Delete"
+  Then a confirmation dialog should appear
+  And the dialog should show the service name and namespace
+  When they confirm deletion
+  Then the service should be deleted from the cluster
+  And the tree view should refresh
+  And the service should no longer appear in the list
+
+Scenario: Describing service from context menu
+  Given a user has expanded "Services" and sees a list of services
+  When they right-click on a service
+  Then they should see "Describe" in the context menu
+  When they click "Describe"
+  Then service details should be displayed
+  And the details should include service type, IP addresses, ports, and selectors
+
+Scenario: Copying service name from context menu
+  Given a user has expanded "Services" and sees a list of services
+  When they right-click on a service named "api-service"
+  Then they should see "Copy Name" in the context menu
+  When they click "Copy Name"
+  Then "api-service" should be copied to the clipboard
+
+Scenario: Copying service YAML from context menu
+  Given a user has expanded "Services" and sees a list of services
+  When they right-click on a service
+  Then they should see "Copy YAML" in the context menu
+  When they click "Copy YAML"
+  Then the service YAML should be copied to the clipboard
+  And the YAML should be in valid Kubernetes format
+
+Scenario: Service type displayed in tree item
+  Given a user has expanded "Services" and sees a list of services
+  When they view a ClusterIP service
+  Then the service description should show "ClusterIP"
+  When they view a NodePort service
+  Then the service description should show "NodePort"
+  When they view a LoadBalancer service
+  Then the service description should show "LoadBalancer"
+  When they view an ExternalName service
+  Then the service description should show "ExternalName"
+
+Scenario: Services grouped by namespace
+  Given a user has expanded "Services" and sees a list of services
+  When services exist in multiple namespaces
+  Then services should be displayed with namespace prefix
+  And services should be grouped visually by namespace
+  And the format should be "namespace/name"
 
 Scenario: Switching between clusters
   Given a user has multiple clusters configured

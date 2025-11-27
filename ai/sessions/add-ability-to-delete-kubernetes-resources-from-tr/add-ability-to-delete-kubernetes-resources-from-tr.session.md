@@ -2,7 +2,7 @@
 session_id: add-ability-to-delete-kubernetes-resources-from-tr
 start_time: '2025-11-21T15:32:12.275Z'
 end_time: '2025-11-21T15:40:20.611Z'
-status: development
+status: completed
 problem_statement: Add ability to delete Kubernetes resources from tree view
 changed_files:
   - path: ai/features/navigation/tree-view-navigation.feature.md

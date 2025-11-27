@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
+import * as yaml from 'js-yaml';
 import { validateYAMLSyntax } from './YAMLValidator';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { ResourceIdentifier, YAMLEditorManager } from './YAMLEditorManager';
 import { parseResourceFromUri } from './Kube9YAMLFileSystemProvider';
 import { RefreshCoordinator } from './RefreshCoordinator';
 import { showErrorWithDetails } from './ErrorHandler';
+import { YAMLContentProvider } from './YAMLContentProvider';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -43,13 +45,77 @@ export class YAMLSaveHandler {
         this.editorManager = manager;
     }
     /**
+     * Removes read-only fields from YAML that shouldn't be sent to Kubernetes during apply.
+     * These fields are managed by Kubernetes and including them causes conflicts.
+     * 
+     * @param yamlContent - The YAML content to clean
+     * @returns Cleaned YAML content without read-only fields
+     */
+    private removeReadOnlyFields(yamlContent: string): string {
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const parsed = yaml.load(yamlContent) as any;
+            
+            if (!parsed || !parsed.metadata) {
+                return yamlContent; // Return as-is if we can't parse it
+            }
+            
+            // Remove read-only metadata fields that cause conflicts
+            const readOnlyFields = [
+                'resourceVersion',
+                'uid',
+                'creationTimestamp',
+                'generation',
+                'selfLink',
+                'managedFields'
+            ];
+            
+            readOnlyFields.forEach(field => {
+                if (parsed.metadata[field] !== undefined) {
+                    delete parsed.metadata[field];
+                }
+            });
+            
+            // Remove the last-applied-configuration annotation
+            // This annotation may contain stale resourceVersion and other read-only fields
+            // kubectl will automatically recreate it with correct values on next apply
+            if (parsed.metadata.annotations && parsed.metadata.annotations['kubectl.kubernetes.io/last-applied-configuration']) {
+                delete parsed.metadata.annotations['kubectl.kubernetes.io/last-applied-configuration'];
+                // If annotations object is now empty, remove it entirely
+                if (Object.keys(parsed.metadata.annotations).length === 0) {
+                    delete parsed.metadata.annotations;
+                }
+            }
+            
+            // Remove read-only status field (if present)
+            if (parsed.status !== undefined) {
+                delete parsed.status;
+            }
+            
+            // Convert back to YAML
+            return yaml.dump(parsed, {
+                indent: 2,
+                lineWidth: -1, // Don't wrap lines
+                noRefs: true,  // Don't use YAML references
+                sortKeys: false // Preserve key order
+            });
+        } catch (error) {
+            // If parsing fails, return original content
+            // Validation will catch any issues
+            console.warn('Failed to remove read-only fields from YAML:', error);
+            return yamlContent;
+        }
+    }
+    
+    /**
      * Handles saving a YAML document to the Kubernetes cluster.
      * 
      * This method performs the following steps:
      * 1. Validates YAML syntax
-     * 2. Performs dry-run validation with kubectl
-     * 3. Applies changes to the cluster
-     * 4. Shows appropriate notifications
+     * 2. Removes read-only fields (resourceVersion, uid, etc.)
+     * 3. Performs dry-run validation with kubectl
+     * 4. Applies changes to the cluster
+     * 5. Shows appropriate notifications
      * 
      * @param document - The VS Code text document containing the YAML to save
      * @returns Promise resolving to true if save succeeded, false otherwise
@@ -57,10 +123,24 @@ export class YAMLSaveHandler {
     public async handleSave(document: vscode.TextDocument): Promise<boolean> {
         try {
             // Extract YAML content from document
-            const yamlContent = document.getText();
+            let yamlContent = document.getText();
             
             // Parse resource identifier from document URI
             const resource = parseResourceFromUri(document.uri);
+            
+            // Remove read-only fields before applying
+            // This prevents conflicts from stale resourceVersion, uid, etc.
+            const originalLength = yamlContent.length;
+            yamlContent = this.removeReadOnlyFields(yamlContent);
+            const cleanedLength = yamlContent.length;
+            console.log(`[YAML Save] Removed read-only fields from ${resource.kind}/${resource.name} (${originalLength} -> ${cleanedLength} bytes)`);
+            
+            // Verify resourceVersion was removed (debug)
+            if (yamlContent.includes('resourceVersion:')) {
+                console.warn(`[YAML Save] WARNING: resourceVersion still present in cleaned YAML for ${resource.kind}/${resource.name}`);
+            } else {
+                console.log(`[YAML Save] Verified: resourceVersion removed from ${resource.kind}/${resource.name}`);
+            }
             
             // Step 0: Check if editor is read-only
             if (this.editorManager && this.editorManager.isEditorReadOnly(resource)) {
@@ -70,40 +150,82 @@ export class YAMLSaveHandler {
                 return false;
             }
             
-            // Step 1: Validate YAML syntax
-            const validationResult = validateYAMLSyntax(yamlContent);
-            if (!validationResult.valid) {
-                const lineInfo = validationResult.line !== undefined 
-                    ? ` at line ${validationResult.line + 1}${validationResult.column !== undefined ? `, column ${validationResult.column + 1}` : ''}`
-                    : '';
-                const errorMessage = `Invalid YAML syntax${lineInfo}: ${validationResult.error}`;
-                vscode.window.showErrorMessage(errorMessage);
-                console.error(`YAML syntax validation failed: ${errorMessage}`);
-                return false;
+            // Step 1: Pause conflict checking during save to prevent false positives
+            if (this.editorManager) {
+                this.editorManager.pauseConflictChecking(resource);
             }
             
-            // Step 2: Perform dry-run validation
-            console.log(`Performing dry-run validation for ${resource.kind}/${resource.name}...`);
-            const dryRunSuccess = await this.performDryRun(yamlContent, resource);
-            if (!dryRunSuccess) {
-                // Error message already shown in performDryRun
-                return false;
-            }
-            
-            // Step 3: Apply changes to cluster
-            console.log(`Applying changes to ${resource.kind}/${resource.name}...`);
-            await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: 'Applying changes...',
-                    cancellable: false
-                },
-                async () => {
-                    await this.applyChanges(yamlContent, resource);
+            try {
+                // Step 2: Validate YAML syntax
+                const validationResult = validateYAMLSyntax(yamlContent);
+                if (!validationResult.valid) {
+                    const lineInfo = validationResult.line !== undefined 
+                        ? ` at line ${validationResult.line + 1}${validationResult.column !== undefined ? `, column ${validationResult.column + 1}` : ''}`
+                        : '';
+                    const errorMessage = `Invalid YAML syntax${lineInfo}: ${validationResult.error}`;
+                    vscode.window.showErrorMessage(errorMessage);
+                    console.error(`YAML syntax validation failed: ${errorMessage}`);
+                    return false;
                 }
-            );
+                
+                // Step 3: Perform dry-run validation
+                console.log(`Performing dry-run validation for ${resource.kind}/${resource.name}...`);
+                const dryRunSuccess = await this.performDryRun(yamlContent, resource);
+                if (!dryRunSuccess) {
+                    // Error message already shown in performDryRun
+                    return false;
+                }
+                
+                // Step 4: Apply changes to cluster
+                console.log(`Applying changes to ${resource.kind}/${resource.name}...`);
+                await vscode.window.withProgress(
+                    {
+                        location: vscode.ProgressLocation.Notification,
+                        title: 'Applying changes...',
+                        cancellable: false
+                    },
+                    async () => {
+                        await this.applyChanges(yamlContent, resource);
+                    }
+                );
+                
+                // Step 5: Update resource version in ConflictDetector after successful save
+                // This prevents false conflict detection on subsequent saves
+                if (this.editorManager) {
+                    try {
+                        // Fetch the updated resource to get the new resourceVersion
+                        const contentProvider = new YAMLContentProvider();
+                        const updatedYAML = await contentProvider.fetchYAML(resource);
+                        
+                        // Extract resourceVersion from updated YAML
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const parsed = yaml.load(updatedYAML) as any;
+                        const newResourceVersion = parsed?.metadata?.resourceVersion;
+                        
+                        if (newResourceVersion) {
+                            await this.editorManager.updateResourceVersionAfterSave(
+                                resource, 
+                                String(newResourceVersion),
+                                updatedYAML
+                            );
+                            console.log(`Updated resource version for ${resource.kind}/${resource.name} to ${newResourceVersion}`);
+                        } else {
+                            console.warn(`Could not extract resourceVersion from updated resource for ${resource.kind}/${resource.name}`);
+                        }
+                    } catch (error) {
+                        // Log error but don't fail the save operation
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        console.warn(`Failed to update resource version after save: ${errorMessage}`);
+                    }
+                }
+            } finally {
+                // Always resume conflict checking after save completes (success or failure)
+                if (this.editorManager) {
+                    this.editorManager.resumeConflictChecking(resource);
+                }
+            }
             
-            // Step 4: Coordinate UI refresh after successful save
+            // Step 5: Coordinate UI refresh after successful save
             // Wrap in try-catch to ensure refresh errors don't affect save status
             try {
                 await this.refreshCoordinator.coordinateRefresh(resource);
@@ -269,7 +391,20 @@ export class YAMLSaveHandler {
             
             // Handle process errors (e.g., kubectl not found)
             kubectl.on('error', (error: Error) => {
-                reject(error);
+                // Enhance error object with expected properties for KubectlError.fromExecError
+                const enhancedError = error as Error & {
+                    code?: string | number;
+                    stderr?: string;
+                    stdout?: string;
+                };
+                
+                // If error code is ENOENT, kubectl is not found
+                if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+                    enhancedError.code = 'ENOENT';
+                }
+                
+                enhancedError.stderr = enhancedError.stderr || error.message;
+                reject(enhancedError);
             });
             
             // Write YAML content to stdin and close

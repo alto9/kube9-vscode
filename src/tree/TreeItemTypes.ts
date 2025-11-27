@@ -13,6 +13,8 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - dashboard: Dashboard category (appears first)
  * - nodes: Nodes category and individual node items
  * - namespaces: Namespaces category
+ * - networking: Networking category
+ * - services: Services subcategory (under Networking)
  * - workloads: Workloads category
  * - deployments: Deployments subcategory (under Workloads)
  * - statefulsets: StatefulSets subcategory (under Workloads)
@@ -41,6 +43,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - storageClass: Individual storage class item
  * - configmap: Individual configmap item
  * - secret: Individual secret item
+ * - service: Individual service item (under Services)
  * - crd: Individual Custom Resource Definition item
  * - dataCollection: Individual data collection report item (under Compliance)
  */
@@ -52,6 +55,7 @@ export type TreeItemType =
     | 'dashboard'
     | 'nodes'
     | 'namespaces'
+    | 'networking'
     | 'workloads'
     | 'deployments'
     | 'statefulsets'
@@ -73,8 +77,10 @@ export type TreeItemType =
     | 'configuration'
     | 'configmaps'
     | 'secrets'
+    | 'services'
     | 'configmap'
     | 'secret'
+    | 'service'
     | 'customResources'
     | 'reports'
     | 'compliance'

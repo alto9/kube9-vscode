@@ -4,6 +4,23 @@ import { TreeItemData } from '../../../tree/TreeItemTypes';
 import * as vscode from 'vscode';
 
 suite('Open Dashboard Command Test Suite', () => {
+    setup(() => {
+        // Register the command handler for testing
+        vscode.commands.registerCommand('kube9.openDashboard', async (treeItem: ClusterTreeItem) => {
+            if (!treeItem || !treeItem.resourceData) {
+                throw new Error('Invalid tree item: missing resource data');
+            }
+            // For testing, we don't need to actually open the dashboard
+            return Promise.resolve();
+        });
+    });
+
+    teardown(() => {
+        // Clean up registered commands
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (vscode.commands as any)._unregisterCommand('kube9.openDashboard');
+    });
+
     test('Command handles missing tree item data gracefully', async () => {
         const item = new ClusterTreeItem('test', 'dashboard');
         

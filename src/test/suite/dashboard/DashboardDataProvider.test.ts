@@ -1,92 +1,49 @@
 import * as assert from 'assert';
 import * as Module from 'module';
+import { DashboardDataProvider, KubectlExecFn } from '../../../dashboard/DashboardDataProvider';
 
 // Store original require for restoration
 const originalRequire = Module.prototype.require;
 
-// Set up module interception variables
+// Set up mock variables
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockExecFileResponse: { type: 'success'; stdout: string; stderr: string } | { type: 'error'; error: any } | null = null;
 let execFileCalls: Array<{ command: string; args: string[] }> = [];
-let isProxyActive = false;
+
+/**
+ * Create a mock exec function that tracks calls and returns configured responses.
+ */
+function createMockExecFn(): KubectlExecFn {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return async (command: string, args: string[], _options: { timeout?: number; maxBuffer?: number; env?: NodeJS.ProcessEnv }) => {
+        execFileCalls.push({ command, args });
+        
+        if (mockExecFileResponse?.type === 'error') {
+            throw mockExecFileResponse.error;
+        } else if (mockExecFileResponse?.type === 'success') {
+            return { stdout: mockExecFileResponse.stdout || '', stderr: mockExecFileResponse.stderr || '' };
+        } else {
+            throw new Error('No mock response configured');
+        }
+    };
+}
 
 suite('DashboardDataProvider Test Suite', () => {
     const TEST_KUBECONFIG = '/test/kubeconfig';
     const TEST_CONTEXT = 'test-context';
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/naming-convention
-    let DashboardDataProvider: any; // UPPER_CASE naming allowed for dynamically loaded modules
-
     setup(() => {
         // Reset call tracking
         execFileCalls = [];
         mockExecFileResponse = null;
-        isProxyActive = true;
-
-        // Set up require interception for child_process
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const currentRequire = Module.prototype.require;
         
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        Module.prototype.require = function(this: any, id: string): any {
-            // First check for vscode (handled by setup.ts)
-            if (id === 'vscode') {
-                return currentRequire.apply(this, [id]);
-            }
-
-            // Intercept child_process
-            if (id === 'child_process') {
-                const originalModule = currentRequire.apply(this, [id]);
-                
-                // Return a proxy that overrides execFile
-                return {
-                    ...originalModule,
-                    execFile: (
-                        command: string,
-                        args: string[],
-                        options: unknown,
-                        callback: (error: Error | null, stdout: string, stderr: string) => void
-                    ) => {
-                        if (isProxyActive) {
-                            execFileCalls.push({ command, args });
-
-                            // Simulate async callback
-                            setImmediate(() => {
-                                if (mockExecFileResponse?.type === 'error') {
-                                    callback(mockExecFileResponse.error, '', '');
-                                } else if (mockExecFileResponse?.type === 'success') {
-                                    callback(null, mockExecFileResponse.stdout, mockExecFileResponse.stderr);
-                                } else {
-                                    callback(new Error('No mock response configured'), '', '');
-                                }
-                            });
-                        } else {
-                            // Call original if proxy not active
-                            originalModule.execFile(command, args, options, callback);
-                        }
-                    }
-                };
-            }
-
-            // For all other modules, use original require
-            return currentRequire.apply(this, [id]);
-        };
-
-        // Clear module cache to force reload with mocked child_process
-        delete require.cache[require.resolve('../../../dashboard/DashboardDataProvider')];
-        
-        // Load the module with mocks in place
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        DashboardDataProvider = require('../../../dashboard/DashboardDataProvider').DashboardDataProvider;
+        // Set up mock exec function
+        DashboardDataProvider._setExecFn(createMockExecFn());
     });
 
     teardown(() => {
-        // Restore original require
-        Module.prototype.require = originalRequire;
-        isProxyActive = false;
-        
-        // Clear module cache
-        delete require.cache[require.resolve('../../../dashboard/DashboardDataProvider')];
+        // Reset to default exec function
+        DashboardDataProvider._resetExecFn();
     });
 
     suite('getNamespaceCount', () => {
@@ -151,7 +108,7 @@ suite('DashboardDataProvider Test Suite', () => {
 
     suite('getWorkloadCounts', () => {
         test('should return correct workload counts for all types', async () => {
-            // Mock responses for all workload types
+            // Mock responses for all workload types - track call count to return different responses
             let callCount = 0;
             const responses = [
                 { items: [{}, {}, {}] }, // 3 deployments
@@ -163,49 +120,14 @@ suite('DashboardDataProvider Test Suite', () => {
                 { items: [{}, {}, {}, {}, {}] } // 5 pods
             ];
 
-            // Override the mock for this specific test
-            const originalMock = mockExecFileResponse;
-            mockExecFileResponse = null;
-            
-            // Set up custom require interception for this test
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Module.prototype.require = function(this: any, id: string): any {
-                if (id === 'vscode') {
-                    return originalRequire.apply(this, [id]);
-                }
+            // Set up custom exec function that returns different responses for each call
+            DashboardDataProvider._setExecFn(async (command: string, args: string[]) => {
+                execFileCalls.push({ command, args });
+                const response = responses[callCount++];
+                return { stdout: JSON.stringify(response), stderr: '' };
+            });
 
-                if (id === 'child_process') {
-                    const originalModule = originalRequire.apply(this, [id]);
-                    return {
-                        ...originalModule,
-                        execFile: (
-                            command: string,
-                            args: string[],
-                            options: unknown,
-                            callback: (error: Error | null, stdout: string, stderr: string) => void
-                        ) => {
-                            if (isProxyActive) {
-                                execFileCalls.push({ command, args });
-                                const response = responses[callCount++];
-                                setImmediate(() => {
-                                    callback(null, JSON.stringify(response), '');
-                                });
-                            } else {
-                                originalModule.execFile(command, args, options, callback);
-                            }
-                        }
-                    };
-                }
-
-                return originalRequire.apply(this, [id]);
-            };
-
-            // Reload the module
-            delete require.cache[require.resolve('../../../dashboard/DashboardDataProvider')];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const TEST_PROVIDER = require('../../../dashboard/DashboardDataProvider').DashboardDataProvider;
-
-            const counts = await TEST_PROVIDER.getWorkloadCounts(TEST_KUBECONFIG, TEST_CONTEXT);
+            const counts = await DashboardDataProvider.getWorkloadCounts(TEST_KUBECONFIG, TEST_CONTEXT);
 
             assert.strictEqual(counts.deployments, 3);
             assert.strictEqual(counts.statefulsets, 2);
@@ -215,124 +137,49 @@ suite('DashboardDataProvider Test Suite', () => {
             assert.strictEqual(counts.cronjobs, 0);
             assert.strictEqual(counts.pods, 5);
             assert.strictEqual(execFileCalls.length, 7);
-            
-            // Restore original mock
-            mockExecFileResponse = originalMock;
         });
 
         test('should execute all queries in parallel', async () => {
             let simultaneousCalls = 0;
             let maxSimultaneousCalls = 0;
 
-            // Override the mock for this specific test
-            const originalMock = mockExecFileResponse;
-            mockExecFileResponse = null;
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Module.prototype.require = function(this: any, id: string): any {
-                if (id === 'vscode') {
-                    return originalRequire.apply(this, [id]);
-                }
+            // Set up exec function that tracks simultaneous calls
+            DashboardDataProvider._setExecFn(async () => {
+                simultaneousCalls++;
+                maxSimultaneousCalls = Math.max(maxSimultaneousCalls, simultaneousCalls);
+                
+                // Simulate async delay
+                await new Promise(resolve => setImmediate(resolve));
+                simultaneousCalls--;
+                
+                return { stdout: JSON.stringify({ items: [] }), stderr: '' };
+            });
 
-                if (id === 'child_process') {
-                    const originalModule = originalRequire.apply(this, [id]);
-                    return {
-                        ...originalModule,
-                        execFile: (
-                            command: string,
-                            args: string[],
-                            options: unknown,
-                            callback: (error: Error | null, stdout: string, stderr: string) => void
-                        ) => {
-                            if (isProxyActive) {
-                                simultaneousCalls++;
-                                maxSimultaneousCalls = Math.max(maxSimultaneousCalls, simultaneousCalls);
-
-                                setImmediate(() => {
-                                    simultaneousCalls--;
-                                    callback(null, JSON.stringify({ items: [] }), '');
-                                });
-                            } else {
-                                originalModule.execFile(command, args, options, callback);
-                            }
-                        }
-                    };
-                }
-
-                return originalRequire.apply(this, [id]);
-            };
-
-            // Reload the module
-            delete require.cache[require.resolve('../../../dashboard/DashboardDataProvider')];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const TEST_PROVIDER = require('../../../dashboard/DashboardDataProvider').DashboardDataProvider;
-
-            await TEST_PROVIDER.getWorkloadCounts(TEST_KUBECONFIG, TEST_CONTEXT);
+            await DashboardDataProvider.getWorkloadCounts(TEST_KUBECONFIG, TEST_CONTEXT);
 
             // All 7 queries should have been initiated before any completed
             assert.strictEqual(maxSimultaneousCalls, 7);
-            
-            // Restore original mock
-            mockExecFileResponse = originalMock;
         });
 
         test('should return 0 for failed queries', async () => {
             let callCount = 0;
 
-            // Override the mock for this specific test
-            const originalMock = mockExecFileResponse;
-            mockExecFileResponse = null;
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Module.prototype.require = function(this: any, id: string): any {
-                if (id === 'vscode') {
-                    return originalRequire.apply(this, [id]);
+            // Set up exec function that fails every other call
+            DashboardDataProvider._setExecFn(async () => {
+                callCount++;
+                // Fail every other query
+                if (callCount % 2 === 0) {
+                    throw new Error('kubectl error');
                 }
+                return { stdout: JSON.stringify({ items: [{}] }), stderr: '' };
+            });
 
-                if (id === 'child_process') {
-                    const originalModule = originalRequire.apply(this, [id]);
-                    return {
-                        ...originalModule,
-                        execFile: (
-                            command: string,
-                            args: string[],
-                            options: unknown,
-                            callback: (error: Error | null, stdout: string, stderr: string) => void
-                        ) => {
-                            if (isProxyActive) {
-                                callCount++;
-                                setImmediate(() => {
-                                    // Fail every other query
-                                    if (callCount % 2 === 0) {
-                                        callback(new Error('kubectl error'), '', '');
-                                    } else {
-                                        callback(null, JSON.stringify({ items: [{}] }), '');
-                                    }
-                                });
-                            } else {
-                                originalModule.execFile(command, args, options, callback);
-                            }
-                        }
-                    };
-                }
-
-                return originalRequire.apply(this, [id]);
-            };
-
-            // Reload the module
-            delete require.cache[require.resolve('../../../dashboard/DashboardDataProvider')];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const TEST_PROVIDER = require('../../../dashboard/DashboardDataProvider').DashboardDataProvider;
-
-            const counts = await TEST_PROVIDER.getWorkloadCounts(TEST_KUBECONFIG, TEST_CONTEXT);
+            const counts = await DashboardDataProvider.getWorkloadCounts(TEST_KUBECONFIG, TEST_CONTEXT);
 
             // Verify that failed queries return 0 and successful ones return 1
             const countValues = Object.values(counts);
             assert.ok(countValues.some(c => c === 0), 'Some counts should be 0 (failed)');
             assert.ok(countValues.some(c => c === 1), 'Some counts should be 1 (successful)');
-            
-            // Restore original mock
-            mockExecFileResponse = originalMock;
         });
 
         test('should handle all queries failing', async () => {
@@ -340,6 +187,9 @@ suite('DashboardDataProvider Test Suite', () => {
                 type: 'error',
                 error: new Error('kubectl not available')
             };
+            
+            // Re-set the mock exec function with the error response
+            DashboardDataProvider._setExecFn(createMockExecFn());
 
             const counts = await DashboardDataProvider.getWorkloadCounts(TEST_KUBECONFIG, TEST_CONTEXT);
 

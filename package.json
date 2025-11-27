@@ -151,8 +151,11 @@
   "scripts": {
     "build": "webpack --mode production",
     "watch": "webpack --mode development --watch",
-    "pretest": "npm run build && npm run lint",
-    "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/{src/test,tests}/**/*.test.js'",
+    "compile": "tsc",
+    "pretest": "npm run compile && npm run lint",
+    "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js'",
+    "test:integration": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/tests/**/*.test.js'",
+    "test:all": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/{src/test,tests}/**/*.test.js'",
     "lint": "eslint src --ext ts",
     "prepackage": "npm run build",
     "package": "vsce package"
