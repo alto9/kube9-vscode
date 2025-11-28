@@ -1,4 +1,4 @@
-<!-- forge-hash: 269c4810aaac74237fa5c20ecdbaabda4cb33caddf2cf30e57119fdf0afa053b -->
+<!-- forge-hash: 3cf95fb959cb8832249eb3162dcbd86e7a9b09e7f774fd75d237966b8507161b -->
 
 # Forge Build
 
@@ -15,7 +15,7 @@ You must provide a story file (*.story.md) when running this command.
 3. **Analyzes the existing codebase**: Understands current implementation patterns and structure
 4. **Reads AI documentation**: Understands intended behavior from linked files:
    - Features (expected behavior with Gherkin scenarios)
-   - Specs (technical implementation details with Nomnoml diagrams)
+   - Specs (technical implementation details with diagram references)
    - Models (data structures)
    - Contexts (technology-specific guidance)
 5. **Implements the changes**: Writes actual code as described in the story
