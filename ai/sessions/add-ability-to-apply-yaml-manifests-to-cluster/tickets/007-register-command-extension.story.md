@@ -3,7 +3,7 @@ story_id: 007-register-command-extension
 session_id: add-ability-to-apply-yaml-manifests-to-cluster
 feature_id: [apply-yaml-manifest]
 spec_id: [apply-yaml-command-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 10
 ---
@@ -46,12 +46,12 @@ This follows the existing pattern used for `configureApiKeyCommand`, `refreshClu
 
 ## Acceptance Criteria
 
-- [ ] `applyYAMLCommand` is imported from `./commands/applyYAML`
-- [ ] Command is registered with ID `kube9.applyYAML`
-- [ ] Command is added to `context.subscriptions`
-- [ ] Command is added to `disposables` array
-- [ ] No TypeScript compilation errors
-- [ ] Command can be invoked from command palette
+- [x] `applyYAMLCommand` is imported from `./commands/applyYAML`
+- [x] Command is registered with ID `kube9.applyYAML`
+- [x] Command is added to `context.subscriptions`
+- [x] Command is added to `disposables` array
+- [x] No TypeScript compilation errors
+- [x] Command can be invoked from command palette
 
 ## Dependencies
 
