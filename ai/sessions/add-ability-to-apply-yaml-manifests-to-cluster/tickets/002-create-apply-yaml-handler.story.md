@@ -3,7 +3,7 @@ story_id: 002-create-apply-yaml-handler
 session_id: add-ability-to-apply-yaml-manifests-to-cluster
 feature_id: [apply-yaml-manifest]
 spec_id: [apply-yaml-command-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -86,12 +86,12 @@ function isYAMLFile(uri: vscode.Uri): boolean {
 
 ## Acceptance Criteria
 
-- [ ] File `src/commands/applyYAML.ts` exists
-- [ ] Function `applyYAMLCommand` is exported
-- [ ] Input resolution correctly prioritizes: URI > active editor > file picker
-- [ ] File picker filters for .yaml and .yml extensions
-- [ ] Function returns early if user cancels file picker
-- [ ] No TypeScript compilation errors
+- [x] File `src/commands/applyYAML.ts` exists
+- [x] Function `applyYAMLCommand` is exported
+- [x] Input resolution correctly prioritizes: URI > active editor > file picker
+- [x] File picker filters for .yaml and .yml extensions
+- [x] Function returns early if user cancels file picker
+- [x] No TypeScript compilation errors
 
 ## Dependencies
 
