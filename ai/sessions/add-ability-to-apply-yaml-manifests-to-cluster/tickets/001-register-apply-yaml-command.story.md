@@ -3,7 +3,7 @@ story_id: 001-register-apply-yaml-command
 session_id: add-ability-to-apply-yaml-manifests-to-cluster
 feature_id: [apply-yaml-manifest]
 spec_id: [apply-yaml-command-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 10
 ---
@@ -44,11 +44,11 @@ This is the first step in implementing the Apply YAML feature. The command must 
 
 ## Acceptance Criteria
 
-- [ ] Command `kube9.applyYAML` is registered in `contributes.commands`
-- [ ] Command has title "Apply YAML" and category "kube9"
-- [ ] Context menu entry added for editor context with YAML file filter
-- [ ] `when` clause correctly filters for .yaml and .yml extensions
-- [ ] No JSON syntax errors in package.json
+- [x] Command `kube9.applyYAML` is registered in `contributes.commands`
+- [x] Command has title "Apply YAML" and category "kube9"
+- [x] Context menu entry added for editor context with YAML file filter
+- [x] `when` clause correctly filters for .yaml and .yml extensions
+- [x] No JSON syntax errors in package.json
 
 ## Dependencies
 
