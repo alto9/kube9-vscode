@@ -3,7 +3,7 @@ story_id: 005-implement-output-logging
 session_id: add-ability-to-apply-yaml-manifests-to-cluster
 feature_id: [apply-yaml-manifest]
 spec_id: [apply-yaml-command-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 15
 ---
@@ -74,13 +74,13 @@ logToChannel(`Error: ${error.message}`);
 
 ## Acceptance Criteria
 
-- [ ] Output channel named "kube9" is used (or created if doesn't exist)
-- [ ] Timestamps are included in log entries
-- [ ] kubectl command is logged before execution
-- [ ] Full command output is logged
-- [ ] Success is indicated with ✓ symbol
-- [ ] Failure is indicated with ✗ symbol
-- [ ] Output channel can be shown to user on demand
+- [x] Output channel named "kube9" is used (or created if doesn't exist)
+- [x] Timestamps are included in log entries
+- [x] kubectl command is logged before execution
+- [x] Full command output is logged
+- [x] Success is indicated with ✓ symbol
+- [x] Failure is indicated with ✗ symbol
+- [x] Output channel can be shown to user on demand
 
 ## Dependencies
 

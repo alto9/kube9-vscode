@@ -24,6 +24,44 @@ const KUBECTL_TIMEOUT_MS = 10000;
 const execFileAsync = promisify(execFile);
 
 /**
+ * OutputChannel for apply YAML operation logging.
+ * Created lazily on first use.
+ */
+let outputChannel: vscode.OutputChannel | undefined;
+
+/**
+ * Gets or creates the OutputChannel for apply YAML operation logging.
+ * 
+ * @returns The OutputChannel instance
+ */
+function getOutputChannel(): vscode.OutputChannel {
+  if (!outputChannel) {
+    outputChannel = vscode.window.createOutputChannel('kube9');
+  }
+  return outputChannel;
+}
+
+/**
+ * Formats a timestamp for log entries.
+ * Uses format: YYYY-MM-DD HH:MM:SS
+ * 
+ * @returns Formatted timestamp string
+ */
+function formatTimestamp(): string {
+  return new Date().toISOString().replace('T', ' ').slice(0, 19);
+}
+
+/**
+ * Logs a message to the output channel with timestamp.
+ * 
+ * @param message - The message to log
+ */
+function logToChannel(message: string): void {
+  const channel = getOutputChannel();
+  channel.appendLine(`[${formatTimestamp()}] ${message}`);
+}
+
+/**
  * Interface for apply mode quick pick items
  */
 interface ApplyOption extends vscode.QuickPickItem {
@@ -86,6 +124,74 @@ function parseApplyOutput(output: string): string[] {
   // Parse lines like "deployment.apps/my-app created"
   const lines = output.trim().split('\n');
   return lines.filter(line => line.length > 0);
+}
+
+/**
+ * Logs the kubectl command being executed.
+ * 
+ * @param filePath - The file path being applied
+ * @param mode - The apply mode
+ */
+function logCommand(filePath: string, mode: ApplyMode): void {
+  const modeDisplay = mode === 'apply' 
+    ? 'apply' 
+    : mode === 'dry-run-server' 
+      ? 'dry-run (server)' 
+      : 'dry-run (client)';
+  logToChannel(`Executing: kubectl apply -f "${filePath}" (mode: ${modeDisplay})`);
+}
+
+/**
+ * Logs the command output.
+ * 
+ * @param output - The stdout output from kubectl command
+ */
+function logOutput(output: string): void {
+  if (output.trim()) {
+    logToChannel('Output:');
+    // Log each line of output
+    const lines = output.trim().split('\n');
+    lines.forEach(line => {
+      const channel = getOutputChannel();
+      channel.appendLine(line);
+    });
+  }
+}
+
+/**
+ * Logs success status.
+ */
+function logSuccess(): void {
+  logToChannel('✓ Apply completed successfully');
+}
+
+/**
+ * Logs error details.
+ * 
+ * @param error - The error that occurred
+ */
+function logError(error: Error | KubectlError | unknown): void {
+  logToChannel('✗ Apply failed');
+  
+  if (error instanceof KubectlError) {
+    const channel = getOutputChannel();
+    channel.appendLine(`Error Type: ${error.type}`);
+    channel.appendLine(`Cluster: ${error.contextName}`);
+    channel.appendLine(`Message: ${error.getUserMessage()}`);
+    channel.appendLine(`Details: ${error.getDetails()}`);
+  } else if (error instanceof Error) {
+    const channel = getOutputChannel();
+    channel.appendLine(`Error: ${error.message}`);
+    if (error.stack) {
+      channel.appendLine(`Stack: ${error.stack}`);
+    }
+  } else {
+    logToChannel(`Error: ${String(error)}`);
+  }
+  
+  // Add empty line for readability
+  const channel = getOutputChannel();
+  channel.appendLine('');
 }
 
 /**
@@ -186,10 +292,25 @@ export async function applyYAMLCommand(uri?: vscode.Uri): Promise<void> {
   
   // Execute kubectl apply command
   try {
+    // Log command before execution
+    logCommand(targetUri.fsPath, mode);
+    
     const result = await executeKubectlApply(targetUri.fsPath, mode);
+    
+    // Log output and success
+    logOutput(result.output);
+    logSuccess();
+    
     // TODO: Show success notification and output (Story 006)
     console.log('Apply completed successfully:', result);
   } catch (error) {
+    // Log error details
+    logError(error);
+    
+    // Show output channel on error to help with debugging
+    const channel = getOutputChannel();
+    channel.show(true);
+    
     // Handle kubectl errors
     if (error instanceof KubectlError) {
       // TODO: Show error notification with details (Story 006)
