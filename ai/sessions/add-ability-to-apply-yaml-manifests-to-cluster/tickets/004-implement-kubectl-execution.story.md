@@ -3,7 +3,7 @@ story_id: 004-implement-kubectl-execution
 session_id: add-ability-to-apply-yaml-manifests-to-cluster
 feature_id: [apply-yaml-manifest]
 spec_id: [apply-yaml-command-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -93,13 +93,13 @@ function parseApplyOutput(output: string): string[] {
 
 ## Acceptance Criteria
 
-- [ ] kubectl apply command is constructed correctly for all three modes
-- [ ] Dry-run flags are added when appropriate
-- [ ] Command timeout is set (10 seconds for apply operations)
-- [ ] stdout is captured and parsed
-- [ ] stderr is captured for error handling
-- [ ] KubectlError is used for structured error handling
-- [ ] Multi-document YAML files are handled (kubectl native support)
+- [x] kubectl apply command is constructed correctly for all three modes
+- [x] Dry-run flags are added when appropriate
+- [x] Command timeout is set (10 seconds for apply operations)
+- [x] stdout is captured and parsed
+- [x] stderr is captured for error handling
+- [x] KubectlError is used for structured error handling
+- [x] Multi-document YAML files are handled (kubectl native support)
 
 ## Dependencies
 
