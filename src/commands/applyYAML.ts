@@ -9,6 +9,13 @@ export interface ApplyYAMLResult {
 }
 
 /**
+ * Interface for apply mode quick pick items
+ */
+interface ApplyOption extends vscode.QuickPickItem {
+  mode: ApplyMode;
+}
+
+/**
  * Checks if a URI points to a YAML file based on its extension.
  * 
  * @param uri - The URI to check
@@ -17,6 +24,40 @@ export interface ApplyYAMLResult {
 function isYAMLFile(uri: vscode.Uri): boolean {
   const ext = uri.fsPath.toLowerCase();
   return ext.endsWith('.yaml') || ext.endsWith('.yml');
+}
+
+/**
+ * Quick pick options for apply mode selection
+ */
+const applyOptions: ApplyOption[] = [
+  {
+    label: 'Apply',
+    description: 'Apply manifest to cluster',
+    mode: 'apply'
+  },
+  {
+    label: 'Dry Run (Server)',
+    description: 'Validate against cluster API without persisting',
+    mode: 'dry-run-server'
+  },
+  {
+    label: 'Dry Run (Client)',
+    description: 'Local validation only',
+    mode: 'dry-run-client'
+  }
+];
+
+/**
+ * Shows a quick pick dialog for selecting the apply mode.
+ * 
+ * @returns The selected apply mode, or undefined if the user cancelled
+ */
+async function selectApplyMode(): Promise<ApplyMode | undefined> {
+  const selected = await vscode.window.showQuickPick(applyOptions, {
+    placeHolder: 'Select apply mode',
+    title: 'Apply YAML Manifest'
+  });
+  return selected?.mode;
 }
 
 /**
@@ -51,6 +92,13 @@ export async function applyYAMLCommand(uri?: vscode.Uri): Promise<void> {
     targetUri = uris[0];
   }
   
-  // TODO: Continue with mode selection (Story 003)
+  // Select apply mode
+  const mode = await selectApplyMode();
+  if (!mode) {
+    // User cancelled mode selection
+    return;
+  }
+  
+  // TODO: Continue with kubectl execution (Story 004)
 }
 
