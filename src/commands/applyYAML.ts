@@ -195,6 +195,52 @@ function logError(error: Error | KubectlError | unknown): void {
 }
 
 /**
+ * Shows a success notification for apply operations.
+ * Formats the message based on mode and resource count.
+ * 
+ * @param result - The apply result containing resources affected
+ * @param mode - The apply mode used
+ */
+async function showApplyNotification(
+  result: ApplyYAMLResult,
+  mode: ApplyMode
+): Promise<void> {
+  const resourceCount = result.resourcesAffected.length;
+  
+  let message: string;
+  if (mode !== 'apply') {
+    // Dry run mode
+    message = `Dry run passed: ${resourceCount} resource(s) validated`;
+  } else if (resourceCount === 1) {
+    // Single resource - show the resource string (e.g., "deployment.apps/my-app created")
+    message = result.resourcesAffected[0];
+  } else {
+    // Multiple resources
+    message = `${resourceCount} resources applied successfully`;
+  }
+  
+  await vscode.window.showInformationMessage(message);
+}
+
+/**
+ * Shows an error notification for apply failures.
+ * Displays a user-friendly error message with "Show Output" action button.
+ * 
+ * @param error - The KubectlError that occurred
+ */
+async function showApplyError(error: KubectlError): Promise<void> {
+  const message = error.getUserMessage();
+  const action = await vscode.window.showErrorMessage(
+    message,
+    'Show Output'
+  );
+  
+  if (action === 'Show Output') {
+    getOutputChannel().show();
+  }
+}
+
+/**
  * Executes kubectl apply command with the specified file and mode.
  * Supports regular apply and dry-run modes (server and client).
  * 
@@ -301,8 +347,8 @@ export async function applyYAMLCommand(uri?: vscode.Uri): Promise<void> {
     logOutput(result.output);
     logSuccess();
     
-    // TODO: Show success notification and output (Story 006)
-    console.log('Apply completed successfully:', result);
+    // Show success notification
+    await showApplyNotification(result, mode);
   } catch (error) {
     // Log error details
     logError(error);
@@ -313,11 +359,10 @@ export async function applyYAMLCommand(uri?: vscode.Uri): Promise<void> {
     
     // Handle kubectl errors
     if (error instanceof KubectlError) {
-      // TODO: Show error notification with details (Story 006)
-      console.error('Apply failed:', error.getUserMessage());
-      vscode.window.showErrorMessage(`Failed to apply YAML: ${error.getUserMessage()}`);
+      // Show error notification with "Show Output" action
+      await showApplyError(error);
     } else {
-      // Unexpected error type
+      // Unexpected error type - show generic error message
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Unexpected error during apply:', errorMessage);
       vscode.window.showErrorMessage(`Failed to apply YAML: ${errorMessage}`);

@@ -3,7 +3,7 @@ story_id: 006-implement-notifications
 session_id: add-ability-to-apply-yaml-manifests-to-cluster
 feature_id: [apply-yaml-manifest]
 spec_id: [apply-yaml-command-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -88,13 +88,13 @@ async function showApplyError(error: KubectlError): Promise<void> {
 
 ## Acceptance Criteria
 
-- [ ] Success notification shows for successful apply
-- [ ] Single resource shows resource name and action
-- [ ] Multiple resources shows count summary
-- [ ] Dry run shows validation passed message
-- [ ] Error notification shows brief, actionable message
-- [ ] "Show Output" button opens output channel
-- [ ] Notifications don't block user workflow
+- [x] Success notification shows for successful apply
+- [x] Single resource shows resource name and action
+- [x] Multiple resources shows count summary
+- [x] Dry run shows validation passed message
+- [x] Error notification shows brief, actionable message
+- [x] "Show Output" button opens output channel
+- [x] Notifications don't block user workflow
 
 ## Dependencies
 
