@@ -3,7 +3,7 @@ story_id: 008-write-unit-tests
 session_id: add-ability-to-apply-yaml-manifests-to-cluster
 feature_id: [apply-yaml-manifest]
 spec_id: [apply-yaml-command-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 30
 ---
@@ -78,13 +78,13 @@ suite('applyYAML Command Tests', () => {
 
 ## Acceptance Criteria
 
-- [ ] Test file created at `src/test/suite/commands/applyYAML.test.ts`
-- [ ] Tests cover input resolution logic
-- [ ] Tests cover mode selection
-- [ ] Tests cover kubectl command construction
-- [ ] Tests cover output parsing
-- [ ] Tests cover error handling
-- [ ] All tests pass with `npm test`
+- [x] Test file created at `src/test/suite/commands/applyYAML.test.ts`
+- [x] Tests cover input resolution logic
+- [x] Tests cover mode selection
+- [x] Tests cover kubectl command construction
+- [x] Tests cover output parsing
+- [x] Tests cover error handling
+- [x] All tests pass with `npm test`
 
 ## Dependencies
 
