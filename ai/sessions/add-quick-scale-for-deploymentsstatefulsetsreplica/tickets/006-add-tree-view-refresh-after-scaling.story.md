@@ -3,7 +3,7 @@ story_id: add-tree-view-refresh-after-scaling
 session_id: add-quick-scale-for-deploymentsstatefulsetsreplica
 feature_id: [workload-scaling]
 spec_id: [workload-scaling-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 15
 ---
@@ -46,10 +46,10 @@ context.subscriptions.push(
 
 ## Acceptance Criteria
 
-- [ ] Tree view refreshes automatically after successful scaling
-- [ ] Tree view refreshes even if scaling fails (to show actual state)
-- [ ] Refresh happens after both success and error notifications
-- [ ] No duplicate refresh calls
+- [x] Tree view refreshes automatically after successful scaling
+- [x] Tree view refreshes even if scaling fails (to show actual state)
+- [x] Refresh happens after both success and error notifications
+- [x] No duplicate refresh calls
 
 ## Dependencies
 

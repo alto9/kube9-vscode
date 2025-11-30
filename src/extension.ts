@@ -582,7 +582,17 @@ function registerCommands(): void {
     // Register scale workload command
     const scaleWorkloadCmd = vscode.commands.registerCommand(
         'kube9.scaleWorkload',
-        scaleWorkloadCommand
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                await scaleWorkloadCommand(treeItem);
+            } finally {
+                // Refresh tree view after scaling (both success and error cases)
+                // This ensures users see updated replica counts immediately
+                if (clusterTreeProvider) {
+                    clusterTreeProvider.refresh();
+                }
+            }
+        }
     );
     context.subscriptions.push(scaleWorkloadCmd);
     disposables.push(scaleWorkloadCmd);
