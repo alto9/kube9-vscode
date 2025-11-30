@@ -3,7 +3,7 @@ story_id: add-webview-refresh-coordination
 session_id: add-quick-scale-for-deploymentsstatefulsetsreplica
 feature_id: [workload-scaling]
 spec_id: [workload-scaling-spec]
-status: pending
+status: completed
 priority: low
 estimated_minutes: 20
 ---
@@ -40,10 +40,9 @@ If a user has a namespace webview open while scaling a workload, the webview sho
 
 ## Acceptance Criteria
 
-- [ ] Investigate webview refresh mechanism
-- [ ] Implement refresh if feasible
-- [ ] OR document why it's not feasible
-- [ ] Test that webview refreshes when open (if implemented)
+- [x] Investigate webview refresh mechanism
+- [x] Implement refresh if feasible
+- [x] Test that webview refreshes when open (if implemented)
 
 ## Dependencies
 

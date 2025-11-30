@@ -591,6 +591,19 @@ function registerCommands(): void {
                 if (clusterTreeProvider) {
                     clusterTreeProvider.refresh();
                 }
+                
+                // Refresh namespace webviews if open for the scaled workload's namespace
+                // This ensures webview workload tables show updated replica counts
+                try {
+                    const namespace = treeItem.resourceData?.namespace;
+                    if (namespace) {
+                        await NamespaceWebview.sendResourceUpdated(namespace);
+                    }
+                } catch (error) {
+                    // Log error but don't block command completion
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`Failed to refresh namespace webviews after scaling: ${errorMessage}`);
+                }
             }
         }
     );
