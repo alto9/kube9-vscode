@@ -347,6 +347,9 @@ export async function applyYAMLCommand(uri?: vscode.Uri): Promise<void> {
     logOutput(result.output);
     logSuccess();
     
+    // Show output channel so user can see the execution details
+    getOutputChannel().show(false);
+    
     // Show success notification
     await showApplyNotification(result, mode);
   } catch (error) {

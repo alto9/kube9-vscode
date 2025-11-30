@@ -131,7 +131,7 @@
       "editor/context": [
         {
           "command": "kube9.applyYAML",
-          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "when": "resourceExtname == yaml || resourceExtname == yml",
           "group": "kube9@1"
         }
       ]
