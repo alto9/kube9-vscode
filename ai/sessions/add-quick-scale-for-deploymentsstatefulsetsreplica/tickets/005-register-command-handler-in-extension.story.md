@@ -3,7 +3,7 @@ story_id: register-command-handler-in-extension
 session_id: add-quick-scale-for-deploymentsstatefulsetsreplica
 feature_id: [workload-scaling]
 spec_id: [workload-scaling-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 10
 ---
@@ -43,11 +43,11 @@ context.subscriptions.push(
 
 ## Acceptance Criteria
 
-- [ ] Import statement added at top of file
-- [ ] Command registered in activate function
-- [ ] Registration added to context.subscriptions array
-- [ ] Comment added to identify the command
-- [ ] Command registration placed with other command registrations
+- [x] Import statement added at top of file
+- [x] Command registered in activate function
+- [x] Registration added to context.subscriptions array
+- [x] Comment added to identify the command
+- [x] Command registration placed with other command registrations
 
 ## Dependencies
 

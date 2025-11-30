@@ -11,6 +11,7 @@ import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCateg
 import { applyYAMLCommand } from './commands/applyYAML';
 import { describeRawCommand } from './commands/describeRaw';
 import { DescribeRawFileSystemProvider } from './commands/DescribeRawFileSystemProvider';
+import { scaleWorkloadCommand } from './commands/scaleWorkload';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -577,6 +578,14 @@ function registerCommands(): void {
     );
     context.subscriptions.push(deleteResourceCmd);
     disposables.push(deleteResourceCmd);
+    
+    // Register scale workload command
+    const scaleWorkloadCmd = vscode.commands.registerCommand(
+        'kube9.scaleWorkload',
+        scaleWorkloadCommand
+    );
+    context.subscriptions.push(scaleWorkloadCmd);
+    disposables.push(scaleWorkloadCmd);
     
     // Register open dashboard command
     const openDashboardCmd = vscode.commands.registerCommand(
