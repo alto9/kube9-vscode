@@ -3,7 +3,7 @@ story_id: create-validation-helper-function
 session_id: add-quick-scale-for-deploymentsstatefulsetsreplica
 feature_id: [workload-scaling]
 spec_id: [workload-scaling-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 15
 ---
@@ -83,13 +83,13 @@ export { validateReplicaCount };
 
 ## Acceptance Criteria
 
-- [ ] Function returns error for empty input
-- [ ] Function returns error for non-numeric input ("abc")
-- [ ] Function returns error for negative values ("-5")
-- [ ] Function returns error for values > 1000 ("10000")
-- [ ] Function returns undefined for valid values (0, 1, 500, 1000)
-- [ ] Function returns undefined for "0" (zero is valid)
-- [ ] Function follows VSCode validation pattern (undefined = valid)
+- [x] Function returns error for empty input
+- [x] Function returns error for non-numeric input ("abc")
+- [x] Function returns error for negative values ("-5")
+- [x] Function returns error for values > 1000 ("10000")
+- [x] Function returns undefined for valid values (0, 1, 500, 1000)
+- [x] Function returns undefined for "0" (zero is valid)
+- [x] Function follows VSCode validation pattern (undefined = valid)
 
 ## Dependencies
 
