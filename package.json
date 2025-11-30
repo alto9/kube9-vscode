@@ -166,6 +166,7 @@
     "compile": "tsc",
     "pretest": "npm run compile && npm run lint",
     "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js'",
+    "test:unit": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js' --grep '@requires-k8s' --invert",
     "test:integration": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/tests/**/*.test.js'",
     "test:all": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/{src/test,tests}/**/*.test.js'",
     "lint": "eslint src --ext ts",
