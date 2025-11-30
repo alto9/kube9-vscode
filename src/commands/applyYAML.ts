@@ -276,7 +276,7 @@ async function executeKubectlApply(
   
   try {
     // Execute kubectl command
-    const { stdout, stderr } = await execFileAsync('kubectl', args, {
+    const { stdout } = await execFileAsync('kubectl', args, {
       timeout: KUBECTL_TIMEOUT_MS,
       maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large manifests
       env: { ...process.env }
@@ -325,7 +325,9 @@ export async function applyYAMLCommand(uri?: vscode.Uri): Promise<void> {
       openLabel: 'Apply YAML',
       filters: { 'YAML files': ['yaml', 'yml'] }
     });
-    if (!uris || uris.length === 0) return;
+    if (!uris || uris.length === 0) {
+      return;
+    }
     targetUri = uris[0];
   }
   

@@ -23,6 +23,12 @@ suite('applyYAML Command Tests', () => {
     // Store original functions for restoration
     let originalGetContextInfo: typeof kubectlContextModule.getContextInfo;
     let originalWindow: typeof vscode.window;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let originalActiveTextEditor: PropertyDescriptor | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let originalShowQuickPick: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let originalShowOpenDialog: any;
     let applyYAMLModule: typeof import('../../../commands/applyYAML');
     let applyYAMLCommand: typeof import('../../../commands/applyYAML').applyYAMLCommand;
 
@@ -71,30 +77,60 @@ suite('applyYAML Command Tests', () => {
                 return new Proxy(realChildProcess, {
                     get(target, prop) {
                         if (prop === 'execFile') {
-                            // Return a mock function that checks if we have a mock response
-                            return function(
-                                file: string,
-                                args: readonly string[],
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                options: any,
-                                callback: (error: Error | null, stdout: string, stderr: string) => void
-                            ) {
+                            // Create a mock function
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const mockFunc: any = function(file: string, args: string[], ...rest: any[]) {
+                                // The signature is: execFile(file, args[, options], callback)
+                                // rest will be either [callback] or [options, callback]
+                                let callback;
+                                if (rest.length === 1) {
+                                    callback = rest[0];
+                                } else {
+                                    callback = rest[1];
+                                }
+                                
                                 execFileCalls.push({ command: file, args: [...args] });
                                 
                                 if (mockExecFileResponse !== null) {
                                     if (mockExecFileResponse.type === 'success') {
                                         const response = mockExecFileResponse;
+                                        // Use process.nextTick to call callback async (AFTER function returns)
                                         process.nextTick(() => callback(null, response.stdout, response.stderr));
                                     } else {
                                         const response = mockExecFileResponse;
                                         process.nextTick(() => callback(response.error, '', ''));
                                     }
-                                    return;
+                                    // Return a ChildProcess-like object with pid
+                                    return { pid: 123 };
                                 }
                                 
                                 // Fallback to real execFile if no mock
-                                return target.execFile(file, args, options, callback);
+                                return target.execFile(file, args, ...rest);
                             };
+                            
+                            // Add a custom promisified version that util.promisify will use
+                            // This ensures promisify uses our custom implementation
+                            // eslint-disable-next-line @typescript-eslint/no-var-requires
+                            const {promisify} = require('util');
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            (mockFunc as any)[promisify.custom] = function(file: string, args: string[]): Promise<{stdout: string; stderr: string}> {
+                                execFileCalls.push({ command: file, args: [...args] });
+                                
+                                if (mockExecFileResponse !== null) {
+                                    if (mockExecFileResponse.type === 'success') {
+                                        const response = mockExecFileResponse;
+                                        return Promise.resolve({ stdout: response.stdout, stderr: response.stderr });
+                                    } else {
+                                        const response = mockExecFileResponse;
+                                        return Promise.reject(response.error);
+                                    }
+                                }
+                                
+                                // Fallback - shouldn't reach here
+                                return Promise.reject(new Error('No mock response set'));
+                            };
+                            
+                            return mockFunc;
                         }
                         return target[prop as keyof typeof target];
                     }
@@ -103,51 +139,63 @@ suite('applyYAML Command Tests', () => {
             return currentRequire.call(this, id);
         };
 
-        // Clear module cache to force reload with mocked execFile
+        // Mock VS Code window APIs FIRST, before loading the module
+        // This ensures the module sees our mocked window
+        originalWindow = vscode.window;
+        
+        // Store original methods we need to override (at suite level for teardown)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        originalActiveTextEditor = Object.getOwnPropertyDescriptor(originalWindow, 'activeTextEditor');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        originalShowQuickPick = (originalWindow as any).showQuickPick;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        originalShowOpenDialog = (originalWindow as any).showOpenDialog;
+        
+        // Override methods directly on the original window object
+        // This preserves all function references including showInformationMessage
+        Object.defineProperty(vscode.window, 'activeTextEditor', {
+            get: (): vscode.TextEditor | undefined => {
+                return activeTextEditorValue;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (vscode.window as any).showQuickPick = async <T extends vscode.QuickPickItem>(
+            items: readonly T[] | Thenable<readonly T[]>,
+            options?: vscode.QuickPickOptions
+        ): Promise<T | undefined> => {
+            const resolvedItems = await Promise.resolve(items);
+            quickPickCalls.push({ items: [...resolvedItems], options });
+            return quickPickReturnValue as T | undefined;
+        };
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (vscode.window as any).showOpenDialog = async (options?: vscode.OpenDialogOptions): Promise<vscode.Uri[] | undefined> => {
+            if (options) {
+                openDialogCalls.push(options);
+            }
+            return openDialogReturnValue;
+        };
+        
+        // Don't replace vscode.window - we're modifying it directly
+        // This ensures showInformationMessage and message tracking methods remain intact
+
+        // Clear messages
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (vscode.window as any)._clearMessages();
+
+        // Clear module cache to force reload with mocked execFile AND mocked window
         const applyYAMLPath = require.resolve('../../../commands/applyYAML');
         delete require.cache[applyYAMLPath];
         
-        // Now import the module - it will use the mocked execFile
+        // Now import the module - it will use the mocked execFile AND mocked window
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         applyYAMLModule = require('../../../commands/applyYAML');
         
         // Get the command function from the reloaded module
         applyYAMLCommand = applyYAMLModule.applyYAMLCommand;
-
-        // Mock VS Code window APIs
-        originalWindow = vscode.window;
-        
-        // Create a mock window object with getter for activeTextEditor
-        const mockWindow = {
-            ...originalWindow,
-            get activeTextEditor(): vscode.TextEditor | undefined {
-                return activeTextEditorValue;
-            },
-            showQuickPick: async <T extends vscode.QuickPickItem>(
-                items: readonly T[] | Thenable<readonly T[]>,
-                options?: vscode.QuickPickOptions
-            ): Promise<T | undefined> => {
-                const resolvedItems = await Promise.resolve(items);
-                quickPickCalls.push({ items: [...resolvedItems], options });
-                return quickPickReturnValue as T | undefined;
-            },
-            showOpenDialog: async (options?: vscode.OpenDialogOptions): Promise<vscode.Uri[] | undefined> => {
-                if (options) {
-                    openDialogCalls.push(options);
-                }
-                return openDialogReturnValue;
-            },
-            showInformationMessage: originalWindow.showInformationMessage,
-            showErrorMessage: originalWindow.showErrorMessage,
-            createOutputChannel: originalWindow.createOutputChannel
-        };
-        
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (vscode.window as any) = mockWindow;
-
-        // Clear messages
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (vscode.window as any)._clearMessages();
     });
 
     teardown(() => {
@@ -172,9 +220,18 @@ suite('applyYAML Command Tests', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (kubectlContextModule as any).getContextInfo = originalGetContextInfo;
         
-        // Restore window
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (vscode.window as any) = originalWindow;
+        // Restore window methods we overrode
+        if (originalActiveTextEditor) {
+            Object.defineProperty(vscode.window, 'activeTextEditor', originalActiveTextEditor);
+        }
+        if (originalShowQuickPick) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vscode.window as any).showQuickPick = originalShowQuickPick;
+        }
+        if (originalShowOpenDialog) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vscode.window as any).showOpenDialog = originalShowOpenDialog;
+        }
     });
 
     /**
@@ -257,7 +314,7 @@ suite('applyYAML Command Tests', () => {
 
             // Should show file picker
             assert.strictEqual(openDialogCalls.length, 1, 'Should show file picker when no URI and no YAML file');
-            assert.strictEqual(openDialogCalls[0].filters?.['YAML files'], ['yaml', 'yml'], 'Should filter for YAML files');
+            assert.deepStrictEqual(openDialogCalls[0].filters?.['YAML files'], ['yaml', 'yml'], 'Should filter for YAML files');
             // Should use selected file
             assert.strictEqual(execFileCalls.length, 1, 'Should execute kubectl command');
             assert.strictEqual(execFileCalls[0].args[execFileCalls[0].args.length - 1], testUri.fsPath, 'Should use file picker URI');
@@ -354,13 +411,19 @@ suite('applyYAML Command Tests', () => {
             const output = 'deployment.apps/my-app created';
             mockExecFileSuccess(output);
 
+            // Clear messages before test
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vscode.window as any)._clearMessages();
+            
             await applyYAMLCommand(testUri);
 
             // Should show success notification with resource name
+            // The message should be the resource string itself for single resource
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const infoMessages = (vscode.window as any)._getInfoMessages();
             assert.ok(infoMessages.length > 0, 'Should show success notification');
-            assert.ok(infoMessages.some((msg: string) => msg.includes('my-app') || msg.includes('created')), 'Notification should contain resource name');
+            // For single resource, the message is the resource string: "deployment.apps/my-app created"
+            assert.ok(infoMessages.some((msg: string) => msg.includes('my-app') || msg.includes('deployment.apps')), 'Notification should contain resource name');
         });
 
         test('parses multi-resource output', async () => {
@@ -369,12 +432,17 @@ suite('applyYAML Command Tests', () => {
             const output = 'deployment.apps/my-app created\nservice/my-service created\nconfigmap/my-config created';
             mockExecFileSuccess(output);
 
+            // Clear messages before test
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (vscode.window as any)._clearMessages();
+
             await applyYAMLCommand(testUri);
 
             // Should show success notification with resource count
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const infoMessages = (vscode.window as any)._getInfoMessages();
             assert.ok(infoMessages.length > 0, 'Should show success notification');
+            // For multiple resources, the message should be: "3 resources applied successfully"
             assert.ok(infoMessages.some((msg: string) => msg.includes('3 resources') || msg.includes('resources applied')), 'Notification should mention resource count');
         });
     });
