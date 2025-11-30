@@ -3,7 +3,7 @@ story_id: register-scale-command-in-package-json
 session_id: add-quick-scale-for-deploymentsstatefulsetsreplica
 feature_id: [workload-scaling]
 spec_id: [workload-scaling-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 10
 ---
