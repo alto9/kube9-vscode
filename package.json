@@ -91,6 +91,11 @@
         "command": "kube9.openDashboard",
         "title": "Open Dashboard",
         "category": "kube9"
+      },
+      {
+        "command": "kube9.applyYAML",
+        "title": "Apply YAML",
+        "category": "kube9"
       }
     ],
     "menus": {
@@ -121,6 +126,13 @@
           "command": "kube9.deleteResource",
           "when": "view == kube9ClusterView && viewItem =~ /^resource/",
           "group": "kube9@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "kube9.applyYAML",
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "group": "kube9@1"
         }
       ]
     },
@@ -154,6 +166,8 @@
     "compile": "tsc",
     "pretest": "npm run compile && npm run lint",
     "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js'",
+    "pretest:unit": "npm run compile && npm run lint",
+    "test:unit": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js' --grep '@requires-k8s' --invert",
     "test:integration": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/tests/**/*.test.js'",
     "test:all": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/{src/test,tests}/**/*.test.js'",
     "lint": "eslint src --ext ts",

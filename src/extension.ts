@@ -9,6 +9,7 @@ import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
+import { applyYAMLCommand } from './commands/applyYAML';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -646,6 +647,14 @@ function registerCommands(): void {
     );
     context.subscriptions.push(openDashboardCmd);
     disposables.push(openDashboardCmd);
+    
+    // Register apply YAML command
+    const applyYAMLCmd = vscode.commands.registerCommand(
+        'kube9.applyYAML',
+        applyYAMLCommand
+    );
+    context.subscriptions.push(applyYAMLCmd);
+    disposables.push(applyYAMLCmd);
 }
 
 /**

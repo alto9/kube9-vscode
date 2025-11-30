@@ -5,12 +5,14 @@ import { ClusterConnectivity, ConnectivityResult } from '../../../kubernetes/Clu
 import { NamespaceCommands, NamespacesResult } from '../../../kubectl/NamespaceCommands';
 import { ParsedKubeconfig } from '../../../kubernetes/KubeconfigParser';
 import { KubectlError, KubectlErrorType } from '../../../kubernetes/KubectlError';
+import * as kubectlContextModule from '../../../utils/kubectlContext';
 import * as vscode from '../../mocks/vscode';
 
 suite('ClusterTreeProvider Test Suite', () => {
     let provider: ClusterTreeProvider;
     let originalGetNamespaces: typeof NamespaceCommands.getNamespaces;
     let originalCheckMultipleConnectivity: typeof ClusterConnectivity.checkMultipleConnectivity;
+    let originalGetCurrentNamespace: typeof kubectlContextModule.getCurrentNamespace;
 
     const mockKubeconfig: ParsedKubeconfig = {
         filePath: '/test/kubeconfig.yaml',
@@ -35,6 +37,13 @@ suite('ClusterTreeProvider Test Suite', () => {
         // Save original methods for restoration
         originalGetNamespaces = NamespaceCommands.getNamespaces;
         originalCheckMultipleConnectivity = ClusterConnectivity.checkMultipleConnectivity;
+        originalGetCurrentNamespace = kubectlContextModule.getCurrentNamespace;
+        
+        // Mock getCurrentNamespace to return null by default (no active namespace)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (kubectlContextModule as any).getCurrentNamespace = async (): Promise<string | null> => {
+            return null;
+        };
         
         // Clear any previous window messages
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,6 +54,8 @@ suite('ClusterTreeProvider Test Suite', () => {
         // Restore original methods
         NamespaceCommands.getNamespaces = originalGetNamespaces;
         ClusterConnectivity.checkMultipleConnectivity = originalCheckMultipleConnectivity;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (kubectlContextModule as any).getCurrentNamespace = originalGetCurrentNamespace;
         
         // Dispose provider
         provider.dispose();

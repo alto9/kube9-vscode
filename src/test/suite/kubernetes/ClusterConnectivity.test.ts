@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ClusterConnectivity } from '../../../kubernetes/ClusterConnectivity';
 import { ClusterStatus } from '../../../kubernetes/ClusterTypes';
 
-suite('ClusterConnectivity Test Suite', () => {
+suite('ClusterConnectivity Test Suite @requires-k8s', () => {
     // Path to test kubeconfig fixture
     const testKubeconfigPath = path.join(__dirname, '../../fixtures/valid-kubeconfig.yaml');
 

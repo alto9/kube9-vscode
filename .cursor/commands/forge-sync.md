@@ -1,4 +1,4 @@
-<!-- forge-hash: c915b09050b7ce48330b7222f131351d3ebd2f041b0e71b13223aed9f007229c -->
+<!-- forge-hash: fbca6f7c97b5aaf316aac62323db4fd8258d00255479695874402fb847b9b7ef -->
 
 # Forge Sync
 
@@ -82,7 +82,7 @@ None. This command can be run at any time, with or without an active design sess
 - **Be thorough**: Don't skip files or make assumptions; actually read and analyze the code
 - **Maintain accuracy**: Documentation must reflect actual implementation, not aspirational design
 - **Preserve existing docs**: Update rather than replace when possible; don't lose valuable context
-- **Respect Forge patterns**: Use correct file types, formats (Gherkin, nomnoml), and frontmatter
+- **Respect Forge patterns**: Use correct file types, formats (Gherkin, react-flow JSON), and frontmatter
 - **Session awareness**: Actors and Contexts can be created freely; Features/Diagrams/Specs may require a session
 
 ## Output Format

@@ -1,4 +1,4 @@
-<!-- forge-hash: e530b84f038f37c4dd1e69416cbbff7c4410b61cf36700a4086f46eade642f16 -->
+<!-- forge-hash: 31dd5dc939bb8ec6bd6161e7c247cb5001e35ea52a7dd383913f0808ad754f1d -->
 
 # Forge Scribe
 
@@ -78,8 +78,8 @@ The command will:
    - This provides just-in-time technical guidance for each technology involved
 
 ### Phase 5: Architectural Understanding
-1. **Read all nomnoml diagrams**
-   - Examine every nomnoml diagram in modified specs
+1. **Read all diagram files**
+   - Examine every diagram file referenced in modified specs
    - Understand:
      - System architecture
      - Component relationships
@@ -110,7 +110,7 @@ Before creating tickets, verify:
 - [ ] All feature/spec `context_id` references read
 - [ ] All `spec_id` linkages followed
 - [ ] All object types extracted and queried via `get_forge_context`
-- [ ] All nomnoml diagrams analyzed
+- [ ] All diagram files analyzed
 - [ ] Complete architectural understanding achieved
 - [ ] Context map synthesized
 

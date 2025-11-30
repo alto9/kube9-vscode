@@ -1,4 +1,4 @@
-<!-- forge-hash: bf72e59eb0b2e68dc1866f092fe017a8192c987d5c4d328fd2038357a79cb831 -->
+<!-- forge-hash: 55ad5cab1a0af4efe59ba43d7082cf4db4a620990edece381b9921d57b8e1b02 -->
 
 # Forge Design
 
@@ -28,7 +28,7 @@ When working in design sessions, use the correct file type for each purpose:
 
 ### Diagrams (*.diagram.md)
 - **Purpose**: Visualize HOW the system is structured
-- **Format**: Single nomnoml diagram per file
+- **Format**: JSON diagram data in markdown code blocks
 - **Contains**: ONE visual representation (infrastructure, components, flows, states)
 - **Example**: "User authentication flow through API gateway to Lambda"
 - **Keep it visual**: No pseudocode or implementation details
@@ -71,7 +71,7 @@ Understanding the existing structure helps maintain coherence and makes the docu
 - **Only modify AI documentation files**: Work exclusively within the `ai/` folder
 - **Do NOT modify implementation code**: This command is for updating features, diagrams, specs, actors, and contexts only
 - **Track all changes**: Ensure changed files are tracked in the active session's `changed_files` array
-- **Use proper formats**: Features use Gherkin in code blocks, Diagrams use single nomnoml diagrams, Specs use markdown only
+- **Use proper formats**: Features use Gherkin in code blocks, Diagrams use react-flow JSON format, Specs use markdown only
 - **Call MCP tools**: Always start by calling `get_forge_about` to understand the current Forge workflow
 
 ## Usage
