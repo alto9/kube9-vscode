@@ -3,7 +3,7 @@ story_id: add-kubectl-scale-functions
 session_id: add-quick-scale-for-deploymentsstatefulsetsreplica
 feature_id: [workload-scaling]
 spec_id: [workload-scaling-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
