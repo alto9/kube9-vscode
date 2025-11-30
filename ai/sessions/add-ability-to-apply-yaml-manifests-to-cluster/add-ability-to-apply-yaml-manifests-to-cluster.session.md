@@ -1,7 +1,7 @@
 ---
 session_id: add-ability-to-apply-yaml-manifests-to-cluster
 start_time: '2025-11-28T15:31:22.110Z'
-status: development
+status: completed
 problem_statement: Add ability to apply YAML manifests to cluster
 changed_files:
   - path: ai/features/cluster/apply-yaml-manifest.feature.md
