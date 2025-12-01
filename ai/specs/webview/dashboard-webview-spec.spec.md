@@ -210,7 +210,7 @@ interface WebviewMessage {
 
 ```typescript
 interface ExtensionMessage {
-  type: 'requestData' | 'refresh' | 'configureApiKey' | 'installOperator';
+  type: 'requestData' | 'refresh' | 'installOperator';
   payload?: any;
 }
 ```

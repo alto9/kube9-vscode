@@ -165,10 +165,6 @@ export class OperatedDashboardPanel {
                 );
                 break;
 
-            case 'configureApiKey':
-                await OperatedDashboardPanel.handleConfigureApiKey(panel, contextName);
-                break;
-
             default:
                 console.log('Unknown message type:', message.type);
         }
@@ -379,68 +375,6 @@ export class OperatedDashboardPanel {
                 type: 'error',
                 error: `Failed to load dashboard data: ${errorMessage}`
             });
-        }
-    }
-
-    /**
-     * Handle API key configuration request from webview.
-     * Prompts user for API key, validates input, stores securely, and refreshes dashboard.
-     * 
-     * @param panel - The webview panel
-     * @param contextName - The kubectl context name
-     */
-    private static async handleConfigureApiKey(
-        panel: vscode.WebviewPanel,
-        contextName: string
-    ): Promise<void> {
-        try {
-            // Show input box for API key
-            const apiKey = await vscode.window.showInputBox({
-                prompt: 'Enter your kube9 API key',
-                password: true,
-                placeHolder: 'API key',
-                validateInput: (value) => {
-                    if (!value || value.trim().length === 0) {
-                        return 'API key cannot be empty';
-                    }
-                    return null;
-                }
-            });
-            
-            // User cancelled
-            if (!apiKey) {
-                console.log('API key configuration cancelled by user');
-                return;
-            }
-            
-            // Store API key securely
-            if (OperatedDashboardPanel.extensionContext) {
-                const { Settings } = await import('../config/Settings');
-                await Settings.setApiKey(OperatedDashboardPanel.extensionContext, apiKey.trim());
-                
-                // Show success message
-                vscode.window.showInformationMessage('API key configured successfully');
-                
-                // Log for debugging
-                console.log('API key configured for context:', contextName);
-                
-                // Get panel info to retrieve kubeconfig path
-                const panelInfo = OperatedDashboardPanel.openPanels.get(contextName);
-                if (panelInfo) {
-                    // Refresh the dashboard to show AI recommendations
-                    await OperatedDashboardPanel.sendDashboardData(
-                        panel,
-                        panelInfo.kubeconfigPath,
-                        contextName
-                    );
-                }
-            } else {
-                throw new Error('Extension context not available');
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error('Failed to configure API key:', errorMessage);
-            vscode.window.showErrorMessage(`Failed to configure API key: ${errorMessage}`);
         }
     }
 

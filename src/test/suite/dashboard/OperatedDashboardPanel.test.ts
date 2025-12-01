@@ -364,7 +364,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         assert.ok(panelInfo, 'Panel info should exist');
         assert.ok(panelInfo.operatorStatus, 'Panel info should have operator status');
         assert.strictEqual(panelInfo.operatorStatus.mode, 'enabled', 'Should store correct operator mode');
-        assert.strictEqual(panelInfo.operatorStatus.hasApiKey, true, 'Should store correct API key status');
+        assert.strictEqual(panelInfo.operatorStatus.hasApiKey, true, 'Should store correct API key status from operator');
         assert.strictEqual(panelInfo.operatorStatus.tier, 'pro', 'Should store correct tier');
         assert.strictEqual(panelInfo.operatorStatus.version, '2.0.0', 'Should store correct version');
         assert.strictEqual(panelInfo.operatorStatus.health, 'healthy', 'Should store correct health status');

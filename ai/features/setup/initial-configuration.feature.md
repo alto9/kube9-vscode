@@ -34,7 +34,6 @@ Scenario: Welcome screen appears on first launch
   Then a welcome screen webview should open automatically
   And the welcome screen should display the kube9 logo and title
   And the welcome screen should show a quick start guide
-  And the welcome screen should include authentication setup instructions
   And the welcome screen should have a "Do not show this again" checkbox
   And the checkbox should be unchecked by default
 
@@ -42,10 +41,6 @@ Scenario: Welcome screen content provides helpful guidance
   Given the welcome screen is displayed
   Then the quick start guide should explain the extension's core features
   And the guide should list cluster viewing, resource navigation, and AI recommendations
-  And the authentication section should explain API keys are optional
-  And the authentication section should clarify API keys are only needed for AI features
-  And the authentication section should provide a link to the kube9 portal at "portal.kube9.dev"
-  And the authentication section should show how to configure the API key in VS Code settings
   And the welcome screen should include a link to full documentation
   And the welcome screen should have a "Get Started" or "Close" button
 
@@ -89,7 +84,6 @@ Scenario: Side panel shows detected clusters and contexts
   And the current context should be highlighted or marked as active
   When the user clicks on a cluster in the tree view
   Then the cluster should expand to show available namespaces
-  And this should work without requiring API key configuration
 
 Scenario: Missing kubeconfig file is handled gracefully
   Given the kube9 extension has activated
@@ -113,17 +107,6 @@ Scenario: Invalid kubeconfig file is handled gracefully
   And the message should indicate the kubeconfig is invalid
   And the message should suggest checking the file for syntax errors
   And the extension should log the error details for troubleshooting
-
-Scenario: Authentication context is clear to users
-  Given the user is viewing clusters in the side panel without authentication
-  When they select a resource and open the webview panel
-  Then the resource details should display normally
-  And the YAML configuration should be visible
-  But the AI Recommendations section should indicate authentication is required
-  And there should be a message like "Configure API key to enable AI recommendations"
-  And there should be a link or button to configure authentication settings
-  When the user clicks on the authentication setup link
-  Then VS Code settings should open to the kube9 configuration section
 
 Scenario: Extension activation performance
   Given the kube9 extension is being activated
@@ -163,28 +146,22 @@ Scenario: Re-activating extension after initial setup
 
 5. **Performance**: Cluster detection should not block the UI. Use async/await patterns and consider implementing a loading state in the tree view.
 
-6. **Authentication UI Flow**: When users need to configure authentication:
-   - Open VS Code settings to `kube9.apiKey`
-   - Provide inline help text explaining where to get an API key
-   - Link to the portal for key generation
-   - Consider implementing a command palette command "kube9: Configure API Key" for easier access
-
-7. **Welcome Screen Design**: The webview should:
+6. **Welcome Screen Design**: The webview should:
    - Match VS Code's theme (light/dark mode)
    - Use VS Code's webview styling for consistency
    - Be responsive and readable at different window sizes
    - Include clear call-to-action buttons
 
-8. **Accessibility**: Ensure the welcome screen and side panel meet accessibility standards:
+7. **Accessibility**: Ensure the welcome screen and side panel meet accessibility standards:
    - Proper ARIA labels
    - Keyboard navigation support
    - Screen reader compatibility
 
-9. **Testing Scenarios**: Test with:
+8. **Testing Scenarios**: Test with:
    - Fresh VS Code installation with no existing settings
    - Multiple clusters in kubeconfig
    - Missing kubeconfig file
    - Corrupted kubeconfig file
    - Custom KUBECONFIG environment variable
 
-10. **Future Enhancement**: Consider adding a "Setup Wizard" command that users can invoke later to reconfigure or see the welcome content again, even if they dismissed it permanently.
+9. **Future Enhancement**: Consider adding a "Setup Wizard" command that users can invoke later to reconfigure or see the welcome content again, even if they dismissed it permanently.

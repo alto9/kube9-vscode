@@ -9,7 +9,7 @@ context_id: [kubernetes-cluster-management, vscode-extension-development, ai-int
 
 ## Overview
 
-The Operated Dashboard displays cluster statistics from operator-managed resources when the kube9-operator is installed. It includes a conditional content section that shows AI-powered recommendations when an API key is configured, or an upsell call-to-action when no API key is present. This dashboard is designed for users who have installed the kube9-operator and represents the paid/premium experience.
+The Operated Dashboard displays cluster statistics from operator-managed resources when the kube9-operator is installed. It includes a conditional content section that shows AI-powered recommendations when the operator is in enabled mode, or an upsell call-to-action for the free tier. This dashboard is designed for users who have installed the kube9-operator and represents the paid/premium experience.
 
 ## Behavior
 
@@ -58,19 +58,17 @@ Scenario: Operated Dashboard displays operator information
   Then the dashboard should indicate that the operator is providing the data
   And the dashboard should display operator status information
 
-Scenario: Dashboard detects API key presence for conditional content
+Scenario: Dashboard detects operator mode for conditional content
   Given the Operated Dashboard is open
   When the dashboard determines which conditional content to display
   Then the dashboard should query the operator status ConfigMap
-  And the dashboard should check the apiKeyConfigured field
-  And the dashboard should check the operator mode is "enabled"
-  And if both conditions are true, the dashboard should prepare to display AI recommendations
-  And if either condition is false, the dashboard should prepare to display upsell CTA
+  And the dashboard should check the operator mode
+  And if mode is "enabled", the dashboard should prepare to display AI recommendations
+  And if mode is "operated", the dashboard should prepare to display upsell CTA
 
-Scenario: Dashboard displays AI recommendations panel when API key present
+Scenario: Dashboard displays AI recommendations panel when operator is enabled
   Given the Operated Dashboard is open
   And the operator has operator status "enabled"
-  And the operator has a valid API key configured
   When the dashboard loads conditional content
   Then the dashboard should display the AI Recommendations panel
   And the panel should be prominently positioned after stats cards
@@ -87,21 +85,14 @@ Scenario: AI recommendations panel displays recommendations
   And each recommendation card should show the title and description
   And the panel should provide value to users with insights about their cluster
 
-Scenario: Dashboard displays upsell CTA when no API key present
+Scenario: Dashboard displays upsell CTA for free tier
   Given the Operated Dashboard is open
   And the operator has operator status "operated"
-  And the operator does NOT have an API key configured
   When the dashboard loads conditional content
   Then the dashboard should display the Upsell CTA panel
   And the panel should be positioned where AI recommendations would appear
-  And the panel should explain the benefits of adding an API key
-  And the panel should provide a "Configure API Key" button
-
-Scenario: User clicks Configure API Key button
-  Given the Upsell CTA panel is visible
-  When the user clicks the "Configure API Key" button
-  Then the dashboard should prompt the user to configure their API key
-  And the dashboard should refresh after API key configuration
+  And the panel should explain the benefits of upgrading to Pro tier
+  And the panel should provide information about upgrading
 
 Scenario: Dashboard refreshes data automatically
   Given the Operated Dashboard is open
@@ -123,8 +114,8 @@ Scenario: User manually refreshes dashboard
 
 Scenario: Dashboard switches conditional content when operator status changes
   Given the Operated Dashboard is open
-  And the dashboard is displaying upsell CTA (no API key)
-  When the operator status changes to "enabled" (API key configured)
+  And the dashboard is displaying upsell CTA (free tier)
+  When the operator status changes to "enabled"
   And the dashboard refreshes or auto-refreshes
   Then the dashboard should detect the status change
   And the dashboard should switch from upsell CTA to AI recommendations panel

@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
+import { getCurrentNamespace } from '../utils/kubectlContext';
 
 /**
  * Timeout for helm commands in milliseconds.
@@ -74,15 +75,31 @@ export class HelmCommands {
     ): Promise<HelmReleasesResult> {
         console.log(`[DEBUG HELM] getHelmReleases called for context: ${contextName}`);
         try {
-            // Execute helm list with JSON output across all namespaces
+            // Check if a namespace is set in kubectl context
+            // Default to 'default' namespace if none is set
+            let currentNamespace: string = 'default';
+            try {
+                const ns = await getCurrentNamespace();
+                if (ns) {
+                    currentNamespace = ns;
+                }
+            } catch (error) {
+                console.warn('Failed to get current namespace, using default namespace:', error);
+            }
+
+            // Build helm command arguments
+            // Always use the namespace (either from context or 'default')
+            const args = [
+                'list',
+                '--namespace', currentNamespace,
+                '--output=json',
+                `--kube-context=${contextName}`
+            ];
+
+            // Execute helm list with JSON output for the specific namespace
             const { stdout } = await execFileAsync(
                 'helm',
-                [
-                    'list',
-                    '--all-namespaces',
-                    '--output=json',
-                    `--kube-context=${contextName}`
-                ],
+                args,
                 {
                     timeout: HELM_TIMEOUT_MS,
                     maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters

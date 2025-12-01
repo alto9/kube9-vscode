@@ -19,7 +19,7 @@ export interface OperatorDashboardStatus {
     
     /** 
      * Whether the operator has an API key configured.
-     * This determines if AI recommendations are available.
+     * Read from operator's ConfigMap. Extension cannot set this.
      */
     hasApiKey: boolean;
     
@@ -169,7 +169,7 @@ export interface Insight {
 
 /**
  * AI recommendations data from the kube9-ai-recommendations ConfigMap.
- * Only available when operator has an API key configured.
+ * Only available when operator is in enabled mode.
  */
 export interface AIRecommendationsData {
     /** Array of AI-powered recommendations */

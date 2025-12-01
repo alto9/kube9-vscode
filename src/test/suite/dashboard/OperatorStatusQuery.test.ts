@@ -182,7 +182,7 @@ suite('OperatorStatusQuery Test Suite', () => {
             assert.strictEqual(result?.health, 'degraded', 'Health should be degraded');
         });
 
-        test('should handle enabled mode without registration as no API key', async () => {
+        test('should handle enabled mode without registration', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'enabled',
                 tier: 'pro',
@@ -212,7 +212,7 @@ suite('OperatorStatusQuery Test Suite', () => {
             assert.strictEqual(result?.hasApiKey, false, 'hasApiKey should be false when not registered');
         });
 
-        test('should handle operated mode with registration as no API key', async () => {
+        test('should handle operated mode with registration', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'operated',
                 tier: 'free',

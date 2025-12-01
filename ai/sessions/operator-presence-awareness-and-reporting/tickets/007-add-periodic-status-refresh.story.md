@@ -47,3 +47,6 @@ Operator status should be refreshed periodically to reflect changes in operator 
 - 001-create-operator-status-client (needs OperatorStatusClient with caching)
 - 004-integrate-status-check-on-connection (needs checkOperatorStatus method)
 
+## Historical Note
+
+**December 2025**: The periodic refresh functionality implemented in this story was later removed to align with standard Kubernetes extension behavior (like ms-kubernetes-tools). The extension now relies solely on manual refresh triggered by the user. Operator status is still checked during initial cluster connection and manual refreshes, with caching still in place to avoid excessive API calls.

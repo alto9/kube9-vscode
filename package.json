@@ -47,12 +47,6 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "kube9.configureApiKey",
-        "title": "Configure API Key",
-        "category": "kube9",
-        "icon": "$(key)"
-      },
-      {
         "command": "kube9.openNamespace",
         "title": "Open Namespace",
         "category": "kube9"
@@ -139,12 +133,6 @@
     "configuration": {
       "title": "kube9",
       "properties": {
-        "kube9.apiKey": {
-          "type": "string",
-          "default": "",
-          "description": "Optional API key for AI-powered features. Get your key at portal.kube9.dev",
-          "scope": "application"
-        },
         "kube9.serverUrl": {
           "type": "string",
           "default": "https://api.kube9.dev",

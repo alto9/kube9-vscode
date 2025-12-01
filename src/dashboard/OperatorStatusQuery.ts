@@ -44,9 +44,9 @@ export async function getOperatorDashboardStatus(
     // Operator is installed - extract relevant fields
     const operatorStatus = cachedStatus.status;
     
-    // Map the registered field to hasApiKey for dashboard use
-    // In enabled mode, registered indicates API key is configured
-    const hasApiKey = operatorStatus.registered && mode === OperatorStatusMode.Enabled;
+    // Map the apiKeyConfigured field from operator status
+    // In enabled mode, this indicates API key is configured at operator level
+    const hasApiKey = operatorStatus.apiKeyConfigured && mode === OperatorStatusMode.Enabled;
     
     // Return dashboard-specific status
     const dashboardStatus: OperatorDashboardStatus = {

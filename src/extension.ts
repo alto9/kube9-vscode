@@ -6,7 +6,6 @@ import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
-import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
 import { applyYAMLCommand } from './commands/applyYAML';
@@ -36,12 +35,6 @@ const disposables: vscode.Disposable[] = [];
  * Accessible for refreshing the tree view when cluster data changes.
  */
 let clusterTreeProvider: ClusterTreeProvider | undefined;
-
-/**
- * Status bar item showing authentication status.
- * Displays API key configuration status for AI features.
- */
-let authStatusBarItem: vscode.StatusBarItem | undefined;
 
 /**
  * Status bar item showing current kubectl namespace.
@@ -126,9 +119,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Pass parsed kubeconfig to tree provider to populate clusters
         clusterTreeProvider.setKubeconfig(kubeconfig);
-        
-        // Create and show status bar item for authentication status
-        createAuthStatusBarItem();
         
         // Create and show status bar item for namespace context
         await createNamespaceStatusBarItem();
@@ -235,40 +225,6 @@ function getApiVersionForKind(kind: string): string {
 }
 
 /**
- * Create and initialize the authentication status bar item.
- * Shows current API key configuration status and provides quick access to settings.
- */
-function createAuthStatusBarItem(): void {
-    const context = getExtensionContext();
-    const hasApiKey = Settings.hasApiKey();
-    
-    // Create status bar item on the right side
-    authStatusBarItem = vscode.window.createStatusBarItem(
-        vscode.StatusBarAlignment.Right,
-        100 // Priority - higher values appear more to the left
-    );
-    
-    // Set text and icon based on API key status
-    if (hasApiKey) {
-        authStatusBarItem.text = '$(check) kube9: Authenticated';
-        authStatusBarItem.tooltip = 'API key configured. AI-powered recommendations are available.\n\nClick to manage API key settings.';
-    } else {
-        authStatusBarItem.text = '$(key) kube9: No API Key';
-        authStatusBarItem.tooltip = 'No API key configured. AI features require authentication.\n\nCore cluster management works without an API key.\n\nClick to configure your API key.';
-    }
-    
-    // Make it clickable to open settings
-    authStatusBarItem.command = 'kube9.configureApiKey';
-    
-    // Show the status bar item
-    authStatusBarItem.show();
-    
-    // Add to disposables for cleanup
-    context.subscriptions.push(authStatusBarItem);
-    disposables.push(authStatusBarItem);
-}
-
-/**
  * Create and initialize the namespace status bar item.
  * Shows current kubectl namespace context with automatic updates on context changes.
  */
@@ -294,14 +250,6 @@ async function createNamespaceStatusBarItem(): Promise<void> {
  */
 function registerCommands(): void {
     const context = getExtensionContext();
-    
-    // Register configure API key command
-    const configureApiKeyCmd = vscode.commands.registerCommand(
-        'kube9.configureApiKey',
-        configureApiKeyCommand
-    );
-    context.subscriptions.push(configureApiKeyCmd);
-    disposables.push(configureApiKeyCmd);
     
     // Register refresh clusters command
     const refreshClustersCommand = vscode.commands.registerCommand('kube9.refreshClusters', async () => {
@@ -693,10 +641,6 @@ export async function deactivate(): Promise<void> {
         console.log('Namespace context watcher stopped.');
         
         // Dispose status bar items
-        if (authStatusBarItem) {
-            authStatusBarItem.dispose();
-        }
-        
         if (namespaceStatusBar) {
             namespaceStatusBar.dispose();
         }
@@ -704,8 +648,7 @@ export async function deactivate(): Promise<void> {
         // Clear tree provider reference
         clusterTreeProvider = undefined;
         
-        // Clear status bar item references
-        authStatusBarItem = undefined;
+        // Clear status bar item reference
         namespaceStatusBar = undefined;
         
         // Clear manager references

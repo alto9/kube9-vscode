@@ -151,27 +151,27 @@ export class ConfigurationCommands {
     ): Promise<ConfigMapsResult> {
         try {
             // Check if a namespace is set in kubectl context
-            let currentNamespace: string | null = null;
+            // Default to 'default' namespace if none is set
+            let currentNamespace: string = 'default';
             try {
-                currentNamespace = await getCurrentNamespace();
+                const ns = await getCurrentNamespace();
+                if (ns) {
+                    currentNamespace = ns;
+                }
             } catch (error) {
-                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+                console.warn('Failed to get current namespace, using default namespace:', error);
             }
 
             // Build kubectl command arguments
-            const args = ['get', 'configmaps'];
-            
-            // If no namespace is set, use --all-namespaces flag
-            // Otherwise, kubectl will use the context namespace automatically
-            if (!currentNamespace) {
-                args.push('--all-namespaces');
-            }
-            
-            args.push(
+            // Always use the namespace (either from context or 'default')
+            // kubectl will automatically use the context namespace if set
+            const args = [
+                'get',
+                'configmaps',
                 '--output=json',
                 `--kubeconfig=${kubeconfigPath}`,
                 `--context=${contextName}`
-            );
+            ];
 
             // Execute kubectl get configmaps with JSON output
             const { stdout } = await execFileAsync(
@@ -352,27 +352,27 @@ export class ConfigurationCommands {
         console.log(`[DEBUG SECRETS] getSecrets called for context: ${contextName}`);
         try {
             // Check if a namespace is set in kubectl context
-            let currentNamespace: string | null = null;
+            // Default to 'default' namespace if none is set
+            let currentNamespace: string = 'default';
             try {
-                currentNamespace = await getCurrentNamespace();
+                const ns = await getCurrentNamespace();
+                if (ns) {
+                    currentNamespace = ns;
+                }
             } catch (error) {
-                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+                console.warn('Failed to get current namespace, using default namespace:', error);
             }
 
             // Build kubectl command arguments
-            const args = ['get', 'secrets'];
-            
-            // If no namespace is set, use --all-namespaces flag
-            // Otherwise, kubectl will use the context namespace automatically
-            if (!currentNamespace) {
-                args.push('--all-namespaces');
-            }
-            
-            args.push(
+            // Always use the namespace (either from context or 'default')
+            // kubectl will automatically use the context namespace if set
+            const args = [
+                'get',
+                'secrets',
                 '--output=json',
                 `--kubeconfig=${kubeconfigPath}`,
                 `--context=${contextName}`
-            );
+            ];
 
             // Execute kubectl get secrets with JSON output
             const { stdout } = await execFileAsync(

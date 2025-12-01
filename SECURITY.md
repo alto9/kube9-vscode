@@ -48,7 +48,7 @@ When using kube9-vscode:
 - **Keep updated**: Update the extension regularly
 
 ### Pro Tier
-- **API key storage**: API keys are stored in VS Code's secret storage (never in settings.json)
+- **Operator configuration**: API keys are managed at the operator level in your cluster
 - **Operator permissions**: Review RBAC permissions for kube9-operator
 - **Network security**: Operator uses HTTPS for all external communication
 - **Data sanitization**: Operator sanitizes data before transmission (no secrets/credentials)
@@ -57,8 +57,8 @@ When using kube9-vscode:
 
 ### kubeconfig Handling
 - The extension reads your kubeconfig file locally
-- **Your kubeconfig never leaves your machine** (free tier)
-- API keys are stored securely using VS Code's secret storage API
+- **Your kubeconfig never leaves your machine**
+- API keys for Pro tier are managed by the operator, not by the extension
 
 ### Kubernetes API Access
 - The extension uses your kubectl credentials

@@ -17,7 +17,7 @@ kube9 is a VS Code extension that brings visual Kubernetes cluster management di
 - ✅ Launch workloads with freeform YAML
 - ✅ Multi-cluster support via kubeconfig
 
-**Pro Tier** - AI-powered intelligence ([Get API Key →](https://portal.kube9.dev)):
+**Pro Tier** - AI-powered intelligence ([Learn More →](https://portal.kube9.dev)):
 - ✨ Advanced dashboards with real-time charts
 - ✨ AI-powered recommendations and insights
 - ✨ Historical metrics and trends
@@ -39,7 +39,7 @@ kube9 uses a **progressive enhancement** architecture that adapts to user tier:
 │  │  - Basic CRUD operations       │ │
 │  └────────────────────────────────┘ │
 │  ┌────────────────────────────────┐ │
-│  │  Pro Tier (with API key):     │ │
+│  │  Pro Tier (with operator):    │ │
 │  │  - Loads from kube9-server    │ │
 │  │  - Rich web applications      │ │
 │  │  - No CSP restrictions        │ │
@@ -120,14 +120,8 @@ npm run compile
 
 ### Upgrade to Pro
 
-#### Step 1: Get API Key
-Visit [portal.kube9.dev](https://portal.kube9.dev) to:
-- Create a free account
-- Generate your API key
-- View installation instructions
-
-#### Step 2: Install Operator
-The operator runs in your cluster to enable Pro features:
+#### Step 1: Install Operator
+The operator runs in your cluster to enable Pro features. Visit [portal.kube9.dev](https://portal.kube9.dev) for complete installation instructions including API key setup.
 
 **Option A: Automatic (requires Helm)**
 ```bash
@@ -135,7 +129,6 @@ The operator runs in your cluster to enable Pro features:
 # Or run manually:
 helm repo add kube9 https://charts.kube9.dev
 helm install kube9-operator kube9/kube9-operator \
-  --set apiKey=YOUR_API_KEY \
   --namespace kube9-system \
   --create-namespace
 ```
@@ -143,20 +136,12 @@ helm install kube9-operator kube9/kube9-operator \
 **Option B: Manual**
 ```bash
 kubectl apply -f https://install.kube9.dev/operator.yaml
-kubectl create secret generic kube9-config \
-  --from-literal=apiKey=YOUR_API_KEY \
-  -n kube9-system
 ```
 
-#### Step 3: Configure Extension
-Add to VS Code settings (`settings.json`):
-```json
-{
-  "kube9.apiKey": "kdy_prod_abc123def456"
-}
-```
+#### Step 2: Configure Operator
+Follow the operator configuration instructions at [portal.kube9.dev](https://portal.kube9.dev) to enable Pro tier features.
 
-That's it! The extension now loads Pro features from kube9-server.
+That's it! The extension automatically detects the operator and enables Pro features.
 
 ## Features by Tier
 
@@ -264,13 +249,13 @@ npm run package
 ### Testing Tiers
 
 **Testing Free Tier:**
-- Don't configure `kube9.apiKey` in settings
+- Don't install the kube9-operator
 - Extension should show local webviews
 - Verify basic CRUD operations work
 
 **Testing Pro Tier:**
 - Set up local kube9-server instance
-- Configure API key in settings
+- Install and configure kube9-operator in test cluster
 - Extension should load remote webviews
 - Verify advanced features appear
 
@@ -289,15 +274,12 @@ npm run package
 
 ```json
 {
-  // Required for Pro tier features
-  "kube9.apiKey": "",
-  
   // Optional: Enable debug logging
   "kube9.debugMode": false
 }
 ```
 
-API keys are stored securely in VS Code's secret storage.
+Pro tier features are automatically enabled when the kube9-operator is installed in your cluster.
 
 ## Related Projects
 
@@ -348,10 +330,10 @@ For security concerns, please see our [Security Policy](SECURITY.md).
 
 ### Pro Tier
 - Operator sends only sanitized metrics (no secrets, credentials, or sensitive data)
-- API key stored in VS Code secret storage
 - Communication over HTTPS
 - Data sanitization at source (operator level)
 - User controls what operator can access via RBAC
+- API keys managed at operator level, not in VSCode extension
 
 **To report a security vulnerability**, please email **security@alto9.com** (do not open a public issue).
 

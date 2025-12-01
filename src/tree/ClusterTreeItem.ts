@@ -76,6 +76,58 @@ export class ClusterTreeItem extends vscode.TreeItem {
         
         // Set context value for use in when clauses (e.g., for context menus)
         this.contextValue = type;
+        
+        // Generate stable ID for preserving tree state during refreshes
+        // Don't set ID for category items - let VSCode generate them to avoid duplicate registration
+        const categoryTypes = ['dashboard', 'nodes', 'namespaces', 'workloads', 'storage', 
+                              'networking', 'helm', 'configuration', 'customResources', 'reports'];
+        if (!categoryTypes.includes(type)) {
+            this.id = this.generateStableId(label, type, resourceData);
+        }
+    }
+    
+    /**
+     * Generates a stable, unique ID for this tree item.
+     * The ID is used by VSCode to preserve expansion state during tree refreshes.
+     * 
+     * Pattern: {contextName}/{type}/{resourceName}/{namespace}
+     * 
+     * @param label The display label for the tree item
+     * @param type The type of tree item
+     * @param resourceData Optional metadata associated with this item
+     * @returns A unique, stable ID string
+     */
+    private generateStableId(label: string, type: TreeItemType, resourceData?: TreeItemData): string {
+        const contextName = resourceData?.context?.name || 'unknown';
+        
+        // For cluster-level items, just use context/type
+        if (type === 'cluster') {
+            return `${contextName}/cluster`;
+        }
+        
+        // For category items, use context/type
+        const categoryTypes = ['dashboard', 'nodes', 'namespaces', 'workloads', 'storage', 
+                              'networking', 'helm', 'configuration', 'customResources', 'reports'];
+        if (categoryTypes.includes(type)) {
+            return `${contextName}/${type}`;
+        }
+        
+        // For subcategory items (under categories), use context/type
+        const subcategoryTypes = ['deployments', 'statefulsets', 'daemonsets', 'cronjobs',
+                                 'persistentVolumes', 'persistentVolumeClaims', 'storageClasses',
+                                 'services', 'configmaps', 'secrets', 'compliance', 'dataCollection'];
+        if (subcategoryTypes.includes(type)) {
+            return `${contextName}/${type}`;
+        }
+        
+        // For resource items, include namespace if available
+        const namespace = resourceData?.namespace || '';
+        if (namespace) {
+            return `${contextName}/${type}/${label}/${namespace}`;
+        }
+        
+        // Default: context/type/label
+        return `${contextName}/${type}/${label}`;
     }
 }
 

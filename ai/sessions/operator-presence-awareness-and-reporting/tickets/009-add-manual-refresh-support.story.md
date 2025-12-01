@@ -37,7 +37,7 @@ When users manually refresh the clusters view (e.g., via refresh button or comma
 - [ ] Manual refresh bypasses cache (forceRefresh=true)
 - [ ] Operator status is updated immediately after manual refresh
 - [ ] Tree view refreshes to show updated operator status
-- [ ] Manual refresh works independently of periodic refresh
+- [ ] Manual refresh works correctly
 
 ## Dependencies
 

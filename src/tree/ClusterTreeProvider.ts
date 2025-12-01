@@ -29,6 +29,7 @@ import { ComplianceSubcategory } from './categories/reports/ComplianceSubcategor
 import { namespaceWatcher } from '../services/namespaceCache';
 import { OperatorStatusClient, getOperatorStatusOutputChannel } from '../services/OperatorStatusClient';
 import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
+import { getContextInfo } from '../utils/kubectlContext';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -73,7 +74,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
     /**
      * Timer for periodic connectivity checks.
-     * Checks cluster connectivity every 60 seconds automatically.
+     * Reserved for cleanup in dispose() method.
      */
     private refreshInterval: NodeJS.Timeout | undefined;
 
@@ -94,6 +95,13 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Set to true during manual refresh to bypass cache.
      */
     private forceOperatorRefreshFlag: boolean = false;
+
+    /**
+     * Cache of cluster tree items by context name.
+     * Used for targeted refresh when namespace changes to avoid full tree rebuild.
+     * Maps context name to its cluster tree item.
+     */
+    private clusterItemsCache: Map<string, ClusterTreeItem> = new Map();
 
     /**
      * Get the UI representation of a tree element.
@@ -119,7 +127,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return this.getClusters();
         }
 
-        // If element is a cluster, return the 7 categories
+        // If element is a cluster, return the categories
         if (element.type === 'cluster' && element.resourceData) {
             return this.getCategories(element);
         }
@@ -576,10 +584,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return item;
         }).filter((item): item is ClusterTreeItem => item !== null);
 
-        // Update cluster items with cached status
+        // Update cluster items with cached status and populate cluster cache
         clusterItems.forEach(item => {
             if (item.type === 'cluster' && item.resourceData?.context?.name) {
                 const contextName = item.resourceData.context.name;
+                
+                // Populate cluster items cache for targeted refresh
+                this.clusterItemsCache.set(contextName, item);
+                
                 const cachedStatus = this.clusterStatusCache.get(contextName);
                 
                 if (cachedStatus !== undefined) {
@@ -614,52 +626,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         }
 
         // Add authentication status message at the bottom of the cluster list
-        const authStatusItem = this.createAuthStatusItem();
-        clusterItems.push(authStatusItem);
-
         return clusterItems;
-    }
-
-    /**
-     * Create an informational tree item showing authentication status.
-     * Provides users with context about API key requirements and easy access to configuration.
-     * 
-     * @returns A tree item with authentication status message and configuration link
-     */
-    private createAuthStatusItem(): ClusterTreeItem {
-        const hasApiKey = Settings.hasApiKey();
-        
-        if (hasApiKey) {
-            // Show authenticated status
-            const item = new ClusterTreeItem(
-                'AI features enabled',
-                'info',
-                vscode.TreeItemCollapsibleState.None
-            );
-            item.iconPath = new vscode.ThemeIcon('check', new vscode.ThemeColor('testing.iconPassed'));
-            item.tooltip = 'API key configured. AI-powered recommendations are available.';
-            item.contextValue = 'authStatus';
-            return item;
-        } else {
-            // Show message prompting API key configuration
-            const item = new ClusterTreeItem(
-                'Configure API key to enable AI recommendations',
-                'info',
-                vscode.TreeItemCollapsibleState.None
-            );
-            item.iconPath = new vscode.ThemeIcon('key');
-            item.tooltip = 'API key required for AI features only. Core cluster management works without authentication.\n\nClick to configure your API key.';
-            item.contextValue = 'authStatus';
-            
-            // Make the item clickable to open settings
-            item.command = {
-                command: 'kube9.configureApiKey',
-                title: 'Configure API Key',
-                arguments: []
-            };
-            
-            return item;
-        }
     }
 
     /**
@@ -670,17 +637,47 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      */
     setKubeconfig(kubeconfig: ParsedKubeconfig): void {
         this.kubeconfig = kubeconfig;
-        this.refresh();
         
-        // Start periodic connectivity checks
-        this.startPeriodicRefresh();
+        // Clear cluster cache since kubeconfig changed
+        this.clusterItemsCache.clear();
+        
+        this.refresh();
         
         // Subscribe to namespace context changes
         if (!this.contextSubscription) {
             this.contextSubscription = namespaceWatcher.onDidChangeContext(() => {
-                console.log('Namespace context changed externally, refreshing tree view...');
-                this.refresh();
+                console.log('Namespace context changed externally, triggering targeted refresh...');
+                void this.handleNamespaceChange();
             });
+        }
+    }
+
+    /**
+     * Handles namespace context changes with targeted refresh.
+     * Only refreshes the affected cluster node, preserving expansion state of other nodes.
+     * This method is called when the namespace changes either via extension or externally.
+     */
+    private async handleNamespaceChange(): Promise<void> {
+        try {
+            // Get current kubectl context to identify which cluster is affected
+            const contextInfo = await getContextInfo();
+            
+            // Look up the cluster item from cache
+            const clusterItem = this.clusterItemsCache.get(contextInfo.contextName);
+            
+            // Fire refresh for this specific cluster only
+            if (clusterItem) {
+                console.log(`Refreshing cluster ${contextInfo.contextName} after namespace change to: ${contextInfo.currentNamespace || 'default'}`);
+                this.refreshItem(clusterItem);
+            } else {
+                // If cluster not in cache (shouldn't happen), do full refresh
+                console.warn(`Cluster ${contextInfo.contextName} not found in cache, doing full refresh`);
+                this.refresh();
+            }
+        } catch (error) {
+            console.error('Failed to handle namespace change:', error);
+            // Fallback to full refresh if something goes wrong
+            this.refresh();
         }
     }
 
@@ -713,60 +710,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         this._onDidChangeTreeData.fire();
     }
 
-    /**
-     * Start periodic connectivity and operator status checks for all clusters.
-     * Checks cluster connectivity every 60 seconds automatically.
-     * Also checks operator status periodically (cache TTL is 5 minutes, so checks
-     * will only query the cluster when cache expires).
-     * Clears any existing interval before starting a new one.
-     */
-    private startPeriodicRefresh(): void {
-        // Clear existing interval if any
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-        }
-
-        // Set up new interval for 60-second periodic checks
-        this.refreshInterval = setInterval(() => {
-            console.log('Running periodic cluster connectivity check...');
-            
-            // Get current cluster items
-            if (this.kubeconfig && this.kubeconfig.contexts.length > 0) {
-                const clusterItems = this.kubeconfig.contexts
-                    .map(context => {
-                        const cluster = this.kubeconfig!.clusters.find(c => c.name === context.cluster);
-                        if (!cluster) {
-                            return null;
-                        }
-                        
-                        const item = new ClusterTreeItem(
-                            context.name,
-                            'cluster',
-                            vscode.TreeItemCollapsibleState.Collapsed,
-                            { context, cluster }
-                        );
-                        return item;
-                    })
-                    .filter((item): item is ClusterTreeItem => item !== null);
-                
-                // Run connectivity check (this will update cache and refresh tree)
-                this.checkAllClustersConnectivity(clusterItems);
-                
-                // Check operator status for all clusters asynchronously
-                // Filter to only valid cluster items (exclude auth status item)
-                const validClusters = clusterItems.filter(item => 
-                    item.type === 'cluster' && 
-                    item.resourceData?.context?.name
-                );
-                
-                // Check operator status for each cluster asynchronously (fire-and-forget)
-                // The OperatorStatusClient will check cache TTL and refresh if needed
-                validClusters.forEach(item => {
-                    void this.checkOperatorStatus(item, false);
-                });
-            }
-        }, 60000); // 60 seconds = 60000 milliseconds
-    }
 
     /**
      * Refresh a specific tree item.
@@ -885,6 +828,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             this.updateTreeItemAppearance(item, isCurrentContext, currentStatus, item.operatorStatus);
 
             // Refresh just this tree item
+            // Categories are now cached on the cluster item, so this won't cause duplicate registrations
             this._onDidChangeTreeData.fire(item);
         } catch (error) {
             // Handle unexpected errors gracefully - leave operatorStatus undefined if check fails

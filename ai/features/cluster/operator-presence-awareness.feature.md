@@ -38,9 +38,8 @@ Scenario: Extension determines basic status when operator not installed
   And the extension should display a basic status icon in the clusters view
   And the extension should cache the basic status for 5 minutes
 
-Scenario: Extension determines operated status when operator installed without key
+Scenario: Extension determines operated status when operator installed in free tier
   Given the operator is installed in the cluster
-  And the operator has no API key configured
   And the operator is running in "operated" mode
   When the extension checks for operator presence
   Then the extension should determine cluster operator status is "operated"
@@ -49,9 +48,8 @@ Scenario: Extension determines operated status when operator installed without k
   And the extension should display an operated status icon in the clusters view
   And the extension should cache the operated status for 5 minutes
 
-Scenario: Extension determines enabled status when operator installed with valid key
+Scenario: Extension determines enabled status when operator registered
   Given the operator is installed in the cluster
-  And the operator has a valid API key configured
   And the operator has successfully registered with kube9-server
   And the operator is running in "enabled" mode
   When the extension checks for operator presence
@@ -63,7 +61,6 @@ Scenario: Extension determines enabled status when operator installed with valid
 
 Scenario: Extension determines degraded status when operator has issues
   Given the operator is installed in the cluster
-  And the operator has a valid API key configured
   And the operator status ConfigMap exists
   And the operator status indicates "degraded" health
   Or the operator status timestamp is stale (> 5 minutes old)
@@ -95,10 +92,9 @@ Scenario: Extension shows status in cluster hover context menu
   And the status information should show any error messages if status is degraded
   And the status information should show the last update timestamp if available
 
-Scenario: Extension refreshes operator status periodically
+Scenario: Extension refreshes operator status on manual refresh
   Given the extension has cached operator status for a cluster
-  When 5 minutes have passed since the last status check
-  And the extension needs to display cluster information
+  When the user manually refreshes the clusters view
   Then the extension should refresh the operator status from the cluster
   And the extension should update the cached status
   And the extension should update the cluster icon if status changed
@@ -113,7 +109,7 @@ Scenario: Extension handles status check failures gracefully
   Then the extension should not crash or show error dialogs
   And the extension should fall back to cached status if available
   And the extension should display a basic status icon if no cache available
-  And the extension should retry the status check on next refresh cycle
+  And the extension should retry the status check on next manual refresh
   And the extension should log the error for debugging purposes
 
 Scenario: Extension maintains status awareness across all clusters
@@ -164,9 +160,9 @@ Scenario: Extension checks operator status on manual refresh
 | Status | Operator State | Features Available | Icon Indication |
 |--------|---------------|-------------------|-----------------|
 | **basic** | No operator installed | kubectl-only operations, show installation prompts | Basic/minimal icon |
-| **operated** | Installed, no API key | Local webviews, basic features, show upgrade prompts | Operated/free tier icon |
-| **enabled** | Installed, has valid API key, registered | Rich UIs from server, AI features, advanced dashboards | Enabled/pro tier icon |
-| **degraded** | Installed, has API key, but registration failed or stale | Temporary fallback, registration failed | Degraded/warning icon |
+| **operated** | Installed, free tier | Local webviews, basic features, show upgrade prompts | Operated/free tier icon |
+| **enabled** | Installed, registered with server | Rich UIs from server, AI features, advanced dashboards | Enabled/pro tier icon |
+| **degraded** | Installed, but registration failed or stale | Temporary fallback, registration failed | Degraded/warning icon |
 
 ## Non-Goals
 

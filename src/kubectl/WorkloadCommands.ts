@@ -467,27 +467,27 @@ export class WorkloadCommands {
     ): Promise<DeploymentsResult> {
         try {
             // Check if a namespace is set in kubectl context
-            let currentNamespace: string | null = null;
+            // Default to 'default' namespace if none is set
+            let currentNamespace: string = 'default';
             try {
-                currentNamespace = await getCurrentNamespace();
+                const ns = await getCurrentNamespace();
+                if (ns) {
+                    currentNamespace = ns;
+                }
             } catch (error) {
-                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+                console.warn('Failed to get current namespace, using default namespace:', error);
             }
 
             // Build kubectl command arguments
-            const args = ['get', 'deployments'];
-            
-            // If no namespace is set, use --all-namespaces flag
-            // Otherwise, kubectl will use the context namespace automatically
-            if (!currentNamespace) {
-                args.push('--all-namespaces');
-            }
-            
-            args.push(
+            // Always use the namespace (either from context or 'default')
+            // kubectl will automatically use the context namespace if set
+            const args = [
+                'get',
+                'deployments',
                 '--output=json',
                 `--kubeconfig=${kubeconfigPath}`,
                 `--context=${contextName}`
-            );
+            ];
 
             // Execute kubectl get deployments with JSON output
             const { stdout } = await execFileAsync(
@@ -603,27 +603,27 @@ export class WorkloadCommands {
     ): Promise<StatefulSetsResult> {
         try {
             // Check if a namespace is set in kubectl context
-            let currentNamespace: string | null = null;
+            // Default to 'default' namespace if none is set
+            let currentNamespace: string = 'default';
             try {
-                currentNamespace = await getCurrentNamespace();
+                const ns = await getCurrentNamespace();
+                if (ns) {
+                    currentNamespace = ns;
+                }
             } catch (error) {
-                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+                console.warn('Failed to get current namespace, using default namespace:', error);
             }
 
             // Build kubectl command arguments
-            const args = ['get', 'statefulsets'];
-            
-            // If no namespace is set, use --all-namespaces flag
-            // Otherwise, kubectl will use the context namespace automatically
-            if (!currentNamespace) {
-                args.push('--all-namespaces');
-            }
-            
-            args.push(
+            // Always use the namespace (either from context or 'default')
+            // kubectl will automatically use the context namespace if set
+            const args = [
+                'get',
+                'statefulsets',
                 '--output=json',
                 `--kubeconfig=${kubeconfigPath}`,
                 `--context=${contextName}`
-            );
+            ];
 
             // Execute kubectl get statefulsets with JSON output
             const { stdout } = await execFileAsync(
@@ -854,27 +854,27 @@ export class WorkloadCommands {
     ): Promise<DaemonSetsResult> {
         try {
             // Check if a namespace is set in kubectl context
-            let currentNamespace: string | null = null;
+            // Default to 'default' namespace if none is set
+            let currentNamespace: string = 'default';
             try {
-                currentNamespace = await getCurrentNamespace();
+                const ns = await getCurrentNamespace();
+                if (ns) {
+                    currentNamespace = ns;
+                }
             } catch (error) {
-                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+                console.warn('Failed to get current namespace, using default namespace:', error);
             }
 
             // Build kubectl command arguments
-            const args = ['get', 'daemonsets'];
-            
-            // If no namespace is set, use --all-namespaces flag
-            // Otherwise, kubectl will use the context namespace automatically
-            if (!currentNamespace) {
-                args.push('--all-namespaces');
-            }
-            
-            args.push(
+            // Always use the namespace (either from context or 'default')
+            // kubectl will automatically use the context namespace if set
+            const args = [
+                'get',
+                'daemonsets',
                 '--output=json',
                 `--kubeconfig=${kubeconfigPath}`,
                 `--context=${contextName}`
-            );
+            ];
 
             // Execute kubectl get daemonsets with JSON output
             const { stdout } = await execFileAsync(
@@ -1026,27 +1026,27 @@ export class WorkloadCommands {
     ): Promise<CronJobsResult> {
         try {
             // Check if a namespace is set in kubectl context
-            let currentNamespace: string | null = null;
+            // Default to 'default' namespace if none is set
+            let currentNamespace: string = 'default';
             try {
-                currentNamespace = await getCurrentNamespace();
+                const ns = await getCurrentNamespace();
+                if (ns) {
+                    currentNamespace = ns;
+                }
             } catch (error) {
-                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+                console.warn('Failed to get current namespace, using default namespace:', error);
             }
 
             // Build kubectl command arguments
-            const args = ['get', 'cronjobs'];
-            
-            // If no namespace is set, use --all-namespaces flag
-            // Otherwise, kubectl will use the context namespace automatically
-            if (!currentNamespace) {
-                args.push('--all-namespaces');
-            }
-            
-            args.push(
+            // Always use the namespace (either from context or 'default')
+            // kubectl will automatically use the context namespace if set
+            const args = [
+                'get',
+                'cronjobs',
                 '--output=json',
                 `--kubeconfig=${kubeconfigPath}`,
                 `--context=${contextName}`
-            );
+            ];
 
             // Execute kubectl get cronjobs with JSON output
             const { stdout } = await execFileAsync(

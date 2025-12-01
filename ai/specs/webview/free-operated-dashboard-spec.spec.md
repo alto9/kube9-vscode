@@ -9,7 +9,7 @@ context_id: [kubernetes-cluster-management, ai-integration]
 
 ## Overview
 
-The Free Operated Dashboard displays cluster statistics from operator-managed resources. This dashboard is shown when the kube9-operator is installed (operator status: "operated", "enabled", or "degraded"). It queries kubectl for operator-provided data and includes a conditional content section that shows AI recommendations (if API key present) or an upsell CTA (if no API key).
+The Free Operated Dashboard displays cluster statistics from operator-managed resources. This dashboard is shown when the kube9-operator is installed (operator status: "operated", "enabled", or "degraded"). It queries kubectl for operator-provided data and includes a conditional content section that shows AI recommendations (if API key is configured in the operator) or an upsell CTA (if no API key).
 
 ## Data Collection
 
@@ -20,7 +20,7 @@ interface OperatorStatus {
   mode: OperatorStatusMode; // operated, enabled, degraded
   tier: 'free' | 'pro';
   version: string;
-  hasApiKey: boolean;
+  hasApiKey: boolean; // Read from operator ConfigMap
   health: 'healthy' | 'degraded';
   lastUpdate: Date;
 }
@@ -262,7 +262,7 @@ function buildUpsellCTA(): UpsellCTAContent {
       'Access advanced analytics and reporting'
     ],
     ctaText: 'Configure API Key',
-    ctaAction: () => vscode.postMessage({ type: 'configureApiKey' })
+    ctaAction: () => window.open('https://portal.kube9.dev')
   };
 }
 ```
@@ -288,13 +288,13 @@ function buildUpsellCTA(): UpsellCTAContent {
       `).join('')}
     </ul>
     
-    <button class="cta-button" onclick="handleConfigureApiKey()">
+    <button class="cta-button" onclick="handleUpgrade()">
       <span class="codicon codicon-key"></span>
       ${ctaText}
     </button>
     
     <p class="cta-subtext">
-      Add your API key to enable AI-powered insights and recommendations.
+      Configure an API key in your operator to enable AI-powered insights and recommendations.
     </p>
   </div>
 </div>
@@ -321,7 +321,7 @@ function buildDegradedWarning(operatorStatus: OperatorStatus): DegradedWarningCo
     ],
     troubleshootingSteps: [
       'Check operator pod logs in kube9-system namespace',
-      'Verify API key configuration',
+      'Verify API key configuration in operator',
       'Check network connectivity to kube9-server',
       'Review operator status ConfigMap for details'
     ]
@@ -519,27 +519,11 @@ ${renderConditionalContent(operatorStatus)}
 ### Configure API Key Action
 
 ```typescript
-async function handleConfigureApiKey() {
-  vscode.postMessage({ type: 'configureApiKey' });
+async function handleUpgrade() {
+  // Opens portal with API key setup instructions
+  // User configures API key at the operator level, not in VSCode extension
+  window.open('https://portal.kube9.dev');
 }
-
-// In extension host
-panel.webview.onDidReceiveMessage(async (message) => {
-  if (message.type === 'configureApiKey') {
-    const apiKey = await vscode.window.showInputBox({
-      prompt: 'Enter your kube9 API key',
-      password: true,
-      validateInput: (value) => {
-        return value.length > 0 ? null : 'API key cannot be empty';
-      }
-    });
-    
-    if (apiKey) {
-      await configureOperatorApiKey(clusterContext, apiKey);
-      panel.webview.postMessage({ type: 'refresh' });
-    }
-  }
-});
 ```
 
 ### Handle Recommendation Action
