@@ -24,8 +24,8 @@
       {
         "assets": [
           {
-            "path": "*.vsix",
-            "label": "VSCode Extension"
+            "path": "kube9-*.vsix",
+            "label": "kube9 VSCode Extension"
           }
         ]
       }

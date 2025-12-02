@@ -3,19 +3,39 @@
   "displayName": "kube9 - Kubernetes Cluster Manager",
   "description": "An AI-powered VS Code extension for Kubernetes cluster management that makes DevOps workflows conversational and intelligent",
   "version": "0.0.1",
-  "publisher": "alto9",
   "license": "MIT",
+  "author": "Alto9",
+  "publisher": "alto9",
+  "keywords": [
+    "kubernetes",
+    "k8s",
+    "kube9",
+    "cluster-management",
+    "devops",
+    "ai",
+    "cloud-native",
+    "containers"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/alto9/kube9"
   },
+  "bugs": {
+    "url": "https://github.com/alto9/kube9/issues"
+  },
+  "homepage": "https://github.com/alto9/kube9#readme",
   "engines": {
     "vscode": "^1.80.0",
     "node": ">=22.0.0"
   },
   "categories": [
+    "Programming Languages",
     "Other"
   ],
+  "galleryBanner": {
+    "color": "#326CE5",
+    "theme": "dark"
+  },
   "activationEvents": [
     "onStartupFinished",
     "onView:kube9ClusterView"
