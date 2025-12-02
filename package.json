@@ -160,9 +160,13 @@
     "test:all": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/{src/test,tests}/**/*.test.js'",
     "lint": "eslint src --ext ts",
     "prepackage": "npm run build",
-    "package": "vsce package"
+    "package": "vsce package",
+    "release": "semantic-release"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.0",
     "@types/js-yaml": "^4.0.5",
     "@types/mocha": "^10.0.1",
     "@types/node": "^22.0.0",
@@ -172,6 +176,7 @@
     "@vscode/vsce": "^2.19.0",
     "eslint": "^8.45.0",
     "mocha": "^10.2.0",
+    "semantic-release": "^23.0.0",
     "source-map-support": "^0.5.21",
     "ts-loader": "^9.5.4",
     "typescript": "^5.1.6",
