@@ -40,7 +40,9 @@ export function getOperatedDashboardHtml(
         '        .dashboard-subtitle { display: flex; align-items: center; gap: 16px; margin-top: 8px; font-size: 14px; color: var(--vscode-descriptionForeground); }\n' +
         '        .cluster-name { font-weight: 500; color: var(--vscode-foreground); }\n' +
         '        .operator-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background-color: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }\n' +
-        '        .last-updated { font-size: 12px; color: var(--vscode-descriptionForeground); }\n' +
+        '        .last-updated { font-size: 12px; color: var(--vscode-descriptionForeground); display: flex; align-items: center; gap: 8px; }\n' +
+        '        .refresh-indicator { display: none; width: 14px; height: 14px; border: 2px solid var(--vscode-panel-border); border-top: 2px solid var(--vscode-progressBar-background); border-radius: 50%; animation: spin 1s linear infinite; }\n' +
+        '        .refresh-indicator.visible { display: inline-block; }\n' +
         '        .refresh-button { background-color: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; }\n' +
         '        .refresh-button:hover { background-color: var(--vscode-button-hoverBackground); }\n' +
         '        .refresh-button:disabled { opacity: 0.5; cursor: not-allowed; }\n' +
@@ -128,7 +130,10 @@ export function getOperatedDashboardHtml(
         '                    <div class="dashboard-subtitle">\n' +
         '                        <span class="cluster-name">' + clusterName + '</span>\n' +
         '                        <span class="operator-badge ' + operatorStatus.mode + '">Operator: ' + operatorStatus.mode + '</span>\n' +
-        '                        <span id="last-updated" class="last-updated">Last updated: --</span>\n' +
+        '                        <span id="last-updated" class="last-updated">\n' +
+        '                            <span>Last updated: --</span>\n' +
+        '                            <span id="refresh-indicator" class="refresh-indicator"></span>\n' +
+        '                        </span>\n' +
         '                    </div>\n' +
         '                </div>\n' +
         '                <button id="refresh-button" class="refresh-button"><span>&#8635;</span> Refresh</button>\n' +
@@ -159,14 +164,17 @@ export function getOperatedDashboardHtml(
         '        const errorDetailsElement = document.getElementById("error-details");\n' +
         '        const refreshButton = document.getElementById("refresh-button");\n' +
         '        const lastUpdatedElement = document.getElementById("last-updated");\n' +
+        '        const refreshIndicator = document.getElementById("refresh-indicator");\n' +
         '        const statsCardsContainer = document.getElementById("stats-cards");\n' +
         '        const workloadTableElement = document.getElementById("workload-table");\n' +
         '        const collectorsRunningElement = document.getElementById("collectors-running");\n' +
         '        const dataPointsCollectedElement = document.getElementById("data-points-collected");\n' +
         '        const lastCollectionTimeElement = document.getElementById("last-collection-time");\n' +
-        '        function showLoading() { loadingElement.classList.remove("hidden"); errorElement.classList.remove("visible"); contentElement.classList.remove("visible"); }\n' +
-        '        function showError(errorMessage) { loadingElement.classList.add("hidden"); errorElement.classList.add("visible"); contentElement.classList.remove("visible"); errorDetailsElement.textContent = errorMessage; }\n' +
-        '        function showContent() { loadingElement.classList.add("hidden"); errorElement.classList.remove("visible"); contentElement.classList.add("visible"); }\n' +
+        '        function showLoading() { loadingElement.classList.remove("hidden"); errorElement.classList.remove("visible"); contentElement.classList.remove("visible"); if (refreshIndicator) { refreshIndicator.classList.remove("visible"); } }\n' +
+        '        function showRefreshing() { if (refreshIndicator) { refreshIndicator.classList.add("visible"); } if (refreshButton) { refreshButton.disabled = true; } }\n' +
+        '        function hideRefreshing() { if (refreshIndicator) { refreshIndicator.classList.remove("visible"); } if (refreshButton) { refreshButton.disabled = false; } }\n' +
+        '        function showError(errorMessage) { loadingElement.classList.add("hidden"); errorElement.classList.add("visible"); contentElement.classList.remove("visible"); errorDetailsElement.textContent = errorMessage; hideRefreshing(); }\n' +
+        '        function showContent() { loadingElement.classList.add("hidden"); errorElement.classList.remove("visible"); contentElement.classList.add("visible"); hideRefreshing(); }\n' +
         '        function formatNumber(num) { return num.toLocaleString(); }\n' +
         '        function getRecommendationIcon(type) { const icons = { "optimization": "\\u26A1", "cost": "\\uD83D\\uDCB0", "security": "\\uD83D\\uDD12", "reliability": "\\uD83D\\uDEE1" }; return icons[type] || "\\uD83D\\uDCA1"; }\n' +
         '        function renderAIRecommendations(recommendations) {\n' +
@@ -187,7 +195,7 @@ export function getOperatedDashboardHtml(
         '        }\n' +
         '        function handleConfigureApiKey() { vscode.postMessage({ type: "configureApiKey" }); }\n' +
         '        function updateDashboardData(data) {\n' +
-        '            if (data.lastUpdated) { const date = new Date(data.lastUpdated); lastUpdatedElement.textContent = "Last updated: " + date.toLocaleTimeString(); }\n' +
+        '            if (data.lastUpdated) { const date = new Date(data.lastUpdated); const textSpan = lastUpdatedElement.querySelector("span:first-child"); if (textSpan) { textSpan.textContent = "Last updated: " + date.toLocaleTimeString(); } }\n' +
         '            if (data.namespaceCount !== undefined || data.workloads || data.nodes) { updateStatsCards(data); }\n' +
         '            if (data.workloads) { updateWorkloadTable(data.workloads); }\n' +
         '            if (data.operatorMetrics) { collectorsRunningElement.textContent = data.operatorMetrics.collectorsRunning || 0; dataPointsCollectedElement.textContent = formatNumber(data.operatorMetrics.dataPointsCollected || 0); lastCollectionTimeElement.textContent = data.operatorMetrics.lastCollectionTime ? new Date(data.operatorMetrics.lastCollectionTime).toLocaleTimeString() : "--"; }\n' +
@@ -205,9 +213,10 @@ export function getOperatedDashboardHtml(
         '        window.addEventListener("message", event => {\n' +
         '            const message = event.data;\n' +
         '            switch (message.type) {\n' +
-        '                case "updateData": updateDashboardData(message.data); if (refreshButton) { refreshButton.disabled = false; } break;\n' +
-        '                case "loading": showLoading(); if (refreshButton) { refreshButton.disabled = true; } break;\n' +
-        '                case "error": showError(message.error); if (refreshButton) { refreshButton.disabled = false; } break;\n' +
+        '                case "updateData": updateDashboardData(message.data); break;\n' +
+        '                case "loading": showLoading(); break;\n' +
+        '                case "refreshing": showRefreshing(); break;\n' +
+        '                case "error": showError(message.error); break;\n' +
         '            }\n' +
         '        });\n' +
         '        if (refreshButton) { refreshButton.addEventListener("click", () => { refreshButton.disabled = true; vscode.postMessage({ type: "refresh" }); }); }\n' +

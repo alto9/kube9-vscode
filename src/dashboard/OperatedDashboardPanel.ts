@@ -153,7 +153,8 @@ export class OperatedDashboardPanel {
                 await OperatedDashboardPanel.sendDashboardData(
                     panel,
                     kubeconfigPath,
-                    contextName
+                    contextName,
+                    true  // Initial load
                 );
                 break;
 
@@ -161,7 +162,8 @@ export class OperatedDashboardPanel {
                 await OperatedDashboardPanel.sendDashboardData(
                     panel,
                     kubeconfigPath,
-                    contextName
+                    contextName,
+                    false  // Not initial load - show subtle indicator
                 );
                 break;
 
@@ -205,11 +207,13 @@ export class OperatedDashboardPanel {
      * @param panel - The webview panel
      * @param kubeconfigPath - Path to the kubeconfig file
      * @param contextName - The kubectl context name
+     * @param isInitialLoad - Whether this is the initial load (default: false)
      */
     private static async sendDashboardDataWithStatusCheck(
         panel: vscode.WebviewPanel,
         kubeconfigPath: string,
-        contextName: string
+        contextName: string,
+        isInitialLoad: boolean = false
     ): Promise<void> {
         // Re-query operator status to detect changes (e.g., API key configuration)
         const freshOperatorStatus = await getOperatorDashboardStatus(contextName);
@@ -224,7 +228,8 @@ export class OperatedDashboardPanel {
         await OperatedDashboardPanel.sendDashboardData(
             panel,
             kubeconfigPath,
-            contextName
+            contextName,
+            isInitialLoad
         );
     }
 
@@ -235,15 +240,19 @@ export class OperatedDashboardPanel {
      * @param panel - The webview panel
      * @param kubeconfigPath - Path to the kubeconfig file
      * @param contextName - The kubectl context name
+     * @param isInitialLoad - Whether this is the initial load (default: false)
      */
     private static async sendDashboardData(
         panel: vscode.WebviewPanel,
         kubeconfigPath: string,
-        contextName: string
+        contextName: string,
+        isInitialLoad: boolean = false
     ): Promise<void> {
         try {
-            // Send loading state
-            panel.webview.postMessage({ type: 'loading' });
+            // Send loading or refreshing state based on load type
+            panel.webview.postMessage({ 
+                type: isInitialLoad ? 'loading' : 'refreshing' 
+            });
 
             // Get panel info to check operator status
             const panelInfo = OperatedDashboardPanel.openPanels.get(contextName);

@@ -32,7 +32,7 @@ export class WelcomeWebview {
         // Otherwise, create a new panel
         const panel = vscode.window.createWebviewPanel(
             'kube9Welcome',
-            'Welcome to kube9',
+            'Welcome to Kube9 VS Code',
             column,
             {
                 enableScripts: true,
@@ -60,8 +60,20 @@ export class WelcomeWebview {
                         break;
                     }
                     case 'openPortal':
-                        // Open the kube9 portal in external browser
-                        vscode.env.openExternal(vscode.Uri.parse('https://portal.kube9.dev'));
+                        // Open the kube9 website in external browser
+                        vscode.env.openExternal(vscode.Uri.parse('https://kube9.io'));
+                        break;
+
+                    case 'openDocs':
+                        // Open the kube9 documentation in external browser
+                        vscode.env.openExternal(vscode.Uri.parse('https://kube9.io/docs'));
+                        break;
+
+                    case 'openExternal':
+                        // Open any external URL (must be HTTPS for security)
+                        if (message.url && message.url.startsWith('https://')) {
+                            vscode.env.openExternal(vscode.Uri.parse(message.url));
+                        }
                         break;
 
                     case 'openSettings':

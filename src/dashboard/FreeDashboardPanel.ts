@@ -143,7 +143,8 @@ export class FreeDashboardPanel {
                 await FreeDashboardPanel.sendDashboardData(
                     panel,
                     kubeconfigPath,
-                    contextName
+                    contextName,
+                    true  // Initial load
                 );
                 break;
 
@@ -151,7 +152,8 @@ export class FreeDashboardPanel {
                 await FreeDashboardPanel.sendDashboardData(
                     panel,
                     kubeconfigPath,
-                    contextName
+                    contextName,
+                    false  // Not initial load - show subtle indicator
                 );
                 break;
 
@@ -167,15 +169,19 @@ export class FreeDashboardPanel {
      * @param panel - The webview panel
      * @param kubeconfigPath - Path to the kubeconfig file
      * @param contextName - The kubectl context name
+     * @param isInitialLoad - Whether this is the initial load (default: false)
      */
     private static async sendDashboardData(
         panel: vscode.WebviewPanel,
         kubeconfigPath: string,
-        contextName: string
+        contextName: string,
+        isInitialLoad: boolean = false
     ): Promise<void> {
         try {
-            // Send loading state
-            panel.webview.postMessage({ type: 'loading' });
+            // Send loading or refreshing state based on load type
+            panel.webview.postMessage({ 
+                type: isInitialLoad ? 'loading' : 'refreshing' 
+            });
 
             // Fetch all dashboard data in parallel for performance
             const [namespaceCount, workloads, nodes] = await Promise.allSettled([

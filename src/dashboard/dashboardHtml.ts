@@ -65,6 +65,23 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
         .last-updated {
             font-size: 12px;
             color: var(--vscode-descriptionForeground);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .refresh-indicator {
+            display: none;
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--vscode-panel-border);
+            border-top: 2px solid var(--vscode-progressBar-background);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        .refresh-indicator.visible {
+            display: inline-block;
         }
         
         .refresh-button {
@@ -363,7 +380,10 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
                     <h1>Cluster Dashboard</h1>
                     <div class="dashboard-subtitle">
                         <span class="cluster-name">${clusterName}</span>
-                        <span id="last-updated" class="last-updated">Last updated: --</span>
+                        <span id="last-updated" class="last-updated">
+                            <span>Last updated: --</span>
+                            <span id="refresh-indicator" class="refresh-indicator"></span>
+                        </span>
                     </div>
                 </div>
                 <button id="refresh-button" class="refresh-button">
@@ -414,14 +434,38 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
         const errorDetailsElement = document.getElementById('error-details');
         const refreshButton = document.getElementById('refresh-button');
         const lastUpdatedElement = document.getElementById('last-updated');
+        const refreshIndicator = document.getElementById('refresh-indicator');
         const statsCardsContainer = document.getElementById('stats-cards');
         const workloadTableElement = document.getElementById('workload-table');
         
-        // Show loading state
+        // Show loading state (initial load only)
         function showLoading() {
             loadingElement.classList.remove('hidden');
             errorElement.classList.remove('visible');
             contentElement.classList.remove('visible');
+            if (refreshIndicator) {
+                refreshIndicator.classList.remove('visible');
+            }
+        }
+        
+        // Show refreshing state (subtle indicator, keep content visible)
+        function showRefreshing() {
+            if (refreshIndicator) {
+                refreshIndicator.classList.add('visible');
+            }
+            if (refreshButton) {
+                refreshButton.disabled = true;
+            }
+        }
+        
+        // Hide refreshing indicator
+        function hideRefreshing() {
+            if (refreshIndicator) {
+                refreshIndicator.classList.remove('visible');
+            }
+            if (refreshButton) {
+                refreshButton.disabled = false;
+            }
         }
         
         // Show error state
@@ -430,6 +474,7 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
             errorElement.classList.add('visible');
             contentElement.classList.remove('visible');
             errorDetailsElement.textContent = errorMessage;
+            hideRefreshing();
         }
         
         // Show content state
@@ -437,6 +482,7 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
             loadingElement.classList.add('hidden');
             errorElement.classList.remove('visible');
             contentElement.classList.add('visible');
+            hideRefreshing();
         }
         
         // Update dashboard data
@@ -444,7 +490,10 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
             // Update last updated timestamp
             if (data.lastUpdated) {
                 const date = new Date(data.lastUpdated);
-                lastUpdatedElement.textContent = 'Last updated: ' + date.toLocaleTimeString();
+                const textSpan = lastUpdatedElement.querySelector('span:first-child');
+                if (textSpan) {
+                    textSpan.textContent = 'Last updated: ' + date.toLocaleTimeString();
+                }
             }
             
             // Update stats cards
@@ -603,23 +652,18 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
             switch (message.type) {
                 case 'updateData':
                     updateDashboardData(message.data);
-                    if (refreshButton) {
-                        refreshButton.disabled = false;
-                    }
                     break;
                     
                 case 'loading':
                     showLoading();
-                    if (refreshButton) {
-                        refreshButton.disabled = true;
-                    }
+                    break;
+                    
+                case 'refreshing':
+                    showRefreshing();
                     break;
                     
                 case 'error':
                     showError(message.error);
-                    if (refreshButton) {
-                        refreshButton.disabled = false;
-                    }
                     break;
             }
         });

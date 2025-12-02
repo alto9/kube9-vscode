@@ -26,6 +26,9 @@ export class DashboardRefreshManager {
      * is already running, it will be stopped before starting a new one to
      * prevent multiple intervals from stacking up.
      * 
+     * The callback is always invoked with isInitialLoad=false since auto-refresh
+     * occurs after the initial data load.
+     * 
      * @param panel - The webview panel to monitor for visibility
      * @param kubeconfigPath - Path to the kubeconfig file
      * @param contextName - The kubectl context name
@@ -35,7 +38,7 @@ export class DashboardRefreshManager {
         panel: vscode.WebviewPanel,
         kubeconfigPath: string,
         contextName: string,
-        refreshCallback: (panel: vscode.WebviewPanel, kubeconfigPath: string, contextName: string) => Promise<void>
+        refreshCallback: (panel: vscode.WebviewPanel, kubeconfigPath: string, contextName: string, isInitialLoad?: boolean) => Promise<void>
     ): void {
         // Clear any existing interval to prevent stacking
         this.stopAutoRefresh();
@@ -44,7 +47,8 @@ export class DashboardRefreshManager {
         this.refreshInterval = setInterval(async () => {
             // Only refresh if panel is visible to avoid unnecessary queries
             if (panel.visible) {
-                await refreshCallback(panel, kubeconfigPath, contextName);
+                // Always pass false for isInitialLoad during auto-refresh
+                await refreshCallback(panel, kubeconfigPath, contextName, false);
             }
         }, this.REFRESH_INTERVAL_MS);
     }

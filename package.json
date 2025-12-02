@@ -2,7 +2,7 @@
   "name": "kube9",
   "displayName": "kube9 - Kubernetes Cluster Manager",
   "description": "An AI-powered VS Code extension for Kubernetes cluster management that makes DevOps workflows conversational and intelligent",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "publisher": "alto9",
   "license": "MIT",
   "repository": {

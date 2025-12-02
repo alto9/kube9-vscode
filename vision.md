@@ -34,6 +34,18 @@ kube9-vscode will become the **default Kubernetes management tool for VS Code us
 - **Unified Workflow**: Cluster resources and GitOps deployments in one interface
 - **Free Tier Feature**: Basic ArgoCD integration available to all users
 
+### Event Viewer Interface
+
+**The Opportunity**: Operators generate valuable event streams (state changes, insight generation, health transitions, assessment results) but lack a user-friendly interface to view and analyze them.
+
+**The kube9 Solution**: Event Viewer interface in VS Code extension that provides:
+- **Visual Event Timeline**: Paged list of events starting with most recent, with filtering by type and severity
+- **Event Details**: Expandable view showing complete event context and related objects
+- **Operated Cluster Feature**: Requires kube9-operator installation (shows call-to-action for non-operated clusters)
+- **Free Tier Feature**: Available to all users with operated clusters (no API key required)
+- **Integration Point**: Queries operator CLI tool via `kubectl exec` for event data
+- **Historical Analysis**: View event trends, troubleshoot past issues, audit cluster changes
+
 ### Strategic Goals
 
 **Short-Term (6-12 months)**
