@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/alto9/kube9-vscode/compare/v1.1.0...v1.1.1) (2025-12-05)
+
+
+### Bug Fixes
+
+* ensure VS Code Marketplace publishes correct version ([c3c914e](https://github.com/alto9/kube9-vscode/commit/c3c914ec1deb0064d5ad38dd677cb772e60207dc))
+
 # [1.1.0](https://github.com/alto9/kube9-vscode/compare/v1.0.2...v1.1.0) (2025-12-05)
 
 
