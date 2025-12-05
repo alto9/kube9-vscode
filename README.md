@@ -1,4 +1,4 @@
-# kube9
+# Kube9
 
 **Visual Kubernetes Management for VS Code with AI-Powered Insights**
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-kube9 is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. Start with powerful free features, then unlock advanced AI-powered insights and rich dashboards with a Pro account.
+Kube9 is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. Start with powerful free features, then unlock advanced AI-powered insights and rich dashboards with a Pro account.
 
 ### Freemium Model
 
@@ -17,7 +17,7 @@ kube9 is a VS Code extension that brings visual Kubernetes cluster management di
 - ✅ Launch workloads with freeform YAML
 - ✅ Multi-cluster support via kubeconfig
 
-**Pro Tier** - AI-powered intelligence ([Learn More →](https://portal.kube9.dev)):
+**Pro Tier** - AI-powered intelligence ([Learn More →](https://app.kube9.io)):
 - ✨ Advanced dashboards with real-time charts
 - ✨ AI-powered recommendations and insights
 - ✨ Historical metrics and trends
@@ -27,7 +27,7 @@ kube9 is a VS Code extension that brings visual Kubernetes cluster management di
 
 ## Architecture
 
-kube9 uses a **progressive enhancement** architecture that adapts to user tier:
+Kube9 uses a **progressive enhancement** architecture that adapts to user tier:
 
 ```
 ┌─────────────────────────────────────┐
@@ -85,7 +85,7 @@ kube9 uses a **progressive enhancement** architecture that adapts to user tier:
 #### From VS Code Marketplace (Recommended)
 1. Open VS Code
 2. Go to Extensions (`Ctrl/Cmd + Shift + X`)
-3. Search for "kube9"
+3. Search for "Kube9"
 4. Click Install
 
 #### For Developers
@@ -100,7 +100,7 @@ npm run compile
 ### Quick Start (Free Tier)
 
 1. **Open kube9**
-   - Look for kube9 icon in VS Code activity bar
+   - Look for the Kube9 icon in VS Code activity bar
    - Extension automatically reads your `~/.kube/config`
 
 2. **Navigate Your Cluster**
@@ -121,13 +121,13 @@ npm run compile
 ### Upgrade to Pro
 
 #### Step 1: Install Operator
-The operator runs in your cluster to enable Pro features. Visit [portal.kube9.dev](https://portal.kube9.dev) for complete installation instructions including API key setup.
+The operator runs in your cluster to enable Pro features. Visit [app.kube9.io](https://app.kube9.io) for complete installation instructions including API key setup.
 
 **Option A: Automatic (requires Helm)**
 ```bash
 # Extension detects Helm and offers one-click install
 # Or run manually:
-helm repo add kube9 https://charts.kube9.dev
+helm repo add kube9 https://charts.kube9.io
 helm install kube9-operator kube9/kube9-operator \
   --namespace kube9-system \
   --create-namespace
@@ -135,11 +135,11 @@ helm install kube9-operator kube9/kube9-operator \
 
 **Option B: Manual**
 ```bash
-kubectl apply -f https://install.kube9.dev/operator.yaml
+kubectl apply -f https://install.kube9.io/operator.yaml
 ```
 
 #### Step 2: Configure Operator
-Follow the operator configuration instructions at [portal.kube9.dev](https://portal.kube9.dev) to enable Pro tier features.
+Follow the operator configuration instructions at [app.kube9.io](https://app.kube9.io) to enable Pro tier features.
 
 That's it! The extension automatically detects the operator and enables Pro features.
 
@@ -349,7 +349,7 @@ MIT License - see LICENSE file for details
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute
 - [Security Policy](SECURITY.md) - Security reporting
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
-- [Portal Support](https://portal.kube9.dev/support)
+- [Portal Support](https://app.kube9.io/support)
 
 ---
 

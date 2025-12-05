@@ -81,6 +81,16 @@
         "category": "kube9"
       },
       {
+        "command": "kube9.describeResource",
+        "title": "Describe",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.describeResourceRaw",
+        "title": "Describe (Raw)",
+        "category": "kube9"
+      },
+      {
         "command": "kube9.viewResourceYAML",
         "title": "View YAML",
         "category": "Kube9"
@@ -126,14 +136,24 @@
           "group": "namespace@1"
         },
         {
-          "command": "kube9.viewResourceYAML",
+          "command": "kube9.describeResource",
           "when": "view == kube9ClusterView && viewItem =~ /^resource/",
           "group": "kube9@1"
         },
         {
-          "command": "kube9.deleteResource",
+          "command": "kube9.describeResourceRaw",
+          "when": "view == kube9ClusterView && viewItem =~ /^resource/",
+          "group": "kube9@1.5"
+        },
+        {
+          "command": "kube9.viewResourceYAML",
           "when": "view == kube9ClusterView && viewItem =~ /^resource/",
           "group": "kube9@2"
+        },
+        {
+          "command": "kube9.deleteResource",
+          "when": "view == kube9ClusterView && viewItem =~ /^resource/",
+          "group": "kube9@3"
         }
       ],
       "editor/context": [
