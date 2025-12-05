@@ -51,7 +51,7 @@ jobs:
         if: success()
         run: |
           # Clean up old VSIX files to ensure we publish the correct version
-          rm -f kube9-*.vsix
+          rm -f *.vsix
           npm run package
       
       - name: Publish to VS Code Marketplace
@@ -63,13 +63,14 @@ jobs:
             echo "VSCE_PAT is not set. Add it as a repository secret to publish." >&2
             exit 1
           fi
-          # Get version from package.json to ensure we publish the correct VSIX
+          # Get package name and version from package.json to construct correct VSIX filename
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
           VERSION=$(node -p "require('./package.json').version")
-          VSIX_FILE="kube9-${VERSION}.vsix"
+          VSIX_FILE="${PACKAGE_NAME}-${VERSION}.vsix"
           if [ ! -f "$VSIX_FILE" ]; then
             echo "VSIX file not found: $VSIX_FILE" >&2
             echo "Available VSIX files:" >&2
-            ls -la kube9-*.vsix >&2 || echo "No VSIX files found" >&2
+            ls -la *.vsix >&2 || echo "No VSIX files found" >&2
             exit 1
           fi
           npx --yes @vscode/vsce publish --packagePath "$VSIX_FILE" --pat "$VSCE_PAT"
