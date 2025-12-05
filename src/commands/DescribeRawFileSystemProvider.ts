@@ -79,6 +79,7 @@ export class DescribeRawFileSystemProvider implements vscode.FileSystemProvider 
         };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     readDirectory(_uri: vscode.Uri): [string, vscode.FileType][] {
         // Describe documents are single files, no directories
         return [];
@@ -96,31 +97,39 @@ export class DescribeRawFileSystemProvider implements vscode.FileSystemProvider 
     }
 
     writeFile(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _uri: vscode.Uri,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _content: Uint8Array,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _options: { create: boolean; overwrite: boolean }
     ): void {
         // Describe documents are read-only
         throw vscode.FileSystemError.NoPermissions('Describe documents are read-only');
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     delete(_uri: vscode.Uri): void {
         // Describe documents are read-only
         throw vscode.FileSystemError.NoPermissions('Describe documents are read-only');
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     rename(_oldUri: vscode.Uri, _newUri: vscode.Uri): void {
         // Describe documents are read-only
         throw vscode.FileSystemError.NoPermissions('Describe documents are read-only');
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     createDirectory(_uri: vscode.Uri): void {
         // Describe documents don't support directories
         throw vscode.FileSystemError.NoPermissions('Describe documents are read-only');
     }
 
     watch(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _uri: vscode.Uri,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _options: { recursive: boolean; excludes: string[] }
     ): vscode.Disposable {
         // Describe documents are read-only and don't change, so no need to watch

@@ -42,7 +42,8 @@ function isDescribableType(type: TreeItemType): boolean {
 export function addDescribeCommandToItems(items: ClusterTreeItem[]): ClusterTreeItem[] {
     return items.map(item => {
         // Only add Describe command to describable resource types
-        if (isDescribableType(item.type)) {
+        // Don't overwrite existing commands (e.g., namespaces have openNamespace command)
+        if (isDescribableType(item.type) && !item.command) {
             // Set command for left-click activation
             item.command = {
                 command: 'kube9.describeResource',

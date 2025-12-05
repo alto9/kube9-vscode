@@ -106,7 +106,7 @@ export async function describeRawCommand(treeItem: ClusterTreeItem): Promise<voi
         const document = await vscode.workspace.openTextDocument(uri);
 
         // Show the document in a read-only editor
-        const editor = await vscode.window.showTextDocument(document, {
+        await vscode.window.showTextDocument(document, {
             preview: false,
             preserveFocus: false
         });
