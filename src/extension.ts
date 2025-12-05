@@ -2,12 +2,15 @@ import * as vscode from 'vscode';
 import { GlobalState } from './state/GlobalState';
 import { WelcomeWebview } from './webview/WelcomeWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
+import { DescribeWebview } from './webview/DescribeWebview';
 import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
 import { applyYAMLCommand } from './commands/applyYAML';
+import { describeRawCommand } from './commands/describeRaw';
+import { DescribeRawFileSystemProvider } from './commands/DescribeRawFileSystemProvider';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -142,6 +145,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         disposables.push(yamlFsProviderDisposable);
         console.log('YAML file system provider registered successfully.');
         
+        // Register custom file system provider for kube9-describe:// URI scheme
+        const describeFsProvider = DescribeRawFileSystemProvider.getInstance();
+        const describeFsProviderDisposable = vscode.workspace.registerFileSystemProvider(
+            'kube9-describe',
+            describeFsProvider,
+            { isCaseSensitive: true, isReadonly: true }
+        );
+        context.subscriptions.push(describeFsProviderDisposable);
+        disposables.push(describeFsProviderDisposable);
+        console.log('Describe file system provider registered successfully.');
+        
         // Show welcome screen on first activation
         const globalState = GlobalState.getInstance();
         if (!globalState.getWelcomeScreenDismissed()) {
@@ -187,7 +201,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
  * @param contextValue The context value string (e.g., 'resource:Pod')
  * @returns The extracted kind (e.g., 'Pod')
  */
-function extractKindFromContextValue(contextValue: string | undefined): string {
+export function extractKindFromContextValue(contextValue: string | undefined): string {
     if (!contextValue) {
         return 'Unknown';
     }
@@ -346,6 +360,46 @@ function registerCommands(): void {
     
     context.subscriptions.push(openDataCollectionReportCommand);
     disposables.push(openDataCollectionReportCommand);
+    
+    // Register describe resource command
+    const describeResourceCmd = vscode.commands.registerCommand(
+        'kube9.describeResource',
+        async (treeItem: ClusterTreeItem | string | undefined) => {
+            try {
+                // Handle case where tree item might be passed as a string (ID) or undefined
+                if (!treeItem) {
+                    vscode.window.showErrorMessage('Unable to describe: no resource selected');
+                    return;
+                }
+
+                // If treeItem is a string (ID), we can't proceed without the actual item
+                if (typeof treeItem === 'string') {
+                    console.error('Describe command received string instead of tree item:', treeItem);
+                    vscode.window.showErrorMessage('Unable to describe: invalid resource reference');
+                    return;
+                }
+
+                // Show the Describe webview
+                DescribeWebview.showFromTreeItem(context, treeItem);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Describe webview:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe resource: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describeResourceCmd);
+    disposables.push(describeResourceCmd);
+    
+    // Register describe resource (raw) command
+    const describeRawCmd = vscode.commands.registerCommand(
+        'kube9.describeResourceRaw',
+        async (treeItem: ClusterTreeItem) => {
+            await describeRawCommand(treeItem);
+        }
+    );
+    context.subscriptions.push(describeRawCmd);
+    disposables.push(describeRawCmd);
     
     // Register set active namespace command
     const setActiveNamespaceCmd = vscode.commands.registerCommand(

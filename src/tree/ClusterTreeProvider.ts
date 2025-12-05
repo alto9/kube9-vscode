@@ -29,6 +29,7 @@ import { namespaceWatcher } from '../services/namespaceCache';
 import { OperatorStatusClient, getOperatorStatusOutputChannel } from '../services/OperatorStatusClient';
 import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
 import { getContextInfo } from '../utils/kubectlContext';
+import { addDescribeCommandToItems } from './describeUtils';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -136,9 +137,18 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return this.getCategoryChildren(element);
         }
 
+        // If element is an individual resource type that can have children (like deployment with pods)
+        // Handle these in getCategoryChildren as well since they follow the same pattern
+        if (element.type === 'deployment' || 
+            element.type === 'statefulset' || 
+            element.type === 'daemonset' || 
+            element.type === 'cronjob') {
+            return this.getCategoryChildren(element);
+        }
+
         // If element has children, return them
         if (element.children) {
-            return element.children;
+            return addDescribeCommandToItems(element.children);
         }
 
         // No children for this element
@@ -238,182 +248,208 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return [];
         }
 
-        // Delegate to category-specific handlers
+        let items: ClusterTreeItem[] = [];
+
         switch (categoryElement.type) {
             case 'nodes':
-                return NodesCategory.getNodeItems(
+                items = await NodesCategory.getNodeItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'namespaces':
-                return NamespacesCategory.getNamespaceItems(
+                items = await NamespacesCategory.getNamespaceItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'workloads':
-                return WorkloadsCategory.getWorkloadSubcategories(
+                items = await WorkloadsCategory.getWorkloadSubcategories(
                     categoryElement.resourceData
                 );
+                break;
             
             case 'deployments':
-                return DeploymentsSubcategory.getDeploymentItems(
+                items = await DeploymentsSubcategory.getDeploymentItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'deployment': {
-                // Get label selector from resourceData
                 const labelSelector = categoryElement.resourceData.labelSelector || '';
-                return DeploymentsSubcategory.getPodsForDeployment(
+                items = await DeploymentsSubcategory.getPodsForDeployment(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     labelSelector,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             }
             
             case 'statefulsets':
-                return StatefulSetsSubcategory.getStatefulSetItems(
+                items = await StatefulSetsSubcategory.getStatefulSetItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'statefulset': {
-                // Get label selector from resourceData
                 const statefulSetLabelSelector = categoryElement.resourceData.labelSelector || '';
-                return StatefulSetsSubcategory.getPodsForStatefulSet(
+                items = await StatefulSetsSubcategory.getPodsForStatefulSet(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     statefulSetLabelSelector,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             }
             
             case 'daemonsets':
-                return DaemonSetsSubcategory.getDaemonSetItems(
+                items = await DaemonSetsSubcategory.getDaemonSetItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'daemonset': {
-                // Get label selector from resourceData
                 const daemonSetLabelSelector = categoryElement.resourceData.labelSelector || '';
-                return DaemonSetsSubcategory.getPodsForDaemonSet(
+                items = await DaemonSetsSubcategory.getPodsForDaemonSet(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     daemonSetLabelSelector,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             }
             
             case 'cronjobs':
-                return CronJobsSubcategory.getCronJobItems(
+                items = await CronJobsSubcategory.getCronJobItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'cronjob':
-                return CronJobsSubcategory.getPodsForCronJob(
+                items = await CronJobsSubcategory.getPodsForCronJob(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'storage':
-                return StorageCategory.getStorageSubcategories(
+                items = await StorageCategory.getStorageSubcategories(
                     categoryElement.resourceData
                 );
+                break;
             
             case 'networking':
-                return NetworkingCategory.getNetworkingSubcategories(
+                items = await NetworkingCategory.getNetworkingSubcategories(
                     categoryElement.resourceData
                 );
+                break;
             
             case 'services':
-                return ServicesSubcategory.getServiceItems(
+                items = await ServicesSubcategory.getServiceItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'persistentVolumes':
-                return PersistentVolumesSubcategory.getPersistentVolumeItems(
+                items = await PersistentVolumesSubcategory.getPersistentVolumeItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'persistentVolumeClaims':
-                return PersistentVolumeClaimsSubcategory.getPersistentVolumeClaimItems(
+                items = await PersistentVolumeClaimsSubcategory.getPersistentVolumeClaimItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'storageClasses':
-                return StorageClassesSubcategory.getStorageClassItems(
+                items = await StorageClassesSubcategory.getStorageClassItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'configuration':
-                return ConfigurationCategory.getConfigurationSubcategories(
+                items = await ConfigurationCategory.getConfigurationSubcategories(
                     categoryElement.resourceData
                 );
+                break;
             
             case 'configmaps':
-                return ConfigMapsSubcategory.getConfigMapItems(
+                items = await ConfigMapsSubcategory.getConfigMapItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'secrets':
-                return SecretsSubcategory.getSecretItems(
+                items = await SecretsSubcategory.getSecretItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'helm':
-                return HelmCategory.getHelmReleaseItems(
+                items = await HelmCategory.getHelmReleaseItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'customResources':
-                return CustomResourcesCategory.getCRDItems(
+                items = await CustomResourcesCategory.getCRDItems(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+                break;
             
             case 'reports':
-                return ReportsCategory.getReportsSubcategories(
+                items = await ReportsCategory.getReportsSubcategories(
                     categoryElement.resourceData
                 );
+                break;
             
             case 'compliance':
-                return ComplianceSubcategory.getComplianceReportItems(
+                items = await ComplianceSubcategory.getComplianceReportItems(
                     categoryElement.resourceData
                 );
+                break;
             
             case 'dataCollection':
-                return [];
+                items = [];
+                break;
             
             default:
-                return [];
+                items = [];
+                break;
         }
+
+        return addDescribeCommandToItems(items);
     }
 
     /**

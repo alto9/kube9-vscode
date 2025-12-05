@@ -1,10 +1,23 @@
 ---
 session_id: describe-webview-for-resources-and-namespaces
 start_time: '2025-12-05T20:18:51.075Z'
-status: design
+status: completed
 problem_statement: Describe webview for resources and namespaces
-changed_files: []
+changed_files:
+  - path: ai/features/webview/describe-webview.feature.md
+    change_type: added
+    scenarios_added:
+      - Opening Describe (formatted) shows stub content in a shared webview
+      - Opening Describe (Raw) shows read-only editor with stub content
+      - Reusing the shared Describe webview across resources
+      - Left-click Describe opens stub webview
+      - Right-click Describe opens stub webview
+      - Right-click Describe (Raw) opens full describe in read-only editor
+    scenarios_removed:
+      - Opening Describe (formatted) shows stub content in a shared webview
+      - Opening Describe (Raw) shows read-only editor with stub content
 start_commit: 09e827279b40249ef4fa824d72efd1052b245424
+end_time: '2025-12-05T21:34:47.741Z'
 ---
 ## Problem Statement
 
