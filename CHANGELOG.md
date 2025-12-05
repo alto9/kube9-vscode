@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/alto9/kube9-vscode/compare/v1.1.1...v1.1.2) (2025-12-05)
+
+
+### Bug Fixes
+
+* use correct VSIX filename pattern for package name ([f1839ae](https://github.com/alto9/kube9-vscode/commit/f1839aefd3b0869d7f2701c31b2e50ae7e28f2d2))
+
 ## [1.1.1](https://github.com/alto9/kube9-vscode/compare/v1.1.0...v1.1.1) (2025-12-05)
 
 
