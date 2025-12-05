@@ -152,12 +152,8 @@ export class ConfigurationCommands {
         try {
             // Check if a namespace is set in kubectl context
             // Default to 'default' namespace if none is set
-            let currentNamespace: string = 'default';
             try {
-                const ns = await getCurrentNamespace();
-                if (ns) {
-                    currentNamespace = ns;
-                }
+                await getCurrentNamespace();
             } catch (error) {
                 console.warn('Failed to get current namespace, using default namespace:', error);
             }
@@ -353,12 +349,8 @@ export class ConfigurationCommands {
         try {
             // Check if a namespace is set in kubectl context
             // Default to 'default' namespace if none is set
-            let currentNamespace: string = 'default';
             try {
-                const ns = await getCurrentNamespace();
-                if (ns) {
-                    currentNamespace = ns;
-                }
+                await getCurrentNamespace();
             } catch (error) {
                 console.warn('Failed to get current namespace, using default namespace:', error);
             }

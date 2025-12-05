@@ -5,7 +5,6 @@ import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
-import { Settings } from './config/Settings';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
 import { applyYAMLCommand } from './commands/applyYAML';

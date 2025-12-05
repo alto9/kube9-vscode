@@ -4,7 +4,6 @@ import { TreeItemType } from './TreeItemTypes';
 import { TreeItemFactory } from './TreeItemFactory';
 import { ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
-import { Settings } from '../config/Settings';
 import { KubectlErrorType } from '../kubernetes/KubectlError';
 import { NodesCategory } from './categories/NodesCategory';
 import { NamespacesCategory } from './categories/NamespacesCategory';
