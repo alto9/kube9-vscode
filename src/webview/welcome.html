@@ -514,18 +514,18 @@
         </div>
 
         <div class="section">
-            <h2><span class="section-icon">🤖</span> Unlock AI-Powered Features</h2>
-            <p>While all core features work out of the box, you can unlock advanced AI capabilities by installing the Kube9 Operator in your clusters:</p>
+            <h2><span class="section-icon">🤖</span> Coming Soon: AI-Powered Features</h2>
+            <p>AI capabilities are not available yet. We are building operator-backed insights and recommendations; they will roll out in a future release.</p>
             
             <ul class="feature-list">
-                <li><strong>Performance Optimization:</strong> Get recommendations to improve workload efficiency</li>
-                <li><strong>Cost Reduction:</strong> Identify opportunities to reduce cloud infrastructure costs</li>
-                <li><strong>Security Insights:</strong> Receive proactive security vulnerability alerts</li>
-                <li><strong>Reliability Improvements:</strong> Get suggestions to enhance application stability</li>
+                <li><strong>Planned:</strong> Performance optimization suggestions</li>
+                <li><strong>Planned:</strong> Cost reduction opportunities</li>
+                <li><strong>Planned:</strong> Security insights and proactive alerts</li>
+                <li><strong>Planned:</strong> Reliability improvements and stability guidance</li>
             </ul>
 
             <div class="info-notice">
-                <strong>How it works:</strong> The Kube9 Operator runs in your cluster, collects metrics, and sends them securely to Kube9's AI analysis engine. Results appear automatically in your dashboards.
+                <strong>Status:</strong> Operator-powered AI features are under development and not enabled in this version.
             </div>
 
             <div class="actions">
@@ -539,7 +539,6 @@
                 <input type="checkbox" id="doNotShowAgain" aria-label="Do not show this welcome screen again">
                 <label for="doNotShowAgain" class="checkbox-label">Don't show this welcome screen again</label>
             </div>
-            <button class="link-button" onclick="dismiss()">Get Started →</button>
         </div>
     </div>
 
@@ -547,7 +546,7 @@
         const vscode = acquireVsCodeApi();
 
         function openPortal() {
-            vscode.postMessage({ command: 'openPortal' });
+            openExternal('https://app.kube9.io');
         }
 
         function openSettings() {
@@ -555,7 +554,7 @@
         }
 
         function openDocs() {
-            vscode.postMessage({ command: 'openDocs' });
+            openExternal('https://alto9.github.io/');
         }
 
         function openExternal(url) {

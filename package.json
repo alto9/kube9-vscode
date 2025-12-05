@@ -5,6 +5,7 @@
   "license": "MIT",
   "author": "Alto9",
   "publisher": "Alto9",
+  "icon": "resources/icons/kube9-icon.png",
   "keywords": [
     "kube9",
     "kubernetes",
@@ -39,8 +40,8 @@
       "activitybar": [
         {
           "id": "kube9View",
-          "title": "kube9",
-          "icon": "$(kubernetes)"
+          "title": "Kube9 Cluster Manager",
+          "icon": "resources/icons/kube9-activity.png"
         }
       ]
     },

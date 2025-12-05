@@ -27,6 +27,21 @@ Scenario: Installing the extension from the marketplace
   And the extension should activate automatically after installation
   And the kube9 side panel should appear in the activity bar
 
+Scenario: Activity bar button shows kube9-branded icon
+  Given the kube9 extension is installed and activated
+  When VS Code renders the activity bar
+  Then the kube9 activity view button should display a transparent PNG icon
+  And the icon should follow VS Code activity bar sizing (24x24 px with safe padding)
+  And the icon should remain legible in light and dark themes
+  And the icon file should be packaged with the extension assets
+
+Scenario: Marketplace publisher profile shows kube9 icon
+  Given the kube9 extension listing is available in the VS Code marketplace
+  When a user opens the kube9 extension page
+  Then the publisher profile should display the kube9 publisher icon
+  And the publisher icon should be a transparent PNG with a square aspect ratio (at least 128x128)
+  And the icon should match the activity bar branding for consistency
+
 Scenario: Welcome screen appears on first launch
   Given the kube9 extension has just been installed
   And the extension has activated for the first time
@@ -165,3 +180,5 @@ Scenario: Re-activating extension after initial setup
    - Custom KUBECONFIG environment variable
 
 9. **Future Enhancement**: Consider adding a "Setup Wizard" command that users can invoke later to reconfigure or see the welcome content again, even if they dismissed it permanently.
+
+10. **Icon Assets**: Provide transparent PNG assets for both the activity bar (24x24 px with padding) and the marketplace publisher profile (square, at least 128x128 px). Keep visual contrast suitable for light and dark themes and include the files within the packaged extension.

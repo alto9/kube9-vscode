@@ -2,6 +2,7 @@
 .vscode/**
 .vscode-test/**
 src/**
+!src/assets/icons/**/*.png
 !src/webview/**/*.html
 !src/webview/**/*.js
 .gitignore
