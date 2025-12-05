@@ -44,7 +44,7 @@ jobs:
       
       - name: Run semantic-release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: npx semantic-release
       
       - name: Re-package extension (post-release)
@@ -56,6 +56,14 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "VSCE_PAT is not set. Add it as a repository secret to publish." >&2
+            exit 1
+          fi
           VSIX_FILE=$(ls kube9-*.vsix | head -1)
-          npx --yes @vscode/vsce publish --packagePath "$VSIX_FILE" --pat $VSCE_PAT
+          if [ -z "$VSIX_FILE" ]; then
+            echo "No VSIX found matching kube9-*.vsix" >&2
+            exit 1
+          fi
+          npx --yes @vscode/vsce publish --packagePath "$VSIX_FILE" --pat "$VSCE_PAT"
 
