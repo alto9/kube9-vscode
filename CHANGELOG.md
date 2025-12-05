@@ -1,3 +1,5 @@
+## [1.0.1](https://github.com/alto9/kube9-vscode/compare/v1.0.0...v1.0.1) (2025-12-05)
+
 # 1.0.0 (2025-12-05)
 
 
