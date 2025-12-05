@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/alto9/kube9-vscode/compare/v1.0.2...v1.1.0) (2025-12-05)
+
+
+### Bug Fixes
+
+* resolve lint errors and test failure ([478126d](https://github.com/alto9/kube9-vscode/commit/478126d2583162745f2ecfaf6780805344b9645b))
+
+
+### Features
+
+* implement describe webview and describe raw editor ([13cfba7](https://github.com/alto9/kube9-vscode/commit/13cfba724ab2ddf6012e0722857040340129ca33))
+
 ## [1.0.2](https://github.com/alto9/kube9-vscode/compare/v1.0.1...v1.0.2) (2025-12-05)
 
 ## [1.0.1](https://github.com/alto9/kube9-vscode/compare/v1.0.0...v1.0.1) (2025-12-05)
