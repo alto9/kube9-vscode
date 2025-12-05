@@ -1,41 +1,34 @@
 {
-  "name": "kube9",
-  "displayName": "kube9 - Kubernetes Cluster Manager",
-  "description": "An AI-powered VS Code extension for Kubernetes cluster management that makes DevOps workflows conversational and intelligent",
-  "version": "0.0.1",
+  "name": "kube9-vscode",
+  "displayName": "Kube9 - Kubernetes Cluster Manager",
+  "version": "0.1.0",
   "license": "MIT",
   "author": "Alto9",
-  "publisher": "alto9",
+  "publisher": "Alto9",
   "keywords": [
-    "kubernetes",
-    "k8s",
     "kube9",
-    "cluster-management",
-    "devops",
-    "ai",
-    "cloud-native",
-    "containers"
+    "kubernetes",
+    "cluster",
+    "manager",
+    "vscode",
+    "extension"
   ],
+  "description": "A VS Code extension for Kubernetes cluster management with a freemium model that provides powerful free features and unlocks advanced AI-powered intelligence for Pro users",
   "repository": {
     "type": "git",
-    "url": "https://github.com/alto9/kube9"
+    "url": "https://github.com/alto9/kube9-vscode"
   },
   "bugs": {
-    "url": "https://github.com/alto9/kube9/issues"
+    "url": "https://github.com/alto9/kube9-vscode/issues"
   },
-  "homepage": "https://github.com/alto9/kube9#readme",
+  "homepage": "https://github.com/alto9/kube9-vscode#readme",
   "engines": {
     "vscode": "^1.80.0",
     "node": ">=22.0.0"
   },
   "categories": [
-    "Programming Languages",
     "Other"
   ],
-  "galleryBanner": {
-    "color": "#326CE5",
-    "theme": "dark"
-  },
   "activationEvents": [
     "onStartupFinished",
     "onView:kube9ClusterView"
@@ -181,12 +174,10 @@
     "lint": "eslint src --ext ts",
     "prepackage": "npm run build",
     "package": "vsce package",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "release:dry-run": "semantic-release --dry-run"
   },
   "devDependencies": {
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
-    "@semantic-release/github": "^11.0.0",
     "@types/js-yaml": "^4.0.5",
     "@types/mocha": "^10.0.1",
     "@types/node": "^22.0.0",
@@ -196,15 +187,20 @@
     "@vscode/vsce": "^2.19.0",
     "eslint": "^8.45.0",
     "mocha": "^10.2.0",
-    "semantic-release": "^23.0.0",
     "source-map-support": "^0.5.21",
     "ts-loader": "^9.5.4",
     "typescript": "^5.1.6",
     "webpack": "^5.102.1",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.2",
+    "@semantic-release/npm": "^13.1.2",
+    "conventional-changelog-conventionalcommits": "^7.0.2",
+    "semantic-release": "^25.0.2"
   },
   "dependencies": {
-    "@kubernetes/client-node": "^0.20.0",
+    "@kubernetes/client-node": "^1.4.0",
     "js-yaml": "^4.1.0"
   }
 }
