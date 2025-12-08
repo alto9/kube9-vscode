@@ -3,7 +3,7 @@ story_id: create-argocd-types-file
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-detection, argocd-tree-view, argocd-application-webview]
 spec_id: [argocd-status-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -37,12 +37,12 @@ All ArgoCD features need strongly-typed interfaces for application data, status 
 
 ## Acceptance Criteria
 
-- [ ] All interfaces from argocd-status-spec are defined
-- [ ] Types are properly exported
-- [ ] Constants are defined and exported
-- [ ] Error classes extend base Error properly
-- [ ] TypeScript compilation succeeds
-- [ ] No circular dependencies
+- [x] All interfaces from argocd-status-spec are defined
+- [x] Types are properly exported
+- [x] Constants are defined and exported
+- [x] Error classes extend base Error properly
+- [x] TypeScript compilation succeeds
+- [x] No circular dependencies
 
 ## Dependencies
 
