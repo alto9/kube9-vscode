@@ -1334,24 +1334,38 @@ export class ArgoCDService {
      * @param namespace Application namespace
      * @param context Name of the Kubernetes context
      * @param timeoutSeconds Timeout in seconds (default: 300 seconds / 5 minutes)
+     * @param onPhaseUpdate Optional callback to report phase updates for progress notifications (phase only, message is ignored)
+     * @param cancellationToken Optional cancellation token to allow stopping polling
      * @returns Promise resolving to operation result
      * @throws Error if operation times out or fails to track
+     * @throws vscode.CancellationError if cancellation is requested
      */
     async trackOperation(
         name: string,
         namespace: string,
         context: string,
-        timeoutSeconds: number = OPERATION_TIMEOUT
+        timeoutSeconds: number = OPERATION_TIMEOUT,
+        onPhaseUpdate?: (phase: OperationPhase, message?: string) => void,
+        cancellationToken?: vscode.CancellationToken
     ): Promise<OperationResult> {
         const startTime = Date.now();
         const timeoutMs = timeoutSeconds * 1000;
         let operationComplete = false;
+        let lastReportedPhase: OperationPhase | undefined;
 
         getOutputChannel().appendLine(
             `[INFO] Starting operation tracking for application ${name} in namespace ${namespace} in context ${context}`
         );
 
         while (!operationComplete) {
+            // Check cancellation
+            if (cancellationToken?.isCancellationRequested) {
+                getOutputChannel().appendLine(
+                    `[INFO] Operation tracking cancelled for application ${name} in namespace ${namespace}`
+                );
+                throw new vscode.CancellationError();
+            }
+
             // Check timeout
             const elapsedMs = Date.now() - startTime;
             if (elapsedMs >= timeoutMs) {
@@ -1367,28 +1381,35 @@ export class ArgoCDService {
                 // Check operation state
                 if (app.lastOperation) {
                     const phase = app.lastOperation.phase;
+                    const message = app.lastOperation.message;
+
+                    // Report phase update if it changed
+                    if (onPhaseUpdate && phase !== lastReportedPhase) {
+                        onPhaseUpdate(phase, message);
+                        lastReportedPhase = phase;
+                    }
 
                     if (phase === 'Succeeded') {
-                        const message = app.lastOperation.message || 'Operation completed successfully';
+                        const successMessage = message || 'Operation completed successfully';
                         getOutputChannel().appendLine(
-                            `[INFO] Operation succeeded for application ${name} in namespace ${namespace}: ${message}`
+                            `[INFO] Operation succeeded for application ${name} in namespace ${namespace}: ${successMessage}`
                         );
                         operationComplete = true;
                         return {
                             success: true,
-                            message
+                            message: successMessage
                         };
                     }
 
                     if (phase === 'Failed' || phase === 'Error') {
-                        const message = app.lastOperation.message || 'Operation failed';
+                        const failureMessage = message || 'Operation failed';
                         getOutputChannel().appendLine(
-                            `[ERROR] Operation failed for application ${name} in namespace ${namespace}: ${message}`
+                            `[ERROR] Operation failed for application ${name} in namespace ${namespace}: ${failureMessage}`
                         );
                         operationComplete = true;
                         return {
                             success: false,
-                            message
+                            message: failureMessage
                         };
                     }
 
@@ -1408,6 +1429,11 @@ export class ArgoCDService {
                 // Wait before polling again
                 await new Promise(resolve => setTimeout(resolve, OPERATION_POLL_INTERVAL));
             } catch (error: unknown) {
+                // Handle cancellation errors
+                if (error instanceof vscode.CancellationError) {
+                    throw error;
+                }
+
                 // Handle errors from getApplication
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 

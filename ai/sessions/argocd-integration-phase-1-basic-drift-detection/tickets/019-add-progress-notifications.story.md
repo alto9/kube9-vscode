@@ -3,7 +3,7 @@ story_id: add-progress-notifications
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-actions]
 spec_id: [argocd-service-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -36,13 +36,13 @@ When users trigger sync operations, they need visual feedback showing the operat
 
 ## Acceptance Criteria
 
-- [ ] Progress notification appears on sync
-- [ ] Progress updates with current phase
-- [ ] Success notification shown on completion
-- [ ] Error notification shown on failure
-- [ ] Timeout notification explains operation continues
-- [ ] Cancel button stops polling (doesn't cancel sync)
-- [ ] Progress appears in notification area
+- [x] Progress notification appears on sync
+- [x] Progress updates with current phase
+- [x] Success notification shown on completion
+- [x] Error notification shown on failure
+- [x] Timeout notification explains operation continues
+- [x] Cancel button stops polling (doesn't cancel sync)
+- [x] Progress appears in notification area
 
 ## Dependencies
 

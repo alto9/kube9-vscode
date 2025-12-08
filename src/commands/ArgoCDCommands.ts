@@ -74,14 +74,60 @@ export async function syncApplicationCommand(treeItem: ClusterTreeItem): Promise
             {
                 location: vscode.ProgressLocation.Notification,
                 title: `Syncing application ${appInfo.name}...`,
-                cancellable: false
+                cancellable: true
             },
-            async () => {
+            async (progress, cancellationToken) => {
+                // Trigger the sync operation
                 await argoCDService.syncApplication(appInfo.name, appInfo.namespace, appInfo.context);
+                
+                // Track the operation with phase updates
+                try {
+                    const result = await argoCDService.trackOperation(
+                        appInfo.name,
+                        appInfo.namespace,
+                        appInfo.context,
+                        undefined, // Use default timeout
+                        (phase) => {
+                            // Update progress with current phase
+                            const phaseMessage = phase === 'Running' ? 'Running' :
+                                phase === 'Terminating' ? 'Terminating' :
+                                phase === 'Succeeded' ? 'Succeeded' :
+                                phase === 'Failed' ? 'Failed' :
+                                phase === 'Error' ? 'Error' : phase;
+                            progress.report({ message: `Syncing ${appInfo.name}... (${phaseMessage})` });
+                        },
+                        cancellationToken
+                    );
+                    
+                    // Show success notification
+                    if (result.success) {
+                        vscode.window.showInformationMessage(`Successfully synced application ${appInfo.name}`);
+                    } else {
+                        vscode.window.showErrorMessage(`Sync failed for application ${appInfo.name}: ${result.message}`);
+                    }
+                } catch (trackError) {
+                    // Handle cancellation
+                    if (trackError instanceof vscode.CancellationError) {
+                        vscode.window.showInformationMessage(
+                            `Operation tracking cancelled for ${appInfo.name}. The sync operation continues in ArgoCD.`
+                        );
+                        return;
+                    }
+                    
+                    // Handle timeout
+                    const errorMessage = trackError instanceof Error ? trackError.message : String(trackError);
+                    if (errorMessage.includes('timed out')) {
+                        vscode.window.showWarningMessage(
+                            `Operation tracking timed out for ${appInfo.name}. The sync operation continues in ArgoCD.`
+                        );
+                        return;
+                    }
+                    
+                    // Re-throw other errors
+                    throw trackError;
+                }
             }
         );
-        
-        vscode.window.showInformationMessage(`Successfully triggered sync for application ${appInfo.name}`);
         
         // Invalidate cache to ensure tree view shows fresh data
         argoCDService.invalidateCache(appInfo.context);
@@ -127,14 +173,60 @@ export async function refreshApplicationCommand(treeItem: ClusterTreeItem): Prom
             {
                 location: vscode.ProgressLocation.Notification,
                 title: `Refreshing application ${appInfo.name}...`,
-                cancellable: false
+                cancellable: true
             },
-            async () => {
+            async (progress, cancellationToken) => {
+                // Trigger the refresh operation
                 await argoCDService.refreshApplication(appInfo.name, appInfo.namespace, appInfo.context);
+                
+                // Track the operation with phase updates
+                try {
+                    const result = await argoCDService.trackOperation(
+                        appInfo.name,
+                        appInfo.namespace,
+                        appInfo.context,
+                        undefined, // Use default timeout
+                        (phase) => {
+                            // Update progress with current phase
+                            const phaseMessage = phase === 'Running' ? 'Running' :
+                                phase === 'Terminating' ? 'Terminating' :
+                                phase === 'Succeeded' ? 'Succeeded' :
+                                phase === 'Failed' ? 'Failed' :
+                                phase === 'Error' ? 'Error' : phase;
+                            progress.report({ message: `Refreshing ${appInfo.name}... (${phaseMessage})` });
+                        },
+                        cancellationToken
+                    );
+                    
+                    // Show success notification
+                    if (result.success) {
+                        vscode.window.showInformationMessage(`Successfully refreshed application ${appInfo.name}`);
+                    } else {
+                        vscode.window.showErrorMessage(`Refresh failed for application ${appInfo.name}: ${result.message}`);
+                    }
+                } catch (trackError) {
+                    // Handle cancellation
+                    if (trackError instanceof vscode.CancellationError) {
+                        vscode.window.showInformationMessage(
+                            `Operation tracking cancelled for ${appInfo.name}. The refresh operation continues in ArgoCD.`
+                        );
+                        return;
+                    }
+                    
+                    // Handle timeout
+                    const errorMessage = trackError instanceof Error ? trackError.message : String(trackError);
+                    if (errorMessage.includes('timed out')) {
+                        vscode.window.showWarningMessage(
+                            `Operation tracking timed out for ${appInfo.name}. The refresh operation continues in ArgoCD.`
+                        );
+                        return;
+                    }
+                    
+                    // Re-throw other errors
+                    throw trackError;
+                }
             }
         );
-        
-        vscode.window.showInformationMessage(`Successfully triggered refresh for application ${appInfo.name}`);
         
         // Invalidate cache to ensure tree view shows fresh data
         argoCDService.invalidateCache(appInfo.context);
@@ -193,14 +285,60 @@ export async function hardRefreshApplicationCommand(treeItem: ClusterTreeItem): 
             {
                 location: vscode.ProgressLocation.Notification,
                 title: `Hard refreshing application ${appInfo.name}...`,
-                cancellable: false
+                cancellable: true
             },
-            async () => {
+            async (progress, cancellationToken) => {
+                // Trigger the hard refresh operation
                 await argoCDService.hardRefreshApplication(appInfo.name, appInfo.namespace, appInfo.context);
+                
+                // Track the operation with phase updates
+                try {
+                    const result = await argoCDService.trackOperation(
+                        appInfo.name,
+                        appInfo.namespace,
+                        appInfo.context,
+                        undefined, // Use default timeout
+                        (phase) => {
+                            // Update progress with current phase
+                            const phaseMessage = phase === 'Running' ? 'Running' :
+                                phase === 'Terminating' ? 'Terminating' :
+                                phase === 'Succeeded' ? 'Succeeded' :
+                                phase === 'Failed' ? 'Failed' :
+                                phase === 'Error' ? 'Error' : phase;
+                            progress.report({ message: `Hard refreshing ${appInfo.name}... (${phaseMessage})` });
+                        },
+                        cancellationToken
+                    );
+                    
+                    // Show success notification
+                    if (result.success) {
+                        vscode.window.showInformationMessage(`Successfully hard refreshed application ${appInfo.name}`);
+                    } else {
+                        vscode.window.showErrorMessage(`Hard refresh failed for application ${appInfo.name}: ${result.message}`);
+                    }
+                } catch (trackError) {
+                    // Handle cancellation
+                    if (trackError instanceof vscode.CancellationError) {
+                        vscode.window.showInformationMessage(
+                            `Operation tracking cancelled for ${appInfo.name}. The hard refresh operation continues in ArgoCD.`
+                        );
+                        return;
+                    }
+                    
+                    // Handle timeout
+                    const errorMessage = trackError instanceof Error ? trackError.message : String(trackError);
+                    if (errorMessage.includes('timed out')) {
+                        vscode.window.showWarningMessage(
+                            `Operation tracking timed out for ${appInfo.name}. The hard refresh operation continues in ArgoCD.`
+                        );
+                        return;
+                    }
+                    
+                    // Re-throw other errors
+                    throw trackError;
+                }
             }
         );
-        
-        vscode.window.showInformationMessage(`Successfully triggered hard refresh for application ${appInfo.name}`);
         
         // Invalidate cache to ensure tree view shows fresh data
         argoCDService.invalidateCache(appInfo.context);
