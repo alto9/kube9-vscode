@@ -688,6 +688,18 @@ function registerCommands(): void {
     );
     context.subscriptions.push(applyYAMLCmd);
     disposables.push(applyYAMLCmd);
+    
+    // Register restart workload command
+    const restartWorkloadCmd = vscode.commands.registerCommand(
+        'kube9.restartWorkload',
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        async (_treeItem: ClusterTreeItem) => {
+            // Stub implementation - will be implemented in later stories
+            vscode.window.showInformationMessage('Restart command triggered (stub implementation)');
+        }
+    );
+    context.subscriptions.push(restartWorkloadCmd);
+    disposables.push(restartWorkloadCmd);
 }
 
 /**

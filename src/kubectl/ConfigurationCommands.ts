@@ -1,7 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
-import { getCurrentNamespace } from '../utils/kubectlContext';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -150,14 +149,6 @@ export class ConfigurationCommands {
         contextName: string
     ): Promise<ConfigMapsResult> {
         try {
-            // Check if a namespace is set in kubectl context
-            // Default to 'default' namespace if none is set
-            try {
-                await getCurrentNamespace();
-            } catch (error) {
-                console.warn('Failed to get current namespace, using default namespace:', error);
-            }
-
             // Build kubectl command arguments
             // Always use the namespace (either from context or 'default')
             // kubectl will automatically use the context namespace if set
@@ -347,14 +338,6 @@ export class ConfigurationCommands {
     ): Promise<SecretsResult> {
         console.log(`[DEBUG SECRETS] getSecrets called for context: ${contextName}`);
         try {
-            // Check if a namespace is set in kubectl context
-            // Default to 'default' namespace if none is set
-            try {
-                await getCurrentNamespace();
-            } catch (error) {
-                console.warn('Failed to get current namespace, using default namespace:', error);
-            }
-
             // Build kubectl command arguments
             // Always use the namespace (either from context or 'default')
             // kubectl will automatically use the context namespace if set
