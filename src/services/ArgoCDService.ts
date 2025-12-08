@@ -1171,6 +1171,9 @@ export class ArgoCDService {
             getOutputChannel().appendLine(
                 `[INFO] Successfully triggered sync for application ${name} in namespace ${namespace} in context ${context}`
             );
+
+            // Invalidate cache to ensure fresh data on next query
+            this.invalidateCache(context);
         } catch (error: unknown) {
             const kubectlError = KubectlError.fromExecError(error, context);
             const errorDetails = kubectlError.getDetails().toLowerCase();
@@ -1280,6 +1283,9 @@ export class ArgoCDService {
             getOutputChannel().appendLine(
                 `[INFO] Successfully triggered hard refresh for application ${name} in namespace ${namespace} in context ${context}`
             );
+
+            // Invalidate cache to ensure fresh data on next query
+            this.invalidateCache(context);
         } catch (error: unknown) {
             const kubectlError = KubectlError.fromExecError(error, context);
             const errorDetails = kubectlError.getDetails().toLowerCase();
@@ -1456,6 +1462,17 @@ export class ArgoCDService {
      */
     clearAllApplicationCache(): void {
         this.applicationCache.clear();
+    }
+
+    /**
+     * Invalidates all cached data for a specific cluster context.
+     * Clears both detection cache and application list cache.
+     * 
+     * @param context Name of the Kubernetes context
+     */
+    invalidateCache(context: string): void {
+        this.clearCache(context);
+        this.clearApplicationCache(context);
     }
 }
 

@@ -374,6 +374,9 @@ export class ArgoCDApplicationWebviewProvider {
             // Execute sync
             await argoCDService.syncApplication(applicationName, namespace, context);
 
+            // Invalidate cache to ensure fresh data
+            argoCDService.invalidateCache(context);
+
             // Reload application data
             await ArgoCDApplicationWebviewProvider.loadApplicationData(
                 argoCDService,
@@ -420,6 +423,9 @@ export class ArgoCDApplicationWebviewProvider {
         try {
             // Execute refresh
             await argoCDService.refreshApplication(applicationName, namespace, context);
+
+            // Invalidate cache to ensure fresh data
+            argoCDService.invalidateCache(context);
 
             // Reload application data
             await ArgoCDApplicationWebviewProvider.loadApplicationData(
@@ -478,6 +484,9 @@ export class ArgoCDApplicationWebviewProvider {
         try {
             // Execute hard refresh
             await argoCDService.hardRefreshApplication(applicationName, namespace, context);
+
+            // Invalidate cache to ensure fresh data
+            argoCDService.invalidateCache(context);
 
             // Reload application data
             await ArgoCDApplicationWebviewProvider.loadApplicationData(

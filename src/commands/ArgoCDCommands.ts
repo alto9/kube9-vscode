@@ -83,6 +83,9 @@ export async function syncApplicationCommand(treeItem: ClusterTreeItem): Promise
         
         vscode.window.showInformationMessage(`Successfully triggered sync for application ${appInfo.name}`);
         
+        // Invalidate cache to ensure tree view shows fresh data
+        argoCDService.invalidateCache(appInfo.context);
+        
         // Refresh tree view to show updated status
         const treeProvider = getClusterTreeProvider();
         treeProvider.refresh();
@@ -132,6 +135,9 @@ export async function refreshApplicationCommand(treeItem: ClusterTreeItem): Prom
         );
         
         vscode.window.showInformationMessage(`Successfully triggered refresh for application ${appInfo.name}`);
+        
+        // Invalidate cache to ensure tree view shows fresh data
+        argoCDService.invalidateCache(appInfo.context);
         
         // Refresh tree view to show updated status
         const treeProvider = getClusterTreeProvider();
@@ -195,6 +201,9 @@ export async function hardRefreshApplicationCommand(treeItem: ClusterTreeItem): 
         );
         
         vscode.window.showInformationMessage(`Successfully triggered hard refresh for application ${appInfo.name}`);
+        
+        // Invalidate cache to ensure tree view shows fresh data
+        argoCDService.invalidateCache(appInfo.context);
         
         // Refresh tree view to show updated status
         const treeProvider = getClusterTreeProvider();

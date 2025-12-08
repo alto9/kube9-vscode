@@ -23,19 +23,21 @@ export class ArgoCDCategory {
      * @param kubeconfigPath Path to the kubeconfig file
      * @param errorHandler Callback to handle kubectl errors
      * @param argoCDService ArgoCDService instance for querying applications
+     * @param bypassCache If true, bypasses cache and queries the cluster directly
      * @returns Array of ArgoCD application tree items
      */
     public static async getArgoCDApplicationItems(
         resourceData: TreeItemData,
         kubeconfigPath: string,
         errorHandler: ErrorHandler,
-        argoCDService: ArgoCDService
+        argoCDService: ArgoCDService,
+        bypassCache = false
     ): Promise<ClusterTreeItem[]> {
         const contextName = resourceData.context.name;
         
         try {
             // Check if ArgoCD is installed
-            const installationStatus = await argoCDService.isInstalled(contextName);
+            const installationStatus = await argoCDService.isInstalled(contextName, bypassCache);
             
             // If ArgoCD is not installed, return empty array
             if (!installationStatus.installed) {
@@ -43,7 +45,7 @@ export class ArgoCDCategory {
             }
             
             // Get applications
-            const applications = await argoCDService.getApplications(contextName);
+            const applications = await argoCDService.getApplications(contextName, bypassCache);
             
             // If no applications found, return empty array
             if (applications.length === 0) {

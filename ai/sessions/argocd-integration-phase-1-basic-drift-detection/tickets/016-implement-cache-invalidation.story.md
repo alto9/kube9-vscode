@@ -3,7 +3,7 @@ story_id: implement-cache-invalidation
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-tree-view, argocd-actions]
 spec_id: [argocd-service-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -35,12 +35,12 @@ After sync/refresh actions, the cached application data needs to be invalidated 
 
 ## Acceptance Criteria
 
-- [ ] Cache is invalidated after successful sync
-- [ ] Cache is invalidated after successful refresh
-- [ ] Manual tree refresh bypasses cache
-- [ ] Tree view updates after sync completes
-- [ ] Webview updates after sync completes
-- [ ] Detection cache and application cache both cleared
+- [x] Cache is invalidated after successful sync
+- [x] Cache is invalidated after successful refresh
+- [x] Manual tree refresh bypasses cache
+- [x] Tree view updates after sync completes
+- [x] Webview updates after sync completes
+- [x] Detection cache and application cache both cleared
 
 ## Dependencies
 
