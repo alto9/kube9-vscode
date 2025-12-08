@@ -3,7 +3,7 @@ story_id: implement-drift-details-tab
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-application-webview]
 spec_id: [argocd-webview-spec, argocd-status-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -42,14 +42,14 @@ The Drift Details tab shows which specific resources are out-of-sync. Users can 
 
 ## Acceptance Criteria
 
-- [ ] Resource table displays all resources
-- [ ] Out-of-sync summary shows correct count
-- [ ] Filter toggle works correctly
-- [ ] Out-of-sync resources highlighted
-- [ ] Row expansion shows resource message
-- [ ] Resource name click sends navigate message
-- [ ] Empty state handled gracefully
-- [ ] Table is responsive and scrollable
+- [x] Resource table displays all resources
+- [x] Out-of-sync summary shows correct count
+- [x] Filter toggle works correctly
+- [x] Out-of-sync resources highlighted
+- [x] Row expansion shows resource message
+- [x] Resource name click sends navigate message
+- [x] Empty state handled gracefully
+- [x] Table is responsive and scrollable
 
 ## Dependencies
 

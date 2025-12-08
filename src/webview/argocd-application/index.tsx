@@ -134,6 +134,17 @@ function App(): React.JSX.Element {
         }
     };
 
+    const handleNavigateToResource = (kind: string, name: string, namespace: string): void => {
+        if (vscode) {
+            vscode.postMessage({ 
+                type: 'navigateToResource',
+                kind,
+                name,
+                namespace
+            });
+        }
+    };
+
     return (
         <ArgoCDApplicationView
             application={application}
@@ -147,6 +158,7 @@ function App(): React.JSX.Element {
             onRefresh={handleRefresh}
             onHardRefresh={handleHardRefresh}
             onViewInTree={handleViewInTree}
+            onNavigateToResource={handleNavigateToResource}
         />
     );
 }

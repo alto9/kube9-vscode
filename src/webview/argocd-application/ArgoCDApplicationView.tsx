@@ -3,6 +3,7 @@ import { TabBar, TabType } from './components/TabBar';
 import { LoadingState } from './components/LoadingState';
 import { ErrorState } from './components/ErrorState';
 import { OverviewTab } from './components/OverviewTab';
+import { DriftDetailsTab } from './components/DriftDetailsTab';
 import { ArgoCDApplication } from '../../types/argocd';
 
 interface ArgoCDApplicationViewProps {
@@ -17,6 +18,7 @@ interface ArgoCDApplicationViewProps {
     onRefresh: () => void;
     onHardRefresh: () => void;
     onViewInTree: () => void;
+    onNavigateToResource: (kind: string, name: string, namespace: string) => void;
 }
 
 /**
@@ -34,7 +36,8 @@ export function ArgoCDApplicationView({
     onSync,
     onRefresh,
     onHardRefresh,
-    onViewInTree
+    onViewInTree,
+    onNavigateToResource
 }: ArgoCDApplicationViewProps): React.JSX.Element {
     // Show loading state
     if (loading) {
@@ -83,10 +86,11 @@ export function ArgoCDApplicationView({
                     />
                 )}
 
-                {activeTab === 'driftDetails' && (
-                    <div>
-                        <p>Drift Details tab content will be implemented in story 013.</p>
-                    </div>
+                {activeTab === 'driftDetails' && application && (
+                    <DriftDetailsTab
+                        application={application}
+                        onNavigate={onNavigateToResource}
+                    />
                 )}
             </div>
         );
