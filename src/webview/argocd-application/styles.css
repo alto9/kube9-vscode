@@ -1,0 +1,604 @@
+/* ArgoCD Application Webview Styles */
+/* Uses VS Code theme variables for consistent theming */
+
+/* ==========================================================================
+   CSS Variables (VS Code Theme Tokens)
+   ========================================================================== */
+
+:root {
+    /* Typography */
+    --font-family: var(--vscode-font-family);
+    --font-size: 13px;
+    --font-size-sm: 12px;
+    --font-size-xs: 11px;
+    --font-size-lg: 14px;
+    
+    /* Colors */
+    --foreground: var(--vscode-foreground);
+    --description-foreground: var(--vscode-descriptionForeground);
+    --background: var(--vscode-editor-background);
+    --border: var(--vscode-panel-border);
+    
+    /* Status Colors */
+    --status-synced: var(--vscode-testing-iconPassed);
+    --status-out-of-sync: var(--vscode-testing-iconQueued);
+    --status-healthy: var(--vscode-testing-iconPassed);
+    --status-degraded: var(--vscode-testing-iconFailed);
+    --status-progressing: var(--vscode-testing-iconQueued);
+    
+    /* Button Colors */
+    --button-primary-bg: var(--vscode-button-background);
+    --button-primary-fg: var(--vscode-button-foreground);
+    --button-primary-hover: var(--vscode-button-hoverBackground);
+    --button-secondary-bg: var(--vscode-button-secondaryBackground);
+    --button-secondary-fg: var(--vscode-button-secondaryForeground);
+    
+    /* Link Colors */
+    --link-color: var(--vscode-textLink-foreground);
+    
+    /* Error/Warning Colors */
+    --error-bg: var(--vscode-inputValidation-errorBackground);
+    --error-border: var(--vscode-inputValidation-errorBorder);
+    --error-fg: var(--vscode-errorForeground);
+    --warning-bg: var(--vscode-inputValidation-warningBackground);
+    --warning-border: var(--vscode-inputValidation-warningBorder);
+    
+    /* Focus */
+    --focus-border: var(--vscode-focusBorder);
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-2xl: 24px;
+    
+    /* Border Radius */
+    --radius-sm: 2px;
+    --radius-md: 3px;
+    --radius-lg: 4px;
+    --radius-xl: 6px;
+    --radius-badge: 12px;
+}
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    color: var(--foreground);
+    background-color: var(--background);
+    padding: 0;
+    margin: 0;
+    line-height: 1.5;
+}
+
+#root {
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   Tab Bar Styles
+   ========================================================================== */
+
+.argocd-tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--spacing-xl);
+}
+
+.argocd-tab {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: none;
+    background: transparent;
+    color: var(--foreground);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.argocd-tab:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.argocd-tab:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: -1px;
+}
+
+.argocd-tab.active {
+    border-bottom-color: var(--focus-border);
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Status Badge Styles
+   ========================================================================== */
+
+.argocd-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-badge);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.argocd-status-badge.synced {
+    background-color: var(--status-synced);
+    color: var(--foreground);
+}
+
+.argocd-status-badge.out-of-sync {
+    background-color: var(--status-out-of-sync);
+    color: var(--foreground);
+}
+
+.argocd-status-badge.healthy {
+    background-color: var(--status-healthy);
+    color: var(--foreground);
+}
+
+.argocd-status-badge.degraded,
+.argocd-status-badge.missing {
+    background-color: var(--status-degraded);
+    color: var(--foreground);
+}
+
+.argocd-status-badge.progressing {
+    background-color: var(--status-progressing);
+    color: var(--foreground);
+}
+
+.argocd-status-badge.suspended,
+.argocd-status-badge.unknown {
+    background-color: var(--description-foreground);
+    color: var(--foreground);
+    opacity: 0.6;
+}
+
+/* ==========================================================================
+   Section Styles (Metadata, Sync Status, Health Status, Source)
+   ========================================================================== */
+
+.argocd-section {
+    margin-bottom: var(--spacing-2xl);
+    padding-bottom: var(--spacing-xl);
+    border-bottom: 1px solid var(--border);
+}
+
+.argocd-section:last-child {
+    border-bottom: none;
+}
+
+.argocd-section-title {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--foreground);
+}
+
+.argocd-section-grid {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: var(--spacing-md) var(--spacing-lg);
+}
+
+.argocd-section-label {
+    font-size: var(--font-size-sm);
+    color: var(--description-foreground);
+    font-weight: 500;
+}
+
+.argocd-section-value {
+    font-size: var(--font-size);
+    color: var(--foreground);
+    font-family: var(--font-family);
+}
+
+.argocd-section-link {
+    color: var(--link-color);
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+}
+
+.argocd-section-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+.argocd-section-link:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.argocd-section-revision {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dashed;
+    font-family: var(--vscode-editor-font-family);
+}
+
+.argocd-section-revision:hover {
+    opacity: 0.8;
+}
+
+.argocd-section-revision:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.argocd-section-message {
+    font-size: var(--font-size-sm);
+    color: var(--description-foreground);
+    font-family: var(--font-family);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--vscode-textBlockQuote-background);
+    border-left: 3px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-top: var(--spacing-sm);
+}
+
+/* ==========================================================================
+   Resource Table Styles
+   ========================================================================== */
+
+.argocd-resource-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    margin-top: var(--spacing-lg);
+}
+
+.argocd-resource-table thead {
+    background-color: var(--background);
+}
+
+.argocd-resource-table th {
+    border-bottom: 2px solid var(--border);
+    padding: var(--spacing-md) var(--spacing-lg);
+    text-align: left;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.argocd-resource-table td {
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: var(--font-size);
+    color: var(--foreground);
+    font-family: var(--font-family);
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border);
+}
+
+.argocd-resource-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.argocd-resource-table tbody tr:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.argocd-resource-table tbody tr.out-of-sync {
+    background-color: var(--status-out-of-sync);
+    opacity: 0.15;
+}
+
+.argocd-resource-table tbody tr.out-of-sync:hover {
+    opacity: 0.25;
+}
+
+.argocd-resource-table tbody tr:focus-within {
+    outline: 1px solid var(--focus-border);
+    outline-offset: -1px;
+}
+
+.argocd-resource-table .resource-name {
+    color: var(--link-color);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.argocd-resource-table .resource-name:hover {
+    opacity: 0.8;
+}
+
+.argocd-resource-table .resource-name:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+
+.argocd-resource-table .expand-cell {
+    width: 32px;
+    text-align: center;
+}
+
+.argocd-resource-table .expanded-content {
+    padding: var(--spacing-md) var(--spacing-lg) var(--spacing-md) 48px;
+    background-color: var(--vscode-textBlockQuote-background);
+    border-top: 1px solid var(--border);
+    font-size: var(--font-size-sm);
+    color: var(--description-foreground);
+    font-family: var(--font-family);
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   Button Styles
+   ========================================================================== */
+
+.argocd-button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    font-weight: 500;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.argocd-button:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 2px;
+}
+
+.argocd-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.argocd-button-primary {
+    background-color: var(--button-primary-bg);
+    color: var(--button-primary-fg);
+}
+
+.argocd-button-primary:hover:not(:disabled) {
+    opacity: 0.9;
+    background-color: var(--button-primary-hover);
+}
+
+.argocd-button-secondary {
+    background-color: var(--button-secondary-bg);
+    color: var(--button-secondary-fg);
+}
+
+.argocd-button-secondary:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+.argocd-button-link {
+    background-color: transparent;
+    color: var(--link-color);
+    text-decoration: underline;
+    padding: 6px var(--spacing-sm);
+}
+
+.argocd-button-link:hover:not(:disabled) {
+    opacity: 0.8;
+}
+
+.argocd-button-group {
+    margin-top: var(--spacing-2xl);
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   Out-of-Sync Warning Styles
+   ========================================================================== */
+
+.argocd-out-of-sync-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    background-color: var(--status-out-of-sync);
+    color: var(--foreground);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   Resource Filter Styles
+   ========================================================================== */
+
+.argocd-resource-filter {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-sm) 0;
+}
+
+.argocd-resource-filter input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--button-primary-bg);
+}
+
+.argocd-resource-filter input[type="checkbox"]:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 2px;
+}
+
+.argocd-resource-filter label {
+    font-size: var(--font-size);
+    color: var(--foreground);
+    font-family: var(--font-family);
+    cursor: pointer;
+    user-select: none;
+}
+
+/* ==========================================================================
+   Loading State Styles
+   ========================================================================== */
+
+.argocd-loading-state {
+    text-align: center;
+    padding: 40px var(--spacing-xl);
+    color: var(--description-foreground);
+}
+
+.argocd-loading-spinner {
+    margin-bottom: var(--spacing-md);
+}
+
+.argocd-loading-spinner .codicon {
+    font-size: 24px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.argocd-loading-message {
+    font-size: var(--font-size);
+    color: var(--description-foreground);
+}
+
+/* ==========================================================================
+   Error State Styles
+   ========================================================================== */
+
+.argocd-error-state {
+    padding: var(--spacing-xl);
+    background-color: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: var(--radius-lg);
+    color: var(--error-fg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.argocd-error-state-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+    font-weight: 600;
+}
+
+.argocd-error-state-header .codicon {
+    margin-right: var(--spacing-sm);
+    font-size: var(--font-size-lg);
+}
+
+.argocd-error-state-message {
+    font-size: var(--font-size);
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   Empty State Styles
+   ========================================================================== */
+
+.argocd-empty-state {
+    padding: 40px var(--spacing-xl);
+    text-align: center;
+    color: var(--description-foreground);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 600px) {
+    .argocd-section-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .argocd-section-label {
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .argocd-resource-table {
+        font-size: var(--font-size-sm);
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+    
+    .argocd-resource-table thead,
+    .argocd-resource-table tbody,
+    .argocd-resource-table tr,
+    .argocd-resource-table td,
+    .argocd-resource-table th {
+        display: block;
+    }
+    
+    .argocd-resource-table thead {
+        display: none;
+    }
+    
+    .argocd-resource-table tr {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--spacing-md);
+        padding: var(--spacing-md);
+    }
+    
+    .argocd-resource-table td {
+        border-bottom: none;
+        padding: var(--spacing-xs) 0;
+        text-align: left;
+    }
+    
+    .argocd-resource-table td:before {
+        content: attr(data-label) ": ";
+        font-weight: 600;
+        color: var(--description-foreground);
+    }
+    
+    .argocd-button-group {
+        flex-direction: column;
+    }
+    
+    .argocd-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ==========================================================================
+   Utility Classes
+   ========================================================================== */
+
+.argocd-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+

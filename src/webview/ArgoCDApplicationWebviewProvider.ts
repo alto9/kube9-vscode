@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { ArgoCDApplication, ArgoCDNotFoundError, ArgoCDPermissionError, SyncStatus, HealthStatus } from '../types/argocd';
@@ -151,7 +153,7 @@ export class ArgoCDApplicationWebviewProvider {
 
     /**
      * Generate the HTML content for the ArgoCD application webview.
-     * Loads React bundle from media directory.
+     * Loads React bundle from media directory and includes CSS styles.
      * 
      * @param webview The webview instance
      * @param extensionContext The extension context for resolving URIs
@@ -169,6 +171,28 @@ export class ArgoCDApplicationWebviewProvider {
             vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'main.js')
         );
 
+        // Read CSS file
+        let cssContent = '';
+        try {
+            const cssPath = path.join(extensionContext.extensionPath, 'src', 'webview', 'argocd-application', 'styles.css');
+            cssContent = fs.readFileSync(cssPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load CSS file:', error);
+            // Fallback to minimal styles if CSS file cannot be loaded
+            cssContent = `
+                body {
+                    font-family: var(--vscode-font-family);
+                    color: var(--vscode-foreground);
+                    background-color: var(--vscode-editor-background);
+                    padding: 0;
+                    margin: 0;
+                }
+                #root {
+                    min-height: 100vh;
+                }
+            `;
+        }
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -177,16 +201,7 @@ export class ArgoCDApplicationWebviewProvider {
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource};">
     <title>ArgoCD Application</title>
     <style>
-        body {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 0;
-            margin: 0;
-        }
-        #root {
-            min-height: 100vh;
-        }
+        ${cssContent}
     </style>
 </head>
 <body>

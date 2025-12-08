@@ -3,7 +3,7 @@ story_id: add-webview-styling
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-application-webview]
 spec_id: [argocd-webview-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 25
 ---
@@ -38,14 +38,14 @@ The webview needs comprehensive styling that respects VS Code theme (dark/light 
 
 ## Acceptance Criteria
 
-- [ ] Styles use VS Code theme variables
-- [ ] Light and dark themes work correctly
-- [ ] Status badges have appropriate colors
-- [ ] Tables are readable and well-spaced
-- [ ] Buttons have hover and focus states
-- [ ] Responsive design works on smaller screens
-- [ ] Out-of-sync items visually distinct
-- [ ] Loading spinner styled appropriately
+- [x] Styles use VS Code theme variables
+- [x] Light and dark themes work correctly
+- [x] Status badges have appropriate colors
+- [x] Tables are readable and well-spaced
+- [x] Buttons have hover and focus states
+- [x] Responsive design works on smaller screens
+- [x] Out-of-sync items visually distinct
+- [x] Loading spinner styled appropriately
 
 ## Dependencies
 
