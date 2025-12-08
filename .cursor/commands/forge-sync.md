@@ -1,4 +1,4 @@
-<!-- forge-hash: fbca6f7c97b5aaf316aac62323db4fd8258d00255479695874402fb847b9b7ef -->
+<!-- forge-hash: 8f75d64650235d19f34f240ee189fc49aa2eaf66b000e1b32ba903710544e91b -->
 
 # Forge Sync
 
@@ -28,7 +28,6 @@ None. This command can be run at any time, with or without an active design sess
    - Specs (*.spec.md)
    - Models (*.model.md)
    - Actors (*.actor.md)
-   - Contexts (*.context.md)
 4. **Identifies gaps and inconsistencies**:
    - Missing documentation for existing code
    - Outdated documentation that doesn't match current implementation

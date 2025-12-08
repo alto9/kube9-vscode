@@ -14,7 +14,7 @@
     "vscode",
     "extension"
   ],
-  "description": "A VS Code extension for Kubernetes cluster management with a freemium model that provides powerful free features and unlocks advanced AI-powered intelligence for Pro users",
+  "description": "Proactive Kubernetes Intelligence - Right in Your IDE",
   "repository": {
     "type": "git",
     "url": "https://github.com/alto9/kube9-vscode"
