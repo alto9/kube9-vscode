@@ -4,7 +4,7 @@ session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-application-webview]
 spec_id: [argocd-webview-spec]
 diagram_id: [argocd-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -40,14 +40,14 @@ The webview displays detailed application information in a panel. The provider c
 
 ## Acceptance Criteria
 
-- [ ] Provider creates webview panel with correct options
-- [ ] HTML content is generated with CSP policy
-- [ ] Application data is loaded from ArgoCDService
-- [ ] Data is sent to webview via postMessage
-- [ ] Message handler receives webview messages
-- [ ] Action handlers call appropriate service methods
-- [ ] Success/error notifications are shown
-- [ ] Panel disposal is handled cleanly
+- [x] Provider creates webview panel with correct options
+- [x] HTML content is generated with CSP policy
+- [x] Application data is loaded from ArgoCDService
+- [x] Data is sent to webview via postMessage
+- [x] Message handler receives webview messages
+- [x] Action handlers call appropriate service methods
+- [x] Success/error notifications are shown
+- [x] Panel disposal is handled cleanly
 
 ## Dependencies
 
