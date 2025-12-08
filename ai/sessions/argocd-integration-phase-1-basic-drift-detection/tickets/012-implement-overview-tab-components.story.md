@@ -3,7 +3,7 @@ story_id: implement-overview-tab-components
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-application-webview]
 spec_id: [argocd-webview-spec, argocd-status-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---

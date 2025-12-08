@@ -24,6 +24,8 @@ function App(): React.JSX.Element {
     const [error, setError] = React.useState<string | null>(null);
     const [loading, setLoading] = React.useState<boolean>(true);
     const [activeTab, setActiveTab] = React.useState<TabType>('overview');
+    const [syncing, setSyncing] = React.useState<boolean>(false);
+    const [refreshing, setRefreshing] = React.useState<boolean>(false);
 
     // Restore state from VS Code API
     React.useEffect(() => {
@@ -70,8 +72,18 @@ function App(): React.JSX.Element {
                     break;
 
                 case 'operationProgress':
-                    // Could show progress indicator here
-                    console.log('Operation progress:', message.phase, message.message);
+                    // Track operation progress for button states
+                    if (message.phase === 'Running') {
+                        if (message.message?.toLowerCase().includes('sync')) {
+                            setSyncing(true);
+                        } else if (message.message?.toLowerCase().includes('refresh')) {
+                            setRefreshing(true);
+                        }
+                    } else if (message.phase === 'Succeeded' || message.phase === 'Failed' || message.phase === 'Error') {
+                        // Reset operation states when operation completes
+                        setSyncing(false);
+                        setRefreshing(false);
+                    }
                     break;
 
                 case 'error':
@@ -94,6 +106,34 @@ function App(): React.JSX.Element {
         };
     }, [application]);
 
+    // Action handlers
+    const handleSync = (): void => {
+        if (vscode && !syncing && !refreshing) {
+            setSyncing(true);
+            vscode.postMessage({ type: 'sync' });
+        }
+    };
+
+    const handleRefresh = (): void => {
+        if (vscode && !syncing && !refreshing) {
+            setRefreshing(true);
+            vscode.postMessage({ type: 'refresh' });
+        }
+    };
+
+    const handleHardRefresh = (): void => {
+        if (vscode && !syncing && !refreshing) {
+            setRefreshing(true);
+            vscode.postMessage({ type: 'hardRefresh' });
+        }
+    };
+
+    const handleViewInTree = (): void => {
+        if (vscode) {
+            vscode.postMessage({ type: 'viewInTree' });
+        }
+    };
+
     return (
         <ArgoCDApplicationView
             application={application}
@@ -101,6 +141,12 @@ function App(): React.JSX.Element {
             loading={loading}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            syncing={syncing}
+            refreshing={refreshing}
+            onSync={handleSync}
+            onRefresh={handleRefresh}
+            onHardRefresh={handleHardRefresh}
+            onViewInTree={handleViewInTree}
         />
     );
 }

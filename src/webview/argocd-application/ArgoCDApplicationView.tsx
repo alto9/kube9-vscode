@@ -2,6 +2,7 @@ import React from 'react';
 import { TabBar, TabType } from './components/TabBar';
 import { LoadingState } from './components/LoadingState';
 import { ErrorState } from './components/ErrorState';
+import { OverviewTab } from './components/OverviewTab';
 import { ArgoCDApplication } from '../../types/argocd';
 
 interface ArgoCDApplicationViewProps {
@@ -10,6 +11,12 @@ interface ArgoCDApplicationViewProps {
     loading: boolean;
     activeTab: TabType;
     onTabChange: (tab: TabType) => void;
+    syncing?: boolean;
+    refreshing?: boolean;
+    onSync: () => void;
+    onRefresh: () => void;
+    onHardRefresh: () => void;
+    onViewInTree: () => void;
 }
 
 /**
@@ -21,7 +28,13 @@ export function ArgoCDApplicationView({
     error,
     loading,
     activeTab,
-    onTabChange
+    onTabChange,
+    syncing = false,
+    refreshing = false,
+    onSync,
+    onRefresh,
+    onHardRefresh,
+    onViewInTree
 }: ArgoCDApplicationViewProps): React.JSX.Element {
     // Show loading state
     if (loading) {
@@ -58,10 +71,16 @@ export function ArgoCDApplicationView({
 
                 <TabBar activeTab={activeTab} onTabChange={onTabChange} />
 
-                {activeTab === 'overview' && (
-                    <div>
-                        <p>Overview tab content will be implemented in story 012.</p>
-                    </div>
+                {activeTab === 'overview' && application && (
+                    <OverviewTab
+                        application={application}
+                        syncing={syncing}
+                        refreshing={refreshing}
+                        onSync={onSync}
+                        onRefresh={onRefresh}
+                        onHardRefresh={onHardRefresh}
+                        onViewInTree={onViewInTree}
+                    />
                 )}
 
                 {activeTab === 'driftDetails' && (
