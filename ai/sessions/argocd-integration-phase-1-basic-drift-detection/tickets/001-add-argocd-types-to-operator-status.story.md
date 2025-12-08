@@ -3,7 +3,7 @@ story_id: add-argocd-types-to-operator-status
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-detection]
 spec_id: [argocd-status-spec, operator-status-api-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 15
 ---
@@ -31,10 +31,10 @@ The kube9-operator already detects ArgoCD and exposes this information in the op
 
 ## Acceptance Criteria
 
-- [ ] `ArgoCDStatus` interface defined with all required fields
-- [ ] `OperatorStatus` interface includes optional `argocd` field
-- [ ] TypeScript compilation succeeds without errors
-- [ ] Interface matches the spec definition in argocd-status-spec
+- [x] `ArgoCDStatus` interface defined with all required fields
+- [x] `OperatorStatus` interface includes optional `argocd` field
+- [x] TypeScript compilation succeeds without errors
+- [x] Interface matches the spec definition in argocd-status-spec
 
 ## Dependencies
 
