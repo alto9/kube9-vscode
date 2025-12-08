@@ -763,15 +763,31 @@ function registerCommands(): void {
                             progress
                         );
                     }
+                    
+                    // Refresh tree view and namespace webviews after successful restart
+                    try {
+                        console.log(`Refreshing tree view and webviews for ${kind}/${resourceName}`);
+                        
+                        // Refresh tree view
+                        treeProvider.refresh();
+                        
+                        // Refresh namespace webviews if namespace is available
+                        if (namespace) {
+                            await NamespaceWebview.sendResourceUpdated(namespace);
+                        }
+                        
+                        console.log('Tree view and webviews refreshed successfully');
+                    } catch (refreshError) {
+                        // Log refresh errors but don't block success notification
+                        const refreshErrorMessage = refreshError instanceof Error ? refreshError.message : String(refreshError);
+                        console.error(`Failed to refresh UI after restart: ${refreshErrorMessage}`);
+                    }
                 });
                 
                 // Show success notification
                 vscode.window.showInformationMessage(
                     `Restarted ${resourceName} successfully`
                 );
-                
-                // Refresh tree view
-                treeProvider.refresh();
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error('Failed to execute restart workload command:', errorMessage);
