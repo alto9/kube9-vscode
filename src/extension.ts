@@ -12,7 +12,7 @@ import { applyYAMLCommand } from './commands/applyYAML';
 import { describeRawCommand } from './commands/describeRaw';
 import { DescribeRawFileSystemProvider } from './commands/DescribeRawFileSystemProvider';
 import { scaleWorkloadCommand } from './commands/scaleWorkload';
-import { showRestartConfirmationDialog } from './commands/restartWorkload';
+import { showRestartConfirmationDialog, applyRestartAnnotation } from './commands/restartWorkload';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -700,11 +700,17 @@ function registerCommands(): void {
                     throw new Error('Invalid tree item: missing resource data');
                 }
                 
-                // Extract resource name
+                // Extract resource information
                 const resourceName = treeItem.resourceData.resourceName || treeItem.label as string;
+                const namespace = treeItem.resourceData.namespace;
+                const kind = extractKindFromContextValue(treeItem.contextValue);
+                const contextName = treeItem.resourceData.context.name;
                 
                 console.log('Restart workload command invoked:', {
-                    resourceName
+                    resourceName,
+                    namespace,
+                    kind,
+                    contextName
                 });
                 
                 // Show confirmation dialog
@@ -723,8 +729,44 @@ function registerCommands(): void {
                     waitForRollout
                 });
                 
-                // TODO: Implement actual restart logic in later stories
-                vscode.window.showInformationMessage(`Restart confirmed for ${resourceName} (waitForRollout: ${waitForRollout}) - implementation pending`);
+                // Get kubeconfig path
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
+                if (!kubeconfigPath) {
+                    throw new Error('Kubeconfig path not available');
+                }
+                
+                // Perform restart with progress notification
+                await vscode.window.withProgress({
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Restarting ${resourceName}...`,
+                    cancellable: false
+                }, async (progress) => {
+                    // Apply restart annotation
+                    progress.report({ message: 'Applying restart annotation...' });
+                    await applyRestartAnnotation(
+                        resourceName,
+                        namespace,
+                        kind,
+                        contextName,
+                        kubeconfigPath
+                    );
+                    
+                    // TODO: Implement rollout watch logic in later stories
+                    if (waitForRollout) {
+                        progress.report({ message: 'Waiting for rollout to complete...' });
+                        // This will be implemented in story 004
+                        console.log('Rollout watch not yet implemented');
+                    }
+                });
+                
+                // Show success notification
+                vscode.window.showInformationMessage(
+                    `Restarted ${resourceName} successfully`
+                );
+                
+                // Refresh tree view
+                treeProvider.refresh();
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error('Failed to execute restart workload command:', errorMessage);
