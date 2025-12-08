@@ -12,7 +12,7 @@ import { applyYAMLCommand } from './commands/applyYAML';
 import { describeRawCommand } from './commands/describeRaw';
 import { DescribeRawFileSystemProvider } from './commands/DescribeRawFileSystemProvider';
 import { scaleWorkloadCommand } from './commands/scaleWorkload';
-import { showRestartConfirmationDialog, applyRestartAnnotation } from './commands/restartWorkload';
+import { showRestartConfirmationDialog, applyRestartAnnotation, watchRolloutStatus } from './commands/restartWorkload';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -752,11 +752,16 @@ function registerCommands(): void {
                         kubeconfigPath
                     );
                     
-                    // TODO: Implement rollout watch logic in later stories
+                    // Watch rollout status if requested
                     if (waitForRollout) {
-                        progress.report({ message: 'Waiting for rollout to complete...' });
-                        // This will be implemented in story 004
-                        console.log('Rollout watch not yet implemented');
+                        await watchRolloutStatus(
+                            resourceName,
+                            namespace,
+                            kind,
+                            contextName,
+                            kubeconfigPath,
+                            progress
+                        );
                     }
                 });
                 
