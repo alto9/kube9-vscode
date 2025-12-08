@@ -455,13 +455,14 @@ suite('restartWorkload Command Tests', () => {
             assert.ok(call.args.includes('my-deployment'), 'Should include resource name');
             assert.ok(call.args.includes('-n'), 'Should include namespace flag');
             assert.ok(call.args.includes('default'), 'Should include namespace');
-            assert.ok(call.args.includes('--type=json'), 'Should use JSON patch type');
+            assert.ok(call.args.includes('--type=merge'), 'Should use merge patch type');
             
-            // Verify annotation key is escaped
+            // Verify patch contains the annotation
             const patchArg = call.args.find(arg => arg.startsWith('-p='));
             assert.ok(patchArg, 'Should have patch argument');
-            const patchJson = JSON.parse(patchArg.substring(3));
-            assert.ok(patchJson[0].path.includes('~1'), 'Annotation key should be escaped');
+            const patchJson = JSON.parse(patchArg!.substring(3));
+            assert.ok(patchJson.spec?.template?.metadata?.annotations, 'Should have annotations in patch');
+            assert.ok(patchJson.spec.template.metadata.annotations['kubectl.kubernetes.io/restartedAt'], 'Should have restart annotation');
         });
 
         test('applies restart annotation without namespace', async () => {
@@ -480,100 +481,28 @@ suite('restartWorkload Command Tests', () => {
         });
 
         test('creates annotations object when missing', async () => {
-            // First call fails with "path does not exist"
-            mockExecFileError({
-                message: 'path does not exist',
-                stderr: 'unable to find /spec/template/metadata/annotations'
-            });
+            // With merge patch, annotations are created automatically if they don't exist
+            // So this test just verifies that the patch succeeds even when annotations are missing
+            mockExecFileSuccess('deployment.apps/my-deployment patched');
             
-            // We need to handle the retry logic
-            // The function will try to create annotations, then add the annotation
-            // Let's mock multiple responses
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const responses: Array<{ type: 'success' | 'error'; stdout?: string; stderr?: string; error?: any }> = [
-                { type: 'error', error: Object.assign(new Error('path does not exist'), { stderr: 'unable to find /spec/template/metadata/annotations' }) },
-                { type: 'success', stdout: 'deployment.apps/my-deployment patched' },
-                { type: 'success', stdout: 'deployment.apps/my-deployment patched' }
-            ];
-            
-            let responseIndex = 0;
-            // Store original require to restore later
-            const savedRequire = Module.prototype.require;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Module.prototype.require = function(this: any, id: string): any {
-                if (id === 'vscode') {
-                    return savedRequire.call(this, id);
-                }
-                if (id === 'child_process' && isProxyActive) {
-                    const realChildProcess = savedRequire.call(this, id);
-                    return new Proxy(realChildProcess, {
-                        get(target, prop) {
-                            if (prop === 'execFile') {
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const mockFunc: any = function(file: string, args: string[], ...rest: any[]) {
-                                    let callback;
-                                    if (rest.length === 1) {
-                                        callback = rest[0];
-                                    } else {
-                                        callback = rest[1];
-                                    }
-                                    
-                                    execFileCalls.push({ command: file, args: [...args] });
-                                    
-                                    const response = responses[responseIndex++];
-                                    if (response.type === 'success') {
-                                        process.nextTick(() => callback(null, response.stdout || '', response.stderr || ''));
-                                    } else {
-                                        process.nextTick(() => callback(response.error, '', ''));
-                                    }
-                                    return { pid: 123 };
-                                };
-                                
-                                // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-                                const {promisify} = require('util');
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                (mockFunc as any)[promisify.custom] = function(file: string, args: string[]): Promise<{stdout: string; stderr: string}> {
-                                    execFileCalls.push({ command: file, args: [...args] });
-                                    const response = responses[responseIndex++];
-                                    if (response.type === 'success') {
-                                        return Promise.resolve({ stdout: response.stdout || '', stderr: response.stderr || '' });
-                                    } else {
-                                        return Promise.reject(response.error);
-                                    }
-                                };
-                                
-                                return mockFunc;
-                            }
-                            return target[prop as keyof typeof target];
-                        }
-                    });
-                }
-                return savedRequire.call(this, id);
-            };
-            
-            // Clear module cache and reload to use new mock
-            const restartWorkloadPath = require.resolve('../../../commands/restartWorkload');
-            delete require.cache[restartWorkloadPath];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-            const testModule = require('../../../commands/restartWorkload');
-            
-            try {
-                await testModule.applyRestartAnnotation(
-                    'my-deployment',
-                    'default',
-                    'Deployment',
-                    'test-context',
-                    '/test/kubeconfig'
-                );
+            await restartWorkloadModule.applyRestartAnnotation(
+                'my-deployment',
+                'default',
+                'Deployment',
+                'test-context',
+                '/test/kubeconfig'
+            );
 
-                // Should have tried to add annotation, then create annotations, then add annotation again
-                assert.ok(execFileCalls.length >= 2, 'Should make multiple patch calls');
-            } finally {
-                // Restore original require
-                Module.prototype.require = savedRequire;
-                // Reload module with original mocks
-                delete require.cache[restartWorkloadPath];
-            }
+            // Should only make one patch call (merge patch handles missing annotations)
+            assert.strictEqual(execFileCalls.length, 1, 'Should make single patch call');
+            const call = execFileCalls[0];
+            assert.ok(call.args.includes('--type=merge'), 'Should use merge patch type');
+            
+            // Verify patch structure includes nested path to annotations
+            const patchArg = call.args.find(arg => arg.startsWith('-p='));
+            assert.ok(patchArg, 'Should have patch argument');
+            const patchJson = JSON.parse(patchArg!.substring(3));
+            assert.ok(patchJson.spec?.template?.metadata?.annotations, 'Should have full nested structure in patch');
         });
 
         test('timestamp is ISO 8601 format', async () => {
@@ -591,8 +520,9 @@ suite('restartWorkload Command Tests', () => {
             const afterTime = new Date().toISOString();
             const call = execFileCalls[0];
             const patchArg = call.args.find(arg => arg.startsWith('-p='));
+            assert.ok(patchArg, 'Should have patch argument');
             const patchJson = JSON.parse(patchArg!.substring(3));
-            const timestamp = patchJson[0].value;
+            const timestamp = patchJson.spec.template.metadata.annotations['kubectl.kubernetes.io/restartedAt'];
             
             // Verify ISO 8601 format
             assert.ok(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(timestamp), 'Timestamp should be ISO 8601 format');
@@ -1088,13 +1018,14 @@ suite('restartWorkload Command Tests', () => {
                                     
                                     execFileCalls.push({ command: file, args: [...args] });
                                     
-                                    // Extract timestamp from patch argument
+                                    // Extract timestamp from patch argument (merge patch format)
                                     const patchArg = args.find(arg => arg.startsWith('-p='));
                                     if (patchArg) {
                                         try {
                                             const patchJson = JSON.parse(patchArg.substring(3));
-                                            if (patchJson[0]?.value) {
-                                                timestamps.push(patchJson[0].value);
+                                            const timestamp = patchJson.spec?.template?.metadata?.annotations?.['kubectl.kubernetes.io/restartedAt'];
+                                            if (timestamp) {
+                                                timestamps.push(timestamp);
                                             }
                                         } catch (e) {
                                             // Ignore parse errors
@@ -1111,13 +1042,14 @@ suite('restartWorkload Command Tests', () => {
                                 (mockFunc as any)[promisify.custom] = function(file: string, args: string[]): Promise<{stdout: string; stderr: string}> {
                                     execFileCalls.push({ command: file, args: [...args] });
                                     
-                                    // Extract timestamp
+                                    // Extract timestamp (merge patch format)
                                     const patchArg = args.find(arg => arg.startsWith('-p='));
                                     if (patchArg) {
                                         try {
                                             const patchJson = JSON.parse(patchArg.substring(3));
-                                            if (patchJson[0]?.value) {
-                                                timestamps.push(patchJson[0].value);
+                                            const timestamp = patchJson.spec?.template?.metadata?.annotations?.['kubectl.kubernetes.io/restartedAt'];
+                                            if (timestamp) {
+                                                timestamps.push(timestamp);
                                             }
                                         } catch (e) {
                                             // Ignore parse errors
