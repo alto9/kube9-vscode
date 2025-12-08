@@ -1,6 +1,6 @@
 # Kube9
 
-**Visual Kubernetes Management for VS Code with AI-Powered Insights**
+**Proactive Kubernetes Intelligence - Right in Your IDE**
 
 ![kube9 Logo](https://img.shields.io/badge/Status-MVP-blue) ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
 
