@@ -12,7 +12,8 @@ import { applyYAMLCommand } from './commands/applyYAML';
 import { describeRawCommand } from './commands/describeRaw';
 import { DescribeRawFileSystemProvider } from './commands/DescribeRawFileSystemProvider';
 import { scaleWorkloadCommand } from './commands/scaleWorkload';
-import { showRestartConfirmationDialog, applyRestartAnnotation, watchRolloutStatus } from './commands/restartWorkload';
+import { showRestartConfirmationDialog, applyRestartAnnotation, watchRolloutStatus, RolloutTimeoutError } from './commands/restartWorkload';
+import { KubectlError, KubectlErrorType } from './kubernetes/KubectlError';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -694,25 +695,34 @@ function registerCommands(): void {
     const restartWorkloadCmd = vscode.commands.registerCommand(
         'kube9.restartWorkload',
         async (treeItem: ClusterTreeItem) => {
+            // Extract resource information from tree item
+            if (!treeItem || !treeItem.resourceData) {
+                vscode.window.showErrorMessage('Invalid tree item: missing resource data');
+                return;
+            }
+            
+            // Extract resource information
+            const resourceName = treeItem.resourceData.resourceName || treeItem.label as string;
+            const namespace = treeItem.resourceData.namespace;
+            const kind = extractKindFromContextValue(treeItem.contextValue);
+            const contextName = treeItem.resourceData.context.name;
+            
+            console.log('Restart workload command invoked:', {
+                resourceName,
+                namespace,
+                kind,
+                contextName
+            });
+            
+            // Get kubeconfig path and tree provider early for error handling
+            const treeProvider = getClusterTreeProvider();
+            const kubeconfigPath = treeProvider.getKubeconfigPath();
+            if (!kubeconfigPath) {
+                vscode.window.showErrorMessage('Kubeconfig path not available');
+                return;
+            }
+            
             try {
-                // Extract resource information from tree item
-                if (!treeItem || !treeItem.resourceData) {
-                    throw new Error('Invalid tree item: missing resource data');
-                }
-                
-                // Extract resource information
-                const resourceName = treeItem.resourceData.resourceName || treeItem.label as string;
-                const namespace = treeItem.resourceData.namespace;
-                const kind = extractKindFromContextValue(treeItem.contextValue);
-                const contextName = treeItem.resourceData.context.name;
-                
-                console.log('Restart workload command invoked:', {
-                    resourceName,
-                    namespace,
-                    kind,
-                    contextName
-                });
-                
                 // Show confirmation dialog
                 const confirmation = await showRestartConfirmationDialog(resourceName);
                 
@@ -722,19 +732,11 @@ function registerCommands(): void {
                     return;
                 }
                 
-                // Store waitForRollout for future implementation (stub for now)
                 const waitForRollout = confirmation.waitForRollout;
                 console.log('Restart confirmed:', {
                     resourceName,
                     waitForRollout
                 });
-                
-                // Get kubeconfig path
-                const treeProvider = getClusterTreeProvider();
-                const kubeconfigPath = treeProvider.getKubeconfigPath();
-                if (!kubeconfigPath) {
-                    throw new Error('Kubeconfig path not available');
-                }
                 
                 // Perform restart with progress notification
                 await vscode.window.withProgress({
@@ -789,9 +791,91 @@ function registerCommands(): void {
                     `Restarted ${resourceName} successfully`
                 );
             } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                console.error('Failed to execute restart workload command:', errorMessage);
-                vscode.window.showErrorMessage(`Failed to restart workload: ${errorMessage}`);
+                // Determine error type and format message
+                let errorReason: string;
+                let apiErrorMessage: string;
+                
+                if (error instanceof RolloutTimeoutError) {
+                    errorReason = 'Rollout did not complete within 5 minutes';
+                    apiErrorMessage = error.message;
+                } else if (error instanceof KubectlError) {
+                    // Map KubectlError types to user-friendly messages
+                    switch (error.type) {
+                        case KubectlErrorType.PermissionDenied:
+                            errorReason = 'Insufficient permissions to restart workload';
+                            break;
+                        case KubectlErrorType.ConnectionFailed:
+                            errorReason = 'Cannot connect to cluster';
+                            break;
+                        case KubectlErrorType.Timeout:
+                            errorReason = 'Request timed out';
+                            break;
+                        case KubectlErrorType.BinaryNotFound:
+                            errorReason = 'kubectl not found';
+                            break;
+                        case KubectlErrorType.Unknown: {
+                            // Check if it's a "not found" error
+                            const lowerDetails = error.getDetails().toLowerCase();
+                            if (
+                                lowerDetails.includes('notfound') ||
+                                lowerDetails.includes('not found') ||
+                                lowerDetails.includes('404') ||
+                                lowerDetails.includes('does not exist')
+                            ) {
+                                errorReason = 'Resource may have been deleted';
+                            } else {
+                                errorReason = 'Failed to restart workload';
+                            }
+                            break;
+                        }
+                        default:
+                            errorReason = 'Failed to restart workload';
+                    }
+                    apiErrorMessage = error.getDetails();
+                } else {
+                    // Generic error
+                    errorReason = 'Failed to restart workload';
+                    apiErrorMessage = error instanceof Error ? error.message : String(error);
+                }
+                
+                // Format error message as specified in story
+                const errorMessage = `Failed to restart ${resourceName}: ${errorReason}\n\nDetails: ${apiErrorMessage}`;
+                
+                // Log error with full details for debugging
+                console.error(`Failed to restart workload ${kind}/${resourceName}`, {
+                    errorType: error instanceof KubectlError ? error.type : error instanceof RolloutTimeoutError ? 'RolloutTimeoutError' : 'Unknown',
+                    resourceName,
+                    namespace,
+                    kind,
+                    contextName,
+                    errorReason,
+                    apiErrorMessage,
+                    error: error instanceof Error ? error.stack : String(error)
+                });
+                
+                // Show error notification
+                vscode.window.showErrorMessage(errorMessage);
+            } finally {
+                // Always refresh tree view even on error to show actual state
+                try {
+                    console.log(`Refreshing tree view after restart operation (success or error) for ${kind}/${resourceName}`);
+                    treeProvider.refresh();
+                    
+                    // Refresh namespace webviews if namespace is available
+                    if (namespace) {
+                        try {
+                            await NamespaceWebview.sendResourceUpdated(namespace);
+                        } catch (webviewError) {
+                            // Log but don't throw - refresh is best effort
+                            const webviewErrorMessage = webviewError instanceof Error ? webviewError.message : String(webviewError);
+                            console.error(`Failed to refresh namespace webview: ${webviewErrorMessage}`);
+                        }
+                    }
+                } catch (refreshError) {
+                    // Log refresh errors but don't throw - refresh is best effort
+                    const refreshErrorMessage = refreshError instanceof Error ? refreshError.message : String(refreshError);
+                    console.error(`Failed to refresh tree view after restart: ${refreshErrorMessage}`);
+                }
             }
         }
     );

@@ -94,6 +94,7 @@ function getKubectlResourceName(kind: string): string {
 /**
  * Applies the restart annotation to a Kubernetes workload resource.
  * Uses kubectl patch with JSON Patch format to add/update the restart annotation.
+ * If the annotations object doesn't exist, it will be created first.
  * 
  * @param name - The name of the workload resource
  * @param namespace - The namespace containing the resource (undefined for cluster-scoped)
@@ -118,37 +119,37 @@ export async function applyRestartAnnotation(
     // Escape forward slash for JSON Patch path (RFC 6901: / becomes ~1)
     const escapedKey = annotationKey.replace('/', '~1');
     
-    // Create JSON Patch payload
-    const patch = [
-        {
-            op: 'add',
-            path: `/spec/template/metadata/annotations/${escapedKey}`,
-            value: timestamp
-        }
-    ];
-    
     // Get kubectl resource name
     const resourceName = getKubectlResourceName(kind);
     
-    // Build kubectl patch command arguments
-    const args = [
+    // Build base kubectl patch command arguments
+    const baseArgs = [
         'patch',
         resourceName,
         name,
         '--type=json',
-        `-p=${JSON.stringify(patch)}`,
         `--kubeconfig=${kubeconfigPath}`,
         `--context=${contextName}`
     ];
     
     // Add namespace flag for namespaced resources
     if (namespace) {
-        args.push('-n', namespace);
+        baseArgs.push('-n', namespace);
     }
     
     try {
-        // Execute kubectl patch command
-        await execFileAsync('kubectl', args, {
+        // First, try to add the restart annotation directly
+        const annotationPatch = [
+            {
+                op: 'add',
+                path: `/spec/template/metadata/annotations/${escapedKey}`,
+                value: timestamp
+            }
+        ];
+        
+        const annotationArgs = [...baseArgs, `-p=${JSON.stringify(annotationPatch)}`];
+        
+        await execFileAsync('kubectl', annotationArgs, {
             timeout: KUBECTL_TIMEOUT_MS,
             maxBuffer: 10 * 1024 * 1024, // 10MB buffer
             env: { ...process.env }
@@ -158,12 +159,77 @@ export async function applyRestartAnnotation(
     } catch (error: unknown) {
         // Convert execution error to structured KubectlError
         const kubectlError = KubectlError.fromExecError(error, contextName);
+        const errorDetails = kubectlError.getDetails().toLowerCase();
+        
+        // Check if the error is due to missing annotations object
+        // kubectl returns errors like "path does not exist" or "unable to find" when annotations don't exist
+        const isAnnotationsMissing = 
+            errorDetails.includes('path does not exist') ||
+            errorDetails.includes('unable to find') ||
+            errorDetails.includes('annotations') && (
+                errorDetails.includes('not found') ||
+                errorDetails.includes('does not exist')
+            );
+        
+        if (isAnnotationsMissing) {
+            // Try to create the annotations object first, then add the annotation
+            try {
+                // Create empty annotations object
+                const createAnnotationsPatch = [
+                    {
+                        op: 'add',
+                        path: '/spec/template/metadata/annotations',
+                        value: {}
+                    }
+                ];
+                
+                const createAnnotationsArgs = [...baseArgs, `-p=${JSON.stringify(createAnnotationsPatch)}`];
+                
+                await execFileAsync('kubectl', createAnnotationsArgs, {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+                    env: { ...process.env }
+                });
+                
+                // Now add the restart annotation
+                const annotationPatch = [
+                    {
+                        op: 'add',
+                        path: `/spec/template/metadata/annotations/${escapedKey}`,
+                        value: timestamp
+                    }
+                ];
+                
+                const annotationArgs = [...baseArgs, `-p=${JSON.stringify(annotationPatch)}`];
+                
+                await execFileAsync('kubectl', annotationArgs, {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+                    env: { ...process.env }
+                });
+                
+                console.log(`Successfully created annotations object and applied restart annotation to ${kind}/${name}`);
+                return;
+            } catch (createError: unknown) {
+                // If creating annotations also fails, log and throw the original error
+                const createKubectlError = KubectlError.fromExecError(createError, contextName);
+                console.error(`Failed to create annotations object for ${kind}/${name}: ${createKubectlError.getDetails()}`);
+                // Fall through to throw the original error
+            }
+        }
         
         // Log detailed error for debugging
-        console.error(`Failed to apply restart annotation to ${kind}/${name}: ${kubectlError.getDetails()}`);
+        console.error(`Failed to apply restart annotation to ${kind}/${name}`, {
+            errorType: kubectlError.type,
+            contextName,
+            resourceName: name,
+            namespace,
+            kind,
+            details: kubectlError.getDetails()
+        });
         
-        // Throw error for caller to handle
-        throw new Error(`Failed to apply restart annotation: ${kubectlError.getUserMessage()}`);
+        // Throw KubectlError directly for caller to handle
+        throw kubectlError;
     }
 }
 
@@ -221,7 +287,7 @@ function sleep(ms: number): Promise<void> {
  * @param contextName - The kubectl context name
  * @param kubeconfigPath - The path to the kubeconfig file
  * @returns WorkloadStatus with replica counts
- * @throws Error if kubectl command fails or resource not found
+ * @throws {KubectlError} If kubectl command fails or resource not found
  */
 export async function getWorkloadStatus(
     name: string,
@@ -285,10 +351,43 @@ export async function getWorkloadStatus(
         const kubectlError = KubectlError.fromExecError(error, contextName);
         
         // Log detailed error for debugging
-        console.error(`Failed to get workload status for ${kind}/${name}: ${kubectlError.getDetails()}`);
+        console.error(`Failed to get workload status for ${kind}/${name}`, {
+            errorType: kubectlError.type,
+            contextName,
+            resourceName: name,
+            namespace,
+            kind,
+            details: kubectlError.getDetails()
+        });
         
-        // Throw error for caller to handle
-        throw new Error(`Failed to get workload status: ${kubectlError.getUserMessage()}`);
+        // Throw KubectlError directly for caller to handle
+        throw kubectlError;
+    }
+}
+
+/**
+ * Custom error for rollout timeout scenarios.
+ * Provides context about which resource timed out.
+ */
+export class RolloutTimeoutError extends Error {
+    public readonly resourceName: string;
+    public readonly namespace: string | undefined;
+    public readonly kind: string;
+    public readonly contextName: string;
+
+    constructor(
+        resourceName: string,
+        namespace: string | undefined,
+        kind: string,
+        contextName: string
+    ) {
+        const namespaceStr = namespace ? ` in namespace ${namespace}` : '';
+        super(`Rollout did not complete within 5 minutes for ${kind} ${resourceName}${namespaceStr}`);
+        this.name = 'RolloutTimeoutError';
+        this.resourceName = resourceName;
+        this.namespace = namespace;
+        this.kind = kind;
+        this.contextName = contextName;
     }
 }
 
@@ -315,7 +414,8 @@ function isRolloutComplete(status: WorkloadStatus): boolean {
  * @param contextName - The kubectl context name
  * @param kubeconfigPath - The path to the kubeconfig file
  * @param progress - VS Code progress object for updating notification messages
- * @throws Error if rollout times out after 5 minutes
+ * @throws {RolloutTimeoutError} If rollout times out after 5 minutes
+ * @throws {KubectlError} If kubectl command fails
  */
 export async function watchRolloutStatus(
     name: string,
@@ -355,6 +455,16 @@ export async function watchRolloutStatus(
     }
     
     // Timeout reached without completion
-    throw new Error('Rollout timed out after 5 minutes');
+    // Log timeout with details before throwing
+    console.error(`Rollout timeout for ${kind}/${name}`, {
+        resourceName: name,
+        namespace,
+        kind,
+        contextName,
+        elapsedTime: Date.now() - startTime,
+        maxWaitTime
+    });
+    
+    throw new RolloutTimeoutError(name, namespace, kind, contextName);
 }
 
