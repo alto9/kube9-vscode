@@ -185,6 +185,21 @@ export interface PodsResult {
 }
 
 /**
+ * Result of a scale operation.
+ */
+export interface ScaleResult {
+    /**
+     * Whether the scale operation succeeded.
+     */
+    success: boolean;
+    
+    /**
+     * Error information if the scale operation failed.
+     */
+    error?: KubectlError;
+}
+
+/**
  * Interface for kubectl deployment response items.
  */
 interface DeploymentItem {
@@ -1560,6 +1575,136 @@ export class WorkloadCommands {
         });
         
         return workloads;
+    }
+
+    /**
+     * Retrieves the current replica count for a specific workload using kubectl.
+     * Uses kubectl get command with jsonpath to extract the replica count.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @param kind The workload kind (Deployment, StatefulSet, or ReplicaSet)
+     * @param name Name of the workload
+     * @param namespace Namespace of the workload
+     * @returns Promise<number | null> The current replica count, or null if an error occurred
+     */
+    public static async getCurrentReplicaCount(
+        kubeconfigPath: string,
+        contextName: string,
+        kind: 'Deployment' | 'StatefulSet' | 'ReplicaSet',
+        name: string,
+        namespace: string
+    ): Promise<number | null> {
+        try {
+            // Convert kind to lowercase for kubectl command
+            const kindLower = kind.toLowerCase();
+            
+            // Build kubectl command arguments
+            const args = [
+                'get',
+                `${kindLower}/${name}`,
+                '-n',
+                namespace,
+                '-o',
+                'jsonpath={.spec.replicas}',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            ];
+
+            // Execute kubectl get command with jsonpath
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                args,
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the result
+            const replicaString = stdout.trim();
+            
+            // Handle empty or missing replicas field
+            if (!replicaString || replicaString === '') {
+                return 0;
+            }
+            
+            // Parse as integer
+            const replicaCount = parseInt(replicaString, 10);
+            
+            // Check if parsing was successful
+            if (isNaN(replicaCount)) {
+                return 0;
+            }
+            
+            return replicaCount;
+        } catch (error: unknown) {
+            // kubectl failed - return null to indicate error
+            console.log(`Failed to get replica count for ${kind} ${name} in namespace ${namespace}: ${error}`);
+            return null;
+        }
+    }
+
+    /**
+     * Scales a workload to a specified replica count using kubectl scale command.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @param kind The workload kind (Deployment, StatefulSet, or ReplicaSet)
+     * @param name Name of the workload
+     * @param namespace Namespace of the workload
+     * @param replicas Desired number of replicas
+     * @returns Promise<ScaleResult> Result indicating success or failure with error details
+     */
+    public static async scaleWorkload(
+        kubeconfigPath: string,
+        contextName: string,
+        kind: 'Deployment' | 'StatefulSet' | 'ReplicaSet',
+        name: string,
+        namespace: string,
+        replicas: number
+    ): Promise<ScaleResult> {
+        try {
+            // Convert kind to lowercase for kubectl command
+            const kindLower = kind.toLowerCase();
+            
+            // Build kubectl scale command arguments
+            const args = [
+                'scale',
+                `${kindLower}/${name}`,
+                `--replicas=${replicas}`,
+                '-n',
+                namespace,
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            ];
+
+            // Execute kubectl scale command
+            await execFileAsync(
+                'kubectl',
+                args,
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer
+                    env: { ...process.env }
+                }
+            );
+
+            // Scale operation succeeded
+            return { success: true };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Scale operation failed for ${kind} ${name} in namespace ${namespace}: ${kubectlError.getDetails()}`);
+            
+            return {
+                success: false,
+                error: kubectlError
+            };
+        }
     }
 }
 

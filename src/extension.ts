@@ -11,6 +11,7 @@ import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCateg
 import { applyYAMLCommand } from './commands/applyYAML';
 import { describeRawCommand } from './commands/describeRaw';
 import { DescribeRawFileSystemProvider } from './commands/DescribeRawFileSystemProvider';
+import { scaleWorkloadCommand } from './commands/scaleWorkload';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -577,6 +578,37 @@ function registerCommands(): void {
     );
     context.subscriptions.push(deleteResourceCmd);
     disposables.push(deleteResourceCmd);
+    
+    // Register scale workload command
+    const scaleWorkloadCmd = vscode.commands.registerCommand(
+        'kube9.scaleWorkload',
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                await scaleWorkloadCommand(treeItem);
+            } finally {
+                // Refresh tree view after scaling (both success and error cases)
+                // This ensures users see updated replica counts immediately
+                if (clusterTreeProvider) {
+                    clusterTreeProvider.refresh();
+                }
+                
+                // Refresh namespace webviews if open for the scaled workload's namespace
+                // This ensures webview workload tables show updated replica counts
+                try {
+                    const namespace = treeItem.resourceData?.namespace;
+                    if (namespace) {
+                        await NamespaceWebview.sendResourceUpdated(namespace);
+                    }
+                } catch (error) {
+                    // Log error but don't block command completion
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`Failed to refresh namespace webviews after scaling: ${errorMessage}`);
+                }
+            }
+        }
+    );
+    context.subscriptions.push(scaleWorkloadCmd);
+    disposables.push(scaleWorkloadCmd);
     
     // Register open dashboard command
     const openDashboardCmd = vscode.commands.registerCommand(
