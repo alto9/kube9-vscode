@@ -6,7 +6,9 @@ import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 import {
     ArgoCDInstallationStatus,
     DETECTION_CACHE_TTL,
-    DEFAULT_ARGOCD_NAMESPACE
+    APPLICATION_CACHE_TTL,
+    DEFAULT_ARGOCD_NAMESPACE,
+    ArgoCDNotFoundError
 } from '../types/argocd';
 
 /**
@@ -27,6 +29,17 @@ interface CachedDetectionStatus {
     status: ArgoCDInstallationStatus;
     
     /** Timestamp when this status was cached (milliseconds since epoch) */
+    timestamp: number;
+}
+
+/**
+ * Cached application list with metadata.
+ */
+interface CachedApplicationList {
+    /** The raw CRD JSON objects */
+    applications: unknown[];
+    
+    /** Timestamp when this list was cached (milliseconds since epoch) */
     timestamp: number;
 }
 
@@ -70,14 +83,24 @@ function getOutputChannel(): vscode.OutputChannel {
  */
 export class ArgoCDService {
     /**
-     * Cache storage keyed by context name.
+     * Cache storage keyed by context name for detection status.
      */
     private cache: Map<string, CachedDetectionStatus> = new Map();
 
     /**
-     * Cache time-to-live in milliseconds (5 minutes).
+     * Cache storage keyed by context name for application lists.
+     */
+    private applicationCache: Map<string, CachedApplicationList> = new Map();
+
+    /**
+     * Cache time-to-live in milliseconds for detection (5 minutes).
      */
     private readonly CACHE_TTL_MS = DETECTION_CACHE_TTL * 1000;
+
+    /**
+     * Cache time-to-live in milliseconds for application lists (30 seconds).
+     */
+    private readonly APPLICATION_CACHE_TTL_MS = APPLICATION_CACHE_TTL * 1000;
 
     /**
      * Creates a new ArgoCDService instance.
@@ -464,6 +487,242 @@ export class ArgoCDService {
     }
 
     /**
+     * Queries all ArgoCD Applications in the cluster.
+     * 
+     * Returns raw CRD JSON objects (parsing happens in a separate method).
+     * Results are cached for 30 seconds unless bypassCache is true.
+     * 
+     * @param context Name of the Kubernetes context
+     * @param bypassCache If true, bypasses cache and queries the cluster directly
+     * @returns Promise resolving to array of raw Application CRD JSON objects
+     */
+    async getApplications(
+        context: string,
+        bypassCache = false
+    ): Promise<unknown[]> {
+        // Check cache if not bypassing
+        if (!bypassCache && this.applicationCache.has(context)) {
+            const cached = this.applicationCache.get(context)!;
+            const cacheAge = Date.now() - cached.timestamp;
+            
+            // Return cached result if still valid
+            if (cacheAge < this.APPLICATION_CACHE_TTL_MS) {
+                getOutputChannel().appendLine(
+                    `[INFO] Returning cached application list for context ${context}`
+                );
+                return cached.applications;
+            }
+        }
+
+        // Get ArgoCD namespace from detection
+        let namespace: string;
+        try {
+            const installationStatus = await this.isInstalled(context, false);
+            
+            // If ArgoCD is not installed, return empty array
+            if (!installationStatus.installed) {
+                getOutputChannel().appendLine(
+                    `[INFO] ArgoCD not installed in context ${context}, returning empty application list`
+                );
+                return [];
+            }
+            
+            namespace = installationStatus.namespace || DEFAULT_ARGOCD_NAMESPACE;
+        } catch (error) {
+            // If detection fails, log and return empty array
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            getOutputChannel().appendLine(
+                `[WARNING] Failed to detect ArgoCD installation for context ${context}: ${errorMessage}`
+            );
+            
+            // Check cache before returning empty array
+            if (this.applicationCache.has(context)) {
+                getOutputChannel().appendLine(
+                    `[INFO] Returning cached application list after detection failure for context ${context}`
+                );
+                return this.applicationCache.get(context)!.applications;
+            }
+            
+            return [];
+        }
+
+        try {
+            // Execute kubectl get applications
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'applications.argoproj.io',
+                    '-n',
+                    namespace,
+                    '--output=json',
+                    `--kubeconfig=${this.kubeconfigPath}`,
+                    `--context=${context}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large application lists
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse JSON response
+            const response = JSON.parse(stdout);
+            
+            // Extract items array (kubectl returns list with items array)
+            const applications = response.items || [];
+            
+            // Cache the result
+            this.applicationCache.set(context, {
+                applications,
+                timestamp: Date.now()
+            });
+            
+            getOutputChannel().appendLine(
+                `[INFO] Successfully queried ${applications.length} applications from context ${context}`
+            );
+            
+            return applications;
+        } catch (error: unknown) {
+            // kubectl failed - analyze error
+            const kubectlError = KubectlError.fromExecError(error, context);
+            const errorDetails = kubectlError.getDetails().toLowerCase();
+            
+            // Check cache before returning empty array
+            if (this.applicationCache.has(context)) {
+                getOutputChannel().appendLine(
+                    `[WARNING] Error querying applications for context ${context}, returning cached data: ${kubectlError.getDetails()}`
+                );
+                return this.applicationCache.get(context)!.applications;
+            }
+            
+            // Handle RBAC/permission errors
+            if (kubectlError.type === KubectlErrorType.PermissionDenied) {
+                getOutputChannel().appendLine(
+                    `[WARNING] RBAC permission denied when querying ArgoCD applications for context ${context}: ${kubectlError.getDetails()}`
+                );
+                return [];
+            }
+            
+            // Handle not found errors (namespace or CRD not found)
+            if (
+                errorDetails.includes('not found') ||
+                errorDetails.includes('404')
+            ) {
+                getOutputChannel().appendLine(
+                    `[INFO] ArgoCD applications not found in namespace ${namespace} for context ${context}`
+                );
+                return [];
+            }
+            
+            // Handle network/connection errors
+            if (
+                kubectlError.type === KubectlErrorType.ConnectionFailed ||
+                kubectlError.type === KubectlErrorType.Timeout
+            ) {
+                getOutputChannel().appendLine(
+                    `[ERROR] Network/connectivity error when querying ArgoCD applications for context ${context}: ${kubectlError.getDetails()}`
+                );
+                return [];
+            }
+            
+            // Unknown error - log and return empty array
+            getOutputChannel().appendLine(
+                `[WARNING] Error querying ArgoCD applications for context ${context}: ${kubectlError.getDetails()}`
+            );
+            return [];
+        }
+    }
+
+    /**
+     * Queries a single ArgoCD Application by name.
+     * 
+     * Returns raw CRD JSON object (parsing happens in a separate method).
+     * No caching for single application queries.
+     * 
+     * @param name Application name
+     * @param namespace Application namespace
+     * @param context Name of the Kubernetes context
+     * @returns Promise resolving to raw Application CRD JSON object
+     * @throws ArgoCDNotFoundError if application is not found
+     * @throws Error for other failures
+     */
+    async getApplication(
+        name: string,
+        namespace: string,
+        context: string
+    ): Promise<unknown> {
+        try {
+            // Execute kubectl get application
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    `application.argoproj.io/${name}`,
+                    '-n',
+                    namespace,
+                    '--output=json',
+                    `--kubeconfig=${this.kubeconfigPath}`,
+                    `--context=${context}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse JSON response
+            const application = JSON.parse(stdout);
+            
+            getOutputChannel().appendLine(
+                `[INFO] Successfully queried application ${name} from namespace ${namespace} in context ${context}`
+            );
+            
+            return application;
+        } catch (error: unknown) {
+            // kubectl failed - analyze error
+            const kubectlError = KubectlError.fromExecError(error, context);
+            const errorDetails = kubectlError.getDetails().toLowerCase();
+            
+            // Handle not found errors
+            if (
+                errorDetails.includes('not found') ||
+                errorDetails.includes('404')
+            ) {
+                throw new ArgoCDNotFoundError(
+                    `Application ${name} not found in namespace ${namespace}`
+                );
+            }
+            
+            // Handle RBAC/permission errors
+            if (kubectlError.type === KubectlErrorType.PermissionDenied) {
+                getOutputChannel().appendLine(
+                    `[WARNING] RBAC permission denied when querying application ${name} in namespace ${namespace} for context ${context}: ${kubectlError.getDetails()}`
+                );
+                throw new ArgoCDNotFoundError(
+                    `Permission denied: Cannot access application ${name} in namespace ${namespace}`
+                );
+            }
+            
+            // Handle network/connection errors
+            if (
+                kubectlError.type === KubectlErrorType.ConnectionFailed ||
+                kubectlError.type === KubectlErrorType.Timeout
+            ) {
+                const errorMessage = `Network/connectivity error when querying application ${name} in namespace ${namespace} for context ${context}: ${kubectlError.getDetails()}`;
+                getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
+            
+            // Unknown error - log and throw
+            const errorMessage = `Error querying application ${name} in namespace ${namespace} for context ${context}: ${kubectlError.getDetails()}`;
+            getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
+    }
+
+    /**
      * Clears the cached detection status for a specific cluster.
      * 
      * @param context Name of the Kubernetes context
@@ -477,6 +736,22 @@ export class ArgoCDService {
      */
     clearAllCache(): void {
         this.cache.clear();
+    }
+
+    /**
+     * Clears the cached application list for a specific cluster.
+     * 
+     * @param context Name of the Kubernetes context
+     */
+    clearApplicationCache(context: string): void {
+        this.applicationCache.delete(context);
+    }
+
+    /**
+     * Clears all cached application lists.
+     */
+    clearAllApplicationCache(): void {
+        this.applicationCache.clear();
     }
 }
 

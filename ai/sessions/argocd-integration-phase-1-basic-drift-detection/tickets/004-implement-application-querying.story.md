@@ -4,7 +4,7 @@ session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-tree-view]
 spec_id: [argocd-service-spec, argocd-status-spec]
 diagram_id: [argocd-data-flow]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -36,12 +36,12 @@ The service needs to query Application CRDs using kubectl to get the list of app
 
 ## Acceptance Criteria
 
-- [ ] `getApplications()` queries all applications in ArgoCD namespace
-- [ ] `getApplication()` queries single application by name
-- [ ] Application list is cached for 30 seconds
-- [ ] Bypass cache flag works correctly
-- [ ] RBAC errors are caught and handled gracefully
-- [ ] Methods return raw CRD JSON (parsing in next story)
+- [x] `getApplications()` queries all applications in ArgoCD namespace
+- [x] `getApplication()` queries single application by name
+- [x] Application list is cached for 30 seconds
+- [x] Bypass cache flag works correctly
+- [x] RBAC errors are caught and handled gracefully
+- [x] Methods return raw CRD JSON (parsing in next story)
 
 ## Dependencies
 
