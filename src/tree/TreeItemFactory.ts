@@ -168,6 +168,25 @@ export class TreeItemFactory {
     }
 
     /**
+     * Creates the ArgoCD Applications category tree item.
+     * Displays all ArgoCD Applications in the cluster.
+     * 
+     * @param resourceData Cluster context and cluster information
+     * @returns Configured ArgoCD Applications category tree item
+     */
+    static createArgoCDCategory(resourceData: TreeItemData): ClusterTreeItem {
+        const item = new ClusterTreeItem(
+            'ArgoCD Applications',
+            'argocd',
+            vscode.TreeItemCollapsibleState.Collapsed,
+            resourceData
+        );
+        item.iconPath = new vscode.ThemeIcon('sync');
+        item.tooltip = 'View ArgoCD Applications';
+        return item;
+    }
+
+    /**
      * Creates the Custom Resources category tree item.
      * Displays all Custom Resource Definitions (CRDs) in the cluster.
      * 

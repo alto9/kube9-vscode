@@ -28,6 +28,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - configuration: Configuration category
  * - configmaps: ConfigMaps subcategory (under Configuration)
  * - secrets: Secrets subcategory (under Configuration)
+ * - argocd: ArgoCD Applications category
  * - customResources: Custom Resources category
  * - reports: Reports category
  * - compliance: Compliance subcategory (under Reports)
@@ -44,6 +45,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - configmap: Individual configmap item
  * - secret: Individual secret item
  * - service: Individual service item (under Services)
+ * - argocdApplication: Individual ArgoCD Application item (under ArgoCD)
  * - crd: Individual Custom Resource Definition item
  * - dataCollection: Individual data collection report item (under Compliance)
  */
@@ -81,6 +83,8 @@ export type TreeItemType =
     | 'configmap'
     | 'secret'
     | 'service'
+    | 'argocd'
+    | 'argocdApplication'
     | 'customResources'
     | 'reports'
     | 'compliance'
