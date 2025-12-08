@@ -4,6 +4,7 @@ import * as path from 'path';
 import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { ArgoCDApplication, ArgoCDNotFoundError, ArgoCDPermissionError, SyncStatus, HealthStatus } from '../types/argocd';
+import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 
 /**
  * Message types sent from webview to extension.
@@ -241,27 +242,50 @@ export class ArgoCDApplicationWebviewProvider {
             } as ExtensionMessage);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
+            let userFriendlyMessage = errorMessage;
             
-            // Send error to webview
+            // Handle specific error types with user-friendly messages
+            if (error instanceof ArgoCDNotFoundError) {
+                userFriendlyMessage = `Application not found: ${applicationName} in namespace ${namespace}. It may have been deleted.`;
+                vscode.window.showErrorMessage(userFriendlyMessage);
+            } else if (error instanceof ArgoCDPermissionError) {
+                userFriendlyMessage = `Permission denied: Cannot access ArgoCD Application ${applicationName}. Check your RBAC permissions.`;
+                vscode.window.showErrorMessage(userFriendlyMessage);
+            } else if (error instanceof KubectlError) {
+                // Handle kubectl-specific errors
+                switch (error.type) {
+                    case KubectlErrorType.PermissionDenied:
+                        userFriendlyMessage = `Permission denied: Cannot access cluster '${context}'. Check your credentials and RBAC permissions.`;
+                        vscode.window.showErrorMessage(userFriendlyMessage);
+                        break;
+                    case KubectlErrorType.ConnectionFailed:
+                        userFriendlyMessage = `Cannot connect to cluster '${context}'. The cluster may be unreachable or down.`;
+                        vscode.window.showWarningMessage(userFriendlyMessage);
+                        break;
+                    case KubectlErrorType.Timeout:
+                        userFriendlyMessage = `Connection to cluster '${context}' timed out. The cluster may be slow to respond.`;
+                        vscode.window.showWarningMessage(userFriendlyMessage);
+                        break;
+                    case KubectlErrorType.BinaryNotFound:
+                        userFriendlyMessage = `kubectl is not installed or not in PATH. Please install kubectl to manage Kubernetes clusters.`;
+                        vscode.window.showErrorMessage(userFriendlyMessage);
+                        break;
+                    default:
+                        userFriendlyMessage = `Failed to load ArgoCD Application: ${error.getUserMessage()}`;
+                        vscode.window.showErrorMessage(userFriendlyMessage);
+                        break;
+                }
+            } else {
+                // Generic error handling
+                userFriendlyMessage = `Failed to load ArgoCD Application: ${errorMessage}`;
+                vscode.window.showErrorMessage(userFriendlyMessage);
+            }
+            
+            // Send error to webview (ErrorState component will display it)
             panel.webview.postMessage({
                 type: 'error',
-                message: errorMessage
+                message: userFriendlyMessage
             } as ExtensionMessage);
-
-            // Show notification
-            if (error instanceof ArgoCDNotFoundError) {
-                vscode.window.showErrorMessage(
-                    `ArgoCD Application not found: ${applicationName} in namespace ${namespace}`
-                );
-            } else if (error instanceof ArgoCDPermissionError) {
-                vscode.window.showErrorMessage(
-                    `Permission denied: Cannot access ArgoCD Application ${applicationName}`
-                );
-            } else {
-                vscode.window.showErrorMessage(
-                    `Failed to load ArgoCD Application: ${errorMessage}`
-                );
-            }
         }
     }
 
@@ -392,15 +416,43 @@ export class ArgoCDApplicationWebviewProvider {
             );
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
+            let userFriendlyMessage = errorMessage;
+
+            // Handle specific error types with user-friendly messages
+            if (error instanceof ArgoCDNotFoundError) {
+                userFriendlyMessage = `Application not found: ${applicationName} in namespace ${namespace}. It may have been deleted.`;
+            } else if (error instanceof ArgoCDPermissionError) {
+                userFriendlyMessage = `Permission denied: Cannot sync application ${applicationName}. Check your RBAC permissions.`;
+            } else if (error instanceof KubectlError) {
+                switch (error.type) {
+                    case KubectlErrorType.PermissionDenied:
+                        userFriendlyMessage = `Permission denied: Cannot sync application ${applicationName}. Check your RBAC permissions.`;
+                        break;
+                    case KubectlErrorType.ConnectionFailed:
+                        userFriendlyMessage = `Cannot connect to cluster '${context}'. The cluster may be unreachable.`;
+                        break;
+                    case KubectlErrorType.Timeout:
+                        userFriendlyMessage = `Connection to cluster '${context}' timed out. Please try again.`;
+                        break;
+                    default:
+                        userFriendlyMessage = `Sync failed: ${error.getUserMessage()}`;
+                        break;
+                }
+            }
 
             // Send error to webview
             panel.webview.postMessage({
                 type: 'error',
-                message: errorMessage
+                message: userFriendlyMessage
             } as ExtensionMessage);
 
             // Show error notification
-            vscode.window.showErrorMessage(`Sync failed: ${errorMessage}`);
+            if (error instanceof KubectlError && 
+                (error.type === KubectlErrorType.ConnectionFailed || error.type === KubectlErrorType.Timeout)) {
+                vscode.window.showWarningMessage(`Sync failed: ${userFriendlyMessage}`);
+            } else {
+                vscode.window.showErrorMessage(`Sync failed: ${userFriendlyMessage}`);
+            }
         }
     }
 
@@ -442,15 +494,43 @@ export class ArgoCDApplicationWebviewProvider {
             );
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
+            let userFriendlyMessage = errorMessage;
+
+            // Handle specific error types with user-friendly messages
+            if (error instanceof ArgoCDNotFoundError) {
+                userFriendlyMessage = `Application not found: ${applicationName} in namespace ${namespace}. It may have been deleted.`;
+            } else if (error instanceof ArgoCDPermissionError) {
+                userFriendlyMessage = `Permission denied: Cannot refresh application ${applicationName}. Check your RBAC permissions.`;
+            } else if (error instanceof KubectlError) {
+                switch (error.type) {
+                    case KubectlErrorType.PermissionDenied:
+                        userFriendlyMessage = `Permission denied: Cannot refresh application ${applicationName}. Check your RBAC permissions.`;
+                        break;
+                    case KubectlErrorType.ConnectionFailed:
+                        userFriendlyMessage = `Cannot connect to cluster '${context}'. The cluster may be unreachable.`;
+                        break;
+                    case KubectlErrorType.Timeout:
+                        userFriendlyMessage = `Connection to cluster '${context}' timed out. Please try again.`;
+                        break;
+                    default:
+                        userFriendlyMessage = `Refresh failed: ${error.getUserMessage()}`;
+                        break;
+                }
+            }
 
             // Send error to webview
             panel.webview.postMessage({
                 type: 'error',
-                message: errorMessage
+                message: userFriendlyMessage
             } as ExtensionMessage);
 
             // Show error notification
-            vscode.window.showErrorMessage(`Refresh failed: ${errorMessage}`);
+            if (error instanceof KubectlError && 
+                (error.type === KubectlErrorType.ConnectionFailed || error.type === KubectlErrorType.Timeout)) {
+                vscode.window.showWarningMessage(`Refresh failed: ${userFriendlyMessage}`);
+            } else {
+                vscode.window.showErrorMessage(`Refresh failed: ${userFriendlyMessage}`);
+            }
         }
     }
 
@@ -503,15 +583,43 @@ export class ArgoCDApplicationWebviewProvider {
             );
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
+            let userFriendlyMessage = errorMessage;
+
+            // Handle specific error types with user-friendly messages
+            if (error instanceof ArgoCDNotFoundError) {
+                userFriendlyMessage = `Application not found: ${applicationName} in namespace ${namespace}. It may have been deleted.`;
+            } else if (error instanceof ArgoCDPermissionError) {
+                userFriendlyMessage = `Permission denied: Cannot hard refresh application ${applicationName}. Check your RBAC permissions.`;
+            } else if (error instanceof KubectlError) {
+                switch (error.type) {
+                    case KubectlErrorType.PermissionDenied:
+                        userFriendlyMessage = `Permission denied: Cannot hard refresh application ${applicationName}. Check your RBAC permissions.`;
+                        break;
+                    case KubectlErrorType.ConnectionFailed:
+                        userFriendlyMessage = `Cannot connect to cluster '${context}'. The cluster may be unreachable.`;
+                        break;
+                    case KubectlErrorType.Timeout:
+                        userFriendlyMessage = `Connection to cluster '${context}' timed out. Please try again.`;
+                        break;
+                    default:
+                        userFriendlyMessage = `Hard refresh failed: ${error.getUserMessage()}`;
+                        break;
+                }
+            }
 
             // Send error to webview
             panel.webview.postMessage({
                 type: 'error',
-                message: errorMessage
+                message: userFriendlyMessage
             } as ExtensionMessage);
 
             // Show error notification
-            vscode.window.showErrorMessage(`Hard refresh failed: ${errorMessage}`);
+            if (error instanceof KubectlError && 
+                (error.type === KubectlErrorType.ConnectionFailed || error.type === KubectlErrorType.Timeout)) {
+                vscode.window.showWarningMessage(`Hard refresh failed: ${userFriendlyMessage}`);
+            } else {
+                vscode.window.showErrorMessage(`Hard refresh failed: ${userFriendlyMessage}`);
+            }
         }
     }
 

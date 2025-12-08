@@ -3,7 +3,7 @@ story_id: add-error-handling
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-detection, argocd-tree-view, argocd-actions]
 spec_id: [argocd-service-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -39,14 +39,14 @@ Various kubectl operations can fail for different reasons. The service needs gra
 
 ## Acceptance Criteria
 
-- [ ] RBAC errors show permission denied message
-- [ ] NotFound errors return empty results gracefully
-- [ ] Network errors fall back to cached data
-- [ ] All errors are logged for debugging
-- [ ] Extension doesn't crash on any error
-- [ ] Tree view shows error state when appropriate
-- [ ] Webview shows error message on failure
-- [ ] Users get actionable error messages
+- [x] RBAC errors show permission denied message
+- [x] NotFound errors return empty results gracefully
+- [x] Network errors fall back to cached data
+- [x] All errors are logged for debugging
+- [x] Extension doesn't crash on any error
+- [x] Tree view shows error state when appropriate
+- [x] Webview shows error message on failure
+- [x] Users get actionable error messages
 
 ## Dependencies
 

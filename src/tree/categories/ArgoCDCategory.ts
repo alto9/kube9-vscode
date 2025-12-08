@@ -1,14 +1,33 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../ClusterTreeItem';
 import { TreeItemData } from '../TreeItemTypes';
-import { KubectlError } from '../../kubernetes/KubectlError';
+import { KubectlError, KubectlErrorType } from '../../kubernetes/KubectlError';
 import { ArgoCDService } from '../../services/ArgoCDService';
+import { ArgoCDNotFoundError, ArgoCDPermissionError } from '../../types/argocd';
 import { getApplicationIcon } from '../../utils/argoCDIcons';
 
 /**
  * Type for error handler callback.
  */
 type ErrorHandler = (error: KubectlError, clusterName: string) => void;
+
+/**
+ * OutputChannel for ArgoCD category logging.
+ * Created lazily on first use.
+ */
+let outputChannel: vscode.OutputChannel | undefined;
+
+/**
+ * Gets or creates the OutputChannel for ArgoCD category logging.
+ * 
+ * @returns The OutputChannel instance
+ */
+function getOutputChannel(): vscode.OutputChannel {
+    if (!outputChannel) {
+        outputChannel = vscode.window.createOutputChannel('kube9 ArgoCD Category');
+    }
+    return outputChannel;
+}
 
 /**
  * ArgoCD category handler.
@@ -108,11 +127,77 @@ export class ArgoCDCategory {
             
             return applicationItems;
         } catch (error) {
-            // Handle errors gracefully
-            // Note: ArgoCDService errors might not be KubectlError, so we handle them generically
-            // For now, we'll just return empty array on error
-            // In a real scenario, we might want to log this differently
+            // Handle errors gracefully with specific error type handling
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
             
+            // Handle ArgoCD-specific errors
+            if (error instanceof ArgoCDNotFoundError) {
+                getOutputChannel().appendLine(
+                    `[INFO] ArgoCD applications not found for context ${contextName}: ${errorMessage}`
+                );
+                return [];
+            }
+            
+            if (error instanceof ArgoCDPermissionError) {
+                getOutputChannel().appendLine(
+                    `[WARNING] Permission denied accessing ArgoCD applications for context ${contextName}: ${errorMessage}`
+                );
+                // Call error handler if provided to show user-facing message
+                if (errorHandler) {
+                    // Create a KubectlError for the error handler
+                    const kubectlError = new KubectlError(
+                        KubectlErrorType.PermissionDenied,
+                        `Permission denied: Cannot access ArgoCD applications in context '${contextName}'`,
+                        errorMessage,
+                        contextName
+                    );
+                    errorHandler(kubectlError, contextName);
+                }
+                return [];
+            }
+            
+            // Handle KubectlError types
+            if (error instanceof KubectlError) {
+                getOutputChannel().appendLine(
+                    `[ERROR] kubectl error when fetching ArgoCD applications for context ${contextName}: ${error.getDetails()}`
+                );
+                
+                // Call error handler if provided
+                if (errorHandler) {
+                    errorHandler(error, contextName);
+                }
+                
+                // For network/timeout errors, return empty array gracefully
+                // (ArgoCDService should have already tried cache fallback)
+                if (
+                    error.type === KubectlErrorType.ConnectionFailed ||
+                    error.type === KubectlErrorType.Timeout
+                ) {
+                    getOutputChannel().appendLine(
+                        `[INFO] Network/timeout error - returning empty array for context ${contextName}`
+                    );
+                    return [];
+                }
+                
+                // For permission errors, return empty array
+                if (error.type === KubectlErrorType.PermissionDenied) {
+                    return [];
+                }
+                
+                // For other errors, return empty array to prevent crash
+                return [];
+            }
+            
+            // Handle unknown errors
+            getOutputChannel().appendLine(
+                `[ERROR] Unexpected error fetching ArgoCD applications for context ${contextName}: ${errorMessage}`
+            );
+            if (errorStack) {
+                getOutputChannel().appendLine(`[ERROR] Stack trace: ${errorStack}`);
+            }
+            
+            // Return empty array to prevent extension crash
             return [];
         }
     }
