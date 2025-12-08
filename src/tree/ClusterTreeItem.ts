@@ -80,7 +80,7 @@ export class ClusterTreeItem extends vscode.TreeItem {
         // Generate stable ID for preserving tree state during refreshes
         // Don't set ID for category items - let VSCode generate them to avoid duplicate registration
         const categoryTypes = ['dashboard', 'nodes', 'namespaces', 'workloads', 'storage', 
-                              'networking', 'helm', 'configuration', 'customResources', 'reports'];
+                              'networking', 'helm', 'configuration', 'argocd', 'customResources', 'reports'];
         if (!categoryTypes.includes(type)) {
             this.id = this.generateStableId(label, type, resourceData);
         }
@@ -107,7 +107,7 @@ export class ClusterTreeItem extends vscode.TreeItem {
         
         // For category items, use context/type
         const categoryTypes = ['dashboard', 'nodes', 'namespaces', 'workloads', 'storage', 
-                              'networking', 'helm', 'configuration', 'customResources', 'reports'];
+                              'networking', 'helm', 'configuration', 'argocd', 'customResources', 'reports'];
         if (categoryTypes.includes(type)) {
             return `${contextName}/${type}`;
         }

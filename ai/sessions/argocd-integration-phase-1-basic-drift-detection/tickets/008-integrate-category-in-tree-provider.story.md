@@ -4,7 +4,7 @@ session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-tree-view]
 spec_id: [tree-view-spec]
 diagram_id: [argocd-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -36,12 +36,12 @@ The tree view's ClusterTreeProvider needs to conditionally show the ArgoCD Appli
 
 ## Acceptance Criteria
 
-- [ ] ArgoCDCategory is imported and instantiated
-- [ ] Category appears in tree when ArgoCD detected
-- [ ] Category does not appear when ArgoCD not detected
-- [ ] Category positioned after Configuration category
-- [ ] Category refreshes with tree refresh
-- [ ] Cluster context passed correctly to category
+- [x] ArgoCDCategory is imported and instantiated
+- [x] Category appears in tree when ArgoCD detected
+- [x] Category does not appear when ArgoCD not detected
+- [x] Category positioned after Configuration category
+- [x] Category refreshes with tree refresh
+- [x] Cluster context passed correctly to category
 
 ## Dependencies
 

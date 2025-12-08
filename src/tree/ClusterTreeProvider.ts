@@ -23,8 +23,10 @@ import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubc
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
 import { HelmCategory } from './categories/HelmCategory';
 import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
+import { ArgoCDCategory } from './categories/ArgoCDCategory';
 import { ReportsCategory } from './categories/ReportsCategory';
 import { ComplianceSubcategory } from './categories/reports/ComplianceSubcategory';
+import { ArgoCDService } from '../services/ArgoCDService';
 import { namespaceWatcher } from '../services/namespaceCache';
 import { OperatorStatusClient, getOperatorStatusOutputChannel } from '../services/OperatorStatusClient';
 import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
@@ -91,6 +93,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private operatorStatusClient: OperatorStatusClient = new OperatorStatusClient();
 
     /**
+     * Service for detecting ArgoCD installations and querying applications.
+     * Created lazily when needed, requires kubeconfigPath to be available.
+     */
+    private argoCDService?: ArgoCDService;
+
+    /**
      * Flag to indicate that operator status should be force refreshed.
      * Set to true during manual refresh to bypass cache.
      */
@@ -129,7 +137,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
         // If element is a cluster, return the categories
         if (element.type === 'cluster' && element.resourceData) {
-            return this.getCategories(element);
+            return await this.getCategories(element);
         }
 
         // If element is a category, return its children (placeholder for now)
@@ -230,6 +238,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'configmaps' ||
                type === 'secrets' ||
                type === 'configmap' ||
+               type === 'argocd' ||
                type === 'customResources' ||
                type === 'reports' ||
                type === 'compliance' ||
@@ -419,6 +428,21 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
                 break;
+            
+            case 'argocd': {
+                const argoCDService = this.getArgoCDService();
+                if (argoCDService) {
+                    items = await ArgoCDCategory.getArgoCDApplicationItems(
+                        categoryElement.resourceData,
+                        this.kubeconfig.filePath,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName),
+                        argoCDService
+                    );
+                } else {
+                    items = [];
+                }
+                break;
+            }
             
             case 'customResources':
                 items = await CustomResourcesCategory.getCRDItems(
@@ -722,6 +746,25 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      */
     getKubeconfigPath(): string | undefined {
         return this.kubeconfig?.filePath;
+    }
+
+    /**
+     * Get or create the ArgoCDService instance.
+     * Creates the service lazily when needed, using the current kubeconfig path.
+     * 
+     * @returns ArgoCDService instance, or undefined if kubeconfig is not available
+     */
+    private getArgoCDService(): ArgoCDService | undefined {
+        if (!this.kubeconfig?.filePath) {
+            return undefined;
+        }
+
+        // Create service if it doesn't exist
+        // Note: Service will use current kubeconfig path, so we recreate it each time
+        // to ensure it's using the latest path (ArgoCDService caches internally)
+        this.argoCDService = new ArgoCDService(this.operatorStatusClient, this.kubeconfig.filePath);
+
+        return this.argoCDService;
     }
 
     /**
