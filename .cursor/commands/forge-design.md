@@ -1,4 +1,4 @@
-<!-- forge-hash: 55ad5cab1a0af4efe59ba43d7082cf4db4a620990edece381b9921d57b8e1b02 -->
+<!-- forge-hash: 0cc236e87774680729776026baf4ee5c38ec4a4bfd4a4ac7d8b0003ea69de969 -->
 
 # Forge Design
 
@@ -46,12 +46,6 @@ When working in design sessions, use the correct file type for each purpose:
 - **Contains**: Responsibilities, characteristics, context
 - **Note**: Always editable (no session required)
 
-### Contexts (*.context.md)
-- **Purpose**: Provide HOW-TO implementation guidance
-- **Format**: Gherkin scenarios with technical guidance
-- **Contains**: When to use patterns, code examples, best practices
-- **Note**: Always editable (no session required)
-
 ## Intelligent Linkage and Grouping
 
 When working with Forge documentation, it's essential to understand and respect the existing organizational structure:
@@ -59,7 +53,7 @@ When working with Forge documentation, it's essential to understand and respect 
 - **Analyze folder structure**: Before creating new files, examine the existing `ai/` subfolder structure to understand how elements are logically grouped
 - **Follow existing patterns**: Contribute to existing grouping patterns rather than creating new arbitrary structures
 - **Respect nesting**: Folder nesting reflects logical relationships - preserve and extend these relationships when adding new files
-- **Utilize linkages effectively**: Use all element linkages (feature_id, spec_id, context_id) to build complete context, but avoid over-verbosity
+- **Utilize linkages effectively**: Use all element linkages (feature_id, spec_id) to build complete context, but avoid over-verbosity
 - **Group logically**: Place related files together in nested folders that reflect their relationships and dependencies
 - **Maintain consistency**: When adding new documentation, follow the same organizational patterns already established in the project
 
