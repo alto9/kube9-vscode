@@ -4,7 +4,7 @@ session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-tree-view, argocd-application-webview]
 spec_id: [argocd-service-spec, argocd-status-spec]
 diagram_id: [argocd-data-flow]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -41,13 +41,13 @@ Application CRDs have complex nested structures. We need to extract and transfor
 
 ## Acceptance Criteria
 
-- [ ] `parseApplication()` extracts all required fields
-- [ ] Sync and health status are correctly parsed
-- [ ] Resource-level status array is properly parsed
-- [ ] Last operation state is parsed if present
-- [ ] Missing optional fields are handled gracefully
-- [ ] Parsed data matches ArgoCDApplication interface
-- [ ] `getApplications()` and `getApplication()` return typed data
+- [x] `parseApplication()` extracts all required fields
+- [x] Sync and health status are correctly parsed
+- [x] Resource-level status array is properly parsed
+- [x] Last operation state is parsed if present
+- [x] Missing optional fields are handled gracefully
+- [x] Parsed data matches ArgoCDApplication interface
+- [x] `getApplications()` and `getApplication()` return typed data
 
 ## Dependencies
 

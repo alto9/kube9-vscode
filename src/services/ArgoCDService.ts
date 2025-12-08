@@ -8,7 +8,19 @@ import {
     DETECTION_CACHE_TTL,
     APPLICATION_CACHE_TTL,
     DEFAULT_ARGOCD_NAMESPACE,
-    ArgoCDNotFoundError
+    ArgoCDNotFoundError,
+    ArgoCDApplication,
+    ArgoCDResource,
+    OperationState,
+    SyncStatus,
+    HealthStatus,
+    ApplicationSource,
+    ApplicationDestination,
+    SyncStatusCode,
+    HealthStatusCode,
+    OperationPhase,
+    SyncOperationResult,
+    ResourceResult
 } from '../types/argocd';
 
 /**
@@ -36,8 +48,8 @@ interface CachedDetectionStatus {
  * Cached application list with metadata.
  */
 interface CachedApplicationList {
-    /** The raw CRD JSON objects */
-    applications: unknown[];
+    /** The parsed ArgoCDApplication objects */
+    applications: ArgoCDApplication[];
     
     /** Timestamp when this list was cached (milliseconds since epoch) */
     timestamp: number;
@@ -52,6 +64,73 @@ interface ArgoCDServerInfo {
     
     /** ArgoCD version string */
     version: string;
+}
+
+/**
+ * Raw Application CRD structure from Kubernetes API.
+ */
+interface RawApplicationCRD {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+        creationTimestamp?: string;
+    };
+    spec?: {
+        project?: string;
+        source?: {
+            repoURL?: string;
+            path?: string;
+            targetRevision?: string;
+            chart?: string;
+            helm?: {
+                values?: string;
+                parameters?: Array<{ name: string; value: string }>;
+            };
+        };
+        destination?: {
+            server?: string;
+            namespace?: string;
+            name?: string;
+        };
+    };
+    status?: {
+        sync?: {
+            status?: string;
+            revision?: string;
+        };
+        health?: {
+            status?: string;
+            message?: string;
+        };
+        resources?: Array<{
+            kind?: string;
+            name?: string;
+            namespace?: string;
+            status?: string;
+            health?: {
+                status?: string;
+            };
+            message?: string;
+            requiresPruning?: boolean;
+        }>;
+        operationState?: {
+            phase?: string;
+            message?: string;
+            startedAt?: string;
+            finishedAt?: string;
+            syncResult?: {
+                resources?: Array<{
+                    kind?: string;
+                    name?: string;
+                    namespace?: string;
+                    status?: string;
+                    message?: string;
+                    hookPhase?: string;
+                }>;
+                revision?: string;
+            };
+        };
+    };
 }
 
 /**
@@ -487,19 +566,318 @@ export class ArgoCDService {
     }
 
     /**
+     * Parses raw Application CRD JSON into strongly-typed ArgoCDApplication interface.
+     * 
+     * @param crdData Raw Application CRD JSON object
+     * @returns Parsed ArgoCDApplication object
+     */
+    private parseApplication(crdData: unknown): ArgoCDApplication {
+        const crd = crdData as RawApplicationCRD;
+        // Extract metadata fields
+        const name = crd.metadata?.name;
+        const namespace = crd.metadata?.namespace || '';
+        const project = crd.spec?.project || 'default';
+        const createdAt = crd.metadata?.creationTimestamp || new Date().toISOString();
+
+        // Validate required fields
+        if (!name) {
+            throw new Error('Application CRD missing required field: metadata.name');
+        }
+        if (!crd.spec?.source) {
+            throw new Error('Application CRD missing required field: spec.source');
+        }
+        if (!crd.spec?.destination) {
+            throw new Error('Application CRD missing required field: spec.destination');
+        }
+
+        // Parse sync status
+        const syncStatus: SyncStatus = this.parseSyncStatus(crd);
+
+        // Parse health status
+        const healthStatus: HealthStatus = this.parseHealthStatus(crd);
+
+        // Parse source
+        const source: ApplicationSource = this.parseSource(crd.spec.source || {});
+
+        // Parse destination
+        const destination: ApplicationDestination = {
+            server: crd.spec.destination.server || '',
+            namespace: crd.spec.destination.namespace || '',
+            name: crd.spec.destination.name
+        };
+
+        // Parse resources
+        const resources = this.parseResources(crd.status?.resources || []);
+
+        // Parse last operation
+        const lastOperation = this.parseOperation(crd.status?.operationState);
+
+        // Extract syncedAt from operationState finishedAt
+        const syncedAt = crd.status?.operationState?.finishedAt;
+
+        return {
+            name,
+            namespace,
+            project,
+            createdAt,
+            syncStatus,
+            healthStatus,
+            source,
+            destination,
+            resources,
+            lastOperation,
+            syncedAt
+        };
+    }
+
+    /**
+     * Parses sync status from CRD data.
+     * 
+     * @param crdData Raw Application CRD JSON object
+     * @returns Parsed SyncStatus object
+     */
+    private parseSyncStatus(crdData: RawApplicationCRD): SyncStatus {
+        const sync = crdData.status?.sync;
+        
+        if (!sync) {
+            // Default sync status with source from spec
+            return {
+                status: 'Unknown' as SyncStatusCode,
+                revision: '',
+                comparedTo: {
+                    source: this.parseSource(crdData.spec?.source || {})
+                }
+            };
+        }
+
+        const statusCode = this.validateSyncStatusCode(sync.status || '');
+        const revision = sync.revision || '';
+
+        // Use spec.source for comparedTo.source
+        const comparedToSource = this.parseSource(crdData.spec?.source || {});
+
+        return {
+            status: statusCode,
+            revision,
+            comparedTo: {
+                source: comparedToSource
+            }
+        };
+    }
+
+    /**
+     * Parses health status from CRD data.
+     * 
+     * @param crdData Raw Application CRD JSON object
+     * @returns Parsed HealthStatus object
+     */
+    private parseHealthStatus(crdData: RawApplicationCRD): HealthStatus {
+        const health = crdData.status?.health;
+        
+        if (!health) {
+            return {
+                status: 'Unknown' as HealthStatusCode
+            };
+        }
+
+        const statusCode = this.validateHealthStatusCode(health.status || '');
+
+        return {
+            status: statusCode,
+            message: health.message
+        };
+    }
+
+    /**
+     * Parses application source from CRD spec.source.
+     * 
+     * @param sourceData Raw source object from CRD
+     * @returns Parsed ApplicationSource object
+     */
+    private parseSource(sourceData: unknown): ApplicationSource {
+        const source = sourceData as RawApplicationCRD['spec'] | undefined;
+        const sourceObj = source?.source;
+        if (!sourceObj) {
+            // Fallback: treat sourceData as the source object directly
+            const directSource = sourceData as { repoURL?: string; path?: string; targetRevision?: string; chart?: string; helm?: { values?: string; parameters?: Array<{ name: string; value: string }> } };
+            return {
+                repoURL: directSource.repoURL || '',
+                path: directSource.path || '',
+                targetRevision: directSource.targetRevision || 'HEAD',
+                chart: directSource.chart,
+                helm: directSource.helm ? {
+                    values: directSource.helm.values,
+                    parameters: directSource.helm.parameters
+                } : undefined
+            };
+        }
+        return {
+            repoURL: sourceObj.repoURL || '',
+            path: sourceObj.path || '',
+            targetRevision: sourceObj.targetRevision || 'HEAD',
+            chart: sourceObj.chart,
+            helm: sourceObj.helm ? {
+                values: sourceObj.helm.values,
+                parameters: sourceObj.helm.parameters
+            } : undefined
+        };
+    }
+
+    /**
+     * Validates and normalizes sync status code.
+     * 
+     * @param status Raw status string from CRD
+     * @returns Valid SyncStatusCode
+     */
+    private validateSyncStatusCode(status: string): SyncStatusCode {
+        const validStatuses: SyncStatusCode[] = ['Synced', 'OutOfSync', 'Unknown'];
+        if (validStatuses.includes(status as SyncStatusCode)) {
+            return status as SyncStatusCode;
+        }
+        getOutputChannel().appendLine(
+            `[WARNING] Invalid sync status code: ${status}, defaulting to 'Unknown'`
+        );
+        return 'Unknown';
+    }
+
+    /**
+     * Validates and normalizes health status code.
+     * 
+     * @param status Raw status string from CRD
+     * @returns Valid HealthStatusCode
+     */
+    private validateHealthStatusCode(status: string): HealthStatusCode {
+        const validStatuses: HealthStatusCode[] = [
+            'Healthy',
+            'Degraded',
+            'Progressing',
+            'Suspended',
+            'Missing',
+            'Unknown'
+        ];
+        if (validStatuses.includes(status as HealthStatusCode)) {
+            return status as HealthStatusCode;
+        }
+        getOutputChannel().appendLine(
+            `[WARNING] Invalid health status code: ${status}, defaulting to 'Unknown'`
+        );
+        return 'Unknown';
+    }
+
+    /**
+     * Parses resource-level status array from CRD data.
+     * 
+     * @param resources Raw resources array from CRD status.resources
+     * @returns Array of parsed ArgoCDResource objects
+     */
+    private parseResources(resources: unknown[]): ArgoCDResource[] {
+        if (!Array.isArray(resources)) {
+            return [];
+        }
+
+        return resources.map(resource => {
+            const res = resource as RawApplicationCRD['status'] extends { resources?: Array<infer R> } ? R : never;
+            const parsed: ArgoCDResource = {
+                kind: (res as { kind?: string }).kind || '',
+                name: (res as { name?: string }).name || '',
+                namespace: (res as { namespace?: string }).namespace || '',
+                syncStatus: (res as { status?: string }).status || 'Unknown',
+                healthStatus: (res as { health?: { status?: string } }).health?.status 
+                    ? this.validateHealthStatusCode((res as { health?: { status?: string } }).health!.status!)
+                    : undefined,
+                message: (res as { message?: string }).message,
+                requiresPruning: (res as { requiresPruning?: boolean }).requiresPruning
+            };
+
+            return parsed;
+        });
+    }
+
+    /**
+     * Parses operation state from CRD data.
+     * 
+     * @param operationState Raw operationState object from CRD status.operationState
+     * @returns Parsed OperationState object or undefined if not present
+     */
+    private parseOperation(operationState: unknown): OperationState | undefined {
+        if (!operationState) {
+            return undefined;
+        }
+
+        const opState = operationState as RawApplicationCRD['status'] extends { operationState?: infer O } ? O : never;
+        const opStateObj = opState as { phase?: string; startedAt?: string; finishedAt?: string; message?: string; syncResult?: { resources?: Array<{ kind?: string; name?: string; namespace?: string; status?: string; message?: string; hookPhase?: string }>; revision?: string } } | undefined;
+        const phase = this.validateOperationPhase(opStateObj?.phase || '');
+        const startedAt = opStateObj?.startedAt || new Date().toISOString();
+        const finishedAt = opStateObj?.finishedAt;
+        const message = opStateObj?.message;
+
+        // Parse syncResult if present
+        let syncResult: SyncOperationResult | undefined;
+        if (opStateObj && opStateObj.syncResult) {
+            const resources: ResourceResult[] = (opStateObj.syncResult.resources || []).map((res: unknown) => {
+                const r = res as { kind?: string; name?: string; namespace?: string; status?: string; message?: string; hookPhase?: string };
+                return {
+                    kind: r.kind || '',
+                    name: r.name || '',
+                    namespace: r.namespace || '',
+                    status: r.status || '',
+                    message: r.message,
+                    hookPhase: r.hookPhase
+                };
+            });
+
+            syncResult = {
+                resources,
+                revision: opStateObj.syncResult.revision || ''
+            };
+        }
+
+        return {
+            phase,
+            message,
+            startedAt,
+            finishedAt,
+            syncResult
+        };
+    }
+
+    /**
+     * Validates and normalizes operation phase.
+     * 
+     * @param phase Raw phase string from CRD
+     * @returns Valid OperationPhase
+     */
+    private validateOperationPhase(phase: string): OperationPhase {
+        const validPhases: OperationPhase[] = [
+            'Running',
+            'Terminating',
+            'Succeeded',
+            'Failed',
+            'Error'
+        ];
+        if (validPhases.includes(phase as OperationPhase)) {
+            return phase as OperationPhase;
+        }
+        getOutputChannel().appendLine(
+            `[WARNING] Invalid operation phase: ${phase}, defaulting to 'Error'`
+        );
+        return 'Error';
+    }
+
+    /**
      * Queries all ArgoCD Applications in the cluster.
      * 
-     * Returns raw CRD JSON objects (parsing happens in a separate method).
+     * Returns parsed ArgoCDApplication objects.
      * Results are cached for 30 seconds unless bypassCache is true.
      * 
      * @param context Name of the Kubernetes context
      * @param bypassCache If true, bypasses cache and queries the cluster directly
-     * @returns Promise resolving to array of raw Application CRD JSON objects
+     * @returns Promise resolving to array of parsed ArgoCDApplication objects
      */
     async getApplications(
         context: string,
         bypassCache = false
-    ): Promise<unknown[]> {
+    ): Promise<ArgoCDApplication[]> {
         // Check cache if not bypassing
         if (!bypassCache && this.applicationCache.has(context)) {
             const cached = this.applicationCache.get(context)!;
@@ -510,7 +888,7 @@ export class ArgoCDService {
                 getOutputChannel().appendLine(
                     `[INFO] Returning cached application list for context ${context}`
                 );
-                return cached.applications;
+                return cached.applications as ArgoCDApplication[];
             }
         }
 
@@ -540,7 +918,7 @@ export class ArgoCDService {
                 getOutputChannel().appendLine(
                     `[INFO] Returning cached application list after detection failure for context ${context}`
                 );
-                return this.applicationCache.get(context)!.applications;
+                return this.applicationCache.get(context)!.applications as ArgoCDApplication[];
             }
             
             return [];
@@ -570,7 +948,22 @@ export class ArgoCDService {
             const response = JSON.parse(stdout);
             
             // Extract items array (kubectl returns list with items array)
-            const applications = response.items || [];
+            const rawApplications = response.items || [];
+            
+            // Parse each application
+            const applications: ArgoCDApplication[] = [];
+            for (const rawApp of rawApplications) {
+                try {
+                    const parsed = this.parseApplication(rawApp);
+                    applications.push(parsed);
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    getOutputChannel().appendLine(
+                        `[WARNING] Failed to parse application CRD: ${errorMessage}`
+                    );
+                    // Continue with other applications instead of failing completely
+                }
+            }
             
             // Cache the result
             this.applicationCache.set(context, {
@@ -579,7 +972,7 @@ export class ArgoCDService {
             });
             
             getOutputChannel().appendLine(
-                `[INFO] Successfully queried ${applications.length} applications from context ${context}`
+                `[INFO] Successfully queried and parsed ${applications.length} applications from context ${context}`
             );
             
             return applications;
@@ -593,7 +986,7 @@ export class ArgoCDService {
                 getOutputChannel().appendLine(
                     `[WARNING] Error querying applications for context ${context}, returning cached data: ${kubectlError.getDetails()}`
                 );
-                return this.applicationCache.get(context)!.applications;
+                return this.applicationCache.get(context)!.applications as ArgoCDApplication[];
             }
             
             // Handle RBAC/permission errors
@@ -637,13 +1030,13 @@ export class ArgoCDService {
     /**
      * Queries a single ArgoCD Application by name.
      * 
-     * Returns raw CRD JSON object (parsing happens in a separate method).
+     * Returns parsed ArgoCDApplication object.
      * No caching for single application queries.
      * 
      * @param name Application name
      * @param namespace Application namespace
      * @param context Name of the Kubernetes context
-     * @returns Promise resolving to raw Application CRD JSON object
+     * @returns Promise resolving to parsed ArgoCDApplication object
      * @throws ArgoCDNotFoundError if application is not found
      * @throws Error for other failures
      */
@@ -651,7 +1044,7 @@ export class ArgoCDService {
         name: string,
         namespace: string,
         context: string
-    ): Promise<unknown> {
+    ): Promise<ArgoCDApplication> {
         try {
             // Execute kubectl get application
             const { stdout } = await execFileAsync(
@@ -673,10 +1066,13 @@ export class ArgoCDService {
             );
 
             // Parse JSON response
-            const application = JSON.parse(stdout);
+            const rawApplication = JSON.parse(stdout);
+            
+            // Parse the application
+            const application = this.parseApplication(rawApplication);
             
             getOutputChannel().appendLine(
-                `[INFO] Successfully queried application ${name} from namespace ${namespace} in context ${context}`
+                `[INFO] Successfully queried and parsed application ${name} from namespace ${namespace} in context ${context}`
             );
             
             return application;
