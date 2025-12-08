@@ -3,7 +3,7 @@ story_id: add-tree-context-menu-commands
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-tree-view, argocd-actions]
 spec_id: [argocd-service-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -42,14 +42,14 @@ Users need to trigger actions from the tree view context menu. Commands need to 
 
 ## Acceptance Criteria
 
-- [ ] All commands defined in package.json
-- [ ] Commands appear in context menu for argocd-application items
-- [ ] Command handlers implemented
-- [ ] Handlers call ArgoCDService methods
-- [ ] Sync shows progress notification
-- [ ] Hard refresh shows confirmation dialog
-- [ ] Copy commands use clipboard API
-- [ ] Commands registered in extension.ts
+- [x] All commands defined in package.json
+- [x] Commands appear in context menu for argocd-application items
+- [x] Command handlers implemented
+- [x] Handlers call ArgoCDService methods
+- [x] Sync shows progress notification
+- [x] Hard refresh shows confirmation dialog
+- [x] Copy commands use clipboard API
+- [x] Commands registered in extension.ts
 
 ## Dependencies
 

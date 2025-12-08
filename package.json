@@ -129,6 +129,36 @@
         "command": "kube9.restartWorkload",
         "title": "Restart",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.argocd.sync",
+        "title": "Sync Application",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.refresh",
+        "title": "Refresh Application",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.hardRefresh",
+        "title": "Hard Refresh Application",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.viewDetails",
+        "title": "View Details",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.copyName",
+        "title": "Copy Application Name",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.copyNamespace",
+        "title": "Copy Namespace",
+        "category": "kube9"
       }
     ],
     "menus": {
@@ -184,6 +214,36 @@
           "command": "kube9.deleteResource",
           "when": "view == kube9ClusterView && viewItem =~ /^resource/",
           "group": "kube9@3"
+        },
+        {
+          "command": "kube9.argocd.sync",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@1"
+        },
+        {
+          "command": "kube9.argocd.refresh",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@1"
+        },
+        {
+          "command": "kube9.argocd.hardRefresh",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@1"
+        },
+        {
+          "command": "kube9.argocd.viewDetails",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@2"
+        },
+        {
+          "command": "kube9.argocd.copyName",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@3"
+        },
+        {
+          "command": "kube9.argocd.copyNamespace",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@3"
         }
       ],
       "editor/context": [

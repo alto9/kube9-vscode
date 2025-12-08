@@ -24,6 +24,14 @@ import { OperatorStatusClient } from './services/OperatorStatusClient';
 import { OperatorStatusMode } from './kubernetes/OperatorStatusTypes';
 import { FreeDashboardPanel } from './dashboard/FreeDashboardPanel';
 import { OperatedDashboardPanel } from './dashboard/OperatedDashboardPanel';
+import {
+    syncApplicationCommand,
+    refreshApplicationCommand,
+    hardRefreshApplicationCommand,
+    viewDetailsCommand,
+    copyNameCommand,
+    copyNamespaceCommand
+} from './commands/ArgoCDCommands';
 
 /**
  * Global extension context accessible to all components.
@@ -879,6 +887,53 @@ function registerCommands(): void {
     );
     context.subscriptions.push(openTerminalCmd);
     disposables.push(openTerminalCmd);
+    // Register ArgoCD sync command
+    const syncApplicationCmd = vscode.commands.registerCommand(
+        'kube9.argocd.sync',
+        syncApplicationCommand
+    );
+    context.subscriptions.push(syncApplicationCmd);
+    disposables.push(syncApplicationCmd);
+    
+    // Register ArgoCD refresh command
+    const refreshApplicationCmd = vscode.commands.registerCommand(
+        'kube9.argocd.refresh',
+        refreshApplicationCommand
+    );
+    context.subscriptions.push(refreshApplicationCmd);
+    disposables.push(refreshApplicationCmd);
+    
+    // Register ArgoCD hard refresh command
+    const hardRefreshApplicationCmd = vscode.commands.registerCommand(
+        'kube9.argocd.hardRefresh',
+        hardRefreshApplicationCommand
+    );
+    context.subscriptions.push(hardRefreshApplicationCmd);
+    disposables.push(hardRefreshApplicationCmd);
+    
+    // Register ArgoCD view details command
+    const viewDetailsCmd = vscode.commands.registerCommand(
+        'kube9.argocd.viewDetails',
+        viewDetailsCommand
+    );
+    context.subscriptions.push(viewDetailsCmd);
+    disposables.push(viewDetailsCmd);
+    
+    // Register ArgoCD copy name command
+    const copyNameCmd = vscode.commands.registerCommand(
+        'kube9.argocd.copyName',
+        copyNameCommand
+    );
+    context.subscriptions.push(copyNameCmd);
+    disposables.push(copyNameCmd);
+    
+    // Register ArgoCD copy namespace command
+    const copyNamespaceCmd = vscode.commands.registerCommand(
+        'kube9.argocd.copyNamespace',
+        copyNamespaceCommand
+    );
+    context.subscriptions.push(copyNamespaceCmd);
+    disposables.push(copyNamespaceCmd);
 }
 
 /**
