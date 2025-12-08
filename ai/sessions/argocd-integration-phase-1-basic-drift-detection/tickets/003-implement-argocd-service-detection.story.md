@@ -4,7 +4,7 @@ session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-detection]
 spec_id: [argocd-service-spec, argocd-status-spec]
 diagram_id: [argocd-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -37,13 +37,13 @@ The service needs to detect ArgoCD presence in two ways: consuming operator stat
 
 ## Acceptance Criteria
 
-- [ ] `isInstalled()` method works in operated mode
-- [ ] `isInstalled()` method falls back to direct detection
-- [ ] Direct CRD detection checks for applications.argoproj.io
-- [ ] ArgoCD server deployment search extracts namespace and version
-- [ ] Detection results are cached for 5 minutes
-- [ ] Errors are caught and logged appropriately
-- [ ] Method returns ArgoCDInstallationStatus type
+- [x] `isInstalled()` method works in operated mode
+- [x] `isInstalled()` method falls back to direct detection
+- [x] Direct CRD detection checks for applications.argoproj.io
+- [x] ArgoCD server deployment search extracts namespace and version
+- [x] Detection results are cached for 5 minutes
+- [x] Errors are caught and logged appropriately
+- [x] Method returns ArgoCDInstallationStatus type
 
 ## Dependencies
 
