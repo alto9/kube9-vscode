@@ -12,6 +12,7 @@ import { applyYAMLCommand } from './commands/applyYAML';
 import { describeRawCommand } from './commands/describeRaw';
 import { DescribeRawFileSystemProvider } from './commands/DescribeRawFileSystemProvider';
 import { scaleWorkloadCommand } from './commands/scaleWorkload';
+import { showRestartConfirmationDialog } from './commands/restartWorkload';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
@@ -692,10 +693,43 @@ function registerCommands(): void {
     // Register restart workload command
     const restartWorkloadCmd = vscode.commands.registerCommand(
         'kube9.restartWorkload',
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        async (_treeItem: ClusterTreeItem) => {
-            // Stub implementation - will be implemented in later stories
-            vscode.window.showInformationMessage('Restart command triggered (stub implementation)');
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                // Extract resource information from tree item
+                if (!treeItem || !treeItem.resourceData) {
+                    throw new Error('Invalid tree item: missing resource data');
+                }
+                
+                // Extract resource name
+                const resourceName = treeItem.resourceData.resourceName || treeItem.label as string;
+                
+                console.log('Restart workload command invoked:', {
+                    resourceName
+                });
+                
+                // Show confirmation dialog
+                const confirmation = await showRestartConfirmationDialog(resourceName);
+                
+                // If user cancelled, return early
+                if (!confirmation) {
+                    console.log('User cancelled restart operation');
+                    return;
+                }
+                
+                // Store waitForRollout for future implementation (stub for now)
+                const waitForRollout = confirmation.waitForRollout;
+                console.log('Restart confirmed:', {
+                    resourceName,
+                    waitForRollout
+                });
+                
+                // TODO: Implement actual restart logic in later stories
+                vscode.window.showInformationMessage(`Restart confirmed for ${resourceName} (waitForRollout: ${waitForRollout}) - implementation pending`);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to execute restart workload command:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to restart workload: ${errorMessage}`);
+            }
         }
     );
     context.subscriptions.push(restartWorkloadCmd);
