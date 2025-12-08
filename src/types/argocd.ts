@@ -387,6 +387,21 @@ export interface OperationState {
     syncResult?: SyncOperationResult;
 }
 
+/**
+ * Result of a tracked operation
+ */
+export interface OperationResult {
+    /**
+     * Whether the operation completed successfully
+     */
+    success: boolean;
+    
+    /**
+     * Status or error message
+     */
+    message: string;
+}
+
 // ============================================================================
 // Display Types
 // ============================================================================

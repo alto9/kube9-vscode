@@ -4,7 +4,7 @@ session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-actions]
 spec_id: [argocd-service-spec]
 diagram_id: [argocd-data-flow]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -40,13 +40,13 @@ Users trigger sync actions from tree view or webview. The service patches the Ap
 
 ## Acceptance Criteria
 
-- [ ] `syncApplication()` patches CRD with normal refresh annotation
-- [ ] `hardRefreshApplication()` patches CRD with hard refresh annotation
-- [ ] `trackOperation()` polls status every 2 seconds
-- [ ] Operation tracking stops on success, failure, or timeout
-- [ ] Timeout is handled after 5 minutes
-- [ ] RBAC and not found errors are handled
-- [ ] Methods return operation result or throw appropriate error
+- [x] `syncApplication()` patches CRD with normal refresh annotation
+- [x] `hardRefreshApplication()` patches CRD with hard refresh annotation
+- [x] `trackOperation()` polls status every 2 seconds
+- [x] Operation tracking stops on success, failure, or timeout
+- [x] Timeout is handled after 5 minutes
+- [x] RBAC and not found errors are handled
+- [x] Methods return operation result or throw appropriate error
 
 ## Dependencies
 

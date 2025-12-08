@@ -9,9 +9,11 @@ import {
     APPLICATION_CACHE_TTL,
     DEFAULT_ARGOCD_NAMESPACE,
     ArgoCDNotFoundError,
+    ArgoCDPermissionError,
     ArgoCDApplication,
     ArgoCDResource,
     OperationState,
+    OperationResult,
     SyncStatus,
     HealthStatus,
     ApplicationSource,
@@ -20,7 +22,9 @@ import {
     HealthStatusCode,
     OperationPhase,
     SyncOperationResult,
-    ResourceResult
+    ResourceResult,
+    OPERATION_POLL_INTERVAL,
+    OPERATION_TIMEOUT
 } from '../types/argocd';
 
 /**
@@ -1116,6 +1120,310 @@ export class ArgoCDService {
             getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
             throw new Error(errorMessage);
         }
+    }
+
+    /**
+     * Triggers a sync operation for an ArgoCD application.
+     * 
+     * Patches the Application CRD with a refresh annotation that ArgoCD controller
+     * detects and processes to initiate a sync operation.
+     * 
+     * @param name Application name
+     * @param namespace Application namespace
+     * @param context Name of the Kubernetes context
+     * @throws ArgoCDNotFoundError if application is not found
+     * @throws ArgoCDPermissionError if RBAC permission denied
+     * @throws Error for other failures
+     */
+    async syncApplication(
+        name: string,
+        namespace: string,
+        context: string
+    ): Promise<void> {
+        const patch = {
+            metadata: {
+                annotations: {
+                    'argocd.argoproj.io/refresh': 'normal'
+                }
+            }
+        };
+
+        try {
+            await execFileAsync(
+                'kubectl',
+                [
+                    'patch',
+                    `application.argoproj.io/${name}`,
+                    '-n',
+                    namespace,
+                    '--type=merge',
+                    `-p=${JSON.stringify(patch)}`,
+                    `--kubeconfig=${this.kubeconfigPath}`,
+                    `--context=${context}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+                    env: { ...process.env }
+                }
+            );
+
+            getOutputChannel().appendLine(
+                `[INFO] Successfully triggered sync for application ${name} in namespace ${namespace} in context ${context}`
+            );
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, context);
+            const errorDetails = kubectlError.getDetails().toLowerCase();
+
+            // Handle not found errors
+            if (
+                errorDetails.includes('not found') ||
+                errorDetails.includes('404')
+            ) {
+                throw new ArgoCDNotFoundError(
+                    `Application ${name} not found in namespace ${namespace}`
+                );
+            }
+
+            // Handle RBAC/permission errors
+            if (kubectlError.type === KubectlErrorType.PermissionDenied) {
+                const errorMessage = `Permission denied: Cannot sync application ${name} in namespace ${namespace}`;
+                getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+                throw new ArgoCDPermissionError(errorMessage);
+            }
+
+            // Handle network/connection errors
+            if (
+                kubectlError.type === KubectlErrorType.ConnectionFailed ||
+                kubectlError.type === KubectlErrorType.Timeout
+            ) {
+                const errorMessage = `Network/connectivity error when syncing application ${name} in namespace ${namespace} for context ${context}: ${kubectlError.getDetails()}`;
+                getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
+
+            // Unknown error - log and throw
+            const errorMessage = `Error syncing application ${name} in namespace ${namespace} for context ${context}: ${kubectlError.getDetails()}`;
+            getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
+    }
+
+    /**
+     * Triggers a refresh operation for an ArgoCD application.
+     * 
+     * Refresh uses the same annotation as sync. ArgoCD controller determines
+     * whether sync is needed based on current state.
+     * 
+     * @param name Application name
+     * @param namespace Application namespace
+     * @param context Name of the Kubernetes context
+     * @throws ArgoCDNotFoundError if application is not found
+     * @throws ArgoCDPermissionError if RBAC permission denied
+     * @throws Error for other failures
+     */
+    async refreshApplication(
+        name: string,
+        namespace: string,
+        context: string
+    ): Promise<void> {
+        // Same as sync - ArgoCD determines operation type
+        return this.syncApplication(name, namespace, context);
+    }
+
+    /**
+     * Triggers a hard refresh operation for an ArgoCD application.
+     * 
+     * Hard refresh clears the cache before comparing Git vs cluster state.
+     * Patches the Application CRD with a hard refresh annotation.
+     * 
+     * @param name Application name
+     * @param namespace Application namespace
+     * @param context Name of the Kubernetes context
+     * @throws ArgoCDNotFoundError if application is not found
+     * @throws ArgoCDPermissionError if RBAC permission denied
+     * @throws Error for other failures
+     */
+    async hardRefreshApplication(
+        name: string,
+        namespace: string,
+        context: string
+    ): Promise<void> {
+        const patch = {
+            metadata: {
+                annotations: {
+                    'argocd.argoproj.io/refresh': 'hard'
+                }
+            }
+        };
+
+        try {
+            await execFileAsync(
+                'kubectl',
+                [
+                    'patch',
+                    `application.argoproj.io/${name}`,
+                    '-n',
+                    namespace,
+                    '--type=merge',
+                    `-p=${JSON.stringify(patch)}`,
+                    `--kubeconfig=${this.kubeconfigPath}`,
+                    `--context=${context}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+                    env: { ...process.env }
+                }
+            );
+
+            getOutputChannel().appendLine(
+                `[INFO] Successfully triggered hard refresh for application ${name} in namespace ${namespace} in context ${context}`
+            );
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, context);
+            const errorDetails = kubectlError.getDetails().toLowerCase();
+
+            // Handle not found errors
+            if (
+                errorDetails.includes('not found') ||
+                errorDetails.includes('404')
+            ) {
+                throw new ArgoCDNotFoundError(
+                    `Application ${name} not found in namespace ${namespace}`
+                );
+            }
+
+            // Handle RBAC/permission errors
+            if (kubectlError.type === KubectlErrorType.PermissionDenied) {
+                const errorMessage = `Permission denied: Cannot hard refresh application ${name} in namespace ${namespace}`;
+                getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+                throw new ArgoCDPermissionError(errorMessage);
+            }
+
+            // Handle network/connection errors
+            if (
+                kubectlError.type === KubectlErrorType.ConnectionFailed ||
+                kubectlError.type === KubectlErrorType.Timeout
+            ) {
+                const errorMessage = `Network/connectivity error when hard refreshing application ${name} in namespace ${namespace} for context ${context}: ${kubectlError.getDetails()}`;
+                getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
+
+            // Unknown error - log and throw
+            const errorMessage = `Error hard refreshing application ${name} in namespace ${namespace} for context ${context}: ${kubectlError.getDetails()}`;
+            getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
+    }
+
+    /**
+     * Tracks the progress of an ArgoCD operation by polling application status.
+     * 
+     * Polls the application's operationState every 2 seconds until the operation
+     * completes (Succeeded, Failed, or Error) or times out after 5 minutes.
+     * 
+     * @param name Application name
+     * @param namespace Application namespace
+     * @param context Name of the Kubernetes context
+     * @param timeoutSeconds Timeout in seconds (default: 300 seconds / 5 minutes)
+     * @returns Promise resolving to operation result
+     * @throws Error if operation times out or fails to track
+     */
+    async trackOperation(
+        name: string,
+        namespace: string,
+        context: string,
+        timeoutSeconds: number = OPERATION_TIMEOUT
+    ): Promise<OperationResult> {
+        const startTime = Date.now();
+        const timeoutMs = timeoutSeconds * 1000;
+        let operationComplete = false;
+
+        getOutputChannel().appendLine(
+            `[INFO] Starting operation tracking for application ${name} in namespace ${namespace} in context ${context}`
+        );
+
+        while (!operationComplete) {
+            // Check timeout
+            const elapsedMs = Date.now() - startTime;
+            if (elapsedMs >= timeoutMs) {
+                const errorMessage = `Operation tracking timed out after ${timeoutSeconds} seconds for application ${name} in namespace ${namespace}`;
+                getOutputChannel().appendLine(`[ERROR] ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
+
+            try {
+                // Get application status
+                const app = await this.getApplication(name, namespace, context);
+
+                // Check operation state
+                if (app.lastOperation) {
+                    const phase = app.lastOperation.phase;
+
+                    if (phase === 'Succeeded') {
+                        const message = app.lastOperation.message || 'Operation completed successfully';
+                        getOutputChannel().appendLine(
+                            `[INFO] Operation succeeded for application ${name} in namespace ${namespace}: ${message}`
+                        );
+                        operationComplete = true;
+                        return {
+                            success: true,
+                            message
+                        };
+                    }
+
+                    if (phase === 'Failed' || phase === 'Error') {
+                        const message = app.lastOperation.message || 'Operation failed';
+                        getOutputChannel().appendLine(
+                            `[ERROR] Operation failed for application ${name} in namespace ${namespace}: ${message}`
+                        );
+                        operationComplete = true;
+                        return {
+                            success: false,
+                            message
+                        };
+                    }
+
+                    // Operation still running or terminating - continue polling
+                    if (phase === 'Running' || phase === 'Terminating') {
+                        getOutputChannel().appendLine(
+                            `[INFO] Operation in progress for application ${name} in namespace ${namespace}: phase=${phase}`
+                        );
+                    }
+                } else {
+                    // No operation state yet - operation may not have started
+                    getOutputChannel().appendLine(
+                        `[INFO] No operation state found for application ${name} in namespace ${namespace}, continuing to poll`
+                    );
+                }
+
+                // Wait before polling again
+                await new Promise(resolve => setTimeout(resolve, OPERATION_POLL_INTERVAL));
+            } catch (error: unknown) {
+                // Handle errors from getApplication
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                
+                // If it's a not found error, the application may have been deleted
+                if (error instanceof ArgoCDNotFoundError) {
+                    const errorMsg = `Application ${name} not found during operation tracking in namespace ${namespace}`;
+                    getOutputChannel().appendLine(`[ERROR] ${errorMsg}`);
+                    throw new Error(errorMsg);
+                }
+
+                // For other errors, log and continue polling (may be transient)
+                getOutputChannel().appendLine(
+                    `[WARNING] Error polling application status during operation tracking: ${errorMessage}, continuing to poll`
+                );
+                
+                // Wait before retrying
+                await new Promise(resolve => setTimeout(resolve, OPERATION_POLL_INTERVAL));
+            }
+        }
+
+        // This should never be reached, but TypeScript requires a return
+        throw new Error('Operation tracking ended unexpectedly');
     }
 
     /**
