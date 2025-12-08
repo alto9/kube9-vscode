@@ -116,18 +116,16 @@ export async function applyRestartAnnotation(
     // Create annotation key
     const annotationKey = 'kubectl.kubernetes.io/restartedAt';
     
-    // Escape forward slash for JSON Patch path (RFC 6901: / becomes ~1)
-    const escapedKey = annotationKey.replace('/', '~1');
-    
     // Get kubectl resource name
     const resourceName = getKubectlResourceName(kind);
     
     // Build base kubectl patch command arguments
+    // Use strategic merge patch which handles nested objects automatically
     const baseArgs = [
         'patch',
         resourceName,
         name,
-        '--type=json',
+        '--type=merge',
         `--kubeconfig=${kubeconfigPath}`,
         `--context=${contextName}`
     ];
@@ -138,18 +136,23 @@ export async function applyRestartAnnotation(
     }
     
     try {
-        // First, try to add the restart annotation directly
-        const annotationPatch = [
-            {
-                op: 'add',
-                path: `/spec/template/metadata/annotations/${escapedKey}`,
-                value: timestamp
+        // Use strategic merge patch - this automatically creates nested objects if they don't exist
+        // and merges the annotation into existing annotations
+        const mergePatch = {
+            spec: {
+                template: {
+                    metadata: {
+                        annotations: {
+                            [annotationKey]: timestamp
+                        }
+                    }
+                }
             }
-        ];
+        };
         
-        const annotationArgs = [...baseArgs, `-p=${JSON.stringify(annotationPatch)}`];
+        const patchArgs = [...baseArgs, `-p=${JSON.stringify(mergePatch)}`];
         
-        await execFileAsync('kubectl', annotationArgs, {
+        await execFileAsync('kubectl', patchArgs, {
             timeout: KUBECTL_TIMEOUT_MS,
             maxBuffer: 10 * 1024 * 1024, // 10MB buffer
             env: { ...process.env }
@@ -159,64 +162,6 @@ export async function applyRestartAnnotation(
     } catch (error: unknown) {
         // Convert execution error to structured KubectlError
         const kubectlError = KubectlError.fromExecError(error, contextName);
-        const errorDetails = kubectlError.getDetails().toLowerCase();
-        
-        // Check if the error is due to missing annotations object
-        // kubectl returns errors like "path does not exist" or "unable to find" when annotations don't exist
-        const isAnnotationsMissing = 
-            errorDetails.includes('path does not exist') ||
-            errorDetails.includes('unable to find') ||
-            errorDetails.includes('annotations') && (
-                errorDetails.includes('not found') ||
-                errorDetails.includes('does not exist')
-            );
-        
-        if (isAnnotationsMissing) {
-            // Try to create the annotations object first, then add the annotation
-            try {
-                // Create empty annotations object
-                const createAnnotationsPatch = [
-                    {
-                        op: 'add',
-                        path: '/spec/template/metadata/annotations',
-                        value: {}
-                    }
-                ];
-                
-                const createAnnotationsArgs = [...baseArgs, `-p=${JSON.stringify(createAnnotationsPatch)}`];
-                
-                await execFileAsync('kubectl', createAnnotationsArgs, {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-                    env: { ...process.env }
-                });
-                
-                // Now add the restart annotation
-                const annotationPatch = [
-                    {
-                        op: 'add',
-                        path: `/spec/template/metadata/annotations/${escapedKey}`,
-                        value: timestamp
-                    }
-                ];
-                
-                const annotationArgs = [...baseArgs, `-p=${JSON.stringify(annotationPatch)}`];
-                
-                await execFileAsync('kubectl', annotationArgs, {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-                    env: { ...process.env }
-                });
-                
-                console.log(`Successfully created annotations object and applied restart annotation to ${kind}/${name}`);
-                return;
-            } catch (createError: unknown) {
-                // If creating annotations also fails, log and throw the original error
-                const createKubectlError = KubectlError.fromExecError(createError, contextName);
-                console.error(`Failed to create annotations object for ${kind}/${name}: ${createKubectlError.getDetails()}`);
-                // Fall through to throw the original error
-            }
-        }
         
         // Log detailed error for debugging
         console.error(`Failed to apply restart annotation to ${kind}/${name}`, {
