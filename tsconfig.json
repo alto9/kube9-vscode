@@ -22,7 +22,8 @@
   "exclude": [
     "node_modules",
     "out",
-    ".vscode-test"
+    ".vscode-test",
+    "src/webview/argocd-application"
   ]
 }
 

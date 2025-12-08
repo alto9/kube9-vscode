@@ -3,7 +3,7 @@ story_id: create-webview-react-app
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-application-webview]
 spec_id: [argocd-webview-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -39,13 +39,13 @@ The webview needs a React application with Overview and Drift Details tabs. This
 
 ## Acceptance Criteria
 
-- [ ] React app renders in webview
-- [ ] Tab bar displays Overview and Drift Details tabs
-- [ ] Tab switching works correctly
-- [ ] Loading state displays while fetching data
-- [ ] Error state displays on fetch failure
-- [ ] VS Code API is acquired and messages received
-- [ ] Selected tab persists across webview hide/show
+- [x] React app renders in webview
+- [x] Tab bar displays Overview and Drift Details tabs
+- [x] Tab switching works correctly
+- [x] Loading state displays while fetching data
+- [x] Error state displays on fetch failure
+- [x] VS Code API is acquired and messages received
+- [x] Selected tab persists across webview hide/show
 
 ## Dependencies
 

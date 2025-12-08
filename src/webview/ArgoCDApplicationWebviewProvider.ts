@@ -115,7 +115,8 @@ export class ArgoCDApplicationWebviewProvider {
 
         // Set the webview's HTML content
         panel.webview.html = ArgoCDApplicationWebviewProvider.getWebviewContent(
-            panel.webview
+            panel.webview,
+            extensionContext
         );
 
         // Load application data
@@ -150,24 +151,23 @@ export class ArgoCDApplicationWebviewProvider {
 
     /**
      * Generate the HTML content for the ArgoCD application webview.
-     * Includes placeholder for React app (to be added in story 011).
+     * Loads React bundle from media directory.
      * 
      * @param webview The webview instance
+     * @param extensionContext The extension context for resolving URIs
      * @returns HTML content string
      */
     private static getWebviewContent(
-        webview: vscode.Webview
+        webview: vscode.Webview,
+        extensionContext: vscode.ExtensionContext
     ): string {
         // Get the webview URI for CSP
         const cspSource = webview.cspSource;
 
-        // For future React bundle (story 011)
-        // const scriptUri = webview.asWebviewUri(
-        //     vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'main.js')
-        // );
-        // const styleUri = webview.asWebviewUri(
-        //     vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'main.css')
-        // );
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'main.js')
+        );
 
         return `<!DOCTYPE html>
 <html lang="en">
@@ -181,83 +181,17 @@ export class ArgoCDApplicationWebviewProvider {
             font-family: var(--vscode-font-family);
             color: var(--vscode-foreground);
             background-color: var(--vscode-editor-background);
-            padding: 20px;
+            padding: 0;
             margin: 0;
         }
-        h1 {
-            margin-top: 0;
-            font-size: 1.5em;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-            border-bottom: 2px solid var(--vscode-panel-border);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .loading {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--vscode-descriptionForeground);
-        }
-        .error {
-            padding: 20px;
-            background-color: var(--vscode-inputValidation-errorBackground);
-            border: 1px solid var(--vscode-inputValidation-errorBorder);
-            border-radius: 4px;
-            color: var(--vscode-errorForeground);
-            margin-bottom: 20px;
-        }
         #root {
-            min-height: 400px;
+            min-height: 100vh;
         }
     </style>
 </head>
 <body>
-    <h1>ArgoCD Application</h1>
-    <div id="root">
-        <div class="loading">Loading application data...</div>
-    </div>
-    <script>
-        const vscode = acquireVsCodeApi();
-        
-        // Listen for messages from extension
-        window.addEventListener('message', event => {
-            const message = event.data;
-            switch (message.type) {
-                case 'applicationData':
-                    // React app will handle this (story 011)
-                    console.log('Application data received:', message.data);
-                    const root = document.getElementById('root');
-                    if (root) {
-                        root.innerHTML = '<div class="loading">Application data loaded. React UI coming in story 011.</div>';
-                    }
-                    break;
-                case 'error':
-                    const errorRoot = document.getElementById('root');
-                    if (errorRoot) {
-                        errorRoot.innerHTML = '<div class="error">Error: ' + 
-                            escapeHtml(message.message || 'Unknown error') + 
-                            '</div>';
-                    }
-                    break;
-                case 'operationProgress':
-                    console.log('Operation progress:', message.phase, message.message);
-                    break;
-            }
-        });
-        
-        // Notify extension that webview is ready
-        vscode.postMessage({ type: 'ready' });
-        
-        // Helper function for HTML escaping
-        function escapeHtml(unsafe) {
-            return unsafe
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
-    </script>
+    <div id="root"></div>
+    <script src="${scriptUri}"></script>
 </body>
 </html>`;
     }
