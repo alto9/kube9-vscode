@@ -92,6 +92,15 @@ export class ArgoCDCategory {
                 
                 item.tooltip = tooltipLines.join('\n');
                 
+                // Set command for left-click activation to open webview
+                if (!item.command) {
+                    item.command = {
+                        command: 'kube9.argocd.viewDetails',
+                        title: 'View Details',
+                        arguments: [item]
+                    };
+                }
+                
                 return item;
             });
             

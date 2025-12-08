@@ -2,11 +2,12 @@ import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { ArgoCDService } from '../services/ArgoCDService';
 import { OperatorStatusClient } from '../services/OperatorStatusClient';
-import { getClusterTreeProvider } from '../extension';
+import { getClusterTreeProvider, getExtensionContext } from '../extension';
 import {
     ArgoCDNotFoundError,
     ArgoCDPermissionError
 } from '../types/argocd';
+import { ArgoCDApplicationWebviewProvider } from '../webview/ArgoCDApplicationWebviewProvider';
 
 /**
  * Gets an ArgoCDService instance for the current kubeconfig.
@@ -214,7 +215,7 @@ export async function hardRefreshApplicationCommand(treeItem: ClusterTreeItem): 
 
 /**
  * Command handler to view ArgoCD application details.
- * Placeholder implementation - webview provider will be implemented in a future story.
+ * Opens the webview provider to display application information.
  * 
  * @param treeItem The ArgoCD application tree item
  */
@@ -226,14 +227,34 @@ export async function viewDetailsCommand(treeItem: ClusterTreeItem): Promise<voi
             return;
         }
         
-        // Placeholder - webview provider not yet implemented
-        vscode.window.showInformationMessage(
-            `View details for application "${appInfo.name}" - Webview coming soon!`
+        const argoCDService = getArgoCDService();
+        if (!argoCDService) {
+            vscode.window.showErrorMessage('Unable to view details: Kubeconfig not available');
+            return;
+        }
+        
+        const treeProvider = getClusterTreeProvider();
+        const extensionContext = getExtensionContext();
+        
+        await ArgoCDApplicationWebviewProvider.showApplication(
+            extensionContext,
+            argoCDService,
+            treeProvider,
+            appInfo.name,
+            appInfo.namespace,
+            appInfo.context
         );
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Error viewing application details:', errorMessage);
-        vscode.window.showErrorMessage(`Failed to view application details: ${errorMessage}`);
+        
+        if (error instanceof ArgoCDNotFoundError) {
+            vscode.window.showErrorMessage(`Application not found: ${errorMessage}`);
+        } else if (error instanceof ArgoCDPermissionError) {
+            vscode.window.showErrorMessage(`Permission denied: ${errorMessage}`);
+        } else {
+            console.error('Error viewing application details:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to view application details: ${errorMessage}`);
+        }
     }
 }
 

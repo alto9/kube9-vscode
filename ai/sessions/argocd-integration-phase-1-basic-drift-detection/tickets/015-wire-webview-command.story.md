@@ -4,7 +4,7 @@ session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-application-webview]
 spec_id: [argocd-webview-spec]
 diagram_id: [argocd-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 15
 ---
@@ -36,12 +36,12 @@ When users click an application in the tree or select "View Details" from contex
 
 ## Acceptance Criteria
 
-- [ ] Clicking application in tree opens webview
-- [ ] "View Details" context menu opens webview
-- [ ] Correct application data is loaded
-- [ ] Webview title shows application name
-- [ ] Multiple applications can have webviews open
-- [ ] Clicking same application reuses existing webview
+- [x] Clicking application in tree opens webview
+- [x] "View Details" context menu opens webview
+- [x] Correct application data is loaded
+- [x] Webview title shows application name
+- [x] Multiple applications can have webviews open
+- [x] Clicking same application reuses existing webview
 
 ## Dependencies
 
