@@ -3,7 +3,7 @@ import { ClusterTreeItem } from '../ClusterTreeItem';
 import { TreeItemData } from '../TreeItemTypes';
 import { KubectlError } from '../../kubernetes/KubectlError';
 import { ArgoCDService } from '../../services/ArgoCDService';
-import { SyncStatusCode, HealthStatusCode } from '../../types/argocd';
+import { getApplicationIcon } from '../../utils/argoCDIcons';
 
 /**
  * Type for error handler callback.
@@ -74,7 +74,7 @@ export class ArgoCDCategory {
                 }
                 
                 // Set icon based on sync and health status
-                item.iconPath = this.getStatusIcon(app.syncStatus.status, app.healthStatus.status);
+                item.iconPath = getApplicationIcon(app.syncStatus.status, app.healthStatus.status);
                 
                 // Set tooltip with detailed information
                 const syncStatusText = app.syncStatus.status;
@@ -114,63 +114,6 @@ export class ArgoCDCategory {
             // In a real scenario, we might want to log this differently
             
             return [];
-        }
-    }
-    
-    /**
-     * Gets the appropriate icon for an application based on sync and health status.
-     * Sync status takes priority, with health status as secondary indicator.
-     * 
-     * @param syncStatus Sync status code
-     * @param healthStatus Health status code
-     * @returns ThemeIcon with appropriate icon and color
-     */
-    private static getStatusIcon(
-        syncStatus: SyncStatusCode,
-        healthStatus: HealthStatusCode
-    ): vscode.ThemeIcon {
-        // Primary indicator: Sync status
-        switch (syncStatus) {
-            case 'Synced':
-                // If synced, check health status for additional context
-                if (healthStatus === 'Degraded') {
-                    // Synced but degraded - show warning
-                    return new vscode.ThemeIcon(
-                        'warning',
-                        new vscode.ThemeColor('editorWarning.foreground')
-                    );
-                } else if (healthStatus === 'Healthy') {
-                    // Synced and healthy - show green check
-                    return new vscode.ThemeIcon(
-                        'check',
-                        new vscode.ThemeColor('testing.iconPassed')
-                    );
-                } else {
-                    // Synced but unknown health - show check
-                    return new vscode.ThemeIcon(
-                        'check',
-                        new vscode.ThemeColor('testing.iconPassed')
-                    );
-                }
-                
-            case 'OutOfSync':
-                // Out of sync - show yellow warning
-                return new vscode.ThemeIcon(
-                    'warning',
-                    new vscode.ThemeColor('editorWarning.foreground')
-                );
-                
-            case 'Unknown':
-            default:
-                // Unknown sync status - check health for context
-                if (healthStatus === 'Degraded' || healthStatus === 'Missing') {
-                    return new vscode.ThemeIcon(
-                        'error',
-                        new vscode.ThemeColor('testing.iconFailed')
-                    );
-                } else {
-                    return new vscode.ThemeIcon('question');
-                }
         }
     }
 }

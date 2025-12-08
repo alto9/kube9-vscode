@@ -3,7 +3,7 @@ story_id: add-status-icon-mapping
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-tree-view]
 spec_id: [argocd-status-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -38,12 +38,12 @@ Different combinations of sync/health status need different icons in tree view. 
 
 ## Acceptance Criteria
 
-- [ ] Function returns correct icon for each status combination
-- [ ] Icons use VS Code ThemeIcon identifiers
-- [ ] All status combinations from spec are handled
-- [ ] Default case returns question icon
-- [ ] Function is exported for use in tree view
-- [ ] Icons visually distinguish healthy from problematic states
+- [x] Function returns correct icon for each status combination
+- [x] Icons use VS Code ThemeIcon identifiers
+- [x] All status combinations from spec are handled
+- [x] Default case returns question icon
+- [x] Function is exported for use in tree view
+- [x] Icons visually distinguish healthy from problematic states
 
 ## Dependencies
 
