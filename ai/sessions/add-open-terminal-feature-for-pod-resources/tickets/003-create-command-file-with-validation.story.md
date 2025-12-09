@@ -3,7 +3,7 @@ story_id: 003-create-command-file-with-validation
 session_id: add-open-terminal-feature-for-pod-resources
 feature_id: [pod-terminal]
 spec_id: [pod-terminal-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -50,14 +50,14 @@ This story establishes the command file structure and implements the first criti
 
 ## Acceptance Criteria
 
-- [ ] File created at correct location
-- [ ] Main function signature matches: `export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<void>`
-- [ ] Validates tree item is a Pod resource
-- [ ] Extracts pod name, namespace, context correctly
-- [ ] Gets kubeconfig path from tree provider
-- [ ] Shows appropriate error messages for validation failures
-- [ ] Follows error handling patterns from existing commands (scaleWorkload, restartWorkload)
-- [ ] TypeScript compiles without errors
+- [x] File created at correct location
+- [x] Main function signature matches: `export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<void>`
+- [x] Validates tree item is a Pod resource
+- [x] Extracts pod name, namespace, context correctly
+- [x] Gets kubeconfig path from tree provider
+- [x] Shows appropriate error messages for validation failures
+- [x] Follows error handling patterns from existing commands (scaleWorkload, restartWorkload)
+- [x] TypeScript compiles without errors
 
 ## Dependencies
 
