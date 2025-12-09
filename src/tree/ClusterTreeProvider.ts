@@ -660,16 +660,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             this.forceOperatorRefreshFlag = false;
         }
 
-        // Add authentication status message at the bottom of the cluster list
-        const authStatusItem = new ClusterTreeItem(
-            'Authentication Status',
-            'info',
-            vscode.TreeItemCollapsibleState.None
-        );
-        authStatusItem.iconPath = new vscode.ThemeIcon('info');
-        authStatusItem.tooltip = 'Authentication status information';
-        
-        return [...clusterItems, authStatusItem];
+        return clusterItems;
     }
 
     /**
