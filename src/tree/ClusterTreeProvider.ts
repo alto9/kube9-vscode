@@ -660,7 +660,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             this.forceOperatorRefreshFlag = false;
         }
 
-        // Add authentication status message at the bottom of the cluster list
         return clusterItems;
     }
 

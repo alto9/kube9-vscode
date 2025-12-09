@@ -119,6 +119,11 @@
         "command": "kube9.applyYAML",
         "title": "Apply YAML",
         "category": "kube9"
+      },
+      {
+        "command": "kube9.restartWorkload",
+        "title": "Restart",
+        "category": "Kube9"
       }
     ],
     "menus": {
@@ -158,6 +163,11 @@
         {
           "command": "kube9.scaleWorkload",
           "when": "view == kube9ClusterView && (viewItem == resource:Deployment || viewItem == resource:StatefulSet || viewItem == resource:ReplicaSet)",
+          "group": "kube9@3"
+        },
+        {
+          "command": "kube9.restartWorkload",
+          "when": "view == kube9ClusterView && (viewItem == resource:Deployment || viewItem == resource:StatefulSet || viewItem == resource:DaemonSet)",
           "group": "kube9@3"
         },
         {
