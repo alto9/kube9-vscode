@@ -3,7 +3,7 @@ story_id: 001-register-open-terminal-command
 session_id: add-open-terminal-feature-for-pod-resources
 feature_id: [pod-terminal]
 spec_id: [pod-terminal-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 10
 ---
@@ -43,10 +43,10 @@ This is the first step in implementing the Pod Terminal feature. The command nee
 
 ## Acceptance Criteria
 
-- [ ] Command is defined in `contributes.commands` with title "Open Terminal"
-- [ ] Context menu entry is added for Pod resources only (`viewItem == resource:Pod`)
-- [ ] Menu item is positioned in the `kube9@2` group (after Describe, before other actions)
-- [ ] JSON syntax is valid (no syntax errors)
+- [x] Command is defined in `contributes.commands` with title "Open Terminal"
+- [x] Context menu entry is added for Pod resources only (`viewItem == resource:Pod`)
+- [x] Menu item is positioned in the `kube9@2` group (after Describe, before other actions)
+- [x] JSON syntax is valid (no syntax errors)
 
 ## Dependencies
 
