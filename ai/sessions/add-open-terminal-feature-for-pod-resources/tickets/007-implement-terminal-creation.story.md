@@ -3,7 +3,7 @@ story_id: 007-implement-terminal-creation
 session_id: add-open-terminal-feature-for-pod-resources
 feature_id: [pod-terminal]
 spec_id: [pod-terminal-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 15
 ---
@@ -46,13 +46,13 @@ This is the final core piece that actually creates the terminal window and execu
 
 ## Acceptance Criteria
 
-- [ ] Terminal is created with correct name
-- [ ] kubectl exec command is sent to terminal
-- [ ] Terminal is focused automatically (visible to user)
-- [ ] Terminal appears in VS Code terminal list
-- [ ] Terminal executes command immediately upon creation
-- [ ] Multiple terminals can be opened for same pod (independent sessions)
-- [ ] Feature works identically in Free and Pro tiers (no operator dependency)
+- [x] Terminal is created with correct name
+- [x] kubectl exec command is sent to terminal
+- [x] Terminal is focused automatically (visible to user)
+- [x] Terminal appears in VS Code terminal list
+- [x] Terminal executes command immediately upon creation
+- [x] Multiple terminals can be opened for same pod (independent sessions)
+- [x] Feature works identically in Free and Pro tiers (no operator dependency)
 
 ## Dependencies
 

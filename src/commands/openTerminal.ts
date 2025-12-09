@@ -252,12 +252,23 @@ export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<vo
         }
         
         // Build kubectl exec command and terminal name
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const kubectlCommand = buildKubectlExecCommand(podName, namespace, contextName, selectedContainer);
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const terminalName = buildTerminalName(podName, namespace, selectedContainer);
         
-        // Store command and name for terminal creation (next story)
+        // Create VS Code terminal with formatted name
+        // Terminal will execute kubectl exec command immediately
+        // User will see connection establishment
+        // Once connected, shell prompt will appear
+        // Terminal remains open even after exit for review
+        const terminal = vscode.window.createTerminal({
+            name: terminalName
+        });
+        
+        // Send the kubectl exec command to the terminal
+        terminal.sendText(kubectlCommand);
+        
+        // Focus the terminal so it's visible to the user
+        terminal.show();
         
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
