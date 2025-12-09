@@ -3,7 +3,7 @@ story_id: 009-add-unit-tests
 session_id: add-open-terminal-feature-for-pod-resources
 feature_id: [pod-terminal]
 spec_id: [pod-terminal-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 30
 ---
@@ -67,15 +67,15 @@ Unit tests ensure the command logic works correctly for all scenarios. Tests sho
 
 ## Acceptance Criteria
 
-- [ ] All validation scenarios tested
-- [ ] Pod status query scenarios tested
-- [ ] Container selection logic tested
-- [ ] Command building logic tested
-- [ ] Error handling scenarios tested
-- [ ] Tests use proper mocking (no real kubectl calls)
-- [ ] All tests pass
-- [ ] Test coverage >80% for openTerminal.ts
-- [ ] Follows existing test patterns and structure
+- [x] All validation scenarios tested
+- [x] Pod status query scenarios tested
+- [x] Container selection logic tested
+- [x] Command building logic tested
+- [x] Error handling scenarios tested
+- [x] Tests use proper mocking (no real kubectl calls)
+- [x] All tests pass
+- [x] Test coverage >80% for openTerminal.ts
+- [x] Follows existing test patterns and structure
 
 ## Dependencies
 
