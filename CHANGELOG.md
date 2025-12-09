@@ -1,3 +1,23 @@
+# [1.2.0](https://github.com/alto9/kube9-vscode/compare/v1.1.2...v1.2.0) (2025-12-09)
+
+
+### Bug Fixes
+
+* add comprehensive error handling for restart workload ([443c366](https://github.com/alto9/kube9-vscode/commit/443c3663c1bf920f1a6979ae20297800fb43e19e))
+* remove accidental commit ([521fa2c](https://github.com/alto9/kube9-vscode/commit/521fa2ca6d443a8b350fb4316d1779bd2925b314))
+* ui flicker issue ([3891fcf](https://github.com/alto9/kube9-vscode/commit/3891fcf17ad5b01455295f426313e7c3bbfd9940))
+* unit tests ([1bb4686](https://github.com/alto9/kube9-vscode/commit/1bb46864293694ef3c6362cac433d4043101a0d5))
+* use strategic merge patch for restart annotation ([49dfc9f](https://github.com/alto9/kube9-vscode/commit/49dfc9f648ee4335cd2b4688c5d85f7c80ffd5e9))
+
+
+### Features
+
+* add restart confirmation dialog with wait option ([13d0235](https://github.com/alto9/kube9-vscode/commit/13d02355f522f0ed708778721893069b73908e04))
+* add tree view and webview refresh after workload restart ([8086144](https://github.com/alto9/kube9-vscode/commit/80861446759578a435d7186b45de614da6e99fe4))
+* implement restart annotation logic for workloads ([5d644c6](https://github.com/alto9/kube9-vscode/commit/5d644c6e8e4c37adcc4c124fc8cdcfbf8118a233))
+* implement rollout watch functionality for workload restarts ([e1208dc](https://github.com/alto9/kube9-vscode/commit/e1208dccb970cec0d6114243c236c5635b2ff515))
+* register restart workload command ([c73fe4d](https://github.com/alto9/kube9-vscode/commit/c73fe4d9e4ba0c4d243bf00e23c2fd9d78734de3))
+
 ## [1.1.2](https://github.com/alto9/kube9-vscode/compare/v1.1.1...v1.1.2) (2025-12-05)
 
 
