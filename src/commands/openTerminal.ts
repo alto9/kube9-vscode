@@ -3,7 +3,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { getClusterTreeProvider } from '../extension';
-import { KubectlError } from '../kubernetes/KubectlError';
+import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -162,12 +162,61 @@ function buildTerminalName(
 }
 
 /**
+ * Formats error messages for terminal command failures with pod-specific context.
+ * Provides user-friendly, actionable error messages based on error type and details.
+ * 
+ * @param kubectlError - The structured kubectl error
+ * @param podName - The name of the pod
+ * @param namespace - The namespace containing the pod
+ * @returns User-friendly error message string
+ */
+function getTerminalErrorMessage(
+    kubectlError: KubectlError,
+    podName: string,
+    namespace: string
+): string {
+    const errorDetails = kubectlError.getDetails().toLowerCase();
+    
+    // Check for kubectl binary not found
+    if (kubectlError.type === KubectlErrorType.BinaryNotFound) {
+        return 'kubectl not found. Please install kubectl to use this feature.';
+    }
+    
+    // Check for pod not found errors (check error details for "not found" patterns)
+    if (
+        errorDetails.includes('notfound') ||
+        errorDetails.includes('not found') ||
+        errorDetails.includes('does not exist')
+    ) {
+        return `Pod '${podName}' not found in namespace '${namespace}'`;
+    }
+    
+    // Check for permission denied errors
+    if (kubectlError.type === KubectlErrorType.PermissionDenied) {
+        return 'Permission denied: Unable to exec into pod. Check your RBAC permissions for pod/exec resource.';
+    }
+    
+    // Check for connection/network errors
+    if (kubectlError.type === KubectlErrorType.ConnectionFailed) {
+        return `Failed to connect to pod: ${kubectlError.getDetails()}`;
+    }
+    
+    // Generic error catch-all
+    return `Failed to open terminal: ${kubectlError.getUserMessage()}`;
+}
+
+/**
  * Command handler to open a terminal for a Kubernetes Pod resource.
  * This is triggered from the tree view context menu.
  * 
  * @param treeItem The Pod tree item that was right-clicked
  */
 export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<void> {
+    // Declare variables outside try block for error handling access
+    let podName = 'unknown';
+    let namespace = 'default';
+    let contextName = 'unknown';
+    
     try {
         // 1. Validate tree item
         if (!treeItem || !treeItem.contextValue?.startsWith('resource:')) {
@@ -188,8 +237,8 @@ export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<vo
         }
         
         // 4. Extract pod metadata
-        const podName = treeItem.resourceData.resourceName || (typeof treeItem.label === 'string' ? treeItem.label : treeItem.label?.toString() || '');
-        const namespace = treeItem.resourceData.namespace || 'default';
+        podName = treeItem.resourceData.resourceName || (typeof treeItem.label === 'string' ? treeItem.label : treeItem.label?.toString() || '');
+        namespace = treeItem.resourceData.namespace || 'default';
         
         // Get kubeconfig path from tree provider
         const treeProvider = getClusterTreeProvider();
@@ -200,7 +249,7 @@ export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<vo
         }
         
         // Get context name from resourceData
-        const contextName = treeItem.resourceData.context.name;
+        contextName = treeItem.resourceData.context.name;
         
         if (!podName || !contextName) {
             vscode.window.showErrorMessage('Failed to open terminal: Missing resource information');
@@ -221,10 +270,15 @@ export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<vo
             podStatus = await queryPodStatus(podName, namespace, contextName, kubeconfigPath);
         } catch (error) {
             const kubectlError = error instanceof KubectlError ? error : KubectlError.fromExecError(error, contextName);
-            console.error('Error querying pod status:', kubectlError.getDetails());
-            vscode.window.showErrorMessage(
-                `Failed to open terminal: ${kubectlError.getUserMessage()}`
-            );
+            const errorMessage = getTerminalErrorMessage(kubectlError, podName, namespace);
+            console.error('Error querying pod status:', {
+                errorType: kubectlError.type,
+                podName,
+                namespace,
+                contextName,
+                details: kubectlError.getDetails()
+            });
+            vscode.window.showErrorMessage(errorMessage);
             return;
         }
         
@@ -271,11 +325,21 @@ export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<vo
         terminal.show();
         
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Error in openTerminalCommand:', errorMessage);
-        vscode.window.showErrorMessage(
-            `Failed to open terminal: ${errorMessage}`
-        );
+        // Convert error to KubectlError if not already
+        const kubectlError = error instanceof KubectlError 
+            ? error 
+            : KubectlError.fromExecError(error, contextName);
+        
+        const errorMessage = getTerminalErrorMessage(kubectlError, podName, namespace);
+        console.error('Error in openTerminalCommand:', {
+            errorType: kubectlError.type,
+            podName,
+            namespace,
+            contextName,
+            details: kubectlError.getDetails(),
+            error: error instanceof Error ? error.message : String(error)
+        });
+        vscode.window.showErrorMessage(errorMessage);
     }
 }
 

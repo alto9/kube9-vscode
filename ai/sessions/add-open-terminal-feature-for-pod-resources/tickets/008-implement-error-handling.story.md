@@ -3,7 +3,7 @@ story_id: 008-implement-error-handling
 session_id: add-open-terminal-feature-for-pod-resources
 feature_id: [pod-terminal]
 spec_id: [pod-terminal-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
