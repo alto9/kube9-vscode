@@ -3,7 +3,7 @@ story_id: 002-register-command-handler-in-extension
 session_id: add-open-terminal-feature-for-pod-resources
 feature_id: [pod-terminal]
 spec_id: [pod-terminal-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 10
 ---
@@ -36,14 +36,15 @@ Note: The `openTerminalCommand` function doesn't exist yet - it will be created 
 
 ## Files Affected
 
+- `src/commands/openTerminal.ts` - Created stub command file with function signature
 - `src/extension.ts` - Add import and command registration
 
 ## Acceptance Criteria
 
-- [ ] Import statement added for `openTerminalCommand`
-- [ ] Command registered in `registerCommands()` function
-- [ ] Command is added to `context.subscriptions` for proper cleanup
-- [ ] Code follows existing patterns from other commands (scale, restart, delete)
+- [x] Import statement added for `openTerminalCommand`
+- [x] Command registered in `registerCommands()` function
+- [x] Command is added to `context.subscriptions` for proper cleanup
+- [x] Code follows existing patterns from other commands (scale, restart, delete)
 
 ## Dependencies
 
