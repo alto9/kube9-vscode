@@ -80,6 +80,28 @@ async function queryPodStatus(
 }
 
 /**
+ * Prompts user to select a container from a list of container names.
+ * For single-container pods, returns the container name immediately without prompting.
+ * 
+ * @param containerNames - Array of container names from the pod
+ * @returns Selected container name, or undefined if user cancelled
+ */
+async function selectContainer(containerNames: string[]): Promise<string | undefined> {
+    // Single container: return immediately without prompt
+    if (containerNames.length === 1) {
+        return containerNames[0];
+    }
+    
+    // Multiple containers: show quick pick dialog
+    const selected = await vscode.window.showQuickPick(containerNames, {
+        title: 'Select Container',
+        placeHolder: 'Choose a container to open terminal in'
+    });
+    
+    return selected; // Returns undefined if user cancelled
+}
+
+/**
  * Command handler to open a terminal for a Kubernetes Pod resource.
  * This is triggered from the tree view context menu.
  * 
@@ -162,8 +184,15 @@ export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<vo
             return;
         }
         
-        // Store container list for next step (container selection)
-        // TODO: Select container if multiple, create terminal
+        // Select container (prompts user if multiple containers)
+        const selectedContainer = await selectContainer(containerNames);
+        if (selectedContainer === undefined) {
+            // User cancelled selection
+            return;
+        }
+        
+        // Store selected container for terminal creation (next story)
+        // TODO: Create terminal with selectedContainer
         
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

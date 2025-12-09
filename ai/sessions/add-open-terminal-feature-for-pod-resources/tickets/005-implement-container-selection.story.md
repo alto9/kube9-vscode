@@ -3,7 +3,7 @@ story_id: 005-implement-container-selection
 session_id: add-open-terminal-feature-for-pod-resources
 feature_id: [pod-terminal]
 spec_id: [pod-terminal-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -42,13 +42,13 @@ When a pod has multiple containers, we need to prompt the user to select which c
 
 ## Acceptance Criteria
 
-- [ ] Single-container pods automatically use the only container (no prompt shown)
-- [ ] Multi-container pods show quick pick dialog with container names
-- [ ] Dialog title is "Select Container"
-- [ ] Placeholder text provides clear instruction
-- [ ] User can cancel selection (returns undefined)
-- [ ] If cancelled, no terminal is opened
-- [ ] Handles empty container list gracefully
+- [x] Single-container pods automatically use the only container (no prompt shown)
+- [x] Multi-container pods show quick pick dialog with container names
+- [x] Dialog title is "Select Container"
+- [x] Placeholder text provides clear instruction
+- [x] User can cancel selection (returns undefined)
+- [x] If cancelled, no terminal is opened
+- [x] Handles empty container list gracefully
 
 ## Dependencies
 
