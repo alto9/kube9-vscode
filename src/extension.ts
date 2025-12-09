@@ -13,6 +13,7 @@ import { describeRawCommand } from './commands/describeRaw';
 import { DescribeRawFileSystemProvider } from './commands/DescribeRawFileSystemProvider';
 import { scaleWorkloadCommand } from './commands/scaleWorkload';
 import { showRestartConfirmationDialog, applyRestartAnnotation, watchRolloutStatus, RolloutTimeoutError } from './commands/restartWorkload';
+import { openTerminalCommand } from './commands/openTerminal';
 import { KubectlError, KubectlErrorType } from './kubernetes/KubectlError';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
@@ -862,6 +863,14 @@ function registerCommands(): void {
     );
     context.subscriptions.push(restartWorkloadCmd);
     disposables.push(restartWorkloadCmd);
+    
+    // Register open terminal command
+    const openTerminalCmd = vscode.commands.registerCommand(
+        'kube9.openTerminal',
+        openTerminalCommand
+    );
+    context.subscriptions.push(openTerminalCmd);
+    disposables.push(openTerminalCmd);
 }
 
 /**
