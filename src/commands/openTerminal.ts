@@ -102,6 +102,66 @@ async function selectContainer(containerNames: string[]): Promise<string | undef
 }
 
 /**
+ * Builds the kubectl exec command string for opening an interactive terminal in a pod.
+ * 
+ * @param podName - The name of the pod to exec into
+ * @param namespace - The namespace containing the pod
+ * @param context - The kubectl context name
+ * @param containerName - Optional container name for multi-container pods
+ * @returns Complete kubectl exec command string ready for terminal execution
+ */
+function buildKubectlExecCommand(
+    podName: string,
+    namespace: string,
+    context: string,
+    containerName?: string
+): string {
+    // Build command components
+    const parts = [
+        'kubectl',
+        'exec',
+        '-it',
+        podName,
+        `-n ${namespace}`,
+        `--context ${context}`
+    ];
+    
+    // Add container flag only if container name is provided
+    if (containerName) {
+        parts.push(`-c ${containerName}`);
+    }
+    
+    // Add shell command
+    parts.push('-- /bin/sh');
+    
+    // Join all parts with spaces
+    return parts.join(' ');
+}
+
+/**
+ * Builds the terminal name string for VS Code terminal display.
+ * 
+ * @param podName - The name of the pod
+ * @param namespace - The namespace containing the pod
+ * @param containerName - Optional container name for multi-container pods
+ * @returns Terminal name string formatted as "Kube9: namespace/pod-name" or "Kube9: namespace/pod-name (container)"
+ */
+function buildTerminalName(
+    podName: string,
+    namespace: string,
+    containerName?: string
+): string {
+    const baseName = `Kube9: ${namespace}/${podName}`;
+    
+    // Add container name for multi-container pods
+    if (containerName) {
+        return `${baseName} (${containerName})`;
+    }
+    
+    return baseName;
+}
+
+/**
  * Command handler to open a terminal for a Kubernetes Pod resource.
  * This is triggered from the tree view context menu.
  * 
@@ -191,8 +251,13 @@ export async function openTerminalCommand(treeItem: ClusterTreeItem): Promise<vo
             return;
         }
         
-        // Store selected container for terminal creation (next story)
-        // TODO: Create terminal with selectedContainer
+        // Build kubectl exec command and terminal name
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const kubectlCommand = buildKubectlExecCommand(podName, namespace, contextName, selectedContainer);
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const terminalName = buildTerminalName(podName, namespace, selectedContainer);
+        
+        // Store command and name for terminal creation (next story)
         
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

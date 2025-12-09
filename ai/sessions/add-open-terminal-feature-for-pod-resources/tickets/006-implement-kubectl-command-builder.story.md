@@ -3,7 +3,7 @@ story_id: 006-implement-kubectl-command-builder
 session_id: add-open-terminal-feature-for-pod-resources
 feature_id: [pod-terminal]
 spec_id: [pod-terminal-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 15
 ---
@@ -45,14 +45,14 @@ We need to build the kubectl exec command with all the proper flags for interact
 
 ## Acceptance Criteria
 
-- [ ] Command includes `-it` flags for interactive TTY
-- [ ] Command includes `-n` flag with namespace
-- [ ] Command includes `--context` flag with context name
-- [ ] Command includes `-c` flag ONLY for multi-container pods
-- [ ] Command ends with `-- /bin/sh` as the shell
-- [ ] Terminal name format matches: `Kube9: namespace/pod-name` or `Kube9: namespace/pod-name (container)`
-- [ ] Terminal name uses capital K in "Kube9"
-- [ ] Command string is properly formatted for execution
+- [x] Command includes `-it` flags for interactive TTY
+- [x] Command includes `-n` flag with namespace
+- [x] Command includes `--context` flag with context name
+- [x] Command includes `-c` flag ONLY for multi-container pods
+- [x] Command ends with `-- /bin/sh` as the shell
+- [x] Terminal name format matches: `Kube9: namespace/pod-name` or `Kube9: namespace/pod-name (container)`
+- [x] Terminal name uses capital K in "Kube9"
+- [x] Command string is properly formatted for execution
 
 ## Dependencies
 
