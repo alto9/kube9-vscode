@@ -1,3 +1,20 @@
+# [1.3.0](https://github.com/alto9/kube9-vscode/compare/v1.2.0...v1.3.0) (2025-12-09)
+
+
+### Bug Fixes
+
+* add comprehensive error handling for open terminal command ([4ae3538](https://github.com/alto9/kube9-vscode/commit/4ae35389a69d142a8f4fa8315f5db09807998585))
+
+
+### Features
+
+* add container selection for multi-container pods ([4671d55](https://github.com/alto9/kube9-vscode/commit/4671d5527206cfacd7fc84d82c543f5e7f06b77c))
+* add pod terminal command validation ([9769437](https://github.com/alto9/kube9-vscode/commit/97694375940dede1bf01547a501e4315f2355f48))
+* implement pod status query for terminal command ([e46d868](https://github.com/alto9/kube9-vscode/commit/e46d86812aa2e2dc1bcdcf8aebeb19a42a49706f))
+* implement terminal creation for pod terminal feature ([9633de5](https://github.com/alto9/kube9-vscode/commit/9633de52ccae1229ec4497c9c2f49869c8155abd))
+* register open terminal command for Pod resources ([f2cefc6](https://github.com/alto9/kube9-vscode/commit/f2cefc654d7e1badb03cbd99d1dc7fde46798713)), closes [#001-register-open-terminal-command](https://github.com/alto9/kube9-vscode/issues/001-register-open-terminal-command)
+* register open terminal command handler in extension ([ec04280](https://github.com/alto9/kube9-vscode/commit/ec042801e0f13faa35b0be683b58b3e8855461fc))
+
 # [1.2.0](https://github.com/alto9/kube9-vscode/compare/v1.1.2...v1.2.0) (2025-12-09)
 
 
