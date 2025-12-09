@@ -1,7 +1,7 @@
 ---
 session_id: add-quick-scale-for-deploymentsstatefulsetsreplica
 start_time: '2025-11-30T17:00:13.338Z'
-status: development
+status: completed
 problem_statement: Add quick scale for Deployments/StatefulSets/ReplicaSets
 changed_files:
   - path: ai/features/cluster/workload-scaling.feature.md
