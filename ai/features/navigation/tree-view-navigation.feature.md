@@ -286,10 +286,14 @@ Scenario: Setting active namespace from context menu
   Given a user has expanded a cluster showing namespaces
   When they right-click on a namespace in the tree view
   And select "Set as Active Namespace" from the context menu
-  Then the extension should execute kubectl config set-context --current --namespace=<namespace>
+  Then the extension should execute kubectl config set-context <context-name> --namespace=<namespace>
   And the namespace should show an active indicator (checkmark icon)
   And the status bar should display the active namespace
   And subsequent kubectl commands should use this namespace by default
+  
+  Note: The extension targets the specific context associated with the cluster,
+  not necessarily the current context. See context-aware-namespace-management.feature.md
+  for multi-context scenarios.
 
 Scenario: Visual indication of active namespace in tree
   Given a user has set a namespace as active
@@ -302,10 +306,14 @@ Scenario: Clearing active namespace selection
   Given a user has set a namespace as active
   When they right-click on the active namespace
   And select "Clear Active Namespace" from the context menu
-  Then the extension should execute kubectl config set-context --current --namespace=''
+  Then the extension should execute kubectl config set-context <context-name> --namespace=''
   And the checkmark indicator should be removed
   And the status bar should show "Namespace: All"
   And subsequent kubectl commands should show all namespaces
+  
+  Note: The extension targets the specific context associated with the cluster,
+  not necessarily the current context. See context-aware-namespace-management.feature.md
+  for multi-context scenarios.
 
 Scenario: Setting namespace from "All Namespaces" option
   Given a user has "All Namespaces" set as active
@@ -373,11 +381,14 @@ Scenario: Setting namespace as default from webview button
   Given a user has opened a webview for the "staging" namespace
   And the "Set as Default Namespace" button is enabled
   When they click the "Set as Default Namespace" button
-  Then the extension should execute kubectl config set-context --current --namespace=staging
+  Then the extension should execute kubectl config set-context <context-name> --namespace=staging
   And the button should change to disabled state with checkmark icon
   And the button text should change to "Default Namespace"
   And the tree view should update to show checkmark on "staging" namespace
   And the status bar should display "Namespace: staging"
+  
+  Note: The extension targets the context associated with the namespace's cluster.
+  See context-aware-namespace-management.feature.md for multi-context scenarios.
 
 Scenario: Button state updates when context changes externally
   Given a user has a webview open for "production" namespace
