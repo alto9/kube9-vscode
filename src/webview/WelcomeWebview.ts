@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { GlobalState } from '../state/GlobalState';
+import { IconProvider } from './IconProvider';
 
 /**
  * WelcomeWebview displays a welcome screen on first activation.
@@ -59,10 +60,6 @@ export class WelcomeWebview {
                         panel.dispose();
                         break;
                     }
-                    case 'openPortal':
-                        // Open the kube9 website in external browser
-                        vscode.env.openExternal(vscode.Uri.parse('https://kube9.io'));
-                        break;
 
                     case 'openDocs':
                         // Open the kube9 documentation in external browser
@@ -106,17 +103,26 @@ export class WelcomeWebview {
      */
     private static getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionContext): string {
         try {
+            // Create icon provider
+            const iconProvider = new IconProvider(context);
+            const activityBarIcon = iconProvider.getKube9ActivityBarIcon();
+            
             // Get the path to the HTML file
             const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'welcome.html');
             
             // Read the HTML file
             let htmlContent = fs.readFileSync(htmlPath, 'utf8');
             
-            // Replace CSP source placeholders if needed
-            // The HTML file has 'unsafe-inline' but we could make it more secure with nonces in the future
+            // Replace icon placeholder
+            const iconHtml = activityBarIcon 
+                ? `<img src="${activityBarIcon}" alt="Kube9 Icon" class="inline-icon" />`
+                : '';
+            htmlContent = htmlContent.replace('{{ACTIVITY_BAR_ICON}}', iconHtml);
+            
+            // Replace CSP source placeholders to allow data URIs for images
             htmlContent = htmlContent.replace(
                 /content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';"/,
-                `content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline';"`
+                `content="default-src 'none'; img-src data: https:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline';"`
             );
             
             return htmlContent;

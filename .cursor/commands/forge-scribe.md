@@ -1,4 +1,4 @@
-<!-- forge-hash: 262930671a1b9f1a5ae678b40b0457a10cefab3cfaa7869fd4da21201e88ca74 -->
+<!-- forge-hash: 3b8afbeb9ddf3808e362c28fdb598c2507057fa44059743ccab4117a4578b0eb -->
 
 # Forge Scribe
 
@@ -6,15 +6,23 @@ This command distills a completed design session into actionable Stories and Tas
 
 ## Prerequisites
 
+If you're not familiar with Forge, run `/forge` first to understand the documentation system.
+
 You must have a session in 'scribe' status before running this command.
+
+## Finding the Session
+
+1. **Seek out the open design session** in Scribe mode in the current project
+2. **Look for session files** in `ai/sessions/` with status: 'scribe'
+3. **Or use the session name** if provided by the user in the prompt
+4. **Read the session file** at `ai/sessions/<session-id>/<session-id>.session.md`
 
 ## What This Command Does
 
-1. **Calls MCP Tools**: Uses `get_forge_about` and `get_forge_schema` to understand distillation principles
-2. **Analyzes session changes**: Reviews all changed files and their scenario-level modifications
-3. **Creates Stories**: Generates implementation stories (< 30 minutes each) for code changes
-4. **Creates Tasks**: Generates manual work items for non-code activities
-5. **Updates session status**: Transitions session from 'scribe' to 'development'
+1. **Analyzes session changes**: Reviews all changed files and their scenario-level modifications
+2. **Creates Stories**: Generates implementation stories (< 30 minutes each) for code changes
+3. **Creates Tasks**: Generates manual work items for non-code activities
+4. **Updates session status**: Transitions session from 'scribe' to 'development'
 
 ## When to Use This Command
 
@@ -151,8 +159,8 @@ ai/sessions/
 
 ### 5. Follow Schemas
 All files must adhere to:
-- Story schema (call `get_forge_schema story`)
-- Task schema (call `get_forge_schema task`)
+- Story schema (see `/forge-design` command for complete schema)
+- Task schema (see `/forge-design` command for complete schema)
 
 ### 6. Link Everything
 Every story/task MUST include:
@@ -180,9 +188,8 @@ After distillation, provide a summary:
 
 1. User ends design session → status changes to 'scribe'
 2. User runs `@forge-scribe`
-3. AI calls `get_forge_about` and `get_forge_schema`
-4. AI reads session file and changed files
-5. AI creates 5-10 small stories in `ai/sessions/<session-id>/tickets/`
+3. AI reads session file and changed files
+4. AI creates 5-10 small stories in `ai/sessions/<session-id>/tickets/`
 6. AI updates session status to 'development'
 7. User can now implement stories using `@forge-build`
 

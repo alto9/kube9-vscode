@@ -3,7 +3,7 @@ story_id: remove-visit-portal-button
 session_id: welcome-screen-uiux-improvements-issue-33
 feature_id: [welcome-screen]
 spec_id: [welcome-screen-spec]
-status: pending
+status: completed
 priority: low
 estimated_time: 5min
 ---

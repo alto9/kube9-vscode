@@ -3,7 +3,7 @@ story_id: remove-what-is-section
 session_id: welcome-screen-uiux-improvements-issue-33
 feature_id: [welcome-screen]
 spec_id: [welcome-screen-spec]
-status: pending
+status: completed
 priority: medium
 estimated_time: 10min
 ---

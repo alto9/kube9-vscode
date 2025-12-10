@@ -3,7 +3,7 @@ story_id: move-dont-show-again-to-top
 session_id: welcome-screen-uiux-improvements-issue-33
 feature_id: [welcome-screen]
 spec_id: [welcome-screen-spec]
-status: pending
+status: completed
 priority: high
 estimated_time: 15min
 ---
