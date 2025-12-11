@@ -13,6 +13,7 @@ suite('ClusterTreeProvider Test Suite', () => {
     let originalGetNamespaces: typeof NamespaceCommands.getNamespaces;
     let originalCheckMultipleConnectivity: typeof ClusterConnectivity.checkMultipleConnectivity;
     let originalGetCurrentNamespace: typeof kubectlContextModule.getCurrentNamespace;
+    let originalGetNamespaceForContext: typeof kubectlContextModule.getNamespaceForContext;
 
     const mockKubeconfig: ParsedKubeconfig = {
         filePath: '/test/kubeconfig.yaml',
@@ -38,10 +39,18 @@ suite('ClusterTreeProvider Test Suite', () => {
         originalGetNamespaces = NamespaceCommands.getNamespaces;
         originalCheckMultipleConnectivity = ClusterConnectivity.checkMultipleConnectivity;
         originalGetCurrentNamespace = kubectlContextModule.getCurrentNamespace;
+        originalGetNamespaceForContext = kubectlContextModule.getNamespaceForContext;
         
         // Mock getCurrentNamespace to return null by default (no active namespace)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (kubectlContextModule as any).getCurrentNamespace = async (): Promise<string | null> => {
+            return null;
+        };
+        
+        // Mock getNamespaceForContext to return null by default (no active namespace for any context)
+        // This is what NamespacesCategory now uses to determine active namespace
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (kubectlContextModule as any).getNamespaceForContext = async (): Promise<string | null> => {
             return null;
         };
         
@@ -56,6 +65,8 @@ suite('ClusterTreeProvider Test Suite', () => {
         ClusterConnectivity.checkMultipleConnectivity = originalCheckMultipleConnectivity;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (kubectlContextModule as any).getCurrentNamespace = originalGetCurrentNamespace;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (kubectlContextModule as any).getNamespaceForContext = originalGetNamespaceForContext;
         
         // Dispose provider
         provider.dispose();
