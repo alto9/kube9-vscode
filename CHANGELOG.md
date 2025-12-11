@@ -1,3 +1,11 @@
+## [1.4.1](https://github.com/alto9/kube9-vscode/compare/v1.4.0...v1.4.1) (2025-12-11)
+
+
+### Bug Fixes
+
+* complete updates for namespace management commands and error handling ([c1a15cc](https://github.com/alto9/kube9-vscode/commit/c1a15cc198a29c2835752c9412a920160d589902))
+* enhance namespace management with context-aware functionality ([c26871d](https://github.com/alto9/kube9-vscode/commit/c26871d9c26fb807b906bf24fbbf09b88e6249c0))
+
 # [1.4.0](https://github.com/alto9/kube9-vscode/compare/v1.3.0...v1.4.0) (2025-12-11)
 
 
