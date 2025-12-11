@@ -115,6 +115,15 @@
             gap: 10px;
         }
 
+        .quickstart-section {
+            margin-top: 8px;  /* Reduced from default, closer to ecosystem */
+        }
+
+        .quickstart-section h2 {
+            font-size: 24px;  /* Larger than other sections */
+            font-weight: 600;
+        }
+
         .section-icon {
             font-size: 24px;
             flex-shrink: 0;
@@ -191,6 +200,26 @@
             font-size: 13px;
             color: var(--vscode-descriptionForeground);
             line-height: 1.5;
+        }
+
+        .ecosystem-card a {
+            display: inline-block;
+            margin-top: 12px;
+            color: var(--vscode-textLink-foreground);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .ecosystem-card a:hover {
+            color: var(--vscode-textLink-activeForeground);
+            text-decoration: underline;
+        }
+
+        .ecosystem-card a:focus-visible {
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: 2px;
+            border-radius: 2px;
         }
 
         /* Info Notice */
@@ -314,6 +343,29 @@
             white-space: nowrap;
         }
 
+        /* Inline Icon Styling */
+        .icon-inline-wrapper {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 4px;
+        }
+
+        .icon-inline-wrapper img {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            vertical-align: middle;
+        }
+
+        /* Fallback for missing icons */
+        .icon-inline-wrapper:empty::before {
+            content: "[Kube9 Icon]";
+            color: var(--vscode-descriptionForeground);
+            font-size: 0.9em;
+            font-style: italic;
+        }
+
         /* Steps List */
         .steps {
             margin: 20px 0;
@@ -330,14 +382,6 @@
         .steps li::marker {
             color: var(--vscode-focusBorder);
             font-weight: 700;
-        }
-
-        /* Footer */
-        .footer {
-            margin-top: 48px;
-            padding-top: 28px;
-            border-top: 1px solid var(--vscode-widget-border);
-            text-align: center;
         }
 
         /* Checkbox Container */
@@ -412,6 +456,71 @@
             font-size: 14px;
         }
 
+        /* Don't Show Container */
+        .dont-show-container {
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            background-color: var(--vscode-editor-background);
+            border-bottom: 1px solid var(--vscode-widget-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .dont-show-container label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--vscode-descriptionForeground);
+            user-select: none;
+        }
+
+        .dont-show-container label:hover {
+            color: var(--vscode-foreground);
+        }
+
+        .dont-show-container input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--vscode-checkbox-border);
+            background-color: var(--vscode-checkbox-background);
+            border-radius: 3px;
+            margin-right: 10px;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+            transition: background-color 0.1s ease, border-color 0.1s ease;
+        }
+
+        .dont-show-container input[type="checkbox"]:hover {
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .dont-show-container input[type="checkbox"]:focus {
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: 2px;
+        }
+
+        .dont-show-container input[type="checkbox"]:checked {
+            background-color: var(--vscode-checkbox-background);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .dont-show-container input[type="checkbox"]:checked::before {
+            content: "";
+            position: absolute;
+            left: 5px;
+            top: 2px;
+            width: 5px;
+            height: 9px;
+            border: solid var(--vscode-checkbox-foreground);
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
         /* Links */
         a {
             color: var(--vscode-textLink-foreground);
@@ -462,22 +571,10 @@
             <div class="logo">Kube9 VS Code</div>
             <p class="subtitle">Intelligent Kubernetes Management for Developers</p>
             <p class="tagline">Part of the Kube9 ecosystem of tools</p>
-        </div>
-
-        <div class="section">
-            <h2><span class="section-icon">🚀</span> What is Kube9 VS Code?</h2>
-            <p>Kube9 VS Code brings powerful Kubernetes cluster management directly into your development environment. View, explore, and manage your clusters without leaving your editor.</p>
-            
-            <div class="success-notice">
-                <strong>✓ No configuration required!</strong> Kube9 works with your existing kubeconfig and is ready to use immediately.
-            </div>
-
-            <ul class="feature-list">
-                <li><strong>Cluster Overview:</strong> Browse all clusters from your kubeconfig with instant access to cluster dashboards</li>
-                <li><strong>Resource Explorer:</strong> Navigate namespaces, workloads (deployments, pods, statefulsets), services, and more</li>
-                <li><strong>Real-time Dashboards:</strong> View cluster statistics, workload distribution, and node health at a glance</li>
-                <li><strong>AI-Powered Insights:</strong> Get intelligent recommendations to optimize performance, reduce costs, and improve reliability</li>
-            </ul>
+            <label>
+                <input type="checkbox" id="doNotShowAgain" aria-label="Don't show this welcome screen again" onchange="dismiss()" />
+                <span>Don't show this welcome screen again</span>
+            </label>
         </div>
 
         <div class="section">
@@ -487,26 +584,29 @@
             <div class="ecosystem-grid">
                 <div class="ecosystem-card">
                     <h3>Kube9 Operator</h3>
-                    <p>Kubernetes operator that deploys to your clusters to collect metrics, analyze workloads, and enable AI-powered recommendations.</p>
+                    <p>Kubernetes operator that manages Kube9 resources and provides advanced cluster capabilities.</p>
+                    <a href="https://github.com/alto9/kube9-operator" onclick="openExternal('https://github.com/alto9/kube9-operator'); return false;">View on GitHub →</a>
                 </div>
                 <div class="ecosystem-card">
-                    <h3>Kube9 Portal</h3>
-                    <p>Web-based management console for multi-cluster oversight, team collaboration, and advanced analytics.</p>
+                    <h3>Kube9 UI</h3>
+                    <p>Web-based dashboard for visualizing and managing Kubernetes resources.</p>
+                    <a href="https://github.com/alto9/kube9-ui" onclick="openExternal('https://github.com/alto9/kube9-ui'); return false;">View on GitHub →</a>
                 </div>
                 <div class="ecosystem-card">
-                    <h3>Kube9 CLI</h3>
-                    <p>Command-line interface for scripting, automation, and integration into your CI/CD pipelines.</p>
+                    <h3>Kube9 VS Code</h3>
+                    <p>VS Code extension for Kubernetes cluster management (this extension).</p>
+                    <a href="https://github.com/alto9/kube9-vscode" onclick="openExternal('https://github.com/alto9/kube9-vscode'); return false;">View on GitHub →</a>
                 </div>
             </div>
 
-            <p style="margin-top: 24px;">Learn more about the complete ecosystem at <a href="https://kube9.io" onclick="openExternal('https://kube9.io'); return false;">kube9.io</a></p>
+            <p style="margin-top: 24px;">Learn more about the complete ecosystem at <a href="https://alto9.github.io/" onclick="openExternal('https://alto9.github.io/'); return false;">alto9.github.io</a></p>
         </div>
 
-        <div class="section">
+        <div class="section quickstart-section">
             <h2><span class="section-icon">⚡</span> Quick Start Guide</h2>
             <ol class="steps">
                 <li>Ensure you have a valid kubeconfig file (typically at <span class="code">~/.kube/config</span>)</li>
-                <li>Click the <strong>Kube9</strong> icon in the VS Code activity bar (left sidebar)</li>
+                <li>Click the <span class="icon-inline-wrapper">{{ACTIVITY_BAR_ICON}}</span> icon in the VS Code activity bar (left sidebar)</li>
                 <li>Select any cluster to open an interactive dashboard with real-time statistics</li>
                 <li>Expand clusters to explore namespaces and Kubernetes resources</li>
                 <li>Click on any resource to view detailed information</li>
@@ -529,25 +629,13 @@
             </div>
 
             <div class="actions">
-                <button class="link-button" onclick="openPortal()">Visit Kube9 Portal</button>
                 <button class="link-button secondary" onclick="openDocs()">View Documentation</button>
-            </div>
-        </div>
-
-        <div class="footer">
-            <div class="checkbox-container">
-                <input type="checkbox" id="doNotShowAgain" aria-label="Do not show this welcome screen again">
-                <label for="doNotShowAgain" class="checkbox-label">Don't show this welcome screen again</label>
             </div>
         </div>
     </div>
 
     <script>
         const vscode = acquireVsCodeApi();
-
-        function openPortal() {
-            openExternal('https://app.kube9.io');
-        }
 
         function openSettings() {
             vscode.postMessage({ command: 'openSettings' });
