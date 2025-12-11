@@ -181,6 +181,55 @@ export async function getContextInfo(): Promise<KubectlContextState> {
 }
 
 /**
+ * Gets the namespace for a specific kubectl context.
+ * 
+ * This function reads the kubectl context configuration for a specific context
+ * (not necessarily the current one) to determine which namespace is set.
+ * 
+ * @param contextName - The context name to check
+ * @returns The namespace name for the context, or null if no namespace is set
+ * @throws {Error} If kubectl command fails or context is not found
+ */
+export async function getNamespaceForContext(contextName: string): Promise<string | null> {
+    try {
+        // Use --minify with --context to get only the specified context's namespace
+        const { stdout } = await execFileAsync(
+            'kubectl',
+            [
+                'config',
+                'view',
+                '--minify',
+                `--context=${contextName}`,
+                '--output=jsonpath={..namespace}'
+            ],
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                env: { ...process.env }
+            }
+        );
+
+        // Trim whitespace from output
+        const namespace = stdout.trim();
+        
+        // Empty string means no namespace is set in context (cluster-wide view)
+        if (!namespace || namespace.length === 0) {
+            return null;
+        }
+
+        return namespace;
+    } catch (error: unknown) {
+        // kubectl failed - create structured error for detailed handling
+        const kubectlError = KubectlError.fromExecError(error, contextName);
+        
+        // Log error details for debugging
+        console.error(`Failed to get namespace for context '${contextName}': ${kubectlError.getDetails()}`);
+        
+        // Rethrow as standard error for caller to handle
+        throw new Error(`Failed to get namespace for context '${contextName}': ${kubectlError.getUserMessage()}`);
+    }
+}
+
+/**
  * Sets the active namespace in the kubectl context.
  * 
  * This function modifies the kubectl context to set a specific namespace as active.

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
-import { setNamespace, clearNamespace } from '../utils/kubectlContext';
+import { setNamespace, clearNamespace, getContextInfo } from '../utils/kubectlContext';
+import { getClusterTreeProvider } from '../extension';
 
 /**
  * Command handler to set a namespace as the active namespace in kubectl context.
@@ -44,13 +45,27 @@ export async function setActiveNamespaceCommand(item: ClusterTreeItem): Promise<
         );
 
         if (success) {
+            // Immediately fetch the updated context state and update cache
+            // This ensures the tree view reflects the change immediately without waiting for watcher polling
+            try {
+                await getContextInfo(); // Updates cache with new state
+                // Refresh the tree view immediately to show the updated namespace selection
+                getClusterTreeProvider().refresh();
+            } catch (refreshError) {
+                // Log error but don't fail the operation - the watcher will eventually catch up
+                console.error('Failed to immediately refresh tree after namespace change:', refreshError);
+                // Fallback: trigger a general refresh anyway
+                try {
+                    getClusterTreeProvider().refresh();
+                } catch (e) {
+                    // Ignore refresh errors - watcher will catch up eventually
+                }
+            }
+
             // Show success notification
             vscode.window.showInformationMessage(
                 `Namespace '${namespaceName}' set on context '${contextName}'`
             );
-            
-            // Refresh the tree view to update the active namespace indicator
-            // The tree provider is listening to namespace watcher events and will refresh automatically
         } else {
             // Show error notification
             vscode.window.showErrorMessage(
@@ -99,13 +114,27 @@ export async function clearActiveNamespaceCommand(item: ClusterTreeItem): Promis
         );
 
         if (success) {
+            // Immediately fetch the updated context state and update cache
+            // This ensures the tree view reflects the change immediately without waiting for watcher polling
+            try {
+                await getContextInfo(); // Updates cache with new state
+                // Refresh the tree view immediately to show the updated namespace selection
+                getClusterTreeProvider().refresh();
+            } catch (refreshError) {
+                // Log error but don't fail the operation - the watcher will eventually catch up
+                console.error('Failed to immediately refresh tree after namespace clear:', refreshError);
+                // Fallback: trigger a general refresh anyway
+                try {
+                    getClusterTreeProvider().refresh();
+                } catch (e) {
+                    // Ignore refresh errors - watcher will catch up eventually
+                }
+            }
+
             // Show success notification
             vscode.window.showInformationMessage(
                 `Namespace cleared on context '${contextName}'`
             );
-            
-            // Refresh the tree view to update the active namespace indicator
-            // The tree provider is listening to namespace watcher events and will refresh automatically
         } else {
             // Show error notification
             vscode.window.showErrorMessage(
