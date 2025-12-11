@@ -3,7 +3,7 @@ story_id: 003-update-setactive-namespace-command
 session_id: setting-namespace-modifies-wrong-context
 feature_id: [context-aware-namespace-management]
 spec_id: [kubectl-context-operations-spec]
-status: pending
+status: completed
 ---
 
 # Update setActiveNamespaceCommand() to Extract and Pass Context
@@ -80,14 +80,14 @@ if (success) {
 
 ## Acceptance Criteria
 
-- [ ] Function extracts `contextName` from `item.resourceData?.context?.name`
-- [ ] Function validates both `namespaceName` and `contextName` are present
-- [ ] Function displays error if either is missing
-- [ ] Function passes both `namespaceName` and `contextName` to `setNamespace()`
-- [ ] Progress notification mentions both namespace and context
-- [ ] Success message mentions both namespace and context
-- [ ] Error message mentions both namespace and context
-- [ ] Tree refresh and status bar update still occur on success
+- [x] Function extracts `contextName` from `item.resourceData?.context?.name`
+- [x] Function validates both `namespaceName` and `contextName` are present
+- [x] Function displays error if either is missing
+- [x] Function passes both `namespaceName` and `contextName` to `setNamespace()`
+- [x] Progress notification mentions both namespace and context
+- [x] Success message mentions both namespace and context
+- [x] Error message mentions both namespace and context
+- [x] Tree refresh and status bar update still occur on success
 
 ## Files Modified
 

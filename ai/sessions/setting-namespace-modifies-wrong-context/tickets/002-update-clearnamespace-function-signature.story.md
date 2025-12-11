@@ -3,7 +3,7 @@ story_id: 002-update-clearnamespace-function-signature
 session_id: setting-namespace-modifies-wrong-context
 feature_id: [context-aware-namespace-management]
 spec_id: [kubectl-context-operations-spec]
-status: pending
+status: completed
 ---
 
 # Update clearNamespace() Function Signature and Implementation
@@ -50,17 +50,18 @@ args.push('--namespace=');  // Empty string clears namespace
 
 ## Acceptance Criteria
 
-- [ ] Function signature includes optional `contextName?: string` parameter
-- [ ] When `contextName` is provided, command uses specific context: `kubectl config set-context <contextName> --namespace=`
-- [ ] When `contextName` is NOT provided, command uses `--current`: `kubectl config set-context --current --namespace=`
-- [ ] Empty namespace value (`--namespace=`) properly clears the namespace
-- [ ] Cache invalidation still called after successful execution
-- [ ] Function still returns `true` on success, `false` on failure
-- [ ] Backward compatibility maintained
+- [x] Function signature includes optional `contextName?: string` parameter
+- [x] When `contextName` is provided, command uses specific context: `kubectl config set-context <contextName> --namespace=`
+- [x] When `contextName` is NOT provided, command uses `--current`: `kubectl config set-context --current --namespace=`
+- [x] Empty namespace value (`--namespace=`) properly clears the namespace
+- [x] Cache invalidation still called after successful execution
+- [x] Function still returns `true` on success, `false` on failure
+- [x] Backward compatibility maintained
 
 ## Files Modified
 
-- `src/utils/kubectlContext.ts` (function around line 241)
+- `src/utils/kubectlContext.ts` (function around line 250)
+- `src/test/suite/utils/kubectlContext.test.ts` (added tests for contextName parameter)
 
 ## Dependencies
 

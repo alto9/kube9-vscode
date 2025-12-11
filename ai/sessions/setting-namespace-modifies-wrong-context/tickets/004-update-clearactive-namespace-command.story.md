@@ -3,7 +3,7 @@ story_id: 004-update-clearactive-namespace-command
 session_id: setting-namespace-modifies-wrong-context
 feature_id: [context-aware-namespace-management]
 spec_id: [kubectl-context-operations-spec]
-status: pending
+status: completed
 ---
 
 # Update clearActiveNamespaceCommand() to Extract and Pass Context
@@ -72,18 +72,19 @@ if (success) {
 
 ## Acceptance Criteria
 
-- [ ] Function extracts `contextName` from `item.resourceData?.context?.name`
-- [ ] Function validates `contextName` is present
-- [ ] Function displays error if context is missing
-- [ ] Function passes `contextName` to `clearNamespace()`
-- [ ] Progress notification mentions context
-- [ ] Success message mentions context
-- [ ] Error message mentions context
-- [ ] Tree refresh and status bar update still occur on success
+- [x] Function extracts `contextName` from `item.resourceData?.context?.name`
+- [x] Function validates `contextName` is present
+- [x] Function displays error if context is missing
+- [x] Function passes `contextName` to `clearNamespace()`
+- [x] Progress notification mentions context
+- [x] Success message mentions context
+- [x] Error message mentions context
+- [x] Tree refresh and status bar update still occur on success
 
 ## Files Modified
 
 - `src/commands/namespaceCommands.ts`
+- `src/extension.ts` (added command registration)
 
 ## Dependencies
 

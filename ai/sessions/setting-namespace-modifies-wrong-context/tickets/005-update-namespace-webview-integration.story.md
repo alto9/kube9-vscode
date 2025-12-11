@@ -3,7 +3,7 @@ story_id: 005-update-namespace-webview-integration
 session_id: setting-namespace-modifies-wrong-context
 feature_id: [context-aware-namespace-management]
 spec_id: [kubectl-context-operations-spec]
-status: pending
+status: completed
 ---
 
 # Update Namespace Webview to Pass Context Information

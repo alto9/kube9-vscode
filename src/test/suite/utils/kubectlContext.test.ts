@@ -273,6 +273,71 @@ suite('kubectlContext Test Suite', () => {
             
             assert.strictEqual(result, false);
         });
+
+        test('Should use --current flag when contextName is not provided (backward compatibility)', async () => {
+            mockExecFileResponse = {
+                type: 'success',
+                stdout: '',
+                stderr: ''
+            };
+            
+            const result = await setNamespace('my-namespace');
+            
+            assert.strictEqual(result, true);
+            assert.strictEqual(execFileCalls.length, 1);
+            assert.deepStrictEqual(execFileCalls[0].args, [
+                'config',
+                'set-context',
+                '--current',
+                '--namespace=my-namespace'
+            ]);
+            assert.strictEqual(cacheInvalidateCalls, 1);
+        });
+
+        test('Should use specific context name when contextName is provided', async () => {
+            mockExecFileResponse = {
+                type: 'success',
+                stdout: '',
+                stderr: ''
+            };
+            
+            const result = await setNamespace('my-namespace', 'minikube');
+            
+            assert.strictEqual(result, true);
+            assert.strictEqual(execFileCalls.length, 1);
+            assert.deepStrictEqual(execFileCalls[0].args, [
+                'config',
+                'set-context',
+                'minikube',
+                '--namespace=my-namespace'
+            ]);
+            assert.strictEqual(cacheInvalidateCalls, 1);
+        });
+
+        test('Should invalidate cache on success when contextName is provided', async () => {
+            mockExecFileResponse = {
+                type: 'success',
+                stdout: '',
+                stderr: ''
+            };
+            
+            await setNamespace('test-namespace', 'prod-cluster');
+            
+            assert.strictEqual(cacheInvalidateCalls, 1);
+        });
+
+        test('Should handle error when setting namespace on non-existent context', async () => {
+            mockExecFileError({ 
+                code: 'ERR_KUBECTL_FAILED',
+                message: 'Failed to set context',
+                stderr: 'Error: context \'old-cluster\' not found'
+            });
+            
+            const result = await setNamespace('my-namespace', 'old-cluster');
+            
+            assert.strictEqual(result, false);
+            assert.strictEqual(cacheInvalidateCalls, 0);
+        });
     });
 
     suite('clearNamespace', () => {
@@ -315,6 +380,71 @@ suite('kubectlContext Test Suite', () => {
             const result = await clearNamespace();
             
             assert.strictEqual(result, false);
+        });
+
+        test('Should use --current flag when contextName is not provided', async () => {
+            mockExecFileResponse = {
+                type: 'success',
+                stdout: '',
+                stderr: ''
+            };
+            
+            const result = await clearNamespace();
+            
+            assert.strictEqual(result, true);
+            assert.strictEqual(execFileCalls.length, 1);
+            assert.deepStrictEqual(execFileCalls[0].args, [
+                'config',
+                'set-context',
+                '--current',
+                '--namespace='
+            ]);
+            assert.strictEqual(cacheInvalidateCalls, 1);
+        });
+
+        test('Should use specific context name when contextName is provided', async () => {
+            mockExecFileResponse = {
+                type: 'success',
+                stdout: '',
+                stderr: ''
+            };
+            
+            const result = await clearNamespace('minikube');
+            
+            assert.strictEqual(result, true);
+            assert.strictEqual(execFileCalls.length, 1);
+            assert.deepStrictEqual(execFileCalls[0].args, [
+                'config',
+                'set-context',
+                'minikube',
+                '--namespace='
+            ]);
+            assert.strictEqual(cacheInvalidateCalls, 1);
+        });
+
+        test('Should invalidate cache on success when contextName is provided', async () => {
+            mockExecFileResponse = {
+                type: 'success',
+                stdout: '',
+                stderr: ''
+            };
+            
+            await clearNamespace('prod-cluster');
+            
+            assert.strictEqual(cacheInvalidateCalls, 1);
+        });
+
+        test('Should handle error when clearing namespace on non-existent context', async () => {
+            mockExecFileError({ 
+                code: 'ERR_KUBECTL_FAILED',
+                message: 'Failed to set context',
+                stderr: 'Error: context \'old-cluster\' not found'
+            });
+            
+            const result = await clearNamespace('old-cluster');
+            
+            assert.strictEqual(result, false);
+            assert.strictEqual(cacheInvalidateCalls, 0);
         });
     });
 

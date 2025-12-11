@@ -328,7 +328,8 @@
             vscode.postMessage({
                 command: 'setActiveNamespace',
                 data: {
-                    namespace: namespaceName
+                    namespace: namespaceName,
+                    contextName: window.initialContextName
                 }
             });
         });

@@ -3,7 +3,7 @@ story_id: 006-add-context-not-found-error-handling
 session_id: setting-namespace-modifies-wrong-context
 feature_id: [context-aware-namespace-management]
 spec_id: [kubectl-context-operations-spec]
-status: pending
+status: completed
 ---
 
 # Add Error Handling for Context Not Found Scenarios
@@ -77,12 +77,12 @@ if (!success) {
 
 ## Acceptance Criteria
 
-- [ ] Functions detect "not found" errors from kubectl stderr
-- [ ] Functions detect "permission denied" errors from kubectl stderr
-- [ ] Specific error messages logged for each error type
-- [ ] Command handlers display user-friendly error messages
-- [ ] Error message suggests context may not exist in kubeconfig
-- [ ] Tree view does NOT update checkmark on error
+- [x] Functions detect "not found" errors from kubectl stderr
+- [x] Functions detect "permission denied" errors from kubectl stderr
+- [x] Specific error messages logged for each error type
+- [x] Command handlers display user-friendly error messages
+- [x] Error message suggests context may not exist in kubeconfig
+- [x] Tree view does NOT update checkmark on error
 
 ## Files Modified
 

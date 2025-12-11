@@ -20,6 +20,8 @@ export interface SetActiveNamespaceMessage {
     data: {
         /** The namespace name to set as active in kubectl context */
         namespace: string;
+        /** The context name to target (optional, falls back to panel's context) */
+        contextName?: string;
     };
 }
 
