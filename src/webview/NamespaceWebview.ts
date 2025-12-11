@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getContextInfo, getCurrentNamespace, setNamespace } from '../utils/kubectlContext';
+import { getContextInfo, getNamespaceForContext, setNamespace } from '../utils/kubectlContext';
 import { NamespaceCommands } from '../kubectl/NamespaceCommands';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewMessage } from '../types/webviewMessages';
@@ -141,10 +141,13 @@ export class NamespaceWebview {
                     
                     case 'setActiveNamespace':
                         // Set the active namespace in kubectl context
-                        if (message.data?.namespace) {
-                            const success = await setNamespace(message.data.namespace);
+                        if (message.data?.namespace && panelInfo) {
+                            // Get context name from message or fall back to panel's context
+                            const contextName = message.data.contextName || panelInfo.namespaceContext.contextName;
+                            
+                            const success = await setNamespace(message.data.namespace, contextName);
                             if (success) {
-                                console.log(`Namespace set to: ${message.data.namespace}`);
+                                console.log(`Namespace set to: ${message.data.namespace} on context: ${contextName}`);
                                 
                                 // Refresh the tree view to filter resources by namespace
                                 try {
@@ -162,7 +165,7 @@ export class NamespaceWebview {
                                 );
                             } else {
                                 vscode.window.showErrorMessage(
-                                    `Failed to set namespace to: ${message.data.namespace}`
+                                    `Failed to set namespace to: ${message.data.namespace} on context: ${contextName}`
                                 );
                             }
                         }
@@ -315,6 +318,8 @@ export class NamespaceWebview {
             // Replace placeholders with actual context data (using regex with global flag for all occurrences)
             htmlContent = htmlContent.replace(/\{\{CLUSTER_NAME\}\}/g, this.escapeHtml(namespaceContext.clusterName));
             htmlContent = htmlContent.replace(/\{\{CONTEXT_NAME\}\}/g, this.escapeHtml(namespaceContext.contextName));
+            // Replace CONTEXT_NAME_JS with JSON-stringified value for JavaScript string assignment
+            htmlContent = htmlContent.replace(/\{\{CONTEXT_NAME_JS\}\}/g, JSON.stringify(namespaceContext.contextName));
             
             if (namespaceContext.namespace) {
                 htmlContent = htmlContent.replace(/\{\{NAMESPACE_NAME\}\}/g, this.escapeHtml(namespaceContext.namespace));
@@ -608,13 +613,14 @@ export class NamespaceWebview {
             return;
         }
 
-        // Get the current active namespace from kubectl context
+        // Get the active namespace for this specific context (not necessarily the current context)
         let currentNamespace: string | null = null;
         try {
-            currentNamespace = await getCurrentNamespace();
+            // Use the context name from the namespace context to get the correct namespace
+            currentNamespace = await getNamespaceForContext(namespaceContext.contextName);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error('Failed to get current namespace for isActive calculation:', errorMessage);
+            console.error(`Failed to get active namespace for context '${namespaceContext.contextName}' for isActive calculation:`, errorMessage);
             // Fallback to false if we can't determine the active namespace
             currentNamespace = null;
         }

@@ -181,6 +181,55 @@ export async function getContextInfo(): Promise<KubectlContextState> {
 }
 
 /**
+ * Gets the namespace for a specific kubectl context.
+ * 
+ * This function reads the kubectl context configuration for a specific context
+ * (not necessarily the current one) to determine which namespace is set.
+ * 
+ * @param contextName - The context name to check
+ * @returns The namespace name for the context, or null if no namespace is set
+ * @throws {Error} If kubectl command fails or context is not found
+ */
+export async function getNamespaceForContext(contextName: string): Promise<string | null> {
+    try {
+        // Use --minify with --context to get only the specified context's namespace
+        const { stdout } = await execFileAsync(
+            'kubectl',
+            [
+                'config',
+                'view',
+                '--minify',
+                `--context=${contextName}`,
+                '--output=jsonpath={..namespace}'
+            ],
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                env: { ...process.env }
+            }
+        );
+
+        // Trim whitespace from output
+        const namespace = stdout.trim();
+        
+        // Empty string means no namespace is set in context (cluster-wide view)
+        if (!namespace || namespace.length === 0) {
+            return null;
+        }
+
+        return namespace;
+    } catch (error: unknown) {
+        // kubectl failed - create structured error for detailed handling
+        const kubectlError = KubectlError.fromExecError(error, contextName);
+        
+        // Log error details for debugging
+        console.error(`Failed to get namespace for context '${contextName}': ${kubectlError.getDetails()}`);
+        
+        // Rethrow as standard error for caller to handle
+        throw new Error(`Failed to get namespace for context '${contextName}': ${kubectlError.getUserMessage()}`);
+    }
+}
+
+/**
  * Sets the active namespace in the kubectl context.
  * 
  * This function modifies the kubectl context to set a specific namespace as active.
@@ -188,9 +237,10 @@ export async function getContextInfo(): Promise<KubectlContextState> {
  * changed again or cleared.
  * 
  * @param namespace - The namespace to set as active (must be non-empty)
+ * @param contextName - Optional context name to target. If not provided, uses --current for backward compatibility
  * @returns Promise<boolean> - true if successful, false if failed
  */
-export async function setNamespace(namespace: string): Promise<boolean> {
+export async function setNamespace(namespace: string, contextName?: string): Promise<boolean> {
     // Validate namespace parameter
     if (!namespace || namespace.trim().length === 0) {
         console.error('Failed to set namespace: namespace parameter must be a non-empty string');
@@ -198,15 +248,22 @@ export async function setNamespace(namespace: string): Promise<boolean> {
     }
 
     try {
+        // Build kubectl command arguments
+        const args = ['config', 'set-context'];
+        
+        // Use specific context name if provided, otherwise use --current for backward compatibility
+        if (contextName) {
+            args.push(contextName);
+        } else {
+            args.push('--current');
+        }
+        
+        args.push(`--namespace=${namespace}`);
+
         // Execute kubectl config set-context to update namespace
         await execFileAsync(
             'kubectl',
-            [
-                'config',
-                'set-context',
-                '--current',
-                `--namespace=${namespace}`
-            ],
+            args,
             {
                 timeout: KUBECTL_TIMEOUT_MS,
                 env: { ...process.env }
@@ -219,8 +276,36 @@ export async function setNamespace(namespace: string): Promise<boolean> {
         // Command succeeded
         return true;
     } catch (error: unknown) {
-        // kubectl command failed - create structured error
-        const kubectlError = KubectlError.fromExecError(error, 'current');
+        // Extract stderr for specific error pattern detection
+        const err = error as {
+            stderr?: Buffer | string;
+            stdout?: Buffer | string;
+            code?: string | number;
+            message?: string;
+            killed?: boolean;
+            signal?: string;
+        };
+        
+        const stderr = err.stderr
+            ? (Buffer.isBuffer(err.stderr) ? err.stderr.toString() : err.stderr).trim()
+            : '';
+        
+        const targetContext = contextName || 'current';
+        
+        // Check for context not found error
+        if (stderr.includes('not found')) {
+            console.error(`Context '${targetContext}' not found in kubeconfig`);
+            return false;
+        }
+        
+        // Check for permission denied error
+        if (stderr.includes('unable to write') || stderr.includes('permission denied')) {
+            console.error('Permission denied to modify kubeconfig');
+            return false;
+        }
+        
+        // Fall back to structured error handling for other errors
+        const kubectlError = KubectlError.fromExecError(error, targetContext);
         
         // Log error details for debugging
         console.error(`Failed to set namespace '${namespace}': ${kubectlError.getDetails()}`);
@@ -236,19 +321,27 @@ export async function setNamespace(namespace: string): Promise<boolean> {
  * This function removes the namespace setting from the kubectl context, returning to
  * a cluster-wide view. The change persists in the kubeconfig file.
  * 
+ * @param contextName - Optional context name to target. If not provided, uses --current for backward compatibility
  * @returns Promise<boolean> - true if successful, false if failed
  */
-export async function clearNamespace(): Promise<boolean> {
+export async function clearNamespace(contextName?: string): Promise<boolean> {
     try {
+        // Build kubectl command arguments
+        const args = ['config', 'set-context'];
+        
+        // Use specific context name if provided, otherwise use --current for backward compatibility
+        if (contextName) {
+            args.push(contextName);
+        } else {
+            args.push('--current');
+        }
+        
+        args.push('--namespace=');  // Empty string clears namespace
+
         // Execute kubectl config set-context to clear namespace (set to empty string)
         await execFileAsync(
             'kubectl',
-            [
-                'config',
-                'set-context',
-                '--current',
-                '--namespace='
-            ],
+            args,
             {
                 timeout: KUBECTL_TIMEOUT_MS,
                 env: { ...process.env }
@@ -261,8 +354,36 @@ export async function clearNamespace(): Promise<boolean> {
         // Command succeeded
         return true;
     } catch (error: unknown) {
-        // kubectl command failed - create structured error
-        const kubectlError = KubectlError.fromExecError(error, 'current');
+        // Extract stderr for specific error pattern detection
+        const err = error as {
+            stderr?: Buffer | string;
+            stdout?: Buffer | string;
+            code?: string | number;
+            message?: string;
+            killed?: boolean;
+            signal?: string;
+        };
+        
+        const stderr = err.stderr
+            ? (Buffer.isBuffer(err.stderr) ? err.stderr.toString() : err.stderr).trim()
+            : '';
+        
+        const targetContext = contextName || 'current';
+        
+        // Check for context not found error
+        if (stderr.includes('not found')) {
+            console.error(`Context '${targetContext}' not found in kubeconfig`);
+            return false;
+        }
+        
+        // Check for permission denied error
+        if (stderr.includes('unable to write') || stderr.includes('permission denied')) {
+            console.error('Permission denied to modify kubeconfig');
+            return false;
+        }
+        
+        // Fall back to structured error handling for other errors
+        const kubectlError = KubectlError.fromExecError(error, targetContext);
         
         // Log error details for debugging
         console.error(`Failed to clear namespace: ${kubectlError.getDetails()}`);

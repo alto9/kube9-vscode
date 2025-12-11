@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
-import { setNamespace, clearNamespace } from '../utils/kubectlContext';
+import { setNamespace, clearNamespace, getContextInfo } from '../utils/kubectlContext';
+import { getClusterTreeProvider } from '../extension';
 
 /**
  * Command handler to set a namespace as the active namespace in kubectl context.
@@ -20,9 +21,13 @@ export async function setActiveNamespaceCommand(item: ClusterTreeItem): Promise<
         // Get the namespace name from the tree item label
         const namespaceName = typeof item.label === 'string' ? item.label : item.label?.toString();
         
-        if (!namespaceName) {
-            console.error('setActiveNamespaceCommand called with item missing label');
-            vscode.window.showErrorMessage('Failed to set active namespace: Namespace name not found');
+        // Extract context name from tree item resource data
+        const contextName = item.resourceData?.context?.name;
+        
+        // Validate that both namespace name and context name are present
+        if (!namespaceName || !contextName) {
+            console.error('setActiveNamespaceCommand called with item missing namespace name or context information');
+            vscode.window.showErrorMessage('Failed to set namespace: missing namespace name or context information');
             return;
         }
 
@@ -30,27 +35,41 @@ export async function setActiveNamespaceCommand(item: ClusterTreeItem): Promise<
         const success = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: `Setting active namespace to '${namespaceName}'...`,
+                title: `Setting namespace '${namespaceName}' on context '${contextName}'...`,
                 cancellable: false
             },
             async () => {
                 // Call the kubectl utility to set the namespace
-                return await setNamespace(namespaceName);
+                return await setNamespace(namespaceName, contextName);
             }
         );
 
         if (success) {
+            // Immediately fetch the updated context state and update cache
+            // This ensures the tree view reflects the change immediately without waiting for watcher polling
+            try {
+                await getContextInfo(); // Updates cache with new state
+                // Refresh the tree view immediately to show the updated namespace selection
+                getClusterTreeProvider().refresh();
+            } catch (refreshError) {
+                // Log error but don't fail the operation - the watcher will eventually catch up
+                console.error('Failed to immediately refresh tree after namespace change:', refreshError);
+                // Fallback: trigger a general refresh anyway
+                try {
+                    getClusterTreeProvider().refresh();
+                } catch (e) {
+                    // Ignore refresh errors - watcher will catch up eventually
+                }
+            }
+
             // Show success notification
             vscode.window.showInformationMessage(
-                `Active namespace set to '${namespaceName}'`
+                `Namespace '${namespaceName}' set on context '${contextName}'`
             );
-            
-            // Refresh the tree view to update the active namespace indicator
-            // The tree provider is listening to namespace watcher events and will refresh automatically
         } else {
             // Show error notification
             vscode.window.showErrorMessage(
-                `Failed to set active namespace to '${namespaceName}'. Check that kubectl is configured correctly.`
+                `Failed to set namespace on context '${contextName}'. The context may not exist in your kubeconfig.`
             );
         }
     } catch (error) {
@@ -66,34 +85,60 @@ export async function setActiveNamespaceCommand(item: ClusterTreeItem): Promise<
  * Command handler to clear the active namespace from kubectl context.
  * This returns to a cluster-wide view with no namespace filtering.
  * This is triggered from the tree view context menu.
+ * 
+ * @param item The namespace tree item that was right-clicked
  */
-export async function clearActiveNamespaceCommand(): Promise<void> {
+export async function clearActiveNamespaceCommand(item: ClusterTreeItem): Promise<void> {
     try {
+        // Extract context name from tree item resource data
+        const contextName = item.resourceData?.context?.name;
+        
+        // Validate that context name is present
+        if (!contextName) {
+            console.error('clearActiveNamespaceCommand called with item missing context information');
+            vscode.window.showErrorMessage('Failed to clear namespace: missing context information');
+            return;
+        }
+
         // Show progress indicator while updating context
         const success = await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
-                title: 'Clearing active namespace...',
+                title: `Clearing namespace on context '${contextName}'...`,
                 cancellable: false
             },
             async () => {
                 // Call the kubectl utility to clear the namespace
-                return await clearNamespace();
+                return await clearNamespace(contextName);
             }
         );
 
         if (success) {
+            // Immediately fetch the updated context state and update cache
+            // This ensures the tree view reflects the change immediately without waiting for watcher polling
+            try {
+                await getContextInfo(); // Updates cache with new state
+                // Refresh the tree view immediately to show the updated namespace selection
+                getClusterTreeProvider().refresh();
+            } catch (refreshError) {
+                // Log error but don't fail the operation - the watcher will eventually catch up
+                console.error('Failed to immediately refresh tree after namespace clear:', refreshError);
+                // Fallback: trigger a general refresh anyway
+                try {
+                    getClusterTreeProvider().refresh();
+                } catch (e) {
+                    // Ignore refresh errors - watcher will catch up eventually
+                }
+            }
+
             // Show success notification
             vscode.window.showInformationMessage(
-                'Active namespace cleared. Now viewing cluster-wide resources.'
+                `Namespace cleared on context '${contextName}'`
             );
-            
-            // Refresh the tree view to update the active namespace indicator
-            // The tree provider is listening to namespace watcher events and will refresh automatically
         } else {
             // Show error notification
             vscode.window.showErrorMessage(
-                'Failed to clear active namespace. Check that kubectl is configured correctly.'
+                `Failed to clear namespace on context '${contextName}'. The context may not exist in your kubeconfig.`
             );
         }
     } catch (error) {

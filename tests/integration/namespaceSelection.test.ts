@@ -416,11 +416,30 @@ suite('Namespace Selection Integration Tests', () => {
         });
 
         test('Should clear namespace from tree view and update UI', async () => {
+            const contextName = 'test-context';
+            
+            // Create a cluster tree item with context information
+            const clusterItem = new ClusterTreeItem(
+                contextName,
+                'cluster',
+                vscode.TreeItemCollapsibleState.Expanded,
+                {
+                    context: {
+                        name: contextName,
+                        cluster: 'test-cluster'
+                    },
+                    cluster: {
+                        name: 'test-cluster',
+                        server: 'https://test-cluster.example.com'
+                    }
+                }
+            );
+
             // Mock successful kubectl set-context command (clearing namespace)
             mockExecFileSuccess('', '');
 
             // Execute the clear command
-            await clearActiveNamespaceCommand();
+            await clearActiveNamespaceCommand(clusterItem);
 
             // Verify command executed without throwing
             // Note: Actual kubectl calls are mocked and may not be tracked in execFileCalls

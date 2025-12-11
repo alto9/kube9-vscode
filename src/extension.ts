@@ -6,7 +6,7 @@ import { DescribeWebview } from './webview/DescribeWebview';
 import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
-import { setActiveNamespaceCommand } from './commands/namespaceCommands';
+import { setActiveNamespaceCommand, clearActiveNamespaceCommand } from './commands/namespaceCommands';
 import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
 import { applyYAMLCommand } from './commands/applyYAML';
 import { describeRawCommand } from './commands/describeRaw';
@@ -412,6 +412,14 @@ function registerCommands(): void {
     );
     context.subscriptions.push(setActiveNamespaceCmd);
     disposables.push(setActiveNamespaceCmd);
+    
+    // Register clear active namespace command
+    const clearActiveNamespaceCmd = vscode.commands.registerCommand(
+        'kube9.clearActiveNamespace',
+        clearActiveNamespaceCommand
+    );
+    context.subscriptions.push(clearActiveNamespaceCmd);
+    disposables.push(clearActiveNamespaceCmd);
     
     // Register view resource YAML command
     const viewResourceYAMLCmd = vscode.commands.registerCommand(

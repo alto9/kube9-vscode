@@ -3,7 +3,7 @@ import { ClusterTreeItem } from '../ClusterTreeItem';
 import { TreeItemData } from '../TreeItemTypes';
 import { NamespaceCommands } from '../../kubectl/NamespaceCommands';
 import { KubectlError } from '../../kubernetes/KubectlError';
-import { getCurrentNamespace } from '../../utils/kubectlContext';
+import { getNamespaceForContext } from '../../utils/kubectlContext';
 
 /**
  * Type for error handler callback.
@@ -49,13 +49,13 @@ export class NamespacesCategory {
             return [];
         }
 
-        // Get the current active namespace from kubectl context
+        // Get the active namespace for this specific context (not necessarily the current context)
         let activeNamespace: string | null = null;
         try {
-            activeNamespace = await getCurrentNamespace();
+            activeNamespace = await getNamespaceForContext(contextName);
         } catch (error) {
             // If we can't get the active namespace, just continue without it
-            console.warn('Failed to get active namespace:', error);
+            console.warn(`Failed to get active namespace for context '${contextName}':`, error);
         }
 
         // Create tree items for each namespace
