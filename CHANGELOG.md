@@ -1,3 +1,16 @@
+# [1.4.0](https://github.com/alto9/kube9-vscode/compare/v1.3.0...v1.4.0) (2025-12-11)
+
+
+### Bug Fixes
+
+* onchange handler for dont show message ([38f2ec4](https://github.com/alto9/kube9-vscode/commit/38f2ec450a52a86182ebc271f4a9ddc1ed6bba5a))
+* small verbiage adjustments ([4085c18](https://github.com/alto9/kube9-vscode/commit/4085c18ab2d377cc4bf64cd48af0aca61560fbdf))
+
+
+### Features
+
+* update Forge documentation with new command structure and guidelines ([fc896d5](https://github.com/alto9/kube9-vscode/commit/fc896d566f0ca7d88e78b751ffbae1e4a8edb6ed))
+
 # [1.3.0](https://github.com/alto9/kube9-vscode/compare/v1.2.0...v1.3.0) (2025-12-09)
 
 

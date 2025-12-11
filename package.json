@@ -1,7 +1,7 @@
 {
   "name": "kube9-vscode",
   "displayName": "Kube9 - Kubernetes Cluster Manager",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "license": "MIT",
   "author": "Alto9",
   "publisher": "Alto9",
