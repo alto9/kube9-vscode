@@ -3,7 +3,7 @@ story_id: add-unit-tests
 session_id: argocd-integration-phase-1-basic-drift-detection
 feature_id: [argocd-detection, argocd-tree-view, argocd-actions]
 spec_id: [argocd-service-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 30
 ---
@@ -39,15 +39,15 @@ The service needs comprehensive unit test coverage to ensure detection logic, CR
 
 ## Acceptance Criteria
 
-- [ ] Tests cover operated mode detection
-- [ ] Tests cover basic mode detection
-- [ ] Tests cover application querying
-- [ ] Tests cover CRD parsing edge cases
-- [ ] Tests cover sync/refresh actions
-- [ ] Tests cover error scenarios
-- [ ] Tests cover caching behavior
-- [ ] All tests pass
-- [ ] Code coverage > 80%
+- [x] Tests cover operated mode detection
+- [x] Tests cover basic mode detection
+- [x] Tests cover application querying
+- [x] Tests cover CRD parsing edge cases
+- [x] Tests cover sync/refresh actions
+- [x] Tests cover error scenarios
+- [x] Tests cover caching behavior
+- [x] All tests pass
+- [x] Code coverage > 80%
 
 ## Dependencies
 
