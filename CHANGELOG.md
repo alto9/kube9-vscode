@@ -1,3 +1,31 @@
+# [1.5.0](https://github.com/alto9/kube9-vscode/compare/v1.4.1...v1.5.0) (2025-12-16)
+
+
+### Bug Fixes
+
+* add comprehensive error handling for ArgoCD operations ([a9f4eab](https://github.com/alto9/kube9-vscode/commit/a9f4eab356b27222c6fb4abddfb0353b3d3c7152))
+
+
+### Features
+
+* add application querying methods to ArgoCDService ([b2c8cf1](https://github.com/alto9/kube9-vscode/commit/b2c8cf1e1479c85dce83f028d6f0447dad07b798))
+* add ArgoCD application context menu commands ([eb56a91](https://github.com/alto9/kube9-vscode/commit/eb56a913d12ab8e42649a1e3dc729c5d0d75a3a3))
+* add ArgoCD status icon mapping utility ([effbc40](https://github.com/alto9/kube9-vscode/commit/effbc404874f1cbdbf48f561d0e22a2c1a74951d))
+* add ArgoCD type definitions ([0b5265e](https://github.com/alto9/kube9-vscode/commit/0b5265eaff39fbe78160c6ad5571983552451ec9))
+* add ArgoCDCategory class for tree view ([31ae42d](https://github.com/alto9/kube9-vscode/commit/31ae42dadc28e6304b18cff0a374c14cb0878a06))
+* add ArgoCDStatus interface to OperatorStatusTypes ([c41cae1](https://github.com/alto9/kube9-vscode/commit/c41cae1f53fc7f967d7ba1cf20f588c26ee92f3f))
+* add progress notifications for ArgoCD sync operations ([358d559](https://github.com/alto9/kube9-vscode/commit/358d559249462d5727910e389caebdb71993b49e))
+* add React webview app structure for ArgoCD application view ([a121264](https://github.com/alto9/kube9-vscode/commit/a121264d66aae5eb973a349077cdf8a20f5d9fd0))
+* create ArgoCD application webview provider ([8ae7e7a](https://github.com/alto9/kube9-vscode/commit/8ae7e7a8d860129cc503a4e50f9aa8860adae008))
+* implement ArgoCD service detection with operated and basic modes ([81531ff](https://github.com/alto9/kube9-vscode/commit/81531ff38de52b8c53f3d17c2674cb0543c93bde))
+* implement cache invalidation for ArgoCD sync operations ([32faa18](https://github.com/alto9/kube9-vscode/commit/32faa186bed429c8f6516b72ab6e910396173422))
+* implement CRD parsing methods in ArgoCDService ([97ac4b5](https://github.com/alto9/kube9-vscode/commit/97ac4b5f7d96dcfc338f4767a6680ff2674648bf))
+* implement drift details tab with resource table and filtering ([0b32558](https://github.com/alto9/kube9-vscode/commit/0b32558b82bbca8588f25d9a476f6a6488ca9077))
+* implement overview tab components for ArgoCD application webview ([8b2089b](https://github.com/alto9/kube9-vscode/commit/8b2089b29f85cdb4dee0deaf0190a847e7be81e2))
+* implement sync actions and operation tracking in ArgoCDService ([9f9e187](https://github.com/alto9/kube9-vscode/commit/9f9e1878543ecfe06ece501a18474beff9a973f6))
+* integrate ArgoCD category into cluster tree provider ([ef50410](https://github.com/alto9/kube9-vscode/commit/ef504108024c8432516d98384ff604a5582196b2))
+* wire view details command to open ArgoCD webview ([757e12d](https://github.com/alto9/kube9-vscode/commit/757e12d86bf42dde4f0180df417c106ea5ac1d4d))
+
 ## [1.4.1](https://github.com/alto9/kube9-vscode/compare/v1.4.0...v1.4.1) (2025-12-11)
 
 
