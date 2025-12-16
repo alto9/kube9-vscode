@@ -311,6 +311,72 @@ body {
     outline-offset: 2px;
 }
 
+/* Folder Item */
+.folder-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.folder-item-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    user-select: none;
+}
+
+.folder-item-header:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.folder-item-header:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.folder-item-arrow {
+    font-size: 14px;
+    color: var(--vscode-icon-foreground);
+    opacity: 0.7;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    flex-shrink: 0;
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.folder-item-icon {
+    font-size: 16px;
+    color: var(--vscode-icon-foreground);
+    opacity: 0.8;
+    flex-shrink: 0;
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.folder-item-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+    font-weight: 500;
+}
+
+.folder-item-children {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+}
+
 /* Empty State */
 .cluster-empty-state {
     display: flex;
