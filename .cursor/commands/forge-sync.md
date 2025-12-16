@@ -1,4 +1,4 @@
-<!-- forge-hash: 2b2e996c49a23027ca3de422be5c0332550bf7caa34a6e884424d501e61d8ad6 -->
+<!-- forge-hash: 8f75d64650235d19f34f240ee189fc49aa2eaf66b000e1b32ba903710544e91b -->
 
 # Forge Sync
 
@@ -29,19 +29,17 @@ If you need to understand file schemas, run `/forge-design` to see complete sche
    - Diagrams (*.diagram.md)
    - Specs (*.spec.md)
    - Actors (*.actor.md)
-
-3. **Represents the codebase**:
-   - **Technically**: With diagrams and specs
-   - **Behaviorally**: With actors and features
-
-4. **Generates documentation**:
-   - **Technical diagrams**: Infrastructure, components, flows, states
-   - **Workflow diagrams**: User flows and process flows
-   - **Specs**: Technical contracts based on diagram objects
-   - **Actors**: System users and external systems
-   - **Features**: User-facing behavior with Gherkin scenarios
-
-5. **Ensures proper linkages**: Links all generated files using the linkage system
+4. **Identifies gaps and inconsistencies**:
+   - Missing documentation for existing code
+   - Outdated documentation that doesn't match current implementation
+   - Undocumented features, APIs, or data structures
+   - Inconsistent or conflicting information
+5. **Creates or updates AI files**: Systematically updates documentation to reflect reality:
+   - Create missing features, diagrams, specs, models
+   - Update outdated information
+   - Ensure all linkages are correct (feature_id, spec_id, diagram_id, etc.)
+   - Maintain proper file structure and naming conventions
+6. **Generates a sync report**: Provides summary of changes made
 
 ## Sync Strategy
 

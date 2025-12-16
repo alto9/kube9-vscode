@@ -51,6 +51,36 @@ export interface CollectionStats {
 }
 
 /**
+ * ArgoCD Status
+ * Represents the current state of ArgoCD detection in the cluster
+ */
+export interface ArgoCDStatus {
+    /**
+     * Whether ArgoCD is detected in the cluster
+     */
+    detected: boolean;
+    
+    /**
+     * Namespace where ArgoCD is installed
+     * null if ArgoCD is not detected
+     */
+    namespace: string | null;
+    
+    /**
+     * ArgoCD version extracted from deployment
+     * null if not detected or version unavailable
+     * @example "v2.8.0"
+     */
+    version: string | null;
+    
+    /**
+     * ISO 8601 timestamp of last detection check
+     * @example "2025-11-20T15:30:00Z"
+     */
+    lastChecked: string;
+}
+
+/**
  * Operator status as returned by the kube9-operator-status ConfigMap.
  * Matches the operator's OperatorStatus interface.
  */
@@ -84,5 +114,8 @@ export interface OperatorStatus {
     
     /** Collection statistics */
     collectionStats: CollectionStats;
+    
+    /** Optional: ArgoCD awareness information */
+    argocd?: ArgoCDStatus;
 }
 

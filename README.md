@@ -1,6 +1,6 @@
 # Kube9
 
-**Visual Kubernetes Management for VS Code with AI-Powered Insights**
+**Proactive Kubernetes Intelligence - Right in Your IDE**
 
 ![kube9 Logo](https://img.shields.io/badge/Status-MVP-blue) ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
 
@@ -16,6 +16,7 @@ Kube9 is a VS Code extension that brings visual Kubernetes cluster management di
 - ✅ Edit and save resources to cluster
 - ✅ Launch workloads with freeform YAML
 - ✅ Multi-cluster support via kubeconfig
+- ✅ ArgoCD integration with drift detection and application monitoring
 
 **Pro Tier** - AI-powered intelligence ([Learn More →](https://app.kube9.io)):
 - ✨ Advanced dashboards with real-time charts
@@ -143,6 +144,24 @@ Follow the operator configuration instructions at [app.kube9.io](https://app.kub
 
 That's it! The extension automatically detects the operator and enables Pro features.
 
+### ArgoCD Integration (Free Tier)
+
+Kube9 provides seamless ArgoCD integration for GitOps workflows. View and manage your ArgoCD Applications directly from VS Code.
+
+**Prerequisites:**
+- ArgoCD 2.5+ installed in your cluster
+- kubectl configured and accessible
+- RBAC permissions for ArgoCD CRD access
+
+**Quick Start:**
+1. Ensure ArgoCD is installed in your cluster
+2. Open the Kube9 tree view - ArgoCD Applications will appear automatically when detected
+3. Expand "ArgoCD Applications" to see all applications with sync/health status
+4. Click any application to view details and drift information
+5. Right-click applications to sync, refresh, or perform hard refresh
+
+For detailed setup instructions, usage guide, and troubleshooting, see [ArgoCD Integration Documentation](docs/argocd-integration.md).
+
 ## Features by Tier
 
 ### Free Tier Features
@@ -164,6 +183,13 @@ That's it! The extension automatically detects the operator and enables Pro feat
 - Automatic kubeconfig parsing
 - Switch between clusters and contexts
 - Multiple kubeconfig file support
+
+**ArgoCD Integration**
+- View ArgoCD Applications in tree view with sync/health status
+- Monitor GitOps deployments and detect configuration drift
+- Sync, refresh, and hard refresh applications directly from VS Code
+- Application details webview with drift information
+- Works with ArgoCD 2.5+ in both operated and basic modes
 
 ### Pro Tier Features
 

@@ -1,4 +1,4 @@
-<!-- forge-hash: 3b8afbeb9ddf3808e362c28fdb598c2507057fa44059743ccab4117a4578b0eb -->
+<!-- forge-hash: 262930671a1b9f1a5ae678b40b0457a10cefab3cfaa7869fd4da21201e88ca74 -->
 
 # Forge Scribe
 

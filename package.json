@@ -14,7 +14,7 @@
     "vscode",
     "extension"
   ],
-  "description": "A VS Code extension for Kubernetes cluster management with a freemium model that provides powerful free features and unlocks advanced AI-powered intelligence for Pro users",
+  "description": "Proactive Kubernetes Intelligence - Right in Your IDE",
   "repository": {
     "type": "git",
     "url": "https://github.com/alto9/kube9-vscode"
@@ -129,6 +129,36 @@
         "command": "kube9.restartWorkload",
         "title": "Restart",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.argocd.sync",
+        "title": "Sync Application",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.refresh",
+        "title": "Refresh Application",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.hardRefresh",
+        "title": "Hard Refresh Application",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.viewDetails",
+        "title": "View Details",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.copyName",
+        "title": "Copy Application Name",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.argocd.copyNamespace",
+        "title": "Copy Namespace",
+        "category": "kube9"
       }
     ],
     "menus": {
@@ -184,6 +214,36 @@
           "command": "kube9.deleteResource",
           "when": "view == kube9ClusterView && viewItem =~ /^resource/",
           "group": "kube9@3"
+        },
+        {
+          "command": "kube9.argocd.sync",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@1"
+        },
+        {
+          "command": "kube9.argocd.refresh",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@1"
+        },
+        {
+          "command": "kube9.argocd.hardRefresh",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@1"
+        },
+        {
+          "command": "kube9.argocd.viewDetails",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@2"
+        },
+        {
+          "command": "kube9.argocd.copyName",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@3"
+        },
+        {
+          "command": "kube9.argocd.copyNamespace",
+          "when": "view == kube9ClusterView && viewItem == argocd-application",
+          "group": "argocd@3"
         }
       ],
       "editor/context": [
@@ -213,9 +273,10 @@
     }
   },
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "webpack --mode production && npm run build:webview",
     "watch": "webpack --mode development --watch",
-    "compile": "tsc",
+    "compile": "tsc && npm run build:webview",
+    "build:webview": "esbuild src/webview/argocd-application/index.tsx --bundle --outfile=media/argocd-application/main.js --format=iife --platform=browser --minify",
     "pretest": "npm run compile && npm run lint",
     "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js'",
     "pretest:unit": "npm run compile && npm run lint",
@@ -232,10 +293,13 @@
     "@types/js-yaml": "^4.0.5",
     "@types/mocha": "^10.0.1",
     "@types/node": "^22.0.0",
+    "@types/react": "^18.2.73",
+    "@types/react-dom": "^18.2.18",
     "@types/vscode": "^1.80.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vscode/vsce": "^2.19.0",
+    "esbuild": "^0.24.0",
     "eslint": "^8.45.0",
     "mocha": "^10.2.0",
     "source-map-support": "^0.5.21",
@@ -252,6 +316,8 @@
   },
   "dependencies": {
     "@kubernetes/client-node": "^1.4.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }
