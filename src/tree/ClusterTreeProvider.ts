@@ -158,9 +158,16 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * @returns A promise resolving to an array of child tree items
      */
     async getChildren(element?: ClusterTreeItem): Promise<ClusterTreeItem[]> {
-        // If no element is provided, we're getting the root level items (clusters)
+        // If no element is provided, we're getting the root level items (folders + clusters)
         if (!element) {
             return this.getClusters();
+        }
+
+        // If element is a folder, return child folders + clusters in folder
+        if (element.type === 'folder' && element.folderId) {
+            const childFolders = await this.buildFolderItems(element.folderId);
+            const clustersInFolder = this.buildClustersInFolder(element.folderId);
+            return [...childFolders, ...clustersInFolder];
         }
 
         // If element is a cluster, return the categories
@@ -603,88 +610,93 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
-     * Get cluster tree items from the parsed kubeconfig.
-     * Creates a tree item for each context, showing the cluster name and context information.
-     * Also checks connectivity status for each cluster asynchronously.
+     * Builds folder tree items for a given parent folder.
      * 
-     * @returns Array of cluster tree items, or a message item if no clusters are available
+     * @param parentId - Parent folder ID, or null for root-level folders
+     * @returns Array of folder tree items
      */
-    private getClusters(): ClusterTreeItem[] {
-        // If no kubeconfig data is available, show a message
-        if (!this.kubeconfig) {
-            const messageItem = new ClusterTreeItem(
-                'No clusters detected',
-                'cluster',
-                vscode.TreeItemCollapsibleState.None
-            );
-            messageItem.iconPath = new vscode.ThemeIcon('info');
-            messageItem.tooltip = 'No kubeconfig file found or it contains no clusters';
-            return [messageItem];
+    private async buildFolderItems(parentId: string | null): Promise<ClusterTreeItem[]> {
+        if (!this.customizationService) {
+            return [];
         }
 
-        // If kubeconfig has no contexts, show a helpful message
-        if (!this.kubeconfig.contexts || this.kubeconfig.contexts.length === 0) {
-            const messageItem = new ClusterTreeItem(
-                'No clusters configured',
-                'cluster',
-                vscode.TreeItemCollapsibleState.None
+        const config = await this.customizationService.getConfiguration();
+        
+        // Filter folders by parentId and sort by order
+        const folders = config.folders
+            .filter(folder => folder.parentId === parentId)
+            .sort((a, b) => a.order - b.order);
+
+        return folders.map(folder => {
+            const folderItem = new ClusterTreeItem(
+                folder.name,
+                'folder',
+                folder.expanded 
+                    ? vscode.TreeItemCollapsibleState.Expanded 
+                    : vscode.TreeItemCollapsibleState.Collapsed
             );
-            messageItem.iconPath = new vscode.ThemeIcon('info');
-            messageItem.tooltip = 'Add clusters to your kubeconfig file to see them here';
-            return [messageItem];
+            
+            folderItem.iconPath = new vscode.ThemeIcon('folder');
+            folderItem.folderId = folder.id;
+            
+            // Update ID with folderId now that it's set
+            folderItem.id = `folder/${folder.id}`;
+            
+            return folderItem;
+        });
+    }
+
+    /**
+     * Builds cluster tree items that don't belong to any folder (root-level clusters).
+     * 
+     * @returns Array of cluster tree items
+     */
+    private buildClustersWithoutFolder(): ClusterTreeItem[] {
+        if (!this.kubeconfig || !this.kubeconfig.contexts || this.kubeconfig.contexts.length === 0) {
+            return [];
         }
 
-        // Create tree items for each context
-        const clusterItems: ClusterTreeItem[] = this.kubeconfig.contexts.map(context => {
-            // Find the corresponding cluster data
-            const cluster = this.kubeconfig!.clusters.find(c => c.name === context.cluster);
-            
-            // Skip if cluster data is missing (invalid kubeconfig)
-            if (!cluster) {
-                console.warn(`Context ${context.name} references non-existent cluster ${context.cluster}`);
-                return null;
-            }
-            
-            // Get cluster customization config if service is available
-            const customization = this.customizationService?.getClusterConfig(context.name);
-            
-            // Skip clusters that are hidden from tree view
-            if (customization?.hidden === true) {
-                return null;
-            }
-            
-            const displayName = customization?.alias || context.name;
-            
-            // Create the tree item with alias or context name as the label
-            const item = new ClusterTreeItem(
-                displayName,
-                'cluster',
-                vscode.TreeItemCollapsibleState.Collapsed,
-                {
-                    context: context,
-                    cluster: cluster
+        // Create tree items for clusters without folders
+        const clusterItems: ClusterTreeItem[] = this.kubeconfig.contexts
+            .map(context => {
+                // Find the corresponding cluster data
+                const cluster = this.kubeconfig!.clusters.find(c => c.name === context.cluster);
+                
+                // Skip if cluster data is missing (invalid kubeconfig)
+                if (!cluster) {
+                    console.warn(`Context ${context.name} references non-existent cluster ${context.cluster}`);
+                    return null;
                 }
+                
+                // Get cluster customization config if service is available
+                const customization = this.customizationService?.getClusterConfig(context.name);
+                
+                // Skip clusters that are hidden from tree view
+                if (customization?.hidden === true) {
+                    return null;
+                }
+                
+                // Skip clusters that belong to a folder
+                if (customization?.folderId !== null && customization?.folderId !== undefined) {
+                    return null;
+                }
+                
+                return this.createClusterTreeItem(context, cluster, customization);
+            })
+            .filter((item): item is ClusterTreeItem => item !== null);
+
+        // Sort by order
+        clusterItems.sort((a, b) => {
+            const aCustomization = this.customizationService?.getClusterConfig(
+                a.resourceData?.context?.name || ''
             );
-
-            // Set tooltip to show original context name when alias exists
-            if (customization?.alias) {
-                item.tooltip = `Context: ${context.name}`;
-            }
-
-            // Set description to show the cluster name if different from context name
-            if (cluster && cluster.name !== context.name) {
-                item.description = cluster.name;
-            }
-
-            // Initialize with unknown status
-            item.status = ClusterStatus.Unknown;
-            
-            // Set initial icon and tooltip (will be updated after connectivity check)
-            const isCurrentContext = context.name === this.kubeconfig!.currentContext;
-            this.updateTreeItemAppearance(item, isCurrentContext, ClusterStatus.Unknown, item.operatorStatus);
-
-            return item;
-        }).filter((item): item is ClusterTreeItem => item !== null);
+            const bCustomization = this.customizationService?.getClusterConfig(
+                b.resourceData?.context?.name || ''
+            );
+            const aOrder = aCustomization?.order ?? 0;
+            const bOrder = bCustomization?.order ?? 0;
+            return aOrder - bOrder;
+        });
 
         // Update cluster items with cached status and populate cluster cache
         clusterItems.forEach(item => {
@@ -709,14 +721,11 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         this.checkAllClustersConnectivity(clusterItems);
 
         // Check operator status for all clusters asynchronously
-        // Filter to only valid cluster items (exclude auth status item)
         const validClusters = clusterItems.filter(item => 
             item.type === 'cluster' && 
             item.resourceData?.context?.name
         );
         
-        // Check operator status for each cluster asynchronously (fire-and-forget)
-        // Use forceOperatorRefreshFlag if set (for manual refresh), otherwise use cache
         const forceRefresh = this.forceOperatorRefreshFlag;
         validClusters.forEach(item => {
             void this.checkOperatorStatus(item, forceRefresh);
@@ -728,6 +737,186 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         }
 
         return clusterItems;
+    }
+
+    /**
+     * Builds cluster tree items that belong to a specific folder.
+     * 
+     * @param folderId - The folder ID
+     * @returns Array of cluster tree items
+     */
+    private buildClustersInFolder(folderId: string): ClusterTreeItem[] {
+        if (!this.kubeconfig || !this.kubeconfig.contexts || this.kubeconfig.contexts.length === 0) {
+            return [];
+        }
+
+        // Create tree items for clusters in the folder
+        const clusterItems: ClusterTreeItem[] = this.kubeconfig.contexts
+            .map(context => {
+                // Find the corresponding cluster data
+                const cluster = this.kubeconfig!.clusters.find(c => c.name === context.cluster);
+                
+                // Skip if cluster data is missing (invalid kubeconfig)
+                if (!cluster) {
+                    console.warn(`Context ${context.name} references non-existent cluster ${context.cluster}`);
+                    return null;
+                }
+                
+                // Get cluster customization config if service is available
+                const customization = this.customizationService?.getClusterConfig(context.name);
+                
+                // Skip clusters that are hidden from tree view
+                if (customization?.hidden === true) {
+                    return null;
+                }
+                
+                // Skip clusters that don't belong to this folder
+                if (customization?.folderId !== folderId) {
+                    return null;
+                }
+                
+                return this.createClusterTreeItem(context, cluster, customization);
+            })
+            .filter((item): item is ClusterTreeItem => item !== null);
+
+        // Sort by order
+        clusterItems.sort((a, b) => {
+            const aCustomization = this.customizationService?.getClusterConfig(
+                a.resourceData?.context?.name || ''
+            );
+            const bCustomization = this.customizationService?.getClusterConfig(
+                b.resourceData?.context?.name || ''
+            );
+            const aOrder = aCustomization?.order ?? 0;
+            const bOrder = bCustomization?.order ?? 0;
+            return aOrder - bOrder;
+        });
+
+        // Update cluster items with cached status and populate cluster cache
+        clusterItems.forEach(item => {
+            if (item.type === 'cluster' && item.resourceData?.context?.name) {
+                const contextName = item.resourceData.context.name;
+                
+                // Populate cluster items cache for targeted refresh
+                this.clusterItemsCache.set(contextName, item);
+                
+                const cachedStatus = this.clusterStatusCache.get(contextName);
+                
+                if (cachedStatus !== undefined) {
+                    // Use cached status if available
+                    item.status = cachedStatus;
+                    const isCurrentContext = contextName === this.kubeconfig!.currentContext;
+                    this.updateTreeItemAppearance(item, isCurrentContext, cachedStatus, item.operatorStatus);
+                }
+            }
+        });
+
+        // Check connectivity for all clusters asynchronously
+        this.checkAllClustersConnectivity(clusterItems);
+
+        // Check operator status for all clusters asynchronously
+        const validClusters = clusterItems.filter(item => 
+            item.type === 'cluster' && 
+            item.resourceData?.context?.name
+        );
+        
+        const forceRefresh = this.forceOperatorRefreshFlag;
+        validClusters.forEach(item => {
+            void this.checkOperatorStatus(item, forceRefresh);
+        });
+        
+        // Clear the flag after use
+        if (this.forceOperatorRefreshFlag) {
+            this.forceOperatorRefreshFlag = false;
+        }
+
+        return clusterItems;
+    }
+
+    /**
+     * Creates a cluster tree item from context and cluster data.
+     * 
+     * @param context - The kubeconfig context
+     * @param cluster - The cluster data
+     * @param customization - Optional cluster customization config
+     * @returns Cluster tree item
+     */
+    private createClusterTreeItem(
+        context: { name: string; cluster: string; user: string; namespace?: string },
+        cluster: { name: string; server: string },
+        customization?: { alias: string | null; hidden: boolean; folderId: string | null; order: number }
+    ): ClusterTreeItem {
+        const displayName = customization?.alias || context.name;
+        
+        // Create the tree item with alias or context name as the label
+        const item = new ClusterTreeItem(
+            displayName,
+            'cluster',
+            vscode.TreeItemCollapsibleState.Collapsed,
+            {
+                context: context,
+                cluster: cluster
+            }
+        );
+
+        // Set tooltip to show original context name when alias exists
+        if (customization?.alias) {
+            item.tooltip = `Context: ${context.name}`;
+        }
+
+        // Set description to show the cluster name if different from context name
+        if (cluster && cluster.name !== context.name) {
+            item.description = cluster.name;
+        }
+
+        // Initialize with unknown status
+        item.status = ClusterStatus.Unknown;
+        
+        // Set initial icon and tooltip (will be updated after connectivity check)
+        const isCurrentContext = context.name === this.kubeconfig!.currentContext;
+        this.updateTreeItemAppearance(item, isCurrentContext, ClusterStatus.Unknown, item.operatorStatus);
+
+        return item;
+    }
+
+    /**
+     * Get root-level tree items (folders + ungrouped clusters).
+     * Creates folder items and cluster items, showing folders first, then clusters.
+     * Also checks connectivity status for each cluster asynchronously.
+     * 
+     * @returns Array of folder and cluster tree items, or a message item if no clusters are available
+     */
+    private async getClusters(): Promise<ClusterTreeItem[]> {
+        // If no kubeconfig data is available, show a message
+        if (!this.kubeconfig) {
+            const messageItem = new ClusterTreeItem(
+                'No clusters detected',
+                'cluster',
+                vscode.TreeItemCollapsibleState.None
+            );
+            messageItem.iconPath = new vscode.ThemeIcon('info');
+            messageItem.tooltip = 'No kubeconfig file found or it contains no clusters';
+            return [messageItem];
+        }
+
+        // If kubeconfig has no contexts, show a helpful message
+        if (!this.kubeconfig.contexts || this.kubeconfig.contexts.length === 0) {
+            const messageItem = new ClusterTreeItem(
+                'No clusters configured',
+                'cluster',
+                vscode.TreeItemCollapsibleState.None
+            );
+            messageItem.iconPath = new vscode.ThemeIcon('info');
+            messageItem.tooltip = 'Add clusters to your kubeconfig file to see them here';
+            return [messageItem];
+        }
+
+        // Get folders at root level and clusters without folders
+        const rootFolders = await this.buildFolderItems(null);
+        const ungroupedClusters = this.buildClustersWithoutFolder();
+
+        // Return folders first, then clusters (maintains order within each group)
+        return [...rootFolders, ...ungroupedClusters];
     }
 
     /**

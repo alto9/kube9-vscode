@@ -644,13 +644,16 @@ suite('ClusterTreeProvider Test Suite', () => {
             providerWithCustomization.setKubeconfig(kubeconfigWithThreeClusters);
             const items = await providerWithCustomization.getChildren();
 
+            // Filter to only clusters (folders may also be present)
+            const clusterItems = items.filter(item => item.type === 'cluster');
+            
             // Should only have 2 clusters (context-1 and context-3), context-2 should be filtered out
-            assert.strictEqual(items.length, 2);
-            assert.strictEqual(items[0].label, 'context-1');
-            assert.strictEqual(items[1].label, 'context-3');
+            assert.strictEqual(clusterItems.length, 2);
+            assert.strictEqual(clusterItems[0].label, 'context-1');
+            assert.strictEqual(clusterItems[1].label, 'context-3');
             
             // Verify context-2 is not in the list
-            const contextNames = items.map(item => item.resourceData?.context?.name).filter(Boolean);
+            const contextNames = clusterItems.map(item => item.resourceData?.context?.name).filter(Boolean);
             assert.ok(!contextNames.includes('context-2'), 'Hidden cluster should not appear in tree');
 
             providerWithCustomization.dispose();
@@ -673,10 +676,13 @@ suite('ClusterTreeProvider Test Suite', () => {
             providerWithCustomization.setKubeconfig(mockKubeconfig);
             const items = await providerWithCustomization.getChildren();
 
+            // Filter to only clusters (folders may also be present)
+            const clusterItems = items.filter(item => item.type === 'cluster');
+            
             // Should have both clusters
-            assert.strictEqual(items.length, 2);
-            assert.strictEqual(items[0].label, 'context-1');
-            assert.strictEqual(items[1].label, 'context-2');
+            assert.strictEqual(clusterItems.length, 2);
+            assert.strictEqual(clusterItems[0].label, 'context-1');
+            assert.strictEqual(clusterItems[1].label, 'context-2');
 
             providerWithCustomization.dispose();
         });
@@ -694,10 +700,13 @@ suite('ClusterTreeProvider Test Suite', () => {
             providerWithoutCustomization.setKubeconfig(mockKubeconfig);
             const items = await providerWithoutCustomization.getChildren();
 
+            // Filter to only clusters (folders may also be present)
+            const clusterItems = items.filter(item => item.type === 'cluster');
+
             // Should have both clusters (no filtering when service is not available)
-            assert.strictEqual(items.length, 2);
-            assert.strictEqual(items[0].label, 'context-1');
-            assert.strictEqual(items[1].label, 'context-2');
+            assert.strictEqual(clusterItems.length, 2);
+            assert.strictEqual(clusterItems[0].label, 'context-1');
+            assert.strictEqual(clusterItems[1].label, 'context-2');
 
             providerWithoutCustomization.dispose();
         });
@@ -719,8 +728,11 @@ suite('ClusterTreeProvider Test Suite', () => {
             providerWithCustomization.setKubeconfig(mockKubeconfig);
             let items = await providerWithCustomization.getChildren();
 
+            // Filter to only clusters (folders may also be present)
+            let clusterItems = items.filter(item => item.type === 'cluster');
+            
             // Initially should have both clusters
-            assert.strictEqual(items.length, 2);
+            assert.strictEqual(clusterItems.length, 2);
 
             // Hide context-2
             await mockCustomizationService.setVisibility('context-2', true);
@@ -731,9 +743,12 @@ suite('ClusterTreeProvider Test Suite', () => {
             // Get items again (tree should have refreshed via event subscription)
             items = await providerWithCustomization.getChildren();
 
+            // Filter to only clusters (folders may also be present)
+            clusterItems = items.filter(item => item.type === 'cluster');
+
             // Should now only have context-1
-            assert.strictEqual(items.length, 1);
-            assert.strictEqual(items[0].label, 'context-1');
+            assert.strictEqual(clusterItems.length, 1);
+            assert.strictEqual(clusterItems[0].label, 'context-1');
 
             providerWithCustomization.dispose();
         });

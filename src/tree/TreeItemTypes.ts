@@ -5,6 +5,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * 
  * Base types:
  * - cluster: Top-level cluster nodes
+ * - folder: Folder items for organizing clusters hierarchically
  * - namespace: Individual namespace items (under Namespaces category)
  * - allNamespaces: Special "All Namespaces" item
  * - info: Informational items (e.g., auth status)
@@ -51,6 +52,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  */
 export type TreeItemType = 
     | 'cluster' 
+    | 'folder'
     | 'namespace' 
     | 'allNamespaces' 
     | 'info'
