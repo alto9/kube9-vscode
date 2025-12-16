@@ -55,6 +55,28 @@ interface MoveClusterMessage {
 }
 
 /**
+ * Message sent from webview to extension to rename a folder.
+ */
+interface RenameFolderMessage {
+    type: 'renameFolder';
+    data: {
+        folderId: string;
+        newName: string;
+    };
+}
+
+/**
+ * Message sent from webview to extension to delete a folder.
+ */
+interface DeleteFolderMessage {
+    type: 'deleteFolder';
+    data: {
+        folderId: string;
+        moveToRoot: boolean;
+    };
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -90,7 +112,7 @@ interface ErrorMessage {
 /**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
@@ -253,6 +275,10 @@ export class ClusterManagerWebview {
                 await this.handleCreateFolder(message.data.name, message.data.parentId);
             } else if (message.type === 'moveCluster') {
                 await this.handleMoveCluster(message.data.contextName, message.data.folderId, message.data.order);
+            } else if (message.type === 'renameFolder') {
+                await this.handleRenameFolder(message.data.folderId, message.data.newName);
+            } else if (message.type === 'deleteFolder') {
+                await this.handleDeleteFolder(message.data.folderId, message.data.moveToRoot);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -331,6 +357,50 @@ export class ClusterManagerWebview {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error moving cluster:', errorMessage);
             // Could send error message to webview here if needed
+        }
+    }
+
+    /**
+     * Handle renameFolder message by renaming a folder.
+     * 
+     * @param folderId - The folder ID to rename
+     * @param newName - The new folder name
+     */
+    private async handleRenameFolder(folderId: string, newName: string): Promise<void> {
+        try {
+            await this.customizationService.renameFolder(folderId, newName);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error renaming folder:', errorMessage);
+            // Send error message back to webview
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
+        }
+    }
+
+    /**
+     * Handle deleteFolder message by deleting a folder.
+     * 
+     * @param folderId - The folder ID to delete
+     * @param moveToRoot - Whether to move clusters to root or delete them
+     */
+    private async handleDeleteFolder(folderId: string, moveToRoot: boolean): Promise<void> {
+        try {
+            await this.customizationService.deleteFolder(folderId, moveToRoot);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error deleting folder:', errorMessage);
+            // Send error message back to webview
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
         }
     }
 

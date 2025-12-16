@@ -394,6 +394,70 @@ body {
     font-weight: 500;
 }
 
+.folder-item-name-input {
+    flex: 1;
+    font-size: 14px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 4px 8px;
+    outline: none;
+}
+
+.folder-item-name-input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.folder-context-menu {
+    background-color: var(--vscode-menu-background);
+    border: 1px solid var(--vscode-menu-border);
+    border-radius: 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    padding: 4px 0;
+    min-width: 180px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.folder-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-menu-foreground);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s ease;
+    width: 100%;
+}
+
+.folder-context-menu-item:hover {
+    background-color: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
+}
+
+.folder-context-menu-item:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.folder-context-menu-item .codicon {
+    font-size: 16px;
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .folder-item-children {
     display: flex;
     flex-direction: column;
@@ -585,6 +649,104 @@ body {
 }
 
 .new-folder-dialog-button:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Delete Folder Dialog */
+.delete-folder-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.delete-folder-dialog {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    min-width: 400px;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.delete-folder-dialog-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.delete-folder-dialog-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.delete-folder-dialog-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.delete-folder-dialog-content p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--vscode-foreground);
+    line-height: 1.5;
+}
+
+.delete-folder-dialog-content p strong {
+    font-weight: 600;
+}
+
+.delete-folder-dialog-actions {
+    padding: 16px;
+    border-top: 1px solid var(--vscode-panel-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.delete-folder-dialog-button {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.delete-folder-dialog-button-primary {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border-color: var(--vscode-button-border);
+}
+
+.delete-folder-dialog-button-primary:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.delete-folder-dialog-button-secondary {
+    color: var(--vscode-button-secondaryForeground);
+    background-color: var(--vscode-button-secondaryBackground);
+    border-color: var(--vscode-button-border);
+}
+
+.delete-folder-dialog-button-secondary:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.delete-folder-dialog-button:focus {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }

@@ -15,6 +15,8 @@ interface NewFolderDialogProps {
     onCancel: () => void;
     /** Optional error message to display */
     errorMessage?: string;
+    /** Optional initial parent ID (for creating subfolders) */
+    initialParentId?: string | null;
 }
 
 /**
@@ -25,7 +27,8 @@ export function NewFolderDialog({
     folders,
     onCreate,
     onCancel,
-    errorMessage
+    errorMessage,
+    initialParentId
 }: NewFolderDialogProps): JSX.Element | null {
     const [folderName, setFolderName] = useState<string>('');
     const [parentId, setParentId] = useState<string | null>(null);
@@ -36,14 +39,14 @@ export function NewFolderDialog({
     useEffect(() => {
         if (isOpen) {
             setFolderName('');
-            setParentId(null);
+            setParentId(initialParentId ?? null);
             setValidationError('');
             // Focus name input when dialog opens
             setTimeout(() => {
                 nameInputRef.current?.focus();
             }, 0);
         }
-    }, [isOpen]);
+    }, [isOpen, initialParentId]);
 
     // Clear validation error when folder name changes
     useEffect(() => {

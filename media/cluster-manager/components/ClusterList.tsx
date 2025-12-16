@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { ClusterInfo, ClusterCustomizationConfig, FolderConfig } from '../types';
 import { ClusterItem } from './ClusterItem';
 import { FolderItem } from './FolderItem';
+import { DeleteFolderDialog } from './DeleteFolderDialog';
 
 /**
  * Props for ClusterList component
@@ -19,6 +20,12 @@ interface ClusterListProps {
     searchTerm?: string;
     /** Callback function to handle moving a cluster to a folder */
     onMoveCluster?: (contextName: string, folderId: string | null, order: number) => void;
+    /** Callback function to handle renaming a folder */
+    onRenameFolder?: (folderId: string, newName: string) => void;
+    /** Callback function to handle deleting a folder */
+    onDeleteFolder?: (folderId: string, moveToRoot: boolean) => void;
+    /** Callback function to handle creating a subfolder */
+    onCreateSubfolder?: (parentId: string) => void;
 }
 
 /**
@@ -53,9 +60,31 @@ function getClustersInFolder(
 }
 
 /**
+ * Count clusters in a folder recursively (including nested folders)
+ */
+function countClustersInFolder(
+    clusters: ClusterInfo[],
+    customizations: ClusterCustomizationConfig,
+    folderId: string
+): number {
+    // Get direct clusters in this folder
+    const directClusters = getClustersInFolder(clusters, customizations, folderId).length;
+    
+    // Get child folders
+    const childFolders = customizations.folders.filter(f => f.parentId === folderId);
+    
+    // Recursively count clusters in child folders
+    const childClusters = childFolders.reduce((count, childFolder) => {
+        return count + countClustersInFolder(clusters, customizations, childFolder.id);
+    }, 0);
+    
+    return directClusters + childClusters;
+}
+
+/**
  * ClusterList component displays folders and clusters in a hierarchical structure
  */
-export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm, onMoveCluster }: ClusterListProps): JSX.Element {
+export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm, onMoveCluster, onRenameFolder, onDeleteFolder, onCreateSubfolder }: ClusterListProps): JSX.Element {
     // Local state for folder expansion (UI-only for now, persistence handled in future story)
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
         // Initialize with folders that have expanded: true
@@ -67,6 +96,9 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
         });
         return initialExpanded;
     });
+
+    // State for delete folder dialog
+    const [deleteDialogFolder, setDeleteDialogFolder] = useState<{ id: string; name: string; clusterCount: number } | null>(null);
 
     // Merge local expansion state with config
     const foldersWithExpansion = useMemo(() => {
@@ -88,12 +120,48 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
         });
     };
 
+    const handleRenameFolder = (folderId: string, newName: string): void => {
+        if (onRenameFolder) {
+            onRenameFolder(folderId, newName);
+        }
+    };
+
+    const handleDeleteFolderRequest = (folderId: string): void => {
+        const folder = customizations.folders.find(f => f.id === folderId);
+        if (folder) {
+            const clusterCount = countClustersInFolder(clusters, customizations, folderId);
+            setDeleteDialogFolder({
+                id: folderId,
+                name: folder.name,
+                clusterCount
+            });
+        }
+    };
+
+    const handleDeleteFolderConfirm = (moveToRoot: boolean): void => {
+        if (deleteDialogFolder && onDeleteFolder) {
+            onDeleteFolder(deleteDialogFolder.id, moveToRoot);
+        }
+        setDeleteDialogFolder(null);
+    };
+
+    const handleDeleteFolderCancel = (): void => {
+        setDeleteDialogFolder(null);
+    };
+
+    const handleCreateSubfolder = (parentId: string): void => {
+        if (onCreateSubfolder) {
+            onCreateSubfolder(parentId);
+        }
+    };
+
     /**
      * Recursively render a folder and its children
      */
     const renderFolder = (folder: FolderConfig, level: number): JSX.Element => {
         const childFolders = buildFolderTree(foldersWithExpansion, folder.id);
         const clustersInFolder = getClustersInFolder(clusters, customizations, folder.id);
+        const clusterCount = countClustersInFolder(clusters, customizations, folder.id);
 
         return (
             <FolderItem
@@ -103,6 +171,10 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
                 onToggleExpand={handleToggleExpand}
                 onMoveCluster={onMoveCluster}
                 customizations={customizations}
+                onRenameFolder={handleRenameFolder}
+                onDeleteFolder={handleDeleteFolderRequest}
+                onCreateSubfolder={handleCreateSubfolder}
+                clusterCount={clusterCount}
             >
                 {childFolders.map(childFolder => renderFolder(childFolder, level + 1))}
                 {clustersInFolder.map(cluster => (
@@ -132,19 +204,30 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
     const rootClusters = getClustersInFolder(clusters, customizations, null);
 
     return (
-        <div className="cluster-list">
-            {rootFolders.map(folder => renderFolder(folder, 0))}
-            {rootClusters.map(cluster => (
-                <ClusterItem
-                    key={cluster.contextName}
-                    cluster={cluster}
-                    customization={customizations.clusters[cluster.contextName]}
-                    onSetAlias={onSetAlias}
-                    onToggleVisibility={onToggleVisibility}
-                    searchTerm={searchTerm}
+        <>
+            <div className="cluster-list">
+                {rootFolders.map(folder => renderFolder(folder, 0))}
+                {rootClusters.map(cluster => (
+                    <ClusterItem
+                        key={cluster.contextName}
+                        cluster={cluster}
+                        customization={customizations.clusters[cluster.contextName]}
+                        onSetAlias={onSetAlias}
+                        onToggleVisibility={onToggleVisibility}
+                        searchTerm={searchTerm}
+                    />
+                ))}
+            </div>
+            {deleteDialogFolder && (
+                <DeleteFolderDialog
+                    isOpen={true}
+                    folderName={deleteDialogFolder.name}
+                    clusterCount={deleteDialogFolder.clusterCount}
+                    onConfirm={handleDeleteFolderConfirm}
+                    onCancel={handleDeleteFolderCancel}
                 />
-            ))}
-        </div>
+            )}
+        </>
     );
 }
 

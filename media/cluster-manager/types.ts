@@ -115,6 +115,28 @@ export interface MoveClusterMessage {
 }
 
 /**
+ * Message sent from webview to extension to rename a folder.
+ */
+export interface RenameFolderMessage {
+    type: 'renameFolder';
+    data: {
+        folderId: string;
+        newName: string;
+    };
+}
+
+/**
+ * Message sent from webview to extension to delete a folder.
+ */
+export interface DeleteFolderMessage {
+    type: 'deleteFolder';
+    data: {
+        folderId: string;
+        moveToRoot: boolean;
+    };
+}
+
+/**
  * Message sent from extension to webview when customizations are updated.
  */
 export interface CustomizationsUpdatedMessage {
@@ -138,5 +160,5 @@ export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdate
 /**
  * Union type for all webview messages from webview to extension.
  */
-export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage;
+export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage;
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { FolderConfig, ClusterCustomizationConfig } from '../types';
 
 /**
@@ -17,16 +17,64 @@ interface FolderItemProps {
     onMoveCluster?: (contextName: string, folderId: string | null, order: number) => void;
     /** Customization configuration for calculating order */
     customizations?: ClusterCustomizationConfig;
+    /** Callback when folder is renamed */
+    onRenameFolder?: (folderId: string, newName: string) => void;
+    /** Callback when folder delete is requested */
+    onDeleteFolder?: (folderId: string) => void;
+    /** Callback when new subfolder is requested */
+    onCreateSubfolder?: (parentId: string) => void;
+    /** Number of clusters in this folder */
+    clusterCount?: number;
 }
 
 /**
  * FolderItem component displays a folder with expand/collapse functionality
  */
-export function FolderItem({ folder, level, onToggleExpand, children, onMoveCluster, customizations }: FolderItemProps): JSX.Element {
+export function FolderItem({ folder, level, onToggleExpand, children, onMoveCluster, customizations, onRenameFolder, onDeleteFolder, onCreateSubfolder, clusterCount = 0 }: FolderItemProps): JSX.Element {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isInvalidDrop, setIsInvalidDrop] = useState(false);
+    const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState('');
+    const inputRef = useRef<HTMLInputElement>(null);
+    const contextMenuRef = useRef<HTMLDivElement>(null);
+    const headerRef = useRef<HTMLDivElement>(null);
 
-    const handleClick = (): void => {
+    // Initialize edit value when entering edit mode
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            setEditValue(folder.name);
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [isEditing, folder.name]);
+
+    // Close context menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent): void => {
+            if (isContextMenuOpen && contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+                setIsContextMenuOpen(false);
+            }
+        };
+
+        if (isContextMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }
+    }, [isContextMenuOpen]);
+
+    const handleClick = (e: React.MouseEvent): void => {
+        // Don't toggle expand if editing
+        if (isEditing) {
+            return;
+        }
+        // Don't toggle if clicking on context menu
+        if ((e.target as HTMLElement).closest('.folder-context-menu')) {
+            return;
+        }
         onToggleExpand(folder.id);
     };
 
@@ -102,15 +150,66 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
         onMoveCluster(contextName, folder.id, order);
     };
 
+    const handleContextMenu = (e: React.MouseEvent): void => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenuPosition({ x: e.clientX, y: e.clientY });
+        setIsContextMenuOpen(true);
+    };
+
+    const handleRenameClick = (): void => {
+        setIsContextMenuOpen(false);
+        setIsEditing(true);
+    };
+
+    const handleNewSubfolderClick = (): void => {
+        setIsContextMenuOpen(false);
+        if (onCreateSubfolder) {
+            onCreateSubfolder(folder.id);
+        }
+    };
+
+    const handleDeleteClick = (): void => {
+        setIsContextMenuOpen(false);
+        if (onDeleteFolder) {
+            onDeleteFolder(folder.id);
+        }
+    };
+
+    const handleRenameSave = (): void => {
+        const trimmedValue = editValue.trim();
+        if (trimmedValue && trimmedValue !== folder.name && onRenameFolder) {
+            onRenameFolder(folder.id, trimmedValue);
+        }
+        setIsEditing(false);
+    };
+
+    const handleRenameCancel = (): void => {
+        setIsEditing(false);
+        setEditValue(folder.name);
+    };
+
+    const handleRenameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleRenameSave();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            handleRenameCancel();
+        }
+    };
+
     const arrowIcon = folder.expanded ? 'codicon-chevron-down' : 'codicon-chevron-right';
     const folderIcon = folder.expanded ? 'codicon-folder-opened' : 'codicon-folder';
 
     return (
         <div className="folder-item">
             <div
+                ref={headerRef}
                 className={`folder-item-header ${isDragOver ? (isInvalidDrop ? 'drag-over-invalid' : 'drag-over') : ''}`}
                 style={{ paddingLeft: `${level * 20}px` }}
                 onClick={handleClick}
+                onContextMenu={handleContextMenu}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
@@ -121,14 +220,64 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
                 onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        handleClick();
+                        handleClick(e as unknown as React.MouseEvent);
                     }
                 }}
             >
                 <span className={`codicon ${arrowIcon} folder-item-arrow`}></span>
                 <span className={`codicon ${folderIcon} folder-item-icon`}></span>
-                <span className="folder-item-name">{folder.name}</span>
+                {isEditing ? (
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        className="folder-item-name-input"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={handleRenameKeyDown}
+                        onBlur={handleRenameSave}
+                        onClick={(e) => e.stopPropagation()}
+                        onContextMenu={(e) => e.stopPropagation()}
+                    />
+                ) : (
+                    <span className="folder-item-name">{folder.name}</span>
+                )}
             </div>
+            {isContextMenuOpen && (
+                <div
+                    ref={contextMenuRef}
+                    className="folder-context-menu"
+                    style={{
+                        position: 'fixed',
+                        left: `${contextMenuPosition.x}px`,
+                        top: `${contextMenuPosition.y}px`
+                    }}
+                >
+                    <button
+                        className="folder-context-menu-item"
+                        onClick={handleRenameClick}
+                        type="button"
+                    >
+                        <span className="codicon codicon-edit"></span>
+                        Rename Folder
+                    </button>
+                    <button
+                        className="folder-context-menu-item"
+                        onClick={handleNewSubfolderClick}
+                        type="button"
+                    >
+                        <span className="codicon codicon-new-folder"></span>
+                        New Subfolder
+                    </button>
+                    <button
+                        className="folder-context-menu-item"
+                        onClick={handleDeleteClick}
+                        type="button"
+                    >
+                        <span className="codicon codicon-trash"></span>
+                        Delete Folder
+                    </button>
+                </div>
+            )}
             {folder.expanded && children && (
                 <div className="folder-item-children">
                     {children}

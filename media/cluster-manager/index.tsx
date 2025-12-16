@@ -37,6 +37,7 @@ function ClusterManagerApp(): JSX.Element {
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [dialogError, setDialogError] = useState<string>('');
+    const [dialogParentId, setDialogParentId] = useState<string | null>(null);
 
     useEffect(() => {
         // Acquire VS Code API
@@ -127,6 +128,7 @@ function ClusterManagerApp(): JSX.Element {
     // Handle new folder button click
     const handleNewFolderClick = (): void => {
         setDialogError('');
+        setDialogParentId(null);
         setIsDialogOpen(true);
     };
 
@@ -156,10 +158,42 @@ function ClusterManagerApp(): JSX.Element {
         });
     };
 
+    // Handle renaming folder
+    const handleRenameFolder = (folderId: string, newName: string): void => {
+        const vscode = acquireVsCodeApi();
+        vscode.postMessage({
+            type: 'renameFolder',
+            data: {
+                folderId,
+                newName
+            }
+        });
+    };
+
+    // Handle deleting folder
+    const handleDeleteFolder = (folderId: string, moveToRoot: boolean): void => {
+        const vscode = acquireVsCodeApi();
+        vscode.postMessage({
+            type: 'deleteFolder',
+            data: {
+                folderId,
+                moveToRoot
+            }
+        });
+    };
+
+    // Handle creating subfolder
+    const handleCreateSubfolder = (parentId: string): void => {
+        setDialogError('');
+        setDialogParentId(parentId);
+        setIsDialogOpen(true);
+    };
+
     // Handle dialog cancel
     const handleDialogCancel = (): void => {
         setIsDialogOpen(false);
         setDialogError('');
+        setDialogParentId(null);
     };
 
     return (
@@ -188,6 +222,9 @@ function ClusterManagerApp(): JSX.Element {
                         onToggleVisibility={handleToggleVisibility}
                         searchTerm={debouncedSearchTerm}
                         onMoveCluster={handleMoveCluster}
+                        onRenameFolder={handleRenameFolder}
+                        onDeleteFolder={handleDeleteFolder}
+                        onCreateSubfolder={handleCreateSubfolder}
                     />
                 )}
             </main>
@@ -212,6 +249,7 @@ function ClusterManagerApp(): JSX.Element {
                 onCreate={handleCreateFolder}
                 onCancel={handleDialogCancel}
                 errorMessage={dialogError}
+                initialParentId={dialogParentId}
             />
         </div>
     );
