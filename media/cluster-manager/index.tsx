@@ -196,6 +196,22 @@ function ClusterManagerApp(): JSX.Element {
         setDialogParentId(null);
     };
 
+    // Handle export click
+    const handleExportClick = (): void => {
+        const vscode = acquireVsCodeApi();
+        vscode.postMessage({
+            type: 'exportConfiguration'
+        });
+    };
+
+    // Handle import click
+    const handleImportClick = (): void => {
+        const vscode = acquireVsCodeApi();
+        vscode.postMessage({
+            type: 'importConfiguration'
+        });
+    };
+
     return (
         <div className="cluster-manager-app">
             <header className="cluster-manager-header">
@@ -206,6 +222,8 @@ function ClusterManagerApp(): JSX.Element {
                 onSearchChange={handleSearchChange}
                 onSearchClear={handleSearchClear}
                 onNewFolderClick={handleNewFolderClick}
+                onExportClick={handleExportClick}
+                onImportClick={handleImportClick}
             />
             <main className="cluster-manager-content">
                 {loading ? (

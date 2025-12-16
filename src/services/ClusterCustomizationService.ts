@@ -544,6 +544,108 @@ export class ClusterCustomizationService {
     }
 
     /**
+     * Exports the current configuration as a pretty-printed JSON string.
+     * 
+     * @returns Promise resolving to JSON string representation of the configuration
+     */
+    async exportConfiguration(): Promise<string> {
+        const config = await this.getConfiguration();
+        return JSON.stringify(config, null, 2);
+    }
+
+    /**
+     * Imports configuration from a JSON string.
+     * Parses the JSON, validates the schema, and merges with existing configuration (imported takes precedence).
+     * 
+     * @param jsonString - JSON string representation of the configuration to import
+     * @returns Promise that resolves when the import is complete
+     * @throws Error if JSON is invalid or schema validation fails
+     */
+    async importConfiguration(jsonString: string): Promise<void> {
+        // Parse JSON
+        let importedConfig: ClusterCustomizationConfig;
+        try {
+            importedConfig = JSON.parse(jsonString);
+        } catch (error) {
+            throw new Error(`Invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
+        // Validate schema version
+        if (!importedConfig.version || typeof importedConfig.version !== 'string') {
+            throw new Error('Invalid configuration: missing or invalid version field');
+        }
+
+        // Validate structure
+        if (!importedConfig.folders || !Array.isArray(importedConfig.folders)) {
+            throw new Error('Invalid configuration: folders must be an array');
+        }
+
+        if (!importedConfig.clusters || typeof importedConfig.clusters !== 'object') {
+            throw new Error('Invalid configuration: clusters must be an object');
+        }
+
+        // Validate folders
+        const folderIds = new Set<string>();
+        for (const folder of importedConfig.folders) {
+            if (!folder.id || typeof folder.id !== 'string') {
+                throw new Error('Invalid folder: missing or invalid id field');
+            }
+            if (!folder.name || typeof folder.name !== 'string' || folder.name.trim().length === 0) {
+                throw new Error(`Invalid folder ${folder.id}: name cannot be empty`);
+            }
+            if (typeof folder.order !== 'number' || folder.order < 0) {
+                throw new Error(`Invalid folder ${folder.id}: order must be a non-negative number`);
+            }
+            if (folderIds.has(folder.id)) {
+                throw new Error(`Invalid configuration: duplicate folder ID ${folder.id}`);
+            }
+            folderIds.add(folder.id);
+        }
+
+        // Validate folder parent references
+        for (const folder of importedConfig.folders) {
+            if (folder.parentId !== null && !folderIds.has(folder.parentId)) {
+                throw new Error(`Invalid folder ${folder.id}: references non-existent parent ${folder.parentId}`);
+            }
+        }
+
+        // Validate clusters
+        for (const [contextName, cluster] of Object.entries(importedConfig.clusters)) {
+            if (cluster.alias !== null && cluster.alias !== undefined && typeof cluster.alias !== 'string') {
+                throw new Error(`Invalid cluster ${contextName}: alias must be a string or null`);
+            }
+            if (cluster.alias && cluster.alias.length > 100) {
+                throw new Error(`Invalid cluster ${contextName}: alias must be 100 characters or less`);
+            }
+            if (typeof cluster.hidden !== 'boolean') {
+                throw new Error(`Invalid cluster ${contextName}: hidden must be a boolean`);
+            }
+            if (typeof cluster.order !== 'number' || cluster.order < 0) {
+                throw new Error(`Invalid cluster ${contextName}: order must be a non-negative number`);
+            }
+            if (cluster.folderId !== null && cluster.folderId !== undefined && !folderIds.has(cluster.folderId)) {
+                throw new Error(`Invalid cluster ${contextName}: references non-existent folder ${cluster.folderId}`);
+            }
+        }
+
+        // Get existing configuration
+        const existingConfig = await this.getConfiguration();
+
+        // Merge configurations (imported takes precedence)
+        const mergedConfig: ClusterCustomizationConfig = {
+            version: importedConfig.version,
+            folders: [...importedConfig.folders],
+            clusters: {
+                ...existingConfig.clusters,
+                ...importedConfig.clusters
+            }
+        };
+
+        // Save merged configuration
+        await this.updateConfiguration(mergedConfig);
+    }
+
+    /**
      * Disposes of resources used by this service.
      * Should be called when the extension is deactivated.
      */

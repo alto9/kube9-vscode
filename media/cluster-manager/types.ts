@@ -137,6 +137,20 @@ export interface DeleteFolderMessage {
 }
 
 /**
+ * Message sent from webview to extension to export configuration.
+ */
+export interface ExportConfigurationMessage {
+    type: 'exportConfiguration';
+}
+
+/**
+ * Message sent from webview to extension to import configuration.
+ */
+export interface ImportConfigurationMessage {
+    type: 'importConfiguration';
+}
+
+/**
  * Message sent from extension to webview when customizations are updated.
  */
 export interface CustomizationsUpdatedMessage {
@@ -160,5 +174,5 @@ export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdate
 /**
  * Union type for all webview messages from webview to extension.
  */
-export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage;
+export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage;
 

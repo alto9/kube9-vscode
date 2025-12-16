@@ -77,6 +77,20 @@ interface DeleteFolderMessage {
 }
 
 /**
+ * Message sent from webview to extension to export configuration.
+ */
+interface ExportConfigurationMessage {
+    type: 'exportConfiguration';
+}
+
+/**
+ * Message sent from webview to extension to import configuration.
+ */
+interface ImportConfigurationMessage {
+    type: 'importConfiguration';
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -112,7 +126,7 @@ interface ErrorMessage {
 /**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
@@ -279,10 +293,20 @@ export class ClusterManagerWebview {
                 await this.handleRenameFolder(message.data.folderId, message.data.newName);
             } else if (message.type === 'deleteFolder') {
                 await this.handleDeleteFolder(message.data.folderId, message.data.moveToRoot);
+            } else if (message.type === 'exportConfiguration') {
+                await this.handleExportConfiguration();
+            } else if (message.type === 'importConfiguration') {
+                await this.handleImportConfiguration();
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error handling webview message:', errorMessage);
+            // Send error message to webview
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
         }
     }
 
@@ -396,6 +420,85 @@ export class ClusterManagerWebview {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error deleting folder:', errorMessage);
             // Send error message back to webview
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
+        }
+    }
+
+    /**
+     * Handle exportConfiguration message by exporting configuration to a JSON file.
+     */
+    private async handleExportConfiguration(): Promise<void> {
+        try {
+            // Get configuration as JSON string
+            const jsonString = await this.customizationService.exportConfiguration();
+
+            // Show save dialog
+            const uri = await vscode.window.showSaveDialog({
+                filters: { 'JSON': ['json'] },
+                defaultUri: vscode.Uri.file('kube9-cluster-config.json')
+            });
+
+            if (!uri) {
+                // User cancelled
+                return;
+            }
+
+            // Write file
+            await vscode.workspace.fs.writeFile(uri, Buffer.from(jsonString, 'utf-8'));
+
+            // Show success notification
+            vscode.window.showInformationMessage('Configuration exported successfully');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error exporting configuration:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to export configuration: ${errorMessage}`);
+            // Send error message to webview
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
+        }
+    }
+
+    /**
+     * Handle importConfiguration message by importing configuration from a JSON file.
+     */
+    private async handleImportConfiguration(): Promise<void> {
+        try {
+            // Show open dialog
+            const uris = await vscode.window.showOpenDialog({
+                canSelectMany: false,
+                filters: { 'JSON': ['json'] },
+                openLabel: 'Import Configuration'
+            });
+
+            if (!uris || uris.length === 0) {
+                // User cancelled
+                return;
+            }
+
+            const uri = uris[0];
+
+            // Read file
+            const fileData = await vscode.workspace.fs.readFile(uri);
+            const jsonString = Buffer.from(fileData).toString('utf-8');
+
+            // Import configuration
+            await this.customizationService.importConfiguration(jsonString);
+
+            // The event listener will automatically send customizationsUpdated message
+            // Show success notification
+            vscode.window.showInformationMessage('Configuration imported successfully');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error importing configuration:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to import configuration: ${errorMessage}`);
+            // Send error message to webview
             const errorMsg: ErrorMessage = {
                 type: 'error',
                 message: errorMessage
