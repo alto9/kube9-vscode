@@ -167,9 +167,19 @@ export interface ErrorMessage {
 }
 
 /**
+ * Message sent from extension to webview when theme changes.
+ */
+export interface ThemeChangedMessage {
+    type: 'themeChanged';
+    data: {
+        theme: 'light' | 'dark';
+    };
+}
+
+/**
  * Union type for all webview messages from extension to webview.
  */
-export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdatedMessage | ErrorMessage;
+export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdatedMessage | ErrorMessage | ThemeChangedMessage;
 
 /**
  * Union type for all webview messages from webview to extension.

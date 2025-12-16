@@ -60,6 +60,8 @@ function ClusterManagerApp(): JSX.Element {
                 setDialogError('');
                 // Reset hidden filter when customizations change
                 setShowHiddenOnly(false);
+            } else if (message.type === 'themeChanged') {
+                setTheme(message.data.theme);
             } else if (message.type === 'error') {
                 // Show error in dialog
                 setDialogError(message.message);
@@ -227,7 +229,7 @@ function ClusterManagerApp(): JSX.Element {
     };
 
     return (
-        <div className="cluster-manager-app">
+        <div className={`cluster-manager-app theme-${theme}`}>
             <header className="cluster-manager-header">
                 <h1>Cluster Manager</h1>
             </header>

@@ -124,6 +124,16 @@ interface ErrorMessage {
 }
 
 /**
+ * Message sent from extension to webview when theme changes.
+ */
+interface ThemeChangedMessage {
+    type: 'themeChanged';
+    data: {
+        theme: 'light' | 'dark';
+    };
+}
+
+/**
  * Union type for all webview messages from webview to extension.
  */
 type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage;
@@ -131,7 +141,7 @@ type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVi
 /**
  * Union type for all webview messages from extension to webview.
  */
-type WebviewFromExtensionMessage = InitializeMessage | CustomizationsUpdatedMessage | ErrorMessage;
+type WebviewFromExtensionMessage = InitializeMessage | CustomizationsUpdatedMessage | ErrorMessage | ThemeChangedMessage;
 
 /**
  * Union type for all webview messages.
@@ -255,6 +265,17 @@ export class ClusterManagerWebview {
             }
         );
         this.disposables.push(customizationDisposable);
+
+        // Set up event listener for theme changes
+        const themeDisposable = vscode.window.onDidChangeActiveColorTheme((e) => {
+            const newTheme = e.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+            const themeMessage: ThemeChangedMessage = {
+                type: 'themeChanged',
+                data: { theme: newTheme }
+            };
+            this.panel.webview.postMessage(themeMessage);
+        });
+        this.disposables.push(themeDisposable);
 
         // Handle panel disposal to clear singleton reference and dispose resources
         const panelDisposable = this.panel.onDidDispose(
