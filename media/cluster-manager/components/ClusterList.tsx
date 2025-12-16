@@ -17,6 +17,8 @@ interface ClusterListProps {
     onToggleVisibility: (contextName: string, hidden: boolean) => void;
     /** Optional search term for highlighting */
     searchTerm?: string;
+    /** Callback function to handle moving a cluster to a folder */
+    onMoveCluster?: (contextName: string, folderId: string | null, order: number) => void;
 }
 
 /**
@@ -53,7 +55,7 @@ function getClustersInFolder(
 /**
  * ClusterList component displays folders and clusters in a hierarchical structure
  */
-export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm }: ClusterListProps): JSX.Element {
+export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm, onMoveCluster }: ClusterListProps): JSX.Element {
     // Local state for folder expansion (UI-only for now, persistence handled in future story)
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
         // Initialize with folders that have expanded: true
@@ -99,6 +101,8 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
                 folder={folder}
                 level={level}
                 onToggleExpand={handleToggleExpand}
+                onMoveCluster={onMoveCluster}
+                customizations={customizations}
             >
                 {childFolders.map(childFolder => renderFolder(childFolder, level + 1))}
                 {clustersInFolder.map(cluster => (

@@ -48,6 +48,7 @@ function highlightText(text: string, searchTerm: string): JSX.Element {
 export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibility, searchTerm }: ClusterItemProps): JSX.Element {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
+    const [isDragging, setIsDragging] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Get display name (alias if exists, otherwise context name)
@@ -101,8 +102,26 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
         onToggleVisibility(cluster.contextName, !isHidden);
     };
 
+    const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
+        if (e.dataTransfer) {
+            e.dataTransfer.setData('cluster', cluster.contextName);
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        setIsDragging(true);
+    };
+
+    const handleDragEnd = (): void => {
+        setIsDragging(false);
+    };
+
     return (
-        <div className={`cluster-item ${isHidden ? 'hidden' : ''}`} title={tooltipText}>
+        <div
+            className={`cluster-item ${isHidden ? 'hidden' : ''} ${isDragging ? 'dragging' : ''}`}
+            title={tooltipText}
+            draggable={true}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+        >
             {isEditing ? (
                 <>
                     <input

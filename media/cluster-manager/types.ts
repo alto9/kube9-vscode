@@ -103,6 +103,18 @@ export interface CreateFolderMessage {
 }
 
 /**
+ * Message sent from webview to extension to move a cluster to a folder.
+ */
+export interface MoveClusterMessage {
+    type: 'moveCluster';
+    data: {
+        contextName: string;
+        folderId: string | null;
+        order: number;
+    };
+}
+
+/**
  * Message sent from extension to webview when customizations are updated.
  */
 export interface CustomizationsUpdatedMessage {
@@ -126,5 +138,5 @@ export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdate
 /**
  * Union type for all webview messages from webview to extension.
  */
-export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage;
+export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage;
 

@@ -187,7 +187,12 @@ body {
     background-color: var(--vscode-list-inactiveSelectionBackground);
     border: 1px solid var(--vscode-panel-border);
     border-radius: 4px;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+    cursor: grab;
+}
+
+.cluster-item:active {
+    cursor: grabbing;
 }
 
 .cluster-item:hover {
@@ -278,6 +283,12 @@ body {
     color: var(--vscode-descriptionForeground);
 }
 
+/* Dragging Cluster Styling */
+.cluster-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
 .cluster-item-hidden-badge {
     padding: 2px 8px;
     font-size: 11px;
@@ -337,6 +348,19 @@ body {
 .folder-item-header:focus {
     outline: 1px solid var(--vscode-focusBorder);
     outline-offset: 2px;
+}
+
+/* Drag Over Styling */
+.folder-item-header.drag-over {
+    border-color: var(--vscode-focusBorder);
+    border-width: 2px;
+    background-color: var(--vscode-list-activeSelectionBackground);
+}
+
+.folder-item-header.drag-over-invalid {
+    border-color: var(--vscode-errorForeground);
+    border-width: 2px;
+    cursor: not-allowed;
 }
 
 .folder-item-arrow {

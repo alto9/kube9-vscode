@@ -43,6 +43,18 @@ interface CreateFolderMessage {
 }
 
 /**
+ * Message sent from webview to extension to move a cluster to a folder.
+ */
+interface MoveClusterMessage {
+    type: 'moveCluster';
+    data: {
+        contextName: string;
+        folderId: string | null;
+        order: number;
+    };
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -78,7 +90,7 @@ interface ErrorMessage {
 /**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
@@ -239,6 +251,8 @@ export class ClusterManagerWebview {
                 await this.handleToggleVisibility(message.data.contextName, message.data.hidden);
             } else if (message.type === 'createFolder') {
                 await this.handleCreateFolder(message.data.name, message.data.parentId);
+            } else if (message.type === 'moveCluster') {
+                await this.handleMoveCluster(message.data.contextName, message.data.folderId, message.data.order);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -299,6 +313,24 @@ export class ClusterManagerWebview {
                 message: errorMessage
             };
             this.panel.webview.postMessage(errorMsg);
+        }
+    }
+
+    /**
+     * Handle moveCluster message by moving a cluster to a folder.
+     * 
+     * @param contextName - The kubeconfig context name of the cluster
+     * @param folderId - The folder ID to move to, or null for root level
+     * @param order - The display order within the folder
+     */
+    private async handleMoveCluster(contextName: string, folderId: string | null, order: number): Promise<void> {
+        try {
+            await this.customizationService.moveCluster(contextName, folderId, order);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error moving cluster:', errorMessage);
+            // Could send error message to webview here if needed
         }
     }
 

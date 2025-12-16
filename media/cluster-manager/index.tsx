@@ -143,6 +143,19 @@ function ClusterManagerApp(): JSX.Element {
         });
     };
 
+    // Handle moving cluster to folder
+    const handleMoveCluster = (contextName: string, folderId: string | null, order: number): void => {
+        const vscode = acquireVsCodeApi();
+        vscode.postMessage({
+            type: 'moveCluster',
+            data: {
+                contextName,
+                folderId,
+                order
+            }
+        });
+    };
+
     // Handle dialog cancel
     const handleDialogCancel = (): void => {
         setIsDialogOpen(false);
@@ -174,6 +187,7 @@ function ClusterManagerApp(): JSX.Element {
                         onSetAlias={handleSetAlias}
                         onToggleVisibility={handleToggleVisibility}
                         searchTerm={debouncedSearchTerm}
+                        onMoveCluster={handleMoveCluster}
                     />
                 )}
             </main>
