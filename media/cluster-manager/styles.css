@@ -107,3 +107,55 @@ body {
     }
 }
 
+/* Cluster List */
+.cluster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Cluster Item */
+.cluster-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
+}
+
+.cluster-item:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.cluster-item-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+}
+
+.cluster-item-active-badge {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+}
+
+/* Empty State */
+.cluster-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 14px;
+    text-align: center;
+}
+

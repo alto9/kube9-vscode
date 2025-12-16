@@ -7,6 +7,7 @@ import type {
     ExtensionToWebviewMessage,
     WebviewToExtensionMessage
 } from './types';
+import { ClusterList } from './components/ClusterList';
 
 /**
  * VS Code API interface
@@ -69,14 +70,22 @@ function ClusterManagerApp(): JSX.Element {
                 {loading ? (
                     <div className="cluster-manager-loading">Loading...</div>
                 ) : (
-                    <div>
-                        {/* Content area - will be populated in future stories */}
-                        <p>Clusters loaded: {clusters.length}</p>
-                    </div>
+                    <ClusterList
+                        clusters={clusters}
+                        customizations={customizations ?? {
+                            version: '1.0',
+                            folders: [],
+                            clusters: {}
+                        }}
+                    />
                 )}
             </main>
             <footer className="cluster-manager-footer">
-                {/* Footer area - empty for now */}
+                {!loading && (
+                    <span>
+                        {clusters.length} cluster{clusters.length !== 1 ? 's' : ''}
+                    </span>
+                )}
             </footer>
         </div>
     );
