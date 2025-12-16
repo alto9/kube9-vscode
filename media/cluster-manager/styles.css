@@ -59,6 +59,70 @@ body {
     min-height: 40px;
 }
 
+/* Search Filter */
+.search-filter {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    max-width: 400px;
+    position: relative;
+}
+
+.search-filter-input {
+    flex: 1;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 4px 8px;
+    outline: none;
+    min-width: 200px;
+}
+
+.search-filter-input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.search-filter-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+.search-filter-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--vscode-icon-foreground);
+    opacity: 0.7;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+    border-radius: 3px;
+}
+
+.search-filter-clear:hover {
+    opacity: 1;
+    background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.search-filter-clear:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.search-filter-clear .codicon {
+    font-size: 14px;
+}
+
 /* Main Content */
 .cluster-manager-content {
     flex: 1;
@@ -135,6 +199,13 @@ body {
     font-size: 14px;
     color: var(--vscode-foreground);
     font-family: var(--vscode-font-family);
+}
+
+.cluster-item-name mark {
+    background-color: var(--vscode-textBlockQuote-background);
+    color: var(--vscode-foreground);
+    padding: 0;
+    font-weight: 600;
 }
 
 .cluster-item-edit-button {

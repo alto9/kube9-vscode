@@ -14,16 +14,18 @@ interface ClusterListProps {
     onSetAlias: (contextName: string, alias: string | null) => void;
     /** Callback function to handle toggling visibility */
     onToggleVisibility: (contextName: string, hidden: boolean) => void;
+    /** Optional search term for highlighting */
+    searchTerm?: string;
 }
 
 /**
  * ClusterList component displays all clusters in a list
  */
-export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility }: ClusterListProps): JSX.Element {
+export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm }: ClusterListProps): JSX.Element {
     if (clusters.length === 0) {
         return (
             <div className="cluster-empty-state">
-                No clusters found in kubeconfig
+                {searchTerm && searchTerm.trim() ? 'No clusters found' : 'No clusters found in kubeconfig'}
             </div>
         );
     }
@@ -37,6 +39,7 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
                     customization={customizations.clusters[cluster.contextName]}
                     onSetAlias={onSetAlias}
                     onToggleVisibility={onToggleVisibility}
+                    searchTerm={searchTerm}
                 />
             ))}
         </div>

@@ -13,12 +13,39 @@ interface ClusterItemProps {
     onSetAlias: (contextName: string, alias: string | null) => void;
     /** Callback function to handle toggling visibility */
     onToggleVisibility: (contextName: string, hidden: boolean) => void;
+    /** Optional search term for highlighting matching text */
+    searchTerm?: string;
+}
+
+/**
+ * Highlights matching text in a string based on search term
+ */
+function highlightText(text: string, searchTerm: string): JSX.Element {
+    if (!searchTerm || !searchTerm.trim()) {
+        return <>{text}</>;
+    }
+
+    // Escape special regex characters
+    const escapedSearch = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedSearch})`, 'gi');
+    const parts = text.split(regex);
+
+    return (
+        <>
+            {parts.map((part, i) => {
+                // Check if this part matches the search term (case-insensitive)
+                const matches = part.toLowerCase() === searchTerm.toLowerCase() ||
+                    new RegExp(escapedSearch, 'i').test(part);
+                return matches ? <mark key={i}>{part}</mark> : part;
+            })}
+        </>
+    );
 }
 
 /**
  * ClusterItem component displays a single cluster in the list
  */
-export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibility }: ClusterItemProps): JSX.Element {
+export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibility, searchTerm }: ClusterItemProps): JSX.Element {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +118,9 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
                 </>
             ) : (
                 <>
-                    <span className="cluster-item-name">{displayName}</span>
+                    <span className="cluster-item-name">
+                        {highlightText(displayName, searchTerm || '')}
+                    </span>
                     <button
                         className="cluster-item-visibility-toggle"
                         onClick={handleToggleVisibility}
