@@ -10,6 +10,7 @@ import type {
 import { ClusterList } from './components/ClusterList';
 import { Toolbar } from './components/Toolbar';
 import { NewFolderDialog } from './components/NewFolderDialog';
+import { Footer } from './components/Footer';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
 
 /**
@@ -35,6 +36,7 @@ function ClusterManagerApp(): JSX.Element {
     const [customizations, setCustomizations] = useState<ClusterCustomizationConfig | null>(null);
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [showHiddenOnly, setShowHiddenOnly] = useState<boolean>(false);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [dialogError, setDialogError] = useState<string>('');
     const [dialogParentId, setDialogParentId] = useState<string | null>(null);
@@ -56,6 +58,8 @@ function ClusterManagerApp(): JSX.Element {
                 // Close dialog and clear error on successful update
                 setIsDialogOpen(false);
                 setDialogError('');
+                // Reset hidden filter when customizations change
+                setShowHiddenOnly(false);
             } else if (message.type === 'error') {
                 // Show error in dialog
                 setDialogError(message.message);
@@ -212,6 +216,16 @@ function ClusterManagerApp(): JSX.Element {
         });
     };
 
+    // Handle filtering to hidden clusters
+    const handleFilterHidden = (): void => {
+        setShowHiddenOnly(true);
+    };
+
+    // Handle showing all clusters
+    const handleShowAll = (): void => {
+        setShowHiddenOnly(false);
+    };
+
     return (
         <div className="cluster-manager-app">
             <header className="cluster-manager-header">
@@ -239,6 +253,7 @@ function ClusterManagerApp(): JSX.Element {
                         onSetAlias={handleSetAlias}
                         onToggleVisibility={handleToggleVisibility}
                         searchTerm={debouncedSearchTerm}
+                        showHiddenOnly={showHiddenOnly}
                         onMoveCluster={handleMoveCluster}
                         onRenameFolder={handleRenameFolder}
                         onDeleteFolder={handleDeleteFolder}
@@ -246,21 +261,19 @@ function ClusterManagerApp(): JSX.Element {
                     />
                 )}
             </main>
-            <footer className="cluster-manager-footer">
-                {!loading && (
-                    <span>
-                        {searchTerm.trim() ? (
-                            <>
-                                {filteredClusters.length} of {clusters.length} cluster{clusters.length !== 1 ? 's' : ''}
-                            </>
-                        ) : (
-                            <>
-                                {clusters.length} cluster{clusters.length !== 1 ? 's' : ''}
-                            </>
-                        )}
-                    </span>
-                )}
-            </footer>
+            {!loading && (
+                <Footer
+                    clusters={clusters}
+                    customizations={customizations ?? {
+                        version: '1.0',
+                        folders: [],
+                        clusters: {}
+                    }}
+                    onFilterHidden={handleFilterHidden}
+                    onShowAll={handleShowAll}
+                    showHiddenOnly={showHiddenOnly}
+                />
+            )}
             <NewFolderDialog
                 isOpen={isDialogOpen}
                 folders={customizations?.folders ?? []}

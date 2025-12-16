@@ -26,6 +26,8 @@ interface ClusterListProps {
     onDeleteFolder?: (folderId: string, moveToRoot: boolean) => void;
     /** Callback function to handle creating a subfolder */
     onCreateSubfolder?: (parentId: string) => void;
+    /** Whether to filter to show only hidden clusters */
+    showHiddenOnly?: boolean;
 }
 
 /**
@@ -43,12 +45,20 @@ function buildFolderTree(folders: FolderConfig[], parentId: string | null): Fold
 function getClustersInFolder(
     clusters: ClusterInfo[],
     customizations: ClusterCustomizationConfig,
-    folderId: string | null
+    folderId: string | null,
+    showHiddenOnly?: boolean
 ): ClusterInfo[] {
     return clusters
         .filter(cluster => {
             const config = customizations.clusters[cluster.contextName];
-            return config?.folderId === folderId;
+            const matchesFolder = config?.folderId === folderId;
+            
+            // Apply visibility filter if enabled
+            if (showHiddenOnly) {
+                return matchesFolder && config?.hidden === true;
+            }
+            
+            return matchesFolder;
         })
         .sort((a, b) => {
             const configA = customizations.clusters[a.contextName];
@@ -84,7 +94,7 @@ function countClustersInFolder(
 /**
  * ClusterList component displays folders and clusters in a hierarchical structure
  */
-export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm, onMoveCluster, onRenameFolder, onDeleteFolder, onCreateSubfolder }: ClusterListProps): JSX.Element {
+export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm, onMoveCluster, onRenameFolder, onDeleteFolder, onCreateSubfolder, showHiddenOnly }: ClusterListProps): JSX.Element {
     // Local state for folder expansion (UI-only for now, persistence handled in future story)
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
         // Initialize with folders that have expanded: true
@@ -160,7 +170,7 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
      */
     const renderFolder = (folder: FolderConfig, level: number): JSX.Element => {
         const childFolders = buildFolderTree(foldersWithExpansion, folder.id);
-        const clustersInFolder = getClustersInFolder(clusters, customizations, folder.id);
+        const clustersInFolder = getClustersInFolder(clusters, customizations, folder.id, showHiddenOnly);
         const clusterCount = countClustersInFolder(clusters, customizations, folder.id);
 
         return (
@@ -191,17 +201,24 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
         );
     };
 
-    if (clusters.length === 0 && customizations.folders.length === 0) {
+    // Get root-level folders and clusters
+    const rootFolders = buildFolderTree(foldersWithExpansion, null);
+    const rootClusters = getClustersInFolder(clusters, customizations, null, showHiddenOnly);
+
+    // Check if we have any clusters or folders to display
+    const hasClusters = rootClusters.length > 0 || rootFolders.length > 0 || clusters.length > 0;
+
+    if (!hasClusters && customizations.folders.length === 0) {
         return (
             <div className="cluster-empty-state">
-                {searchTerm && searchTerm.trim() ? 'No clusters found' : 'No clusters found in kubeconfig'}
+                {showHiddenOnly 
+                    ? 'No hidden clusters found'
+                    : searchTerm && searchTerm.trim() 
+                        ? 'No clusters found' 
+                        : 'No clusters found in kubeconfig'}
             </div>
         );
     }
-
-    // Get root-level folders and clusters
-    const rootFolders = buildFolderTree(foldersWithExpansion, null);
-    const rootClusters = getClustersInFolder(clusters, customizations, null);
 
     return (
         <>
