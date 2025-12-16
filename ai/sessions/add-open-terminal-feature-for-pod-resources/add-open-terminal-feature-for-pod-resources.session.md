@@ -1,7 +1,7 @@
 ---
 session_id: add-open-terminal-feature-for-pod-resources
 start_time: '2025-12-09T03:20:35.517Z'
-status: development
+status: completed
 problem_statement: Add Open Terminal feature for Pod resources
 changed_files:
   - path: ai/features/cluster/pod-terminal.feature.md
