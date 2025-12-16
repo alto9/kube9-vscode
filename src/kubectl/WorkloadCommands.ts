@@ -2,6 +2,9 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { WorkloadEntry, WorkloadHealth } from '../types/workloadData';
+import { fetchPods } from '../kubernetes/resourceFetchers';
+import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -775,49 +778,47 @@ export class WorkloadCommands {
                 return { pods: [] };
             }
 
-            // Execute kubectl get pods with label selector
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'pods',
-                    '-n',
-                    namespace,
-                    '--selector',
-                    labelSelector,
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: PodListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract pod information from the items array
-            const pods: PodInfo[] = response.items?.map((item: PodItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const podNamespace = item.metadata?.namespace || namespace;
-                const phase = item.status?.phase || 'Unknown';
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = `${contextName}:pods:${namespace}:${labelSelector}`;
+            const cached = cache.get<PodInfo[]>(cacheKey);
+            if (cached) {
+                return { pods: cached };
+            }
+
+            // Fetch from API
+            const v1Pods = await fetchPods({ 
+                namespace, 
+                labelSelector, 
+                timeout: 10 
+            });
+            
+            // Transform k8s.V1Pod[] to PodInfo[] format
+            const pods: PodInfo[] = v1Pods.map(pod => {
+                const name = pod.metadata?.name || 'Unknown';
+                const podNamespace = pod.metadata?.namespace || namespace;
+                const phase = pod.status?.phase || 'Unknown';
                 
                 return {
                     name,
                     namespace: podNamespace,
                     phase
                 };
-            }) || [];
+            });
             
             // Sort pods alphabetically by name
             pods.sort((a, b) => a.name.localeCompare(b.name));
             
+            // Cache result
+            cache.set(cacheKey, pods, CACHE_TTL.PODS);
+            
             return { pods };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
