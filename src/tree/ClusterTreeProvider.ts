@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as k8s from '@kubernetes/client-node';
 import { ClusterTreeItem, ClusterStatus } from './ClusterTreeItem';
 import { TreeItemType } from './TreeItemTypes';
 import { TreeItemFactory } from './TreeItemFactory';
@@ -7,6 +8,8 @@ import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { KubectlErrorType } from '../kubernetes/KubectlError';
 import { NodesCategory } from './categories/NodesCategory';
 import { NamespacesCategory } from './categories/NamespacesCategory';
+import { fetchClusterResources } from '../kubernetes/resourceFetchers';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { WorkloadsCategory } from './categories/WorkloadsCategory';
 import { DeploymentsSubcategory } from './categories/workloads/DeploymentsSubcategory';
 import { StatefulSetsSubcategory } from './categories/workloads/StatefulSetsSubcategory';
@@ -124,6 +127,18 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private customizationSubscription?: vscode.Disposable;
 
     /**
+     * Cache of pre-fetched cluster resources (nodes, namespaces, pods).
+     * Used to avoid sequential fetching when categories are expanded.
+     * Maps context name to cached resources with timestamp.
+     */
+    private clusterResourcesCache: Map<string, {
+        nodes: k8s.V1Node[];
+        namespaces: k8s.V1Namespace[];
+        pods: k8s.V1Pod[];
+        timestamp: number;
+    }> = new Map();
+
+    /**
      * Creates a new ClusterTreeProvider instance.
      * 
      * @param customizationService - Optional cluster customization service for managing aliases
@@ -199,11 +214,39 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Pre-fetch cluster resources (nodes, namespaces, pods) in parallel.
+     * This method is called when a cluster is expanded to improve performance
+     * when categories are later expanded. Results are cached for 30 seconds.
+     * 
+     * @param contextName The context name of the cluster to pre-fetch resources for
+     */
+    private async prefetchClusterResources(contextName: string): Promise<void> {
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            const { nodes, namespaces, pods } = await fetchClusterResources();
+            
+            this.clusterResourcesCache.set(contextName, {
+                nodes,
+                namespaces,
+                pods,
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            // Log error but don't block - individual fetches will still work
+            console.warn(`Failed to pre-fetch cluster resources for ${contextName}:`, error);
+        }
+    }
+
+    /**
      * Get resource categories for a cluster.
      * Returns categories with Dashboard always appearing first, followed by conditional and standard categories:
      * - Dashboard always appears first (for all clusters)
      * - If operator status is NOT Basic: Reports appears second, followed by Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources
      * - If operator status is Basic or undefined: Returns Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources (no Reports)
+     * 
+     * Also triggers parallel pre-fetch of cluster resources (nodes, namespaces, pods) to improve performance.
      * 
      * @param clusterElement The cluster tree item to get categories for
      * @returns Array of category tree items
@@ -229,6 +272,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             const insertIndex = categories.length - 1; // Before Custom Resources
             categories.splice(insertIndex, 0, TreeItemFactory.createArgoCDCategory(clusterElement.resourceData));
         }
+
+        // Trigger parallel pre-fetch (fire-and-forget)
+        const contextName = clusterElement.resourceData.context.name;
+        void this.prefetchClusterResources(contextName);
 
         // Prepend Reports category if operator is installed (status is NOT Basic)
         if (clusterElement.operatorStatus !== undefined && clusterElement.operatorStatus !== OperatorStatusMode.Basic) {
@@ -289,6 +336,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     /**
      * Get children for a category tree item.
      * Delegates to category-specific handlers for fetching and displaying resources.
+     * Uses cached pre-fetched resources when available to avoid sequential fetching.
      * 
      * @param categoryElement The category tree item to get children for
      * @returns Array of child tree items for the category
@@ -298,23 +346,50 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return [];
         }
 
+        // Check cache for pre-fetched resources
+        const contextName = categoryElement.resourceData.context.name;
+        const cached = this.clusterResourcesCache.get(contextName);
+        const cacheAge = cached ? Date.now() - cached.timestamp : Infinity;
+        const useCache = cached && cacheAge < 30000; // 30 second TTL
+
         let items: ClusterTreeItem[] = [];
 
         switch (categoryElement.type) {
             case 'nodes':
-                items = await NodesCategory.getNodeItems(
-                    categoryElement.resourceData,
-                    this.kubeconfig.filePath,
-                    (error, clusterName) => this.handleKubectlError(error, clusterName)
-                );
+                if (useCache && cached && cached.nodes.length > 0) {
+                    // Use cached nodes
+                    items = await NodesCategory.getNodeItemsFromCache(
+                        categoryElement.resourceData,
+                        cached.nodes,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName)
+                    );
+                } else {
+                    // Fall back to existing fetch
+                    items = await NodesCategory.getNodeItems(
+                        categoryElement.resourceData,
+                        this.kubeconfig.filePath,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName)
+                    );
+                }
                 break;
             
             case 'namespaces':
-                items = await NamespacesCategory.getNamespaceItems(
-                    categoryElement.resourceData,
-                    this.kubeconfig.filePath,
-                    (error, clusterName) => this.handleKubectlError(error, clusterName)
-                );
+                if (useCache && cached && cached.namespaces.length > 0) {
+                    // Use cached namespaces
+                    items = await NamespacesCategory.getNamespaceItemsFromCache(
+                        categoryElement.resourceData,
+                        cached.namespaces,
+                        this.kubeconfig.filePath,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName)
+                    );
+                } else {
+                    // Fall back to existing fetch
+                    items = await NamespacesCategory.getNamespaceItems(
+                        categoryElement.resourceData,
+                        this.kubeconfig.filePath,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName)
+                    );
+                }
                 break;
             
             case 'workloads':
