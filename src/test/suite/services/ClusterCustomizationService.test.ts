@@ -348,5 +348,191 @@ suite('ClusterCustomizationService Test Suite', () => {
         // Also dispose the subscription
         disposable.dispose();
     });
+
+    suite('setAlias', () => {
+        test('setAlias should create cluster config if it doesn\'t exist', async () => {
+            const contextName = 'new-cluster';
+            
+            await service.setAlias(contextName, 'My Cluster');
+            
+            const config = await service.getConfiguration();
+            assert.ok(config.clusters[contextName]);
+            assert.strictEqual(config.clusters[contextName].alias, 'My Cluster');
+            assert.strictEqual(config.clusters[contextName].hidden, false);
+            assert.strictEqual(config.clusters[contextName].folderId, null);
+            assert.strictEqual(config.clusters[contextName].order, 0);
+        });
+
+        test('setAlias should set alias for existing cluster', async () => {
+            const contextName = 'existing-cluster';
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Old Alias',
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.setAlias(contextName, 'New Alias');
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, 'New Alias');
+        });
+
+        test('setAlias should trim whitespace from alias', async () => {
+            const contextName = 'trim-test-cluster';
+            
+            await service.setAlias(contextName, '  Trimmed Alias  ');
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, 'Trimmed Alias');
+        });
+
+        test('setAlias should remove alias when set to null', async () => {
+            const contextName = 'remove-alias-cluster';
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Existing Alias',
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.setAlias(contextName, null);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, null);
+        });
+
+        test('setAlias should remove alias when set to empty string', async () => {
+            const contextName = 'empty-string-cluster';
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Existing Alias',
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.setAlias(contextName, '');
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, null);
+        });
+
+        test('setAlias should remove alias when set to whitespace only', async () => {
+            const contextName = 'whitespace-cluster';
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Existing Alias',
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.setAlias(contextName, '   ');
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, null);
+        });
+
+        test('setAlias should throw error when alias exceeds 100 characters', async () => {
+            const contextName = 'long-alias-cluster';
+            const longAlias = 'a'.repeat(101);
+            
+            try {
+                await service.setAlias(contextName, longAlias);
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'Alias must be 100 characters or less');
+            }
+        });
+
+        test('setAlias should emit customization change event', (done) => {
+            const contextName = 'event-test-cluster';
+            
+            service.onDidChangeCustomizations(() => {
+                done();
+            });
+            
+            service.setAlias(contextName, 'Test Alias').catch((err) => {
+                done(err);
+            });
+        });
+
+        test('setAlias should persist alias to Global State', async () => {
+            const contextName = 'persist-test-cluster';
+            const alias = 'Persisted Alias';
+            
+            await service.setAlias(contextName, alias);
+            
+            // Create a new service instance to verify persistence
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const newService = new ClusterCustomizationService(mockContext as any);
+            const config = await newService.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, alias);
+        });
+
+        test('setAlias should preserve other cluster config fields', async () => {
+            const contextName = 'preserve-fields-cluster';
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Old Alias',
+                        hidden: true,
+                        folderId: 'folder-1',
+                        order: 5
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.setAlias(contextName, 'New Alias');
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, 'New Alias');
+            assert.strictEqual(config.clusters[contextName].hidden, true);
+            assert.strictEqual(config.clusters[contextName].folderId, 'folder-1');
+            assert.strictEqual(config.clusters[contextName].order, 5);
+        });
+
+        test('setAlias should accept alias exactly 100 characters', async () => {
+            const contextName = 'max-length-cluster';
+            const maxLengthAlias = 'a'.repeat(100);
+            
+            await service.setAlias(contextName, maxLengthAlias);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, maxLengthAlias);
+            assert.strictEqual(config.clusters[contextName].alias!.length, 100);
+        });
+    });
 });
 

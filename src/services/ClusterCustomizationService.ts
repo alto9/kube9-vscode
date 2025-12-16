@@ -137,6 +137,42 @@ export class ClusterCustomizationService {
     }
 
     /**
+     * Sets or removes a cluster alias.
+     * 
+     * @param contextName - The kubeconfig context name of the cluster
+     * @param alias - The friendly name to assign, or null to remove the alias
+     * @returns Promise that resolves when the alias has been saved
+     * @throws Error if alias exceeds 100 characters
+     */
+    async setAlias(contextName: string, alias: string | null): Promise<void> {
+        const config = await this.getConfiguration();
+        
+        // Trim whitespace from alias
+        const trimmedAlias = alias?.trim() || null;
+        
+        // Validate alias length
+        if (trimmedAlias && trimmedAlias.length > 100) {
+            throw new Error('Alias must be 100 characters or less');
+        }
+        
+        // Get or create cluster config for the context
+        if (!config.clusters[contextName]) {
+            config.clusters[contextName] = {
+                alias: null,
+                hidden: false,
+                folderId: null,
+                order: 0
+            };
+        }
+        
+        // Update alias field
+        config.clusters[contextName].alias = trimmedAlias;
+        
+        // Save configuration (this will emit the change event)
+        await this.updateConfiguration(config);
+    }
+
+    /**
      * Disposes of resources used by this service.
      * Should be called when the extension is deactivated.
      */

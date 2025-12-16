@@ -5,7 +5,7 @@ feature_id:
   - cluster-alias-management
 spec_id:
   - cluster-customization-storage-spec
-status: pending
+status: completed
 ---
 
 # Implement Alias CRUD Operations in Service
