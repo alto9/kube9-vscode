@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from '../../mocks/vscode';
-import { ClusterCustomizationService, ClusterCustomizationConfig } from '../../../services/ClusterCustomizationService';
+import { ClusterCustomizationService, ClusterCustomizationConfig, CustomizationChangeEvent } from '../../../services/ClusterCustomizationService';
 
 suite('ClusterCustomizationService Test Suite', () => {
     let mockContext: vscode.ExtensionContext;
@@ -209,6 +209,144 @@ suite('ClusterCustomizationService Test Suite', () => {
         assert.strictEqual(config.version, '1.0');
         assert.deepStrictEqual(config.folders, []);
         assert.deepStrictEqual(config.clusters, {});
+    });
+
+    test('updateConfiguration should fire onDidChangeCustomizations event after successful write', (done) => {
+        const testConfig: ClusterCustomizationConfig = {
+            version: '1.0',
+            folders: [],
+            clusters: {}
+        };
+
+        let eventFired = false;
+        service.onDidChangeCustomizations((event: CustomizationChangeEvent) => {
+            eventFired = true;
+            assert.strictEqual(event.type, 'bulk');
+            assert.strictEqual(event.operation, 'update');
+            assert.ok(Array.isArray(event.affectedIds));
+            done();
+        });
+
+        service.updateConfiguration(testConfig).then(() => {
+            assert.strictEqual(eventFired, true);
+        }).catch((err) => {
+            done(err);
+        });
+    });
+
+    test('onDidChangeCustomizations event should include correct payload structure', (done) => {
+        const testConfig: ClusterCustomizationConfig = {
+            version: '1.0',
+            folders: [
+                {
+                    id: 'folder-1',
+                    name: 'Production',
+                    parentId: null,
+                    order: 0,
+                    expanded: true
+                }
+            ],
+            clusters: {
+                'test-cluster': {
+                    alias: 'Test Cluster',
+                    hidden: false,
+                    folderId: 'folder-1',
+                    order: 0
+                }
+            }
+        };
+
+        service.onDidChangeCustomizations((event: CustomizationChangeEvent) => {
+            assert.strictEqual(event.type, 'bulk');
+            assert.strictEqual(event.operation, 'update');
+            assert.ok(Array.isArray(event.affectedIds));
+            assert.strictEqual(event.affectedIds.length, 0); // Empty for bulk updates
+            done();
+        });
+
+        service.updateConfiguration(testConfig).catch((err) => {
+            done(err);
+        });
+    });
+
+    test('multiple subscribers should receive the same event', (done) => {
+        const testConfig: ClusterCustomizationConfig = {
+            version: '1.0',
+            folders: [],
+            clusters: {}
+        };
+
+        let subscriber1Fired = false;
+        let subscriber2Fired = false;
+
+        service.onDidChangeCustomizations(() => {
+            subscriber1Fired = true;
+            if (subscriber1Fired && subscriber2Fired) {
+                done();
+            }
+        });
+
+        service.onDidChangeCustomizations(() => {
+            subscriber2Fired = true;
+            if (subscriber1Fired && subscriber2Fired) {
+                done();
+            }
+        });
+
+        service.updateConfiguration(testConfig).catch((err) => {
+            done(err);
+        });
+    });
+
+    test('event should not fire if updateConfiguration throws an error', (done) => {
+        const testConfig: ClusterCustomizationConfig = {
+            version: '1.0',
+            folders: [],
+            clusters: {}
+        };
+
+        let eventFired = false;
+        service.onDidChangeCustomizations(() => {
+            eventFired = true;
+        });
+
+        // Create a mock that throws an error
+        const originalUpdate = mockMemento.update;
+        mockMemento.update = async () => {
+            throw new Error('Simulated write failure');
+        };
+
+        service.updateConfiguration(testConfig).catch(() => {
+            // Restore original update function
+            mockMemento.update = originalUpdate;
+            // Event should not have fired
+            assert.strictEqual(eventFired, false);
+            done();
+        });
+    });
+
+    test('dispose should clean up event emitter', () => {
+        const testConfig: ClusterCustomizationConfig = {
+            version: '1.0',
+            folders: [],
+            clusters: {}
+        };
+
+        let eventFired = false;
+        const disposable = service.onDidChangeCustomizations(() => {
+            eventFired = true;
+        });
+
+        // Dispose the service
+        service.dispose();
+
+        // Try to update configuration - event should not fire after dispose
+        service.updateConfiguration(testConfig).then(() => {
+            assert.strictEqual(eventFired, false);
+        });
+
+        // Also dispose the subscription
+        disposable.dispose();
     });
 });
 

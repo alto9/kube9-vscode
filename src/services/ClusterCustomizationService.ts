@@ -43,6 +43,18 @@ export interface ClusterCustomizationConfig {
 }
 
 /**
+ * Event payload for customization change notifications.
+ */
+export interface CustomizationChangeEvent {
+    /** Type of customization that changed */
+    type: 'folder' | 'cluster' | 'bulk';
+    /** Operation that was performed */
+    operation: 'create' | 'update' | 'delete';
+    /** Array of affected IDs (folder IDs or cluster context names) */
+    affectedIds: string[];
+}
+
+/**
  * Service for managing cluster customizations (folders, aliases, visibility) using VS Code's Global State API.
  * 
  * This service provides persistence and retrieval of cluster customizations. It is the foundation
@@ -67,6 +79,18 @@ export class ClusterCustomizationService {
      * VS Code extension context for accessing Global State.
      */
     private readonly context: vscode.ExtensionContext;
+
+    /**
+     * Event emitter for customization changes.
+     */
+    private readonly _onDidChangeCustomizations = new vscode.EventEmitter<CustomizationChangeEvent>();
+
+    /**
+     * Public event that fires when customizations change.
+     * Subscribers (webview, tree provider) can listen to this for real-time updates.
+     */
+    readonly onDidChangeCustomizations: vscode.Event<CustomizationChangeEvent> = 
+        this._onDidChangeCustomizations.event;
 
     /**
      * Creates a new ClusterCustomizationService instance.
@@ -101,6 +125,23 @@ export class ClusterCustomizationService {
             ClusterCustomizationService.STORAGE_KEY,
             config
         );
+        
+        // Emit change event after successful write
+        // For now, emit 'bulk' type since we don't track individual changes yet
+        // Future stories will refine this to emit specific change types
+        this._onDidChangeCustomizations.fire({
+            type: 'bulk',
+            operation: 'update',
+            affectedIds: []
+        });
+    }
+
+    /**
+     * Disposes of resources used by this service.
+     * Should be called when the extension is deactivated.
+     */
+    dispose(): void {
+        this._onDidChangeCustomizations.dispose();
     }
 }
 

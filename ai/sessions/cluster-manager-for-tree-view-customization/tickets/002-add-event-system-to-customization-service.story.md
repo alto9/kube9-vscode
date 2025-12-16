@@ -8,7 +8,7 @@ feature_id:
   - cluster-visibility-control
 spec_id:
   - cluster-customization-storage-spec
-status: pending
+status: completed
 ---
 
 # Add Event System to ClusterCustomizationService
