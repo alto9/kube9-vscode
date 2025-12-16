@@ -6,6 +6,7 @@ import { DescribeWebview } from './webview/DescribeWebview';
 import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
 import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
+import { ClusterCustomizationService } from './services/ClusterCustomizationService';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { setActiveNamespaceCommand, clearActiveNamespaceCommand } from './commands/namespaceCommands';
 import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
@@ -62,6 +63,12 @@ let namespaceStatusBar: NamespaceStatusBar | undefined;
  * Manages YAML editor instances for Kubernetes resources.
  */
 let yamlEditorManager: YAMLEditorManager | undefined;
+
+/**
+ * Global cluster customization service instance.
+ * Manages cluster customizations (folders, aliases, visibility).
+ */
+let clusterCustomizationService: ClusterCustomizationService | undefined;
 
 /**
  * Get the extension context.
@@ -380,7 +387,19 @@ function registerCommands(): void {
         async () => {
             try {
                 console.log('Cluster Manager opening...');
-                ClusterManagerWebview.createOrShow(context.extensionUri);
+                
+                // Create or get cluster customization service instance
+                if (!clusterCustomizationService) {
+                    clusterCustomizationService = new ClusterCustomizationService(context);
+                    context.subscriptions.push(clusterCustomizationService);
+                    disposables.push(clusterCustomizationService);
+                }
+                
+                ClusterManagerWebview.createOrShow(
+                    context.extensionUri,
+                    clusterCustomizationService,
+                    context
+                );
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error('Failed to open Cluster Manager:', errorMessage);

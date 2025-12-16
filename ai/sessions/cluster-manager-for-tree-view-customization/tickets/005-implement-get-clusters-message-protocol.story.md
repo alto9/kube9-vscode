@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - cluster-manager-webview-spec
   - cluster-customization-storage-spec
-status: pending
+status: completed
 ---
 
 # Implement Get Clusters Message Protocol
