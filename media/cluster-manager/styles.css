@@ -7,6 +7,12 @@
     box-sizing: border-box;
 }
 
+/* Global focus indicator for accessibility */
+*:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
 body {
     font-family: var(--vscode-font-family);
     color: var(--vscode-foreground);
@@ -84,8 +90,8 @@ body {
 
 .search-filter-input:focus {
     border-color: var(--vscode-focusBorder);
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
 }
 
 .search-filter-input::placeholder {
@@ -115,7 +121,7 @@ body {
 }
 
 .search-filter-clear:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
 
@@ -157,7 +163,7 @@ body {
 }
 
 .footer-hidden-link:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
     border-radius: 2px;
 }
@@ -179,7 +185,7 @@ body {
 }
 
 .footer-show-all-button:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
 
@@ -280,7 +286,7 @@ body {
 }
 
 .cluster-item-edit-button:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
 
@@ -302,8 +308,8 @@ body {
 
 .cluster-item-input:focus {
     border-color: var(--vscode-focusBorder);
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
 }
 
 .cluster-item-active-badge {
@@ -361,7 +367,7 @@ body {
 }
 
 .cluster-item-visibility-toggle:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
 
@@ -389,7 +395,7 @@ body {
 }
 
 .folder-item-header:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
 
@@ -451,8 +457,8 @@ body {
 
 .folder-item-name-input:focus {
     border-color: var(--vscode-focusBorder);
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
 }
 
 .folder-context-menu {
@@ -489,8 +495,8 @@ body {
 }
 
 .folder-context-menu-item:focus {
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
 }
 
 .folder-context-menu-item .codicon {
@@ -540,7 +546,7 @@ body {
 }
 
 .cluster-manager-toolbar-button:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
 
@@ -617,8 +623,8 @@ body {
 
 .new-folder-dialog-input:focus {
     border-color: var(--vscode-focusBorder);
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
 }
 
 .new-folder-dialog-input.error {
@@ -643,8 +649,8 @@ body {
 
 .new-folder-dialog-select:focus {
     border-color: var(--vscode-focusBorder);
-    outline: 1px solid var(--vscode-focusBorder);
-    outline-offset: -1px;
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
 }
 
 .new-folder-dialog-error {
@@ -692,7 +698,7 @@ body {
 }
 
 .new-folder-dialog-button:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
 
@@ -790,7 +796,7 @@ body {
 }
 
 .delete-folder-dialog-button:focus {
-    outline: 1px solid var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }
 

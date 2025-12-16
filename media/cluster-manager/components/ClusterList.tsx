@@ -222,7 +222,7 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
 
     return (
         <>
-            <div className="cluster-list">
+            <div className="cluster-list" role="tree" aria-label="Cluster organization tree">
                 {rootFolders.map(folder => renderFolder(folder, 0))}
                 {rootClusters.map(cluster => (
                     <ClusterItem

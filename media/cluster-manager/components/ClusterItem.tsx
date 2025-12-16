@@ -114,6 +114,8 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
         setIsDragging(false);
     };
 
+    const ariaLabel = `${displayName} cluster${isHidden ? ', hidden' : ''}${cluster.isActive ? ', active' : ''}`;
+
     return (
         <div
             className={`cluster-item ${isHidden ? 'hidden' : ''} ${isDragging ? 'dragging' : ''}`}
@@ -121,6 +123,15 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
             draggable={true}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            role="treeitem"
+            tabIndex={0}
+            aria-label={ariaLabel}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isEditing) {
+                    e.preventDefault();
+                    handleEditClick();
+                }
+            }}
         >
             {isEditing ? (
                 <>
@@ -133,6 +144,7 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
                         onKeyDown={handleKeyDown}
                         onBlur={handleSave}
                         maxLength={100}
+                        aria-label={`Edit alias for ${cluster.contextName}`}
                     />
                 </>
             ) : (

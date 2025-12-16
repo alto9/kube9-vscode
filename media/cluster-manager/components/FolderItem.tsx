@@ -213,14 +213,18 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                role="button"
+                role="treeitem"
                 tabIndex={0}
                 aria-expanded={folder.expanded}
-                aria-label={`${folder.name} folder`}
+                aria-label={`${folder.name} folder${folder.expanded ? ', expanded' : ', collapsed'}`}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
                         handleClick(e as unknown as React.MouseEvent);
+                    } else if (e.key === 'Delete' && onDeleteFolder) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onDeleteFolder(folder.id);
                     }
                 }}
             >
@@ -237,6 +241,7 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
                         onBlur={handleRenameSave}
                         onClick={(e) => e.stopPropagation()}
                         onContextMenu={(e) => e.stopPropagation()}
+                        aria-label={`Rename folder ${folder.name}`}
                     />
                 ) : (
                     <span className="folder-item-name">{folder.name}</span>

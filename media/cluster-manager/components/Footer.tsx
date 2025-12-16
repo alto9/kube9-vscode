@@ -45,17 +45,28 @@ export function Footer({ clusters, customizations, onFilterHidden, onShowAll, sh
                 {visibleCount} visible / {clusters.length} total clusters
             </span>
             {hiddenCount > 0 && !showHiddenOnly && (
-                <span className="footer-hidden-link" onClick={onFilterHidden} role="button" tabIndex={0} onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onFilterHidden();
-                    }
-                }}>
+                <span 
+                    className="footer-hidden-link" 
+                    onClick={onFilterHidden} 
+                    role="button" 
+                    tabIndex={0} 
+                    aria-label={`Show ${hiddenCount} hidden cluster${hiddenCount === 1 ? '' : 's'}`}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onFilterHidden();
+                        }
+                    }}
+                >
                     {hiddenCount} hidden
                 </span>
             )}
             {showHiddenOnly && (
-                <button className="footer-show-all-button" onClick={onShowAll}>
+                <button 
+                    className="footer-show-all-button" 
+                    onClick={onShowAll}
+                    aria-label="Show all clusters"
+                >
                     Show All
                 </button>
             )}
