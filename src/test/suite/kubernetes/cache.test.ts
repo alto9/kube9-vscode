@@ -288,5 +288,140 @@ suite('ResourceCache Test Suite', () => {
             assert.deepStrictEqual(cache.get('prod-cluster:nodes'), ['node3', 'node4'], 'prod-cluster entries should remain');
         });
     });
+
+    suite('size() Method', () => {
+        test('Should return 0 for empty cache', () => {
+            const cache = getResourceCache();
+            assert.strictEqual(cache.size(), 0, 'size() should return 0 for empty cache');
+        });
+
+        test('Should return correct count for valid entries', () => {
+            const cache = getResourceCache();
+            cache.set('key1', 'data1', 1000);
+            cache.set('key2', 'data2', 1000);
+            cache.set('key3', 'data3', 1000);
+
+            assert.strictEqual(cache.size(), 3, 'size() should return correct count');
+        });
+
+        test('Should exclude expired entries', (done) => {
+            const cache = getResourceCache();
+            cache.set('expired-key', 'data', 100);
+            cache.set('valid-key', 'data', 5000);
+
+            setTimeout(() => {
+                // Expired entry should not be counted
+                assert.strictEqual(cache.size(), 1, 'size() should exclude expired entries');
+                done();
+            }, 150);
+        });
+
+        test('Should handle mixed valid and expired entries', () => {
+            const cache = getResourceCache();
+            cache.set('key1', 'data1', 1000);
+            cache.set('key2', 'data2', 1000);
+
+            assert.strictEqual(cache.size(), 2, 'size() should count all valid entries');
+        });
+    });
+
+    suite('totalSize() Method', () => {
+        test('Should return 0 for empty cache', () => {
+            const cache = getResourceCache();
+            assert.strictEqual(cache.totalSize(), 0, 'totalSize() should return 0 for empty cache');
+        });
+
+        test('Should return positive size for cached entries', () => {
+            const cache = getResourceCache();
+            cache.set('key1', 'test data', 1000);
+            cache.set('key2', { name: 'test', value: 123 }, 1000);
+
+            const size = cache.totalSize();
+            assert.ok(size > 0, 'totalSize() should return positive size');
+        });
+
+        test('Should exclude expired entries from size calculation', (done) => {
+            const cache = getResourceCache();
+            cache.set('expired-key', 'large data string', 100);
+            cache.set('valid-key', 'small data', 5000);
+
+            setTimeout(() => {
+                const size = cache.totalSize();
+                // Size should only include valid-key, not expired-key
+                assert.ok(size > 0, 'totalSize() should return positive size');
+                // Size should be relatively small (just 'valid-key' + 'small data')
+                assert.ok(size < 1000, 'totalSize() should exclude expired entries');
+                done();
+            }, 150);
+        });
+
+        test('Should include key length in size calculation', () => {
+            const cache = getResourceCache();
+            const longKey = 'a'.repeat(100);
+            cache.set(longKey, 'data', 1000);
+
+            const size = cache.totalSize();
+            assert.ok(size >= 100, 'totalSize() should include key length');
+        });
+    });
+
+    suite('keys() Method', () => {
+        test('Should return empty array for empty cache', () => {
+            const cache = getResourceCache();
+            const keys = cache.keys();
+            assert.deepStrictEqual(keys, [], 'keys() should return empty array for empty cache');
+        });
+
+        test('Should return all valid keys', () => {
+            const cache = getResourceCache();
+            cache.set('key1', 'data1', 1000);
+            cache.set('key2', 'data2', 1000);
+            cache.set('key3', 'data3', 1000);
+
+            const keys = cache.keys();
+            assert.strictEqual(keys.length, 3, 'keys() should return all keys');
+            assert.ok(keys.includes('key1'), 'keys() should include key1');
+            assert.ok(keys.includes('key2'), 'keys() should include key2');
+            assert.ok(keys.includes('key3'), 'keys() should include key3');
+        });
+
+        test('Should exclude expired entries', (done) => {
+            const cache = getResourceCache();
+            cache.set('expired-key', 'data', 100);
+            cache.set('valid-key', 'data', 5000);
+
+            setTimeout(() => {
+                const keys = cache.keys();
+                assert.strictEqual(keys.length, 1, 'keys() should exclude expired entries');
+                assert.ok(keys.includes('valid-key'), 'keys() should include valid-key');
+                assert.ok(!keys.includes('expired-key'), 'keys() should not include expired-key');
+                done();
+            }, 150);
+        });
+
+        test('Should return sorted keys', () => {
+            const cache = getResourceCache();
+            cache.set('zebra', 'data', 1000);
+            cache.set('apple', 'data', 1000);
+            cache.set('banana', 'data', 1000);
+
+            const keys = cache.keys();
+            // Keys should be sorted alphabetically
+            assert.deepStrictEqual(keys, ['apple', 'banana', 'zebra'], 'keys() should return sorted keys');
+        });
+
+        test('Should handle context-aware keys', () => {
+            const cache = getResourceCache();
+            cache.set('minikube:nodes', 'data', 1000);
+            cache.set('prod-cluster:pods', 'data', 1000);
+            cache.set('minikube:deployments:default', 'data', 1000);
+
+            const keys = cache.keys();
+            assert.strictEqual(keys.length, 3, 'keys() should return all context-aware keys');
+            assert.ok(keys.includes('minikube:nodes'), 'keys() should include context-aware keys');
+            assert.ok(keys.includes('prod-cluster:pods'), 'keys() should include context-aware keys');
+            assert.ok(keys.includes('minikube:deployments:default'), 'keys() should include namespace-aware keys');
+        });
+    });
 });
 

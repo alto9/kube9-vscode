@@ -107,6 +107,62 @@ export class ResourceCache {
     public clear(): void {
         this.cache.clear();
     }
+
+    /**
+     * Get the number of valid cache entries (excluding expired entries).
+     * @returns The number of valid cache entries
+     */
+    public size(): number {
+        const now = Date.now();
+        let count = 0;
+        for (const entry of this.cache.values()) {
+            const age = now - entry.timestamp;
+            if (age <= entry.ttl) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Get approximate total size of cache in bytes.
+     * Uses JSON.stringify to estimate size of cached data.
+     * @returns Approximate cache size in bytes
+     */
+    public totalSize(): number {
+        const now = Date.now();
+        let totalSize = 0;
+        for (const [key, entry] of this.cache.entries()) {
+            const age = now - entry.timestamp;
+            if (age <= entry.ttl) {
+                // Estimate size: key length + JSON stringified data length
+                totalSize += key.length;
+                try {
+                    totalSize += JSON.stringify(entry.data).length;
+                } catch {
+                    // If JSON.stringify fails, estimate based on data type
+                    totalSize += String(entry.data).length;
+                }
+            }
+        }
+        return totalSize;
+    }
+
+    /**
+     * Get all valid cache keys (excluding expired entries).
+     * @returns Array of valid cache keys, sorted alphabetically
+     */
+    public keys(): string[] {
+        const now = Date.now();
+        const validKeys: string[] = [];
+        for (const [key, entry] of this.cache.entries()) {
+            const age = now - entry.timestamp;
+            if (age <= entry.ttl) {
+                validKeys.push(key);
+            }
+        }
+        return validKeys.sort();
+    }
 }
 
 /**

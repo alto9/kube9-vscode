@@ -164,6 +164,11 @@
         "command": "kube9.argocd.copyNamespace",
         "title": "Copy Namespace",
         "category": "kube9"
+      },
+      {
+        "command": "kube9.showCacheStats",
+        "title": "Show Cache Statistics",
+        "category": "kube9"
       }
     ],
     "menus": {

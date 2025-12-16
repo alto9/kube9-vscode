@@ -34,6 +34,7 @@ import {
     copyNameCommand,
     copyNamespaceCommand
 } from './commands/ArgoCDCommands';
+import { showCacheStatsCommand } from './commands/cacheStats';
 
 /**
  * Global extension context accessible to all components.
@@ -978,6 +979,14 @@ function registerCommands(): void {
     );
     context.subscriptions.push(copyNamespaceCmd);
     disposables.push(copyNamespaceCmd);
+    
+    // Register cache statistics command
+    const showCacheStatsCmd = vscode.commands.registerCommand(
+        'kube9.showCacheStats',
+        showCacheStatsCommand
+    );
+    context.subscriptions.push(showCacheStatsCmd);
+    disposables.push(showCacheStatsCmd);
 }
 
 /**
