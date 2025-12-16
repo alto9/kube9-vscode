@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import * as k8s from '@kubernetes/client-node';
 import { getKubernetesApiClient } from './apiClient';
 
@@ -251,7 +252,7 @@ export async function fetchClusterResources(): Promise<{
 
 /**
  * Handle API errors with user-friendly messages.
- * Logs appropriate error messages based on error type and HTTP status codes.
+ * Displays actionable error messages via VS Code notifications and logs to console for debugging.
  * This is a private helper function used internally by all fetcher functions.
  * 
  * @param error - The error object from the API call
@@ -264,20 +265,45 @@ function handleApiError(error: unknown, operation: string): void {
         const message = apiError.response.body?.message || 'Unknown error';
 
         if (status === 401) {
+            vscode.window.showErrorMessage(
+                `Authentication failed: Check your credentials in kubeconfig. Operation: ${operation}`
+            );
             console.error(`Authentication failed while trying to ${operation}: ${message}`);
         } else if (status === 403) {
+            vscode.window.showErrorMessage(
+                `Permission denied: You don't have access to ${operation}. Check your RBAC permissions with cluster administrator.`
+            );
             console.error(`Permission denied while trying to ${operation}: ${message}`);
         } else if (status === 404) {
+            vscode.window.showErrorMessage(
+                `Resource not found: ${message}. Operation: ${operation}`
+            );
             console.error(`Resource not found while trying to ${operation}: ${message}`);
         } else if (status >= 500) {
+            vscode.window.showErrorMessage(
+                `Cluster error: Server reported an error while trying to ${operation}. Check cluster health.`
+            );
             console.error(`Server error while trying to ${operation}: ${message}`);
         } else {
             console.error(`API error while trying to ${operation} (${status}): ${message}`);
         }
     } else if (error && typeof error === 'object' && 'code' in error && 'message' in error) {
         const connectionError = error as { code: string; message: string };
-        if (connectionError.code === 'ETIMEDOUT' || connectionError.code === 'ECONNREFUSED') {
+        if (connectionError.code === 'ETIMEDOUT') {
+            vscode.window.showErrorMessage(
+                `Connection timeout: Unable to reach cluster while trying to ${operation}. Check your network connection.`
+            );
             console.error(`Connection failed while trying to ${operation}: ${connectionError.message}`);
+        } else if (connectionError.code === 'ECONNREFUSED') {
+            vscode.window.showErrorMessage(
+                `Connection refused: Cluster endpoint not reachable while trying to ${operation}. Verify cluster is running.`
+            );
+            console.error(`Connection failed while trying to ${operation}: ${connectionError.message}`);
+        } else if (connectionError.code === 'ENOTFOUND') {
+            vscode.window.showErrorMessage(
+                `DNS error: Could not resolve cluster address while trying to ${operation}. Verify cluster address in kubeconfig.`
+            );
+            console.error(`DNS error while trying to ${operation}: ${connectionError.message}`);
         }
     } else {
         console.error(`Unexpected error while trying to ${operation}:`, error);

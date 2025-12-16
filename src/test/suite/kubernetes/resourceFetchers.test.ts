@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as assert from 'assert';
+import * as vscode from 'vscode';
 import * as k8s from '@kubernetes/client-node';
 import {
     fetchNodes,
@@ -19,6 +20,8 @@ suite('Resource Fetchers Test Suite', () => {
     let originalAppsApi: k8s.AppsV1Api;
     let mockCoreApi: any;
     let mockAppsApi: any;
+    let originalShowErrorMessage: any;
+    let showErrorMessageCalls: string[];
 
     setup(() => {
         // Reset singleton to ensure clean state
@@ -47,6 +50,14 @@ suite('Resource Fetchers Test Suite', () => {
         // Replace API clients with mocks
         (client as any).coreApi = mockCoreApi;
         (client as any).appsApi = mockAppsApi;
+
+        // Mock vscode.window.showErrorMessage
+        showErrorMessageCalls = [];
+        originalShowErrorMessage = (vscode.window as any).showErrorMessage;
+        (vscode.window as any).showErrorMessage = async (message: string, ...items: string[]): Promise<string | undefined> => {
+            showErrorMessageCalls.push(message);
+            return Promise.resolve(items[0]);
+        };
     });
 
     teardown(() => {
@@ -55,6 +66,10 @@ suite('Resource Fetchers Test Suite', () => {
         (client as any).coreApi = originalCoreApi;
         (client as any).appsApi = originalAppsApi;
         resetKubernetesApiClient();
+
+        // Restore original showErrorMessage
+        (vscode.window as any).showErrorMessage = originalShowErrorMessage;
+        showErrorMessageCalls = [];
     });
 
     suite('fetchNodes', () => {
@@ -472,6 +487,168 @@ suite('Resource Fetchers Test Suite', () => {
                 assert.fail('Should have thrown an error');
             } catch (error) {
                 assert.strictEqual(error, unexpectedError, 'Should re-throw the original error');
+            }
+        });
+
+        test('Should display user-friendly message for 401 authentication errors', async () => {
+            const apiError: any = new Error('Authentication failed');
+            apiError.response = {
+                statusCode: 401,
+                body: { message: 'Unauthorized' }
+            };
+
+            mockCoreApi.listNode = async () => Promise.reject(apiError);
+
+            try {
+                await fetchNodes();
+                assert.fail('Should have thrown an error');
+            } catch (error) {
+                assert.strictEqual(error, apiError, 'Should re-throw the original error');
+                assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show one error message');
+                assert.ok(
+                    showErrorMessageCalls[0].includes('Authentication failed') &&
+                    showErrorMessageCalls[0].includes('kubeconfig') &&
+                    showErrorMessageCalls[0].includes('fetch nodes'),
+                    'Error message should be user-friendly and include operation context'
+                );
+            }
+        });
+
+        test('Should display user-friendly message for 403 permission errors', async () => {
+            const apiError: any = new Error('Permission denied');
+            apiError.response = {
+                statusCode: 403,
+                body: { message: 'Forbidden' }
+            };
+
+            mockCoreApi.listNamespace = async () => Promise.reject(apiError);
+
+            try {
+                await fetchNamespaces();
+                assert.fail('Should have thrown an error');
+            } catch (error) {
+                assert.strictEqual(error, apiError, 'Should re-throw the original error');
+                assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show one error message');
+                assert.ok(
+                    showErrorMessageCalls[0].includes('Permission denied') &&
+                    showErrorMessageCalls[0].includes('RBAC') &&
+                    showErrorMessageCalls[0].includes('fetch namespaces'),
+                    'Error message should be user-friendly and include operation context'
+                );
+            }
+        });
+
+        test('Should display user-friendly message for 404 not found errors', async () => {
+            const apiError: any = new Error('Not found');
+            apiError.response = {
+                statusCode: 404,
+                body: { message: 'Resource not found' }
+            };
+
+            mockCoreApi.listNode = async () => Promise.reject(apiError);
+
+            try {
+                await fetchNodes();
+                assert.fail('Should have thrown an error');
+            } catch (error) {
+                assert.strictEqual(error, apiError, 'Should re-throw the original error');
+                assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show one error message');
+                assert.ok(
+                    showErrorMessageCalls[0].includes('Resource not found') &&
+                    showErrorMessageCalls[0].includes('fetch nodes'),
+                    'Error message should be user-friendly and include operation context'
+                );
+            }
+        });
+
+        test('Should display user-friendly message for 500+ server errors', async () => {
+            const apiError: any = new Error('Server error');
+            apiError.response = {
+                statusCode: 500,
+                body: { message: 'Internal server error' }
+            };
+
+            mockCoreApi.listNode = async () => Promise.reject(apiError);
+
+            try {
+                await fetchNodes();
+                assert.fail('Should have thrown an error');
+            } catch (error) {
+                assert.strictEqual(error, apiError, 'Should re-throw the original error');
+                assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show one error message');
+                assert.ok(
+                    showErrorMessageCalls[0].includes('Cluster error') &&
+                    showErrorMessageCalls[0].includes('cluster health') &&
+                    showErrorMessageCalls[0].includes('fetch nodes'),
+                    'Error message should be user-friendly and include operation context'
+                );
+            }
+        });
+
+        test('Should display user-friendly message for ETIMEDOUT errors', async () => {
+            const timeoutError: any = new Error('Connection timeout');
+            timeoutError.code = 'ETIMEDOUT';
+            timeoutError.message = 'Request timeout';
+
+            mockCoreApi.listServiceForAllNamespaces = async () => Promise.reject(timeoutError);
+
+            try {
+                await fetchServices();
+                assert.fail('Should have thrown an error');
+            } catch (error) {
+                assert.strictEqual(error, timeoutError, 'Should re-throw the original error');
+                assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show one error message');
+                assert.ok(
+                    showErrorMessageCalls[0].includes('Connection timeout') &&
+                    showErrorMessageCalls[0].includes('network connection') &&
+                    showErrorMessageCalls[0].includes('fetch services'),
+                    'Error message should be user-friendly and include operation context'
+                );
+            }
+        });
+
+        test('Should display user-friendly message for ECONNREFUSED errors', async () => {
+            const connectionError: any = new Error('Connection refused');
+            connectionError.code = 'ECONNREFUSED';
+            connectionError.message = 'Connection refused';
+
+            mockCoreApi.listServiceForAllNamespaces = async () => Promise.reject(connectionError);
+
+            try {
+                await fetchServices();
+                assert.fail('Should have thrown an error');
+            } catch (error) {
+                assert.strictEqual(error, connectionError, 'Should re-throw the original error');
+                assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show one error message');
+                assert.ok(
+                    showErrorMessageCalls[0].includes('Connection refused') &&
+                    showErrorMessageCalls[0].includes('cluster is running') &&
+                    showErrorMessageCalls[0].includes('fetch services'),
+                    'Error message should be user-friendly and include operation context'
+                );
+            }
+        });
+
+        test('Should display user-friendly message for ENOTFOUND DNS errors', async () => {
+            const dnsError: any = new Error('DNS error');
+            dnsError.code = 'ENOTFOUND';
+            dnsError.message = 'getaddrinfo ENOTFOUND';
+
+            mockCoreApi.listNode = async () => Promise.reject(dnsError);
+
+            try {
+                await fetchNodes();
+                assert.fail('Should have thrown an error');
+            } catch (error) {
+                assert.strictEqual(error, dnsError, 'Should re-throw the original error');
+                assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show one error message');
+                assert.ok(
+                    showErrorMessageCalls[0].includes('DNS error') &&
+                    showErrorMessageCalls[0].includes('cluster address') &&
+                    showErrorMessageCalls[0].includes('kubeconfig') &&
+                    showErrorMessageCalls[0].includes('fetch nodes'),
+                    'Error message should be user-friendly and include operation context'
+                );
             }
         });
     });
