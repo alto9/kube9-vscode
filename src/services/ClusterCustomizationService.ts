@@ -173,6 +173,33 @@ export class ClusterCustomizationService {
     }
 
     /**
+     * Sets or removes cluster visibility in tree view.
+     * 
+     * @param contextName - The kubeconfig context name of the cluster
+     * @param hidden - Whether the cluster should be hidden from tree view
+     * @returns Promise that resolves when the visibility has been saved
+     */
+    async setVisibility(contextName: string, hidden: boolean): Promise<void> {
+        const config = await this.getConfiguration();
+        
+        // Get or create cluster config for the context
+        if (!config.clusters[contextName]) {
+            config.clusters[contextName] = {
+                alias: null,
+                hidden: false,
+                folderId: null,
+                order: 0
+            };
+        }
+        
+        // Update hidden field
+        config.clusters[contextName].hidden = hidden;
+        
+        // Save configuration (this will emit the change event)
+        await this.updateConfiguration(config);
+    }
+
+    /**
      * Gets customization for a specific cluster.
      * 
      * @param contextName - Cluster context name

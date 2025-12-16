@@ -534,5 +534,151 @@ suite('ClusterCustomizationService Test Suite', () => {
             assert.strictEqual(config.clusters[contextName].alias!.length, 100);
         });
     });
+
+    suite('setVisibility', () => {
+        test('setVisibility should create cluster config if it doesn\'t exist with hidden=true', async () => {
+            const contextName = 'new-cluster-hidden';
+            
+            await service.setVisibility(contextName, true);
+            
+            const config = await service.getConfiguration();
+            assert.ok(config.clusters[contextName]);
+            assert.strictEqual(config.clusters[contextName].hidden, true);
+            assert.strictEqual(config.clusters[contextName].alias, null);
+            assert.strictEqual(config.clusters[contextName].folderId, null);
+            assert.strictEqual(config.clusters[contextName].order, 0);
+        });
+
+        test('setVisibility should create cluster config if it doesn\'t exist with hidden=false', async () => {
+            const contextName = 'new-cluster-visible';
+            
+            await service.setVisibility(contextName, false);
+            
+            const config = await service.getConfiguration();
+            assert.ok(config.clusters[contextName]);
+            assert.strictEqual(config.clusters[contextName].hidden, false);
+            assert.strictEqual(config.clusters[contextName].alias, null);
+            assert.strictEqual(config.clusters[contextName].folderId, null);
+            assert.strictEqual(config.clusters[contextName].order, 0);
+        });
+
+        test('setVisibility should set hidden for existing cluster from visible to hidden', async () => {
+            const contextName = 'existing-cluster';
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Existing Cluster',
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.setVisibility(contextName, true);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].hidden, true);
+        });
+
+        test('setVisibility should set hidden for existing cluster from hidden to visible', async () => {
+            const contextName = 'hidden-cluster';
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Hidden Cluster',
+                        hidden: true,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.setVisibility(contextName, false);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].hidden, false);
+        });
+
+        test('setVisibility should emit customization change event', (done) => {
+            const contextName = 'event-test-cluster';
+            
+            service.onDidChangeCustomizations(() => {
+                done();
+            });
+            
+            service.setVisibility(contextName, true).catch((err) => {
+                done(err);
+            });
+        });
+
+        test('setVisibility should persist visibility to Global State', async () => {
+            const contextName = 'persist-test-cluster';
+            const hidden = true;
+            
+            await service.setVisibility(contextName, hidden);
+            
+            // Create a new service instance to verify persistence
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const newService = new ClusterCustomizationService(mockContext as any);
+            const config = await newService.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].hidden, hidden);
+        });
+
+        test('setVisibility should preserve other cluster config fields', async () => {
+            const contextName = 'preserve-fields-cluster';
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Test Alias',
+                        hidden: false,
+                        folderId: 'folder-1',
+                        order: 5
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.setVisibility(contextName, true);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].hidden, true);
+            assert.strictEqual(config.clusters[contextName].alias, 'Test Alias');
+            assert.strictEqual(config.clusters[contextName].folderId, 'folder-1');
+            assert.strictEqual(config.clusters[contextName].order, 5);
+        });
+
+        test('setVisibility should handle multiple visibility changes', async () => {
+            const contextName = 'toggle-cluster';
+            
+            // Initially visible
+            await service.setVisibility(contextName, false);
+            let config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].hidden, false);
+            
+            // Hide it
+            await service.setVisibility(contextName, true);
+            config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].hidden, true);
+            
+            // Show it again
+            await service.setVisibility(contextName, false);
+            config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].hidden, false);
+            
+            // Hide it again
+            await service.setVisibility(contextName, true);
+            config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].hidden, true);
+        });
+    });
 });
 
