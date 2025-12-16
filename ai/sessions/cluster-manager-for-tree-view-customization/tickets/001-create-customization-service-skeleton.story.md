@@ -5,7 +5,7 @@ feature_id:
   - cluster-manager-webview
 spec_id:
   - cluster-customization-storage-spec
-status: pending
+status: completed
 ---
 
 # Create ClusterCustomizationService Skeleton
