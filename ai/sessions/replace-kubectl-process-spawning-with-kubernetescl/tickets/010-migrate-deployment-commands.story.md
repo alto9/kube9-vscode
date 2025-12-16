@@ -6,7 +6,7 @@ feature_id:
   - api-client-performance
 spec_id:
   - kubernetes-client-node-integration
-status: pending
+status: completed
 estimated_minutes: 20
 ---
 
