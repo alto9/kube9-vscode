@@ -5,7 +5,7 @@ feature_id:
   - cluster-visibility-control
 spec_id:
   - cluster-manager-webview-spec
-status: pending
+status: completed
 ---
 
 # Add Visibility Toggle UI in Webview

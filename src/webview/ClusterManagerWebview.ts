@@ -21,6 +21,17 @@ interface SetAliasMessage {
 }
 
 /**
+ * Message sent from webview to extension to toggle cluster visibility.
+ */
+interface ToggleVisibilityMessage {
+    type: 'toggleVisibility';
+    data: {
+        contextName: string;
+        hidden: boolean;
+    };
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -48,7 +59,7 @@ interface CustomizationsUpdatedMessage {
 /**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
@@ -205,6 +216,8 @@ export class ClusterManagerWebview {
                 await this.handleGetClusters();
             } else if (message.type === 'setAlias') {
                 await this.handleSetAlias(message.data.contextName, message.data.alias);
+            } else if (message.type === 'toggleVisibility') {
+                await this.handleToggleVisibility(message.data.contextName, message.data.hidden);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -225,6 +238,23 @@ export class ClusterManagerWebview {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error setting alias:', errorMessage);
+            // Could send error message to webview here if needed
+        }
+    }
+
+    /**
+     * Handle toggleVisibility message by updating the cluster visibility.
+     * 
+     * @param contextName - The kubeconfig context name of the cluster
+     * @param hidden - Whether the cluster should be hidden from tree view
+     */
+    private async handleToggleVisibility(contextName: string, hidden: boolean): Promise<void> {
+        try {
+            await this.customizationService.setVisibility(contextName, hidden);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error toggling visibility:', errorMessage);
             // Could send error message to webview here if needed
         }
     }

@@ -11,12 +11,14 @@ interface ClusterItemProps {
     customization?: ClusterConfig;
     /** Callback function to handle setting an alias */
     onSetAlias: (contextName: string, alias: string | null) => void;
+    /** Callback function to handle toggling visibility */
+    onToggleVisibility: (contextName: string, hidden: boolean) => void;
 }
 
 /**
  * ClusterItem component displays a single cluster in the list
  */
-export function ClusterItem({ cluster, customization, onSetAlias }: ClusterItemProps): JSX.Element {
+export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibility }: ClusterItemProps): JSX.Element {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -24,6 +26,9 @@ export function ClusterItem({ cluster, customization, onSetAlias }: ClusterItemP
     // Get display name (alias if exists, otherwise context name)
     const displayName = customization?.alias ?? cluster.contextName;
     const hasAlias = customization?.alias !== null && customization.alias !== undefined;
+    
+    // Determine if cluster is hidden (default to false if not set)
+    const isHidden = customization?.hidden === true;
 
     // Initialize edit value when entering edit mode
     useEffect(() => {
@@ -65,8 +70,12 @@ export function ClusterItem({ cluster, customization, onSetAlias }: ClusterItemP
 
     const tooltipText = hasAlias ? `Original: ${cluster.contextName}` : '';
 
+    const handleToggleVisibility = (): void => {
+        onToggleVisibility(cluster.contextName, !isHidden);
+    };
+
     return (
-        <div className="cluster-item" title={tooltipText}>
+        <div className={`cluster-item ${isHidden ? 'hidden' : ''}`} title={tooltipText}>
             {isEditing ? (
                 <>
                     <input
@@ -84,6 +93,14 @@ export function ClusterItem({ cluster, customization, onSetAlias }: ClusterItemP
                 <>
                     <span className="cluster-item-name">{displayName}</span>
                     <button
+                        className="cluster-item-visibility-toggle"
+                        onClick={handleToggleVisibility}
+                        title={isHidden ? 'Click to show cluster' : 'Click to hide cluster'}
+                        aria-label={isHidden ? 'Show cluster' : 'Hide cluster'}
+                    >
+                        {isHidden ? 'Hidden' : 'Visible'}
+                    </button>
+                    <button
                         className="cluster-item-edit-button"
                         onClick={handleEditClick}
                         title="Click to edit alias"
@@ -92,6 +109,9 @@ export function ClusterItem({ cluster, customization, onSetAlias }: ClusterItemP
                         <span className="codicon codicon-edit"></span>
                     </button>
                 </>
+            )}
+            {isHidden && (
+                <span className="cluster-item-hidden-badge">Hidden</span>
             )}
             {cluster.isActive && (
                 <span className="cluster-item-active-badge">Active</span>

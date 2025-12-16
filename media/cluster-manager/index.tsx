@@ -72,6 +72,18 @@ function ClusterManagerApp(): JSX.Element {
         });
     };
 
+    // Handle toggling visibility
+    const handleToggleVisibility = (contextName: string, hidden: boolean): void => {
+        const vscode = acquireVsCodeApi();
+        vscode.postMessage({
+            type: 'toggleVisibility',
+            data: {
+                contextName,
+                hidden
+            }
+        });
+    };
+
     return (
         <div className="cluster-manager-app">
             <header className="cluster-manager-header">
@@ -92,6 +104,7 @@ function ClusterManagerApp(): JSX.Element {
                             clusters: {}
                         }}
                         onSetAlias={handleSetAlias}
+                        onToggleVisibility={handleToggleVisibility}
                     />
                 )}
             </main>

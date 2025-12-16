@@ -81,6 +81,17 @@ export interface SetAliasMessage {
 }
 
 /**
+ * Message sent from webview to extension to toggle cluster visibility.
+ */
+export interface ToggleVisibilityMessage {
+    type: 'toggleVisibility';
+    data: {
+        contextName: string;
+        hidden: boolean;
+    };
+}
+
+/**
  * Message sent from extension to webview when customizations are updated.
  */
 export interface CustomizationsUpdatedMessage {
@@ -96,5 +107,5 @@ export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdate
 /**
  * Union type for all webview messages from webview to extension.
  */
-export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage;
+export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage;
 
