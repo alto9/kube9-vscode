@@ -10,12 +10,14 @@ interface ClusterListProps {
     clusters: ClusterInfo[];
     /** Customization configuration */
     customizations: ClusterCustomizationConfig;
+    /** Callback function to handle setting an alias */
+    onSetAlias: (contextName: string, alias: string | null) => void;
 }
 
 /**
  * ClusterList component displays all clusters in a list
  */
-export function ClusterList({ clusters, customizations }: ClusterListProps): JSX.Element {
+export function ClusterList({ clusters, customizations, onSetAlias }: ClusterListProps): JSX.Element {
     if (clusters.length === 0) {
         return (
             <div className="cluster-empty-state">
@@ -31,6 +33,7 @@ export function ClusterList({ clusters, customizations }: ClusterListProps): JSX
                     key={cluster.contextName}
                     cluster={cluster}
                     customization={customizations.clusters[cluster.contextName]}
+                    onSetAlias={onSetAlias}
                 />
             ))}
         </div>

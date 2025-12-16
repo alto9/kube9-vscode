@@ -44,6 +44,8 @@ function ClusterManagerApp(): JSX.Element {
                 setCustomizations(message.data.customizations);
                 setTheme(message.data.theme);
                 setLoading(false);
+            } else if (message.type === 'customizationsUpdated') {
+                setCustomizations(message.data);
             }
         };
 
@@ -57,6 +59,18 @@ function ClusterManagerApp(): JSX.Element {
             window.removeEventListener('message', handleMessage);
         };
     }, []);
+
+    // Handle setting alias
+    const handleSetAlias = (contextName: string, alias: string | null): void => {
+        const vscode = acquireVsCodeApi();
+        vscode.postMessage({
+            type: 'setAlias',
+            data: {
+                contextName,
+                alias
+            }
+        });
+    };
 
     return (
         <div className="cluster-manager-app">
@@ -77,6 +91,7 @@ function ClusterManagerApp(): JSX.Element {
                             folders: [],
                             clusters: {}
                         }}
+                        onSetAlias={handleSetAlias}
                     />
                 )}
             </main>

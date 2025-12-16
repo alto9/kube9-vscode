@@ -137,6 +137,56 @@ body {
     font-family: var(--vscode-font-family);
 }
 
+.cluster-item-edit-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--vscode-icon-foreground);
+    opacity: 0.7;
+    transition: opacity 0.15s ease, color 0.15s ease;
+    border-radius: 3px;
+}
+
+.cluster-item-edit-button:hover {
+    opacity: 1;
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-icon-foreground);
+}
+
+.cluster-item-edit-button:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.cluster-item-edit-button .codicon {
+    font-size: 14px;
+}
+
+.cluster-item-input {
+    flex: 1;
+    font-size: 14px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 4px 8px;
+    outline: none;
+}
+
+.cluster-item-input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
 .cluster-item-active-badge {
     padding: 2px 8px;
     font-size: 11px;

@@ -70,12 +70,31 @@ export interface InitializeMessage {
 }
 
 /**
+ * Message sent from webview to extension to set a cluster alias.
+ */
+export interface SetAliasMessage {
+    type: 'setAlias';
+    data: {
+        contextName: string;
+        alias: string | null;
+    };
+}
+
+/**
+ * Message sent from extension to webview when customizations are updated.
+ */
+export interface CustomizationsUpdatedMessage {
+    type: 'customizationsUpdated';
+    data: ClusterCustomizationConfig;
+}
+
+/**
  * Union type for all webview messages from extension to webview.
  */
-export type ExtensionToWebviewMessage = InitializeMessage;
+export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdatedMessage;
 
 /**
  * Union type for all webview messages from webview to extension.
  */
-export type WebviewToExtensionMessage = GetClustersMessage;
+export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage;
 

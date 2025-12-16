@@ -10,6 +10,17 @@ interface GetClustersMessage {
 }
 
 /**
+ * Message sent from webview to extension to set a cluster alias.
+ */
+interface SetAliasMessage {
+    type: 'setAlias';
+    data: {
+        contextName: string;
+        alias: string | null;
+    };
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -27,9 +38,27 @@ interface InitializeMessage {
 }
 
 /**
+ * Message sent from extension to webview when customizations are updated.
+ */
+interface CustomizationsUpdatedMessage {
+    type: 'customizationsUpdated';
+    data: ClusterCustomizationConfig;
+}
+
+/**
+ * Union type for all webview messages from webview to extension.
+ */
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage;
+
+/**
+ * Union type for all webview messages from extension to webview.
+ */
+type WebviewFromExtensionMessage = InitializeMessage | CustomizationsUpdatedMessage;
+
+/**
  * Union type for all webview messages.
  */
-type WebviewMessage = GetClustersMessage | InitializeMessage;
+type WebviewMessage = WebviewToExtensionMessage | WebviewFromExtensionMessage;
 
 /**
  * ClusterManagerWebview manages the webview panel for the Cluster Manager interface.
@@ -61,6 +90,11 @@ export class ClusterManagerWebview {
      * Extension URI for loading resources.
      */
     private readonly extensionUri: vscode.Uri;
+
+    /**
+     * Disposables for event listeners and subscriptions.
+     */
+    private readonly disposables: vscode.Disposable[] = [];
 
     /**
      * Create or show the Cluster Manager webview panel.
@@ -122,22 +156,39 @@ export class ClusterManagerWebview {
         );
 
         // Set up message handler
-        this.panel.webview.onDidReceiveMessage(
+        const messageDisposable = this.panel.webview.onDidReceiveMessage(
             async (message: WebviewMessage) => {
                 await this.handleMessage(message);
             },
             undefined,
             []
         );
+        this.disposables.push(messageDisposable);
 
-        // Handle panel disposal to clear singleton reference
-        this.panel.onDidDispose(
+        // Set up event listener for customization changes
+        const customizationDisposable = this.customizationService.onDidChangeCustomizations(
+            async () => {
+                const config = await this.customizationService.getConfiguration();
+                const updateMessage: CustomizationsUpdatedMessage = {
+                    type: 'customizationsUpdated',
+                    data: config
+                };
+                this.panel.webview.postMessage(updateMessage);
+            }
+        );
+        this.disposables.push(customizationDisposable);
+
+        // Handle panel disposal to clear singleton reference and dispose resources
+        const panelDisposable = this.panel.onDidDispose(
             () => {
                 ClusterManagerWebview.currentPanel = undefined;
+                // Dispose all resources
+                vscode.Disposable.from(...this.disposables).dispose();
             },
             null,
             []
         );
+        this.disposables.push(panelDisposable);
 
         // Store this instance as the current panel
         ClusterManagerWebview.currentPanel = this;
@@ -152,10 +203,29 @@ export class ClusterManagerWebview {
         try {
             if (message.type === 'getClusters') {
                 await this.handleGetClusters();
+            } else if (message.type === 'setAlias') {
+                await this.handleSetAlias(message.data.contextName, message.data.alias);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error handling webview message:', errorMessage);
+        }
+    }
+
+    /**
+     * Handle setAlias message by updating the cluster alias.
+     * 
+     * @param contextName - The kubeconfig context name of the cluster
+     * @param alias - The friendly name to assign, or null to remove the alias
+     */
+    private async handleSetAlias(contextName: string, alias: string | null): Promise<void> {
+        try {
+            await this.customizationService.setAlias(contextName, alias);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error setting alias:', errorMessage);
+            // Could send error message to webview here if needed
         }
     }
 
@@ -262,12 +332,18 @@ export class ClusterManagerWebview {
             vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'cluster-manager', 'index.js')
         );
 
+        // Get codicons CSS URI
+        const codiconsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
+        );
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval'; font-src ${webview.cspSource};">
+    <link rel="stylesheet" href="${codiconsUri}">
     <title>Cluster Manager</title>
 </head>
 <body>

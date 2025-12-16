@@ -5,7 +5,7 @@ feature_id:
   - cluster-alias-management
 spec_id:
   - cluster-manager-webview-spec
-status: pending
+status: completed
 ---
 
 # Add Alias Editing UI in Webview
