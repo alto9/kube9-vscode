@@ -680,5 +680,592 @@ suite('ClusterCustomizationService Test Suite', () => {
             assert.strictEqual(config.clusters[contextName].hidden, true);
         });
     });
+
+    suite('createFolder', () => {
+        test('createFolder should create folder at root level with unique name', async () => {
+            const folder = await service.createFolder('Production', null);
+            
+            assert.ok(folder);
+            assert.strictEqual(folder.name, 'Production');
+            assert.strictEqual(folder.parentId, null);
+            assert.strictEqual(folder.order, 0);
+            assert.strictEqual(folder.expanded, false);
+            assert.ok(folder.id); // UUID should be generated
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.folders.length, 1);
+            assert.strictEqual(config.folders[0].id, folder.id);
+        });
+
+        test('createFolder should create folder with parentId', async () => {
+            // Create parent folder first
+            const parentFolder = await service.createFolder('AWS', null);
+            
+            // Create child folder
+            const childFolder = await service.createFolder('Production', parentFolder.id);
+            
+            assert.strictEqual(childFolder.parentId, parentFolder.id);
+            assert.strictEqual(childFolder.name, 'Production');
+            assert.strictEqual(childFolder.order, 0);
+            
+            const config = await service.getConfiguration();
+            // Verify both folders exist
+            assert.ok(config.folders.find(f => f.id === parentFolder.id));
+            assert.ok(config.folders.find(f => f.id === childFolder.id));
+        });
+
+        test('createFolder should generate UUID v4 for folder ID', async () => {
+            const folder = await service.createFolder('Test', null);
+            
+            // UUID v4 format: 8-4-4-4-12 hexadecimal characters
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+            assert.ok(uuidRegex.test(folder.id), 'Folder ID should be a valid UUID v4');
+        });
+
+        test('createFolder should calculate correct order value', async () => {
+            // Create first folder
+            const folder1 = await service.createFolder('Order Folder 1', null);
+            const initialOrder = folder1.order;
+            
+            // Create second folder
+            const folder2 = await service.createFolder('Order Folder 2', null);
+            assert.strictEqual(folder2.order, initialOrder + 1);
+            
+            // Create third folder
+            const folder3 = await service.createFolder('Order Folder 3', null);
+            assert.strictEqual(folder3.order, initialOrder + 2);
+        });
+
+        test('createFolder should set expanded to false by default', async () => {
+            const folder = await service.createFolder('Expanded Test Folder', null);
+            assert.strictEqual(folder.expanded, false);
+        });
+
+        test('createFolder should throw error for empty name', async () => {
+            try {
+                await service.createFolder('', null);
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'Folder name cannot be empty');
+            }
+        });
+
+        test('createFolder should throw error for whitespace-only name', async () => {
+            try {
+                await service.createFolder('   ', null);
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'Folder name cannot be empty');
+            }
+        });
+
+        test('createFolder should throw error for duplicate name within same parent', async () => {
+            await service.createFolder('Duplicate Test Production', null);
+            
+            try {
+                await service.createFolder('Duplicate Test Production', null);
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'A folder with this name already exists');
+            }
+        });
+
+        test('createFolder should allow duplicate names in different parents', async () => {
+            const parent1 = await service.createFolder('Duplicate Parent AWS', null);
+            const parent2 = await service.createFolder('Duplicate Parent Azure', null);
+            
+            // Should be able to create "Production" under both parents
+            const prod1 = await service.createFolder('Duplicate Production', parent1.id);
+            const prod2 = await service.createFolder('Duplicate Production', parent2.id);
+            
+            assert.strictEqual(prod1.name, 'Duplicate Production');
+            assert.strictEqual(prod2.name, 'Duplicate Production');
+            assert.strictEqual(prod1.parentId, parent1.id);
+            assert.strictEqual(prod2.parentId, parent2.id);
+        });
+
+        test('createFolder should throw error when exceeding max nesting depth', async () => {
+            // Create 5 levels of nesting (root = level 0, so 5 folders = level 5)
+            let currentParent: string | null = null;
+            for (let i = 0; i < 5; i++) {
+                const folder = await service.createFolder(`Level ${i}`, currentParent);
+                currentParent = folder.id;
+            }
+            
+            // Attempting to create at 6th level should fail
+            try {
+                await service.createFolder('Level 6', currentParent);
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'Maximum folder depth reached (5 levels)');
+            }
+        });
+
+        test('createFolder should emit customization change event', (done) => {
+            service.onDidChangeCustomizations((event: CustomizationChangeEvent) => {
+                assert.strictEqual(event.type, 'folder');
+                assert.strictEqual(event.operation, 'create');
+                assert.ok(Array.isArray(event.affectedIds));
+                assert.strictEqual(event.affectedIds.length, 1);
+                done();
+            });
+            
+            service.createFolder('Event Emit Test', null).catch((err) => {
+                done(err);
+            });
+        });
+
+        test('createFolder should persist folder to Global State', async () => {
+            const folder = await service.createFolder('Persisted Folder', null);
+            
+            // Create a new service instance to verify persistence
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const newService = new ClusterCustomizationService(mockContext as any);
+            const config = await newService.getConfiguration();
+            
+            const persistedFolder = config.folders.find(f => f.id === folder.id);
+            assert.ok(persistedFolder);
+            assert.strictEqual(persistedFolder!.name, 'Persisted Folder');
+        });
+
+        test('createFolder should return created FolderConfig', async () => {
+            const folder = await service.createFolder('Return Test Folder', null);
+            
+            assert.ok(folder);
+            assert.strictEqual(typeof folder.id, 'string');
+            assert.strictEqual(folder.name, 'Test Folder');
+            assert.strictEqual(folder.parentId, null);
+            assert.strictEqual(typeof folder.order, 'number');
+            assert.strictEqual(typeof folder.expanded, 'boolean');
+        });
+
+        test('createFolder should trim whitespace from name', async () => {
+            const folder = await service.createFolder('  Trimmed Name  ', null);
+            assert.strictEqual(folder.name, 'Trimmed Name');
+        });
+    });
+
+    suite('renameFolder', () => {
+        test('renameFolder should rename existing folder', async () => {
+            const folder = await service.createFolder('Old Name', null);
+            
+            await service.renameFolder(folder.id, 'New Name');
+            
+            const config = await service.getConfiguration();
+            const renamedFolder = config.folders.find(f => f.id === folder.id);
+            assert.ok(renamedFolder);
+            assert.strictEqual(renamedFolder!.name, 'New Name');
+        });
+
+        test('renameFolder should validate folder exists', async () => {
+            try {
+                await service.renameFolder('non-existent-id', 'New Name');
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'Folder not found');
+            }
+        });
+
+        test('renameFolder should validate new name is non-empty', async () => {
+            const folder = await service.createFolder('Rename Empty Test', null);
+            
+            try {
+                await service.renameFolder(folder.id, '');
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'Folder name cannot be empty');
+            }
+        });
+
+        test('renameFolder should validate new name is unique within parent', async () => {
+            await service.createFolder('Folder 1', null);
+            const folder2 = await service.createFolder('Folder 2', null);
+            
+            try {
+                await service.renameFolder(folder2.id, 'Folder 1');
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'A folder with this name already exists');
+            }
+        });
+
+        test('renameFolder should allow rename to same name', async () => {
+            const folder = await service.createFolder('Same Name', null);
+            
+            // Should not throw error
+            await service.renameFolder(folder.id, 'Same Name');
+            
+            const config = await service.getConfiguration();
+            const renamedFolder = config.folders.find(f => f.id === folder.id);
+            assert.ok(renamedFolder);
+            assert.strictEqual(renamedFolder!.name, 'Same Name');
+        });
+
+        test('renameFolder should allow rename if name unique in different parent', async () => {
+            const parent1 = await service.createFolder('Rename Unique AWS', null);
+            const parent2 = await service.createFolder('Rename Unique Azure', null);
+            await service.createFolder('Rename Unique Production', parent1.id);
+            const folder2 = await service.createFolder('Rename Unique Staging', parent2.id);
+            
+            // Should be able to rename folder2 to "Production" since it's in different parent
+            await service.renameFolder(folder2.id, 'Rename Unique Production');
+            
+            const config = await service.getConfiguration();
+            const renamedFolder = config.folders.find(f => f.id === folder2.id);
+            assert.ok(renamedFolder);
+            assert.strictEqual(renamedFolder!.name, 'Production');
+        });
+
+        test('renameFolder should emit customization change event', (done) => {
+            service.createFolder('Rename Event Test', null).then((folder) => {
+                service.onDidChangeCustomizations((event: CustomizationChangeEvent) => {
+                    // updateConfiguration emits 'bulk' event first, then renameFolder emits 'folder' event
+                    // We want to check the 'folder' event
+                    if (event.type === 'folder') {
+                        assert.strictEqual(event.type, 'folder');
+                        assert.strictEqual(event.operation, 'update');
+                        assert.ok(Array.isArray(event.affectedIds));
+                        assert.strictEqual(event.affectedIds.length, 1);
+                        assert.strictEqual(event.affectedIds[0], folder.id);
+                        done();
+                    }
+                });
+                
+                service.renameFolder(folder.id, 'Renamed').catch((err) => {
+                    done(err);
+                });
+            }).catch((err) => {
+                done(err);
+            });
+        });
+
+        test('renameFolder should persist rename to Global State', async () => {
+            const folder = await service.createFolder('Original Name', null);
+            await service.renameFolder(folder.id, 'Renamed');
+            
+            // Create a new service instance to verify persistence
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const newService = new ClusterCustomizationService(mockContext as any);
+            const config = await newService.getConfiguration();
+            
+            const renamedFolder = config.folders.find(f => f.id === folder.id);
+            assert.ok(renamedFolder);
+            assert.strictEqual(renamedFolder!.name, 'Renamed');
+        });
+
+        test('renameFolder should preserve other folder properties', async () => {
+            const folder = await service.createFolder('Rename Preserve Test', null);
+            const originalId = folder.id;
+            const originalParentId = folder.parentId;
+            const originalOrder = folder.order;
+            const originalExpanded = folder.expanded;
+            
+            await service.renameFolder(folder.id, 'Renamed');
+            
+            const config = await service.getConfiguration();
+            const renamedFolder = config.folders.find(f => f.id === originalId);
+            assert.ok(renamedFolder);
+            assert.strictEqual(renamedFolder!.id, originalId);
+            assert.strictEqual(renamedFolder!.parentId, originalParentId);
+            assert.strictEqual(renamedFolder!.order, originalOrder);
+            assert.strictEqual(renamedFolder!.expanded, originalExpanded);
+        });
+
+        test('renameFolder should trim whitespace from new name', async () => {
+            const folder = await service.createFolder('Rename Trim Test', null);
+            
+            await service.renameFolder(folder.id, '  Trimmed Name  ');
+            
+            const config = await service.getConfiguration();
+            const renamedFolder = config.folders.find(f => f.id === folder.id);
+            assert.ok(renamedFolder);
+            assert.strictEqual(renamedFolder!.name, 'Trimmed Name');
+        });
+    });
+
+    suite('deleteFolder', () => {
+        test('deleteFolder should delete empty folder', async () => {
+            const folder = await service.createFolder('Empty Folder', null);
+            
+            await service.deleteFolder(folder.id);
+            
+            const config = await service.getConfiguration();
+            const deletedFolder = config.folders.find(f => f.id === folder.id);
+            assert.strictEqual(deletedFolder, undefined);
+        });
+
+        test('deleteFolder should move clusters to root when moveToRoot is true', async () => {
+            const folder = await service.createFolder('Move To Root Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    'cluster-1': {
+                        alias: 'Cluster 1',
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: 'Cluster 2',
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 1
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.deleteFolder(folder.id, true);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.folders.length, 0);
+            assert.strictEqual(config.clusters['cluster-1'].folderId, null);
+            assert.strictEqual(config.clusters['cluster-2'].folderId, null);
+            assert.strictEqual(config.clusters['cluster-1'].alias, 'Cluster 1');
+            assert.strictEqual(config.clusters['cluster-2'].alias, 'Cluster 2');
+        });
+
+        test('deleteFolder should remove cluster configs when moveToRoot is false', async () => {
+            const folder = await service.createFolder('Remove Configs Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    'cluster-1': {
+                        alias: 'Cluster 1',
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: 'Cluster 2',
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 1
+                    },
+                    'cluster-3': {
+                        alias: 'Cluster 3',
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.deleteFolder(folder.id, false);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.folders.length, 0);
+            assert.strictEqual(config.clusters['cluster-1'], undefined);
+            assert.strictEqual(config.clusters['cluster-2'], undefined);
+            // Cluster not in folder should be preserved
+            assert.ok(config.clusters['cluster-3']);
+        });
+
+        test('deleteFolder should delete folder recursively', async () => {
+            const parent = await service.createFolder('Recursive Parent', null);
+            const child1 = await service.createFolder('Recursive Child 1', parent.id);
+            const child2 = await service.createFolder('Recursive Child 2', parent.id);
+            const grandchild = await service.createFolder('Recursive Grandchild', child1.id);
+            
+            await service.deleteFolder(parent.id);
+            
+            const config = await service.getConfiguration();
+            // Check that all specific folders are deleted
+            assert.strictEqual(config.folders.find(f => f.id === parent.id), undefined);
+            assert.strictEqual(config.folders.find(f => f.id === child1.id), undefined);
+            assert.strictEqual(config.folders.find(f => f.id === child2.id), undefined);
+            assert.strictEqual(config.folders.find(f => f.id === grandchild.id), undefined);
+        });
+
+        test('deleteFolder should move clusters from nested folders to root when moveToRoot is true', async () => {
+            const parent = await service.createFolder('Nested Move Parent', null);
+            const child = await service.createFolder('Nested Move Child', parent.id);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [parent, child],
+                clusters: {
+                    'cluster-1': {
+                        alias: 'Cluster 1',
+                        hidden: false,
+                        folderId: parent.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: 'Cluster 2',
+                        hidden: false,
+                        folderId: child.id,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.deleteFolder(parent.id, true);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.folders.length, 0);
+            assert.strictEqual(config.clusters['cluster-1'].folderId, null);
+            assert.strictEqual(config.clusters['cluster-2'].folderId, null);
+        });
+
+        test('deleteFolder should remove clusters from nested folders when moveToRoot is false', async () => {
+            const parent = await service.createFolder('Nested Remove Parent', null);
+            const child = await service.createFolder('Nested Remove Child', parent.id);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [parent, child],
+                clusters: {
+                    'cluster-1': {
+                        alias: 'Cluster 1',
+                        hidden: false,
+                        folderId: parent.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: 'Cluster 2',
+                        hidden: false,
+                        folderId: child.id,
+                        order: 0
+                    },
+                    'cluster-3': {
+                        alias: 'Cluster 3',
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.deleteFolder(parent.id, false);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.folders.length, 0);
+            assert.strictEqual(config.clusters['cluster-1'], undefined);
+            assert.strictEqual(config.clusters['cluster-2'], undefined);
+            // Cluster not in deleted folder tree should be preserved
+            assert.ok(config.clusters['cluster-3']);
+        });
+
+        test('deleteFolder should throw error if folder not found', async () => {
+            try {
+                await service.deleteFolder('non-existent-id');
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'Folder not found');
+            }
+        });
+
+        test('deleteFolder should emit customization change event with all affected folder IDs', (done) => {
+            service.createFolder('Event Parent', null).then((parent) => {
+                service.createFolder('Event Child', parent.id).then((child) => {
+                    service.onDidChangeCustomizations((event: CustomizationChangeEvent) => {
+                        // updateConfiguration emits 'bulk' event first, then deleteFolder emits 'folder' event
+                        // We want to check the 'folder' event
+                        if (event.type === 'folder') {
+                            assert.strictEqual(event.type, 'folder');
+                            assert.strictEqual(event.operation, 'delete');
+                            assert.ok(Array.isArray(event.affectedIds));
+                            assert.ok(event.affectedIds.length >= 2);
+                            assert.ok(event.affectedIds.includes(parent.id));
+                            assert.ok(event.affectedIds.includes(child.id));
+                            done();
+                        }
+                    });
+                    
+                    service.deleteFolder(parent.id).catch((err) => {
+                        done(err);
+                    });
+                }).catch((err) => {
+                    done(err);
+                });
+            }).catch((err) => {
+                done(err);
+            });
+        });
+
+        test('deleteFolder should persist deletion to Global State', async () => {
+            const folder = await service.createFolder('To Delete', null);
+            await service.deleteFolder(folder.id);
+            
+            // Create a new service instance to verify persistence
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const newService = new ClusterCustomizationService(mockContext as any);
+            const config = await newService.getConfiguration();
+            
+            const deletedFolder = config.folders.find(f => f.id === folder.id);
+            assert.strictEqual(deletedFolder, undefined);
+        });
+
+        test('deleteFolder should preserve clusters not in deleted folder', async () => {
+            const folder1 = await service.createFolder('Preserve Folder 1', null);
+            const folder2 = await service.createFolder('Preserve Folder 2', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder1, folder2],
+                clusters: {
+                    'cluster-1': {
+                        alias: 'Cluster 1',
+                        hidden: false,
+                        folderId: folder1.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: 'Cluster 2',
+                        hidden: false,
+                        folderId: folder2.id,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.deleteFolder(folder1.id, true);
+            
+            const config = await service.getConfiguration();
+            // Folder 2 should still exist
+            assert.ok(config.folders.find(f => f.id === folder2.id));
+            // Cluster 2 should still be in Folder 2
+            assert.strictEqual(config.clusters['cluster-2'].folderId, folder2.id);
+            // Cluster 1 should be moved to root
+            assert.strictEqual(config.clusters['cluster-1'].folderId, null);
+        });
+
+        test('deleteFolder should use moveToRoot=true as default', async () => {
+            const folder = await service.createFolder('Default Move Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    'cluster-1': {
+                        alias: 'Cluster 1',
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            // Call without moveToRoot parameter (should default to true)
+            await service.deleteFolder(folder.id);
+            
+            const config = await service.getConfiguration();
+            // Cluster should be moved to root, not deleted
+            assert.ok(config.clusters['cluster-1']);
+            assert.strictEqual(config.clusters['cluster-1'].folderId, null);
+        });
+    });
 });
 

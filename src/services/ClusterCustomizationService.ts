@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Configuration for a folder used to organize clusters.
@@ -218,6 +219,220 @@ export class ClusterCustomizationService {
             folderId: null,
             order: 0
         };
+    }
+
+    /**
+     * Creates a new folder for organizing clusters.
+     * 
+     * @param name - Folder display name
+     * @param parentId - Parent folder ID or null for root level
+     * @returns Promise resolving to the created folder configuration
+     * @throws Error if name is empty, duplicate, or nesting depth exceeds maximum
+     */
+    async createFolder(name: string, parentId: string | null): Promise<FolderConfig> {
+        const config = await this.getConfiguration();
+        
+        // Trim and validate name
+        const trimmedName = name.trim();
+        if (trimmedName.length === 0) {
+            throw new Error('Folder name cannot be empty');
+        }
+        
+        // Validate name is unique within parent
+        const siblings = config.folders.filter(f => f.parentId === parentId);
+        if (siblings.some(f => f.name === trimmedName)) {
+            throw new Error('A folder with this name already exists');
+        }
+        
+        // Validate nesting depth (max 5 levels, root = level 0)
+        const currentDepth = this.getNestingDepth(parentId, config);
+        if (currentDepth >= 5) {
+            throw new Error('Maximum folder depth reached (5 levels)');
+        }
+        
+        // Generate UUID for folder ID
+        const folderId = uuidv4();
+        
+        // Calculate next order value
+        const order = this.getNextOrder(parentId, config);
+        
+        // Create folder configuration
+        const folder: FolderConfig = {
+            id: folderId,
+            name: trimmedName,
+            parentId: parentId,
+            order: order,
+            expanded: false
+        };
+        
+        // Add to configuration
+        config.folders.push(folder);
+        
+        // Save configuration
+        await this.updateConfiguration(config);
+        
+        // Emit specific folder create event
+        this._onDidChangeCustomizations.fire({
+            type: 'folder',
+            operation: 'create',
+            affectedIds: [folderId]
+        });
+        
+        return folder;
+    }
+
+    /**
+     * Renames an existing folder.
+     * 
+     * @param folderId - Folder to rename
+     * @param newName - New folder name
+     * @returns Promise that resolves when the folder has been renamed
+     * @throws Error if folder not found, name is empty, or name is duplicate
+     */
+    async renameFolder(folderId: string, newName: string): Promise<void> {
+        const config = await this.getConfiguration();
+        
+        // Find folder by ID
+        const folder = config.folders.find(f => f.id === folderId);
+        if (!folder) {
+            throw new Error('Folder not found');
+        }
+        
+        // Trim and validate new name
+        const trimmedName = newName.trim();
+        if (trimmedName.length === 0) {
+            throw new Error('Folder name cannot be empty');
+        }
+        
+        // If name hasn't changed, no-op
+        if (folder.name === trimmedName) {
+            return;
+        }
+        
+        // Validate new name is unique within parent (check siblings)
+        const siblings = config.folders.filter(f => f.parentId === folder.parentId && f.id !== folderId);
+        if (siblings.some(f => f.name === trimmedName)) {
+            throw new Error('A folder with this name already exists');
+        }
+        
+        // Update folder name
+        folder.name = trimmedName;
+        
+        // Save configuration
+        await this.updateConfiguration(config);
+        
+        // Emit specific folder update event
+        this._onDidChangeCustomizations.fire({
+            type: 'folder',
+            operation: 'update',
+            affectedIds: [folderId]
+        });
+    }
+
+    /**
+     * Deletes a folder and optionally moves contained clusters to root or removes them.
+     * 
+     * @param folderId - Folder to delete
+     * @param moveToRoot - If true, move contained clusters to root; if false, delete contained clusters
+     * @returns Promise that resolves when the folder has been deleted
+     * @throws Error if folder not found
+     */
+    async deleteFolder(folderId: string, moveToRoot: boolean = true): Promise<void> {
+        const config = await this.getConfiguration();
+        
+        // Find folder by ID
+        const folder = config.folders.find(f => f.id === folderId);
+        if (!folder) {
+            throw new Error('Folder not found');
+        }
+        
+        // Collect all child folder IDs recursively
+        const childFolderIds = this.getChildFolderIds(folderId, config);
+        const allFolderIdsToDelete = [folderId, ...childFolderIds];
+        
+        // Handle clusters in deleted folders
+        if (moveToRoot) {
+            // Move clusters to root (set folderId to null)
+            for (const [, cluster] of Object.entries(config.clusters)) {
+                if (cluster.folderId && allFolderIdsToDelete.includes(cluster.folderId)) {
+                    cluster.folderId = null;
+                }
+            }
+        } else {
+            // Remove cluster configs for clusters in deleted folders
+            for (const [contextName, cluster] of Object.entries(config.clusters)) {
+                if (cluster.folderId && allFolderIdsToDelete.includes(cluster.folderId)) {
+                    delete config.clusters[contextName];
+                }
+            }
+        }
+        
+        // Remove all folders (deleted folder + all child folders)
+        config.folders = config.folders.filter(f => !allFolderIdsToDelete.includes(f.id));
+        
+        // Save configuration
+        await this.updateConfiguration(config);
+        
+        // Emit specific folder delete event with all affected folder IDs
+        this._onDidChangeCustomizations.fire({
+            type: 'folder',
+            operation: 'delete',
+            affectedIds: allFolderIdsToDelete
+        });
+    }
+
+    /**
+     * Calculates the nesting depth of a folder by traversing the parent chain.
+     * 
+     * @param folderId - Folder ID or null for root level
+     * @param config - Current configuration
+     * @returns Nesting depth (0 for root level)
+     */
+    private getNestingDepth(folderId: string | null, config: ClusterCustomizationConfig): number {
+        if (folderId === null) {
+            return 0; // Root level
+        }
+        
+        const folder = config.folders.find(f => f.id === folderId);
+        if (!folder) {
+            return 0; // Folder not found, treat as root
+        }
+        
+        return 1 + this.getNestingDepth(folder.parentId, config);
+    }
+
+    /**
+     * Recursively collects all descendant folder IDs for a given folder.
+     * 
+     * @param folderId - Parent folder ID
+     * @param config - Current configuration
+     * @returns Array of all descendant folder IDs
+     */
+    private getChildFolderIds(folderId: string, config: ClusterCustomizationConfig): string[] {
+        const childIds: string[] = [];
+        const children = config.folders.filter(f => f.parentId === folderId);
+        
+        for (const child of children) {
+            childIds.push(child.id);
+            childIds.push(...this.getChildFolderIds(child.id, config));
+        }
+        
+        return childIds;
+    }
+
+    /**
+     * Calculates the next order value for a folder within its parent.
+     * 
+     * @param parentId - Parent folder ID or null for root level
+     * @param config - Current configuration
+     * @returns Next order value (0-indexed)
+     */
+    private getNextOrder(parentId: string | null, config: ClusterCustomizationConfig): number {
+        const siblings = config.folders.filter(f => f.parentId === parentId);
+        if (siblings.length === 0) {
+            return 0;
+        }
+        return Math.max(...siblings.map(f => f.order)) + 1;
     }
 
     /**

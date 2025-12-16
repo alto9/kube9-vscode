@@ -5,7 +5,7 @@ feature_id:
   - cluster-folder-organization
 spec_id:
   - cluster-customization-storage-spec
-status: pending
+status: completed
 ---
 
 # Implement Folder CRUD Operations in Service
