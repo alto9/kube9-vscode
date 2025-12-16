@@ -224,6 +224,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             TreeItemFactory.createCustomResourcesCategory(clusterElement.resourceData)
         ];
 
+        // Insert ArgoCD category after Configuration if ArgoCD is installed
+        if (clusterElement.argoCDInstalled === true) {
+            const insertIndex = categories.length - 1; // Before Custom Resources
+            categories.splice(insertIndex, 0, TreeItemFactory.createArgoCDCategory(clusterElement.resourceData));
+        }
+
         // Prepend Reports category if operator is installed (status is NOT Basic)
         if (clusterElement.operatorStatus !== undefined && clusterElement.operatorStatus !== OperatorStatusMode.Basic) {
             return [
@@ -729,6 +735,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         const forceRefresh = this.forceOperatorRefreshFlag;
         validClusters.forEach(item => {
             void this.checkOperatorStatus(item, forceRefresh);
+            void this.checkArgoCDStatus(item, forceRefresh);
         });
         
         // Clear the flag after use
@@ -1156,6 +1163,46 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             // Leave operatorStatus undefined - tree will show connectivity-based icon
             // No error dialogs shown to users - errors are logged to OutputChannel only
+        }
+    }
+
+    /**
+     * Check ArgoCD installation status for a single cluster and update the tree item.
+     * This method runs asynchronously and updates the cluster item with ArgoCD installation
+     * status when available.
+     * 
+     * @param item The cluster tree item to check ArgoCD status for
+     * @param forceRefresh If true, bypasses cache and queries the cluster directly
+     */
+    private async checkArgoCDStatus(item: ClusterTreeItem, forceRefresh = false): Promise<void> {
+        // Validate prerequisites
+        if (!this.kubeconfig || !item.resourceData?.context?.name) {
+            return;
+        }
+
+        const contextName = item.resourceData.context.name;
+
+        try {
+            // Get or create ArgoCDService
+            const argoCDService = this.getArgoCDService();
+            if (!argoCDService) {
+                return;
+            }
+
+            // Check if ArgoCD is installed (uses caching internally unless forceRefresh=true)
+            const installationStatus = await argoCDService.isInstalled(contextName, forceRefresh);
+
+            // Update item with ArgoCD installation status
+            item.argoCDInstalled = installationStatus.installed;
+
+            // Refresh just this tree item to update categories
+            this._onDidChangeTreeData.fire(item);
+        } catch (error) {
+            // Handle unexpected errors gracefully - leave argoCDInstalled undefined
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[ERROR] Unexpected error in checkArgoCDStatus for cluster ${contextName}: ${errorMessage}`);
+            
+            // Leave argoCDInstalled undefined - category will not be shown
         }
     }
 

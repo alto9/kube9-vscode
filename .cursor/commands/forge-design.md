@@ -1,4 +1,4 @@
-<!-- forge-hash: 0cc236e87774680729776026baf4ee5c38ec4a4bfd4a4ac7d8b0003ea69de969 -->
+<!-- forge-hash: 7d7b6419b04961fe69dcdb16267543b98f4f0a62e774e395198086795df3554f -->
 
 # Forge Design
 
@@ -6,13 +6,11 @@ This command guides AI agents when working within Forge design sessions to updat
 
 ## Prerequisites
 
-If you're not familiar with Forge, run `/forge` first to understand the documentation system.
-
 You must have an active design session before making changes to AI documentation.
 
 ## What This Command Does
 
-1. **Provides complete schema information**: All document schemas embedded below
+1. **Provides complete schema information**: All document schemas embedded below for self-contained design guidance
 2. **Checks for active session**: Ensures you're working within a structured design workflow
 3. **Reads AI documentation**: Understands existing design patterns and structure
 4. **Guides documentation updates**: Helps create or modify features, diagrams, specs, actors
@@ -433,7 +431,7 @@ When working in design sessions, use the correct file type for each purpose:
 
 ## Intelligent Linkage and Grouping
 
-When working with Forge documentation:
+When working with Forge documentation, it's essential to understand and respect the existing organizational structure:
 
 - **Analyze folder structure**: Before creating new files, examine the existing `ai/` subfolder structure to understand how elements are logically grouped
 - **Follow existing patterns**: Contribute to existing grouping patterns rather than creating new arbitrary structures
@@ -449,20 +447,17 @@ Understanding the existing structure helps maintain coherence and makes the docu
 - **This is a Forge design session**: You are working within a structured design workflow
 - **Only modify AI documentation files**: Work exclusively within the `ai/` folder
 - **Do NOT modify implementation code**: This command is for updating features, diagrams, specs, actors only
-- **Track all changes**: Ensure changed files are tracked in the active session's `changed_files` array (features only)
+- **Track all changes**: Ensure changed files are tracked in the active session's `changed_files` array
 - **Use proper formats**: Features use Gherkin in code blocks, Diagrams use react-flow JSON format, Specs use markdown only
-- **Timeless documentation**: Write about ideal state, not changes or decisions
-- **Diagram-first**: Create diagrams before specs, derive specs from diagram objects
-- **Follow linkages**: Use the linkage system to discover related documentation
+- **No MCP tools needed**: All schemas and guidance are embedded in this command - completely self-contained
 
 ## Usage
 
-1. Run `/forge` if you need to understand the Forge system
-2. Ensure you have an active design session
-3. Run this command
-4. Use embedded schemas to understand file formats
-5. Analyze existing AI documentation
-6. Update documentation following diagram-first approach and timeless principles
-7. Track all feature changes in the active session
+1. Ensure you have an active design session
+2. Run this command
+3. The AI will use embedded schemas to understand file formats
+4. The AI will analyze existing AI documentation
+5. The AI will update documentation in the ai/ folder
+6. All changes will be tracked in the active design session
 
 The documentation updates will be consistent with your existing design patterns and the Forge workflow.
