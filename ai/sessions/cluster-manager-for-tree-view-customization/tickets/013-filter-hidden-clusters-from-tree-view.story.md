@@ -5,7 +5,7 @@ feature_id:
   - cluster-visibility-control
 spec_id:
   - cluster-customization-storage-spec
-status: pending
+status: completed
 ---
 
 # Filter Hidden Clusters from Tree View

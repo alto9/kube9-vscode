@@ -647,6 +647,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             // Get cluster customization config if service is available
             const customization = this.customizationService?.getClusterConfig(context.name);
+            
+            // Skip clusters that are hidden from tree view
+            if (customization?.hidden === true) {
+                return null;
+            }
+            
             const displayName = customization?.alias || context.name;
             
             // Create the tree item with alias or context name as the label
