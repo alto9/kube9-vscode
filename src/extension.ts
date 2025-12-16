@@ -129,8 +129,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // This ensures commands are available when tree items are clicked
         registerCommands();
         
-        // Initialize and register tree view provider
-        clusterTreeProvider = new ClusterTreeProvider();
+        // Initialize cluster customization service
+        // This service manages aliases, folders, and visibility customizations
+        clusterCustomizationService = new ClusterCustomizationService(context);
+        context.subscriptions.push(clusterCustomizationService);
+        disposables.push(clusterCustomizationService);
+        
+        // Initialize and register tree view provider with customization service
+        clusterTreeProvider = new ClusterTreeProvider(clusterCustomizationService);
         const treeViewDisposable = vscode.window.registerTreeDataProvider(
             'kube9ClusterView',
             clusterTreeProvider
@@ -388,7 +394,8 @@ function registerCommands(): void {
             try {
                 console.log('Cluster Manager opening...');
                 
-                // Create or get cluster customization service instance
+                // Service should already be initialized during activation
+                // But check just in case for safety
                 if (!clusterCustomizationService) {
                     clusterCustomizationService = new ClusterCustomizationService(context);
                     context.subscriptions.push(clusterCustomizationService);

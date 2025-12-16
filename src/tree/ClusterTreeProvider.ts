@@ -29,6 +29,7 @@ import { ComplianceSubcategory } from './categories/reports/ComplianceSubcategor
 import { ArgoCDService } from '../services/ArgoCDService';
 import { namespaceWatcher } from '../services/namespaceCache';
 import { OperatorStatusClient, getOperatorStatusOutputChannel } from '../services/OperatorStatusClient';
+import { ClusterCustomizationService } from '../services/ClusterCustomizationService';
 import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
 import { getContextInfo } from '../utils/kubectlContext';
 import { addDescribeCommandToItems } from './describeUtils';
@@ -110,6 +111,33 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Maps context name to its cluster tree item.
      */
     private clusterItemsCache: Map<string, ClusterTreeItem> = new Map();
+
+    /**
+     * Optional cluster customization service for managing aliases and customizations.
+     */
+    private customizationService?: ClusterCustomizationService;
+
+    /**
+     * Subscription to customization change events.
+     * Used to refresh tree view when customizations change.
+     */
+    private customizationSubscription?: vscode.Disposable;
+
+    /**
+     * Creates a new ClusterTreeProvider instance.
+     * 
+     * @param customizationService - Optional cluster customization service for managing aliases
+     */
+    constructor(customizationService?: ClusterCustomizationService) {
+        this.customizationService = customizationService;
+
+        // Subscribe to customization changes to refresh tree automatically
+        if (this.customizationService) {
+            this.customizationSubscription = this.customizationService.onDidChangeCustomizations(() => {
+                this.refresh();
+            });
+        }
+    }
 
     /**
      * Get the UI representation of a tree element.
@@ -617,9 +645,13 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 return null;
             }
             
-            // Create the tree item with context name as the label
+            // Get cluster customization config if service is available
+            const customization = this.customizationService?.getClusterConfig(context.name);
+            const displayName = customization?.alias || context.name;
+            
+            // Create the tree item with alias or context name as the label
             const item = new ClusterTreeItem(
-                context.name,
+                displayName,
                 'cluster',
                 vscode.TreeItemCollapsibleState.Collapsed,
                 {
@@ -627,6 +659,11 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     cluster: cluster
                 }
             );
+
+            // Set tooltip to show original context name when alias exists
+            if (customization?.alias) {
+                item.tooltip = `Context: ${context.name}`;
+            }
 
             // Set description to show the cluster name if different from context name
             if (cluster && cluster.name !== context.name) {
@@ -1185,6 +1222,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         if (this.contextSubscription) {
             this.contextSubscription.dispose();
             this.contextSubscription = undefined;
+        }
+        
+        // Clean up customization change subscription
+        if (this.customizationSubscription) {
+            this.customizationSubscription.dispose();
+            this.customizationSubscription = undefined;
         }
         
         // Clean up error tracking

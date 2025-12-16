@@ -173,6 +173,27 @@ export class ClusterCustomizationService {
     }
 
     /**
+     * Gets customization for a specific cluster.
+     * 
+     * @param contextName - Cluster context name
+     * @returns Cluster configuration or default values
+     */
+    getClusterConfig(contextName: string): ClusterConfig {
+        const config = this.context.globalState.get<ClusterCustomizationConfig>(
+            ClusterCustomizationService.STORAGE_KEY,
+            ClusterCustomizationService.DEFAULT_CONFIG
+        );
+        
+        // Return cluster config if exists, otherwise return defaults
+        return config.clusters[contextName] || {
+            alias: null,
+            hidden: false,
+            folderId: null,
+            order: 0
+        };
+    }
+
+    /**
      * Disposes of resources used by this service.
      * Should be called when the extension is deactivated.
      */
