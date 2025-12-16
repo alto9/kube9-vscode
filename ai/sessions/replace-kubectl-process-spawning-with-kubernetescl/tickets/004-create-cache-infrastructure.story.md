@@ -8,7 +8,7 @@ spec_id:
   - api-client-caching-strategy
 diagram_id:
   - api-client-architecture
-status: pending
+status: completed
 estimated_minutes: 30
 ---
 
@@ -24,16 +24,16 @@ Caching is critical for performance. Resources like nodes and namespaces change 
 
 ## Acceptance Criteria
 
-- [ ] New file `src/kubernetes/cache.ts` created
-- [ ] `ResourceCache` class implemented with TTL support
-- [ ] `set<T>(key, data, ttl)` method for storing entries
-- [ ] `get<T>(key)` method with automatic TTL expiration
-- [ ] `invalidate(key)` method for single entry removal
-- [ ] `invalidatePattern(pattern)` method for bulk invalidation
-- [ ] `clear()` method for full cache reset
-- [ ] `CACHE_TTL` constants exported with resource-specific values
-- [ ] Singleton cache instance exported via `getResourceCache()`
-- [ ] TypeScript generics properly implemented
+- [x] New file `src/kubernetes/cache.ts` created
+- [x] `ResourceCache` class implemented with TTL support
+- [x] `set<T>(key, data, ttl)` method for storing entries
+- [x] `get<T>(key)` method with automatic TTL expiration
+- [x] `invalidate(key)` method for single entry removal
+- [x] `invalidatePattern(pattern)` method for bulk invalidation
+- [x] `clear()` method for full cache reset
+- [x] `CACHE_TTL` constants exported with resource-specific values
+- [x] Singleton cache instance exported via `getResourceCache()`
+- [x] TypeScript generics properly implemented
 
 ## Implementation Steps
 
