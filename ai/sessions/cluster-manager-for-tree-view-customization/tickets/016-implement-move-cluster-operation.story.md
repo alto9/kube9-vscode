@@ -5,7 +5,7 @@ feature_id:
   - cluster-folder-organization
 spec_id:
   - cluster-customization-storage-spec
-status: pending
+status: completed
 ---
 
 # Implement Move Cluster Operation in Service

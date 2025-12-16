@@ -681,6 +681,387 @@ suite('ClusterCustomizationService Test Suite', () => {
         });
     });
 
+    suite('moveCluster', () => {
+        test('moveCluster should create cluster config if it doesn\'t exist', async () => {
+            const contextName = 'move-new-cluster';
+            const folder = await service.createFolder('Move Test Folder', null);
+            
+            await service.moveCluster(contextName, folder.id, 0);
+            
+            const config = await service.getConfiguration();
+            assert.ok(config.clusters[contextName]);
+            assert.strictEqual(config.clusters[contextName].folderId, folder.id);
+            assert.strictEqual(config.clusters[contextName].order, 0);
+            assert.strictEqual(config.clusters[contextName].alias, null);
+            assert.strictEqual(config.clusters[contextName].hidden, false);
+        });
+
+        test('moveCluster should update folderId and order for existing cluster', async () => {
+            const contextName = 'existing-cluster';
+            const folder1 = await service.createFolder('Folder 1', null);
+            const folder2 = await service.createFolder('Folder 2', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder1, folder2],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Existing Cluster',
+                        hidden: false,
+                        folderId: folder1.id,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.moveCluster(contextName, folder2.id, 1);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].folderId, folder2.id);
+            assert.strictEqual(config.clusters[contextName].order, 1);
+            assert.strictEqual(config.clusters[contextName].alias, 'Existing Cluster');
+            assert.strictEqual(config.clusters[contextName].hidden, false);
+        });
+
+        test('moveCluster should move cluster to root (folderId: null)', async () => {
+            const contextName = 'move-root-cluster';
+            const folder = await service.createFolder('Move Root Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Root Cluster',
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.moveCluster(contextName, null, 0);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].folderId, null);
+            assert.strictEqual(config.clusters[contextName].order, 0);
+        });
+
+        test('moveCluster should throw error when folder doesn\'t exist', async () => {
+            const contextName = 'test-cluster';
+            
+            try {
+                await service.moveCluster(contextName, 'non-existent-folder-id', 0);
+                assert.fail('Expected error to be thrown');
+            } catch (error) {
+                assert.ok(error instanceof Error);
+                assert.strictEqual(error.message, 'Folder non-existent-folder-id not found');
+            }
+        });
+
+        test('moveCluster should handle null folderId (root level)', async () => {
+            const contextName = 'root-level-cluster';
+            
+            await service.moveCluster(contextName, null, 0);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].folderId, null);
+            assert.strictEqual(config.clusters[contextName].order, 0);
+        });
+
+        test('moveCluster should reorder clusters when moving forward within same folder', async () => {
+            const folder = await service.createFolder('Reorder Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    'cluster-1': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 1
+                    },
+                    'cluster-3': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 2
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            // Move cluster-3 from position 2 to position 0
+            await service.moveCluster('cluster-3', folder.id, 0);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters['cluster-3'].order, 0);
+            assert.strictEqual(config.clusters['cluster-1'].order, 1);
+            assert.strictEqual(config.clusters['cluster-2'].order, 2);
+        });
+
+        test('moveCluster should reorder clusters when moving backward within same folder', async () => {
+            const folder = await service.createFolder('Reorder Backward Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    'cluster-1': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 1
+                    },
+                    'cluster-3': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 2
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            // Move cluster-1 from position 0 to position 2
+            await service.moveCluster('cluster-1', folder.id, 2);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters['cluster-2'].order, 0);
+            assert.strictEqual(config.clusters['cluster-3'].order, 1);
+            assert.strictEqual(config.clusters['cluster-1'].order, 2);
+        });
+
+        test('moveCluster should shift clusters in both folders when moving to different folder', async () => {
+            const folder1 = await service.createFolder('Move Shift Folder 1', null);
+            const folder2 = await service.createFolder('Move Shift Folder 2', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder1, folder2],
+                clusters: {
+                    'cluster-1': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder1.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder1.id,
+                        order: 1
+                    },
+                    'cluster-3': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder2.id,
+                        order: 0
+                    },
+                    'cluster-4': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder2.id,
+                        order: 1
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            // Move cluster-2 from folder1 (order 1) to folder2 (order 0)
+            await service.moveCluster('cluster-2', folder2.id, 0);
+            
+            const config = await service.getConfiguration();
+            // cluster-2 should be in folder2 at order 0
+            assert.strictEqual(config.clusters['cluster-2'].folderId, folder2.id);
+            assert.strictEqual(config.clusters['cluster-2'].order, 0);
+            // cluster-1 should remain at order 0 in folder1 (no shift needed)
+            assert.strictEqual(config.clusters['cluster-1'].folderId, folder1.id);
+            assert.strictEqual(config.clusters['cluster-1'].order, 0);
+            // cluster-3 and cluster-4 in folder2 should shift up
+            assert.strictEqual(config.clusters['cluster-3'].order, 1);
+            assert.strictEqual(config.clusters['cluster-4'].order, 2);
+        });
+
+        test('moveCluster should shift clusters when moving from folder to root', async () => {
+            const folder = await service.createFolder('To Root Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    'cluster-1': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 1
+                    },
+                    'root-cluster': {
+                        alias: null,
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            // Move cluster-2 from folder to root at order 0
+            await service.moveCluster('cluster-2', null, 0);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters['cluster-2'].folderId, null);
+            assert.strictEqual(config.clusters['cluster-2'].order, 0);
+            // cluster-1 should remain at order 0 in folder (no shift needed)
+            assert.strictEqual(config.clusters['cluster-1'].folderId, folder.id);
+            assert.strictEqual(config.clusters['cluster-1'].order, 0);
+            // root-cluster should shift up
+            assert.strictEqual(config.clusters['root-cluster'].order, 1);
+        });
+
+        test('moveCluster should shift clusters when moving from root to folder', async () => {
+            const folder = await service.createFolder('From Root Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    'root-cluster-1': {
+                        alias: null,
+                        hidden: false,
+                        folderId: null,
+                        order: 0
+                    },
+                    'root-cluster-2': {
+                        alias: null,
+                        hidden: false,
+                        folderId: null,
+                        order: 1
+                    },
+                    'folder-cluster': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            // Move root-cluster-2 from root to folder at order 0
+            await service.moveCluster('root-cluster-2', folder.id, 0);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters['root-cluster-2'].folderId, folder.id);
+            assert.strictEqual(config.clusters['root-cluster-2'].order, 0);
+            // root-cluster-1 should remain at order 0 (no shift needed)
+            assert.strictEqual(config.clusters['root-cluster-1'].folderId, null);
+            assert.strictEqual(config.clusters['root-cluster-1'].order, 0);
+            // folder-cluster should shift up
+            assert.strictEqual(config.clusters['folder-cluster'].order, 1);
+        });
+
+        test('moveCluster should emit customization change event', async () => {
+            const contextName = 'event-test-cluster';
+            const folder = await service.createFolder('Event Test Folder', null);
+            
+            return new Promise<void>((resolve, reject) => {
+                service.onDidChangeCustomizations(() => {
+                    resolve();
+                });
+                
+                service.moveCluster(contextName, folder.id, 0).catch((err) => {
+                    reject(err);
+                });
+            });
+        });
+
+        test('moveCluster should persist changes to Global State', async () => {
+            const contextName = 'persist-test-cluster';
+            const folder = await service.createFolder('Persist Folder', null);
+            
+            await service.moveCluster(contextName, folder.id, 0);
+            
+            // Create a new service instance to verify persistence
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const newService = new ClusterCustomizationService(mockContext as any);
+            const config = await newService.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].folderId, folder.id);
+            assert.strictEqual(config.clusters[contextName].order, 0);
+        });
+
+        test('moveCluster should preserve alias and hidden fields when moving', async () => {
+            const contextName = 'preserve-fields-cluster';
+            const folder1 = await service.createFolder('Preserve Folder 1', null);
+            const folder2 = await service.createFolder('Preserve Folder 2', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder1, folder2],
+                clusters: {
+                    [contextName]: {
+                        alias: 'Preserved Alias',
+                        hidden: true,
+                        folderId: folder1.id,
+                        order: 0
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            await service.moveCluster(contextName, folder2.id, 1);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters[contextName].alias, 'Preserved Alias');
+            assert.strictEqual(config.clusters[contextName].hidden, true);
+            assert.strictEqual(config.clusters[contextName].folderId, folder2.id);
+            assert.strictEqual(config.clusters[contextName].order, 1);
+        });
+
+        test('moveCluster should handle no-op when order unchanged in same folder', async () => {
+            const folder = await service.createFolder('No Op Folder', null);
+            const initialConfig: ClusterCustomizationConfig = {
+                version: '1.0',
+                folders: [folder],
+                clusters: {
+                    'cluster-1': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 0
+                    },
+                    'cluster-2': {
+                        alias: null,
+                        hidden: false,
+                        folderId: folder.id,
+                        order: 1
+                    }
+                }
+            };
+            await service.updateConfiguration(initialConfig);
+            
+            // Move cluster-1 to same position (no-op)
+            await service.moveCluster('cluster-1', folder.id, 0);
+            
+            const config = await service.getConfiguration();
+            assert.strictEqual(config.clusters['cluster-1'].order, 0);
+            assert.strictEqual(config.clusters['cluster-2'].order, 1);
+        });
+    });
+
     suite('createFolder', () => {
         test('createFolder should create folder at root level with unique name', async () => {
             const folder = await service.createFolder('Production', null);

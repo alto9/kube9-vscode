@@ -201,6 +201,114 @@ export class ClusterCustomizationService {
     }
 
     /**
+     * Moves a cluster to a different folder or changes its display order.
+     * 
+     * @param contextName - The kubeconfig context name of the cluster
+     * @param folderId - Target folder ID or null for root level
+     * @param order - Position within folder (0-indexed)
+     * @returns Promise that resolves when the move has been saved
+     * @throws Error if folder doesn't exist
+     */
+    async moveCluster(
+        contextName: string,
+        folderId: string | null,
+        order: number
+    ): Promise<void> {
+        const config = await this.getConfiguration();
+        
+        // Validate folder exists (if not null)
+        if (folderId && !config.folders.find(f => f.id === folderId)) {
+            throw new Error(`Folder ${folderId} not found`);
+        }
+        
+        // Get old folder ID and order (if cluster existed)
+        const oldClusterConfig = config.clusters[contextName];
+        const oldFolderId = oldClusterConfig?.folderId ?? null;
+        const oldOrder = oldClusterConfig?.order ?? 0;
+        
+        // Get or create cluster config
+        if (!config.clusters[contextName]) {
+            config.clusters[contextName] = {
+                alias: null,
+                hidden: false,
+                folderId: folderId,
+                order: order
+            };
+        } else {
+            // Update folderId and order
+            config.clusters[contextName].folderId = folderId;
+            config.clusters[contextName].order = order;
+        }
+        
+        // Handle reordering logic
+        const isMovingToDifferentFolder = oldFolderId !== folderId;
+        
+        if (isMovingToDifferentFolder) {
+            // Moving to different folder: shift clusters in both old and new folders
+            
+            // Shift clusters in old folder: decrement order for clusters with order > old order
+            if (oldFolderId !== null) {
+                for (const [otherContextName, otherCluster] of Object.entries(config.clusters)) {
+                    if (otherContextName !== contextName && 
+                        otherCluster.folderId === oldFolderId && 
+                        otherCluster.order > oldOrder) {
+                        otherCluster.order--;
+                    }
+                }
+            }
+            
+            // Shift clusters in new folder: increment order for clusters with order >= new order
+            if (folderId !== null) {
+                for (const [otherContextName, otherCluster] of Object.entries(config.clusters)) {
+                    if (otherContextName !== contextName && 
+                        otherCluster.folderId === folderId && 
+                        otherCluster.order >= order) {
+                        otherCluster.order++;
+                    }
+                }
+            } else {
+                // Moving to root: increment order for root clusters with order >= new order
+                for (const [otherContextName, otherCluster] of Object.entries(config.clusters)) {
+                    if (otherContextName !== contextName && 
+                        otherCluster.folderId === null && 
+                        otherCluster.order >= order) {
+                        otherCluster.order++;
+                    }
+                }
+            }
+        } else {
+            // Moving within same folder: shift clusters between old and new positions
+            if (order < oldOrder) {
+                // Moving forward: increment orders of clusters between new and old
+                const targetFolderId = folderId;
+                for (const [otherContextName, otherCluster] of Object.entries(config.clusters)) {
+                    if (otherContextName !== contextName && 
+                        otherCluster.folderId === targetFolderId && 
+                        otherCluster.order >= order && 
+                        otherCluster.order < oldOrder) {
+                        otherCluster.order++;
+                    }
+                }
+            } else if (order > oldOrder) {
+                // Moving backward: decrement orders of clusters between old and new
+                const targetFolderId = folderId;
+                for (const [otherContextName, otherCluster] of Object.entries(config.clusters)) {
+                    if (otherContextName !== contextName && 
+                        otherCluster.folderId === targetFolderId && 
+                        otherCluster.order > oldOrder && 
+                        otherCluster.order <= order) {
+                        otherCluster.order--;
+                    }
+                }
+            }
+            // If order === oldOrder, no reordering needed
+        }
+        
+        // Save configuration (this will emit the change event)
+        await this.updateConfiguration(config);
+    }
+
+    /**
      * Gets customization for a specific cluster.
      * 
      * @param contextName - Cluster context name
