@@ -8,7 +8,7 @@ spec_id:
   - kubernetes-client-node-integration
 diagram_id:
   - api-client-architecture
-status: pending
+status: completed
 estimated_minutes: 30
 ---
 
