@@ -58,6 +58,11 @@ export class ClusterManagerWebview {
     private readonly extensionContext: vscode.ExtensionContext;
 
     /**
+     * Extension URI for loading resources.
+     */
+    private readonly extensionUri: vscode.Uri;
+
+    /**
      * Create or show the Cluster Manager webview panel.
      * If a panel already exists, reveals it. Otherwise creates a new one.
      * 
@@ -92,6 +97,7 @@ export class ClusterManagerWebview {
         customizationService: ClusterCustomizationService,
         extensionContext: vscode.ExtensionContext
     ) {
+        this.extensionUri = extensionUri;
         this.customizationService = customizationService;
         this.extensionContext = extensionContext;
 
@@ -102,12 +108,18 @@ export class ClusterManagerWebview {
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                retainContextWhenHidden: true
+                retainContextWhenHidden: true,
+                localResourceRoots: [
+                    vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'cluster-manager')
+                ]
             }
         );
 
         // Set HTML content
-        this.panel.webview.html = ClusterManagerWebview.getWebviewContent(this.panel.webview);
+        this.panel.webview.html = ClusterManagerWebview.getWebviewContent(
+            this.panel.webview,
+            extensionUri
+        );
 
         // Set up message handler
         this.panel.webview.onDidReceiveMessage(
@@ -238,62 +250,29 @@ export class ClusterManagerWebview {
 
     /**
      * Generate the HTML content for the Cluster Manager webview.
-     * Returns placeholder content with message protocol setup.
+     * Loads the React bundle and sets up the webview.
      * 
      * @param webview - The webview instance
+     * @param extensionUri - The extension URI for loading resources
      * @returns HTML content string
      */
-    private static getWebviewContent(webview: vscode.Webview): string {
+    private static getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+        // Get the URI for the React bundle
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'cluster-manager', 'index.js')
+        );
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval';">
     <title>Cluster Manager</title>
-    <style>
-        body {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 20px;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
-        .placeholder {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--vscode-descriptionForeground);
-        }
-        .placeholder-message {
-            font-size: 1.5em;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--vscode-foreground);
-        }
-    </style>
 </head>
 <body>
-    <div class="placeholder">
-        <div class="placeholder-message">Cluster Manager - Under Construction</div>
-    </div>
-    <script>
-        const vscode = acquireVsCodeApi();
-        
-        // Listen for messages from extension
-        window.addEventListener('message', event => {
-            const message = event.data;
-            if (message.type === 'initialize') {
-                console.log('Received initialize:', message.data);
-            }
-        });
-        
-        // Send getClusters message on page load
-        vscode.postMessage({ type: 'getClusters' });
-    </script>
+    <div id="root"></div>
+    <script src="${scriptUri}"></script>
 </body>
 </html>`;
     }
