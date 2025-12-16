@@ -4,6 +4,7 @@ import { WelcomeWebview } from './webview/WelcomeWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DescribeWebview } from './webview/DescribeWebview';
 import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
+import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { setActiveNamespaceCommand, clearActiveNamespaceCommand } from './commands/namespaceCommands';
@@ -377,8 +378,14 @@ function registerCommands(): void {
     const openClusterManagerCmd = vscode.commands.registerCommand(
         'kube9.openClusterManager',
         async () => {
-            console.log('Cluster Manager opening...');
-            // Webview creation comes in next story
+            try {
+                console.log('Cluster Manager opening...');
+                ClusterManagerWebview.createOrShow(context.extensionUri);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Cluster Manager:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open Cluster Manager: ${errorMessage}`);
+            }
         }
     );
     context.subscriptions.push(openClusterManagerCmd);

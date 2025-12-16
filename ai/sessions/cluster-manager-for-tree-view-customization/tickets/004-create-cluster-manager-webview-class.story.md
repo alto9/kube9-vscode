@@ -5,7 +5,7 @@ feature_id:
   - cluster-manager-webview
 spec_id:
   - cluster-manager-webview-spec
-status: pending
+status: completed
 ---
 
 # Create ClusterManagerWebview Class
