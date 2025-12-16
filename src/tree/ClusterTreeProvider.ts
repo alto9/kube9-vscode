@@ -10,6 +10,7 @@ import { NodesCategory } from './categories/NodesCategory';
 import { NamespacesCategory } from './categories/NamespacesCategory';
 import { fetchClusterResources } from '../kubernetes/resourceFetchers';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import { getResourceCache } from '../kubernetes/cache';
 import { WorkloadsCategory } from './categories/WorkloadsCategory';
 import { DeploymentsSubcategory } from './categories/workloads/DeploymentsSubcategory';
 import { StatefulSetsSubcategory } from './categories/workloads/StatefulSetsSubcategory';
@@ -1093,6 +1094,21 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // The flag will be checked in getClusters() when cluster items are created
         if (forceOperatorRefresh) {
             this.forceOperatorRefreshFlag = true;
+        }
+        
+        // Invalidate cache for current context to ensure fresh data is fetched
+        try {
+            const apiClient = getKubernetesApiClient();
+            const currentContext = apiClient.getCurrentContext();
+            
+            // Only invalidate if we have a current context
+            if (currentContext) {
+                const cache = getResourceCache();
+                cache.invalidatePattern(new RegExp(`^${currentContext}:`));
+            }
+        } catch (error) {
+            // Log error but don't block refresh - cache invalidation is best effort
+            console.warn('Failed to invalidate cache during refresh:', error);
         }
         
         // Fire tree data change event to refresh the tree view

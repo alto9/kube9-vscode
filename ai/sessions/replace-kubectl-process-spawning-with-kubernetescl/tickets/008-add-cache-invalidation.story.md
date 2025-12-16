@@ -6,7 +6,7 @@ feature_id:
   - api-client-performance
 spec_id:
   - api-client-caching-strategy
-status: pending
+status: completed
 estimated_minutes: 15
 ---
 
