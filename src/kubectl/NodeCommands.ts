@@ -1,16 +1,7 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
-
-/**
- * Timeout for kubectl commands in milliseconds.
- */
-const KUBECTL_TIMEOUT_MS = 5000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
+import { fetchNodes } from '../kubernetes/resourceFetchers';
+import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 
 /**
  * Information about a Kubernetes node.
@@ -39,40 +30,16 @@ export interface NodesResult {
     error?: KubectlError;
 }
 
-/**
- * Interface for kubectl node response items.
- */
-interface NodeItem {
-    metadata?: {
-        name?: string;
-        labels?: {
-            [key: string]: string;
-        };
-    };
-    status?: {
-        conditions?: Array<{
-            type?: string;
-            status?: string;
-        }>;
-    };
-}
-
-/**
- * Interface for kubectl node list response.
- */
-interface NodeListResponse {
-    items?: NodeItem[];
-}
 
 /**
  * Utility class for kubectl node operations.
  */
 export class NodeCommands {
     /**
-     * Retrieves the list of nodes from a cluster using kubectl.
-     * Uses kubectl get nodes command with JSON output for parsing.
+     * Retrieves the list of nodes from a cluster using the Kubernetes API client.
+     * Uses direct API calls with caching to improve performance.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @returns NodesResult with nodes array and optional error information
      */
@@ -81,32 +48,27 @@ export class NodeCommands {
         contextName: string
     ): Promise<NodesResult> {
         try {
-            // Execute kubectl get nodes with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'nodes',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: NodeListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract node information from the items array
-            const nodes: NodeInfo[] = response.items?.map((item: NodeItem) => {
-                const name = item.metadata?.name || 'Unknown';
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = `${contextName}:nodes`;
+            const cached = cache.get<NodeInfo[]>(cacheKey);
+            if (cached) {
+                return { nodes: cached };
+            }
+            
+            // Fetch from API
+            const v1Nodes = await fetchNodes({ timeout: 10 });
+            
+            // Transform to NodeInfo format
+            const nodes: NodeInfo[] = v1Nodes.map(node => {
+                const name = node.metadata?.name || 'Unknown';
                 
                 // Extract roles from labels
-                const labels = item.metadata?.labels || {};
+                const labels = node.metadata?.labels || {};
                 const roles: string[] = [];
                 
                 // Check for common role labels
@@ -134,7 +96,7 @@ export class NodeCommands {
                 
                 // Determine node status from conditions
                 let status = 'Unknown';
-                const conditions = item.status?.conditions || [];
+                const conditions = node.status?.conditions || [];
                 const readyCondition = conditions.find(c => c.type === 'Ready');
                 
                 if (readyCondition) {
@@ -146,14 +108,17 @@ export class NodeCommands {
                     status,
                     roles
                 };
-            }) || [];
+            });
             
             // Sort nodes alphabetically by name
             nodes.sort((a, b) => a.name.localeCompare(b.name));
             
+            // Cache result
+            cache.set(cacheKey, nodes, CACHE_TTL.NODES);
+            
             return { nodes };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
