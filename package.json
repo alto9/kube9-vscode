@@ -71,6 +71,11 @@
         "category": "kube9"
       },
       {
+        "command": "kube9.openClusterManager",
+        "title": "Kube9: Cluster Manager",
+        "category": "Kube9"
+      },
+      {
         "command": "kube9.setActiveNamespace",
         "title": "Set as Active Namespace",
         "category": "kube9"

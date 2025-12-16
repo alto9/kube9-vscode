@@ -373,6 +373,17 @@ function registerCommands(): void {
     context.subscriptions.push(openDataCollectionReportCommand);
     disposables.push(openDataCollectionReportCommand);
     
+    // Register open Cluster Manager command
+    const openClusterManagerCmd = vscode.commands.registerCommand(
+        'kube9.openClusterManager',
+        async () => {
+            console.log('Cluster Manager opening...');
+            // Webview creation comes in next story
+        }
+    );
+    context.subscriptions.push(openClusterManagerCmd);
+    disposables.push(openClusterManagerCmd);
+    
     // Register describe resource command
     const describeResourceCmd = vscode.commands.registerCommand(
         'kube9.describeResource',
