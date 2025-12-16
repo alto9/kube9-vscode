@@ -388,3 +388,180 @@ body {
     text-align: center;
 }
 
+/* Toolbar Button */
+.cluster-manager-toolbar-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.cluster-manager-toolbar-button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.cluster-manager-toolbar-button:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.cluster-manager-toolbar-button .codicon {
+    font-size: 16px;
+}
+
+/* New Folder Dialog */
+.new-folder-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.new-folder-dialog {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    min-width: 400px;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.new-folder-dialog-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.new-folder-dialog-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.new-folder-dialog-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.new-folder-dialog-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.new-folder-dialog-field label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+}
+
+.new-folder-dialog-input {
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 6px 8px;
+    outline: none;
+}
+
+.new-folder-dialog-input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.new-folder-dialog-input.error {
+    border-color: var(--vscode-errorForeground);
+}
+
+.new-folder-dialog-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+.new-folder-dialog-select {
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 6px 8px;
+    outline: none;
+    cursor: pointer;
+}
+
+.new-folder-dialog-select:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.new-folder-dialog-error {
+    font-size: 12px;
+    color: var(--vscode-errorForeground);
+    margin-top: 4px;
+}
+
+.new-folder-dialog-actions {
+    padding: 16px;
+    border-top: 1px solid var(--vscode-panel-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.new-folder-dialog-button {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.new-folder-dialog-button-primary {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border-color: var(--vscode-button-border);
+}
+
+.new-folder-dialog-button-primary:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.new-folder-dialog-button-secondary {
+    color: var(--vscode-button-secondaryForeground);
+    background-color: var(--vscode-button-secondaryBackground);
+    border-color: var(--vscode-button-border);
+}
+
+.new-folder-dialog-button-secondary:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.new-folder-dialog-button:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+

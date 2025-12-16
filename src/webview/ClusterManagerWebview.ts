@@ -32,6 +32,17 @@ interface ToggleVisibilityMessage {
 }
 
 /**
+ * Message sent from webview to extension to create a folder.
+ */
+interface CreateFolderMessage {
+    type: 'createFolder';
+    data: {
+        name: string;
+        parentId: string | null;
+    };
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -57,14 +68,22 @@ interface CustomizationsUpdatedMessage {
 }
 
 /**
+ * Message sent from extension to webview with an error.
+ */
+interface ErrorMessage {
+    type: 'error';
+    message: string;
+}
+
+/**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
  */
-type WebviewFromExtensionMessage = InitializeMessage | CustomizationsUpdatedMessage;
+type WebviewFromExtensionMessage = InitializeMessage | CustomizationsUpdatedMessage | ErrorMessage;
 
 /**
  * Union type for all webview messages.
@@ -218,6 +237,8 @@ export class ClusterManagerWebview {
                 await this.handleSetAlias(message.data.contextName, message.data.alias);
             } else if (message.type === 'toggleVisibility') {
                 await this.handleToggleVisibility(message.data.contextName, message.data.hidden);
+            } else if (message.type === 'createFolder') {
+                await this.handleCreateFolder(message.data.name, message.data.parentId);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -256,6 +277,28 @@ export class ClusterManagerWebview {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error toggling visibility:', errorMessage);
             // Could send error message to webview here if needed
+        }
+    }
+
+    /**
+     * Handle createFolder message by creating a new folder.
+     * 
+     * @param name - The folder name
+     * @param parentId - The parent folder ID, or null for root level
+     */
+    private async handleCreateFolder(name: string, parentId: string | null): Promise<void> {
+        try {
+            await this.customizationService.createFolder(name, parentId);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error creating folder:', errorMessage);
+            // Send error message back to webview
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
         }
     }
 

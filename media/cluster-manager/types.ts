@@ -92,6 +92,17 @@ export interface ToggleVisibilityMessage {
 }
 
 /**
+ * Message sent from webview to extension to create a folder.
+ */
+export interface CreateFolderMessage {
+    type: 'createFolder';
+    data: {
+        name: string;
+        parentId: string | null;
+    };
+}
+
+/**
  * Message sent from extension to webview when customizations are updated.
  */
 export interface CustomizationsUpdatedMessage {
@@ -100,12 +111,20 @@ export interface CustomizationsUpdatedMessage {
 }
 
 /**
+ * Message sent from extension to webview with an error.
+ */
+export interface ErrorMessage {
+    type: 'error';
+    message: string;
+}
+
+/**
  * Union type for all webview messages from extension to webview.
  */
-export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdatedMessage;
+export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdatedMessage | ErrorMessage;
 
 /**
  * Union type for all webview messages from webview to extension.
  */
-export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage;
+export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage;
 

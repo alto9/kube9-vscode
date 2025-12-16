@@ -9,6 +9,7 @@ import type {
 } from './types';
 import { ClusterList } from './components/ClusterList';
 import { Toolbar } from './components/Toolbar';
+import { NewFolderDialog } from './components/NewFolderDialog';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
 
 /**
@@ -34,6 +35,8 @@ function ClusterManagerApp(): JSX.Element {
     const [customizations, setCustomizations] = useState<ClusterCustomizationConfig | null>(null);
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [searchTerm, setSearchTerm] = useState<string>('');
+    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+    const [dialogError, setDialogError] = useState<string>('');
 
     useEffect(() => {
         // Acquire VS Code API
@@ -49,6 +52,12 @@ function ClusterManagerApp(): JSX.Element {
                 setLoading(false);
             } else if (message.type === 'customizationsUpdated') {
                 setCustomizations(message.data);
+                // Close dialog and clear error on successful update
+                setIsDialogOpen(false);
+                setDialogError('');
+            } else if (message.type === 'error') {
+                // Show error in dialog
+                setDialogError(message.message);
             }
         };
 
@@ -115,6 +124,31 @@ function ClusterManagerApp(): JSX.Element {
         setSearchTerm('');
     };
 
+    // Handle new folder button click
+    const handleNewFolderClick = (): void => {
+        setDialogError('');
+        setIsDialogOpen(true);
+    };
+
+    // Handle creating folder
+    const handleCreateFolder = (name: string, parentId: string | null): void => {
+        const vscode = acquireVsCodeApi();
+        setDialogError('');
+        vscode.postMessage({
+            type: 'createFolder',
+            data: {
+                name,
+                parentId
+            }
+        });
+    };
+
+    // Handle dialog cancel
+    const handleDialogCancel = (): void => {
+        setIsDialogOpen(false);
+        setDialogError('');
+    };
+
     return (
         <div className="cluster-manager-app">
             <header className="cluster-manager-header">
@@ -124,6 +158,7 @@ function ClusterManagerApp(): JSX.Element {
                 searchValue={searchTerm}
                 onSearchChange={handleSearchChange}
                 onSearchClear={handleSearchClear}
+                onNewFolderClick={handleNewFolderClick}
             />
             <main className="cluster-manager-content">
                 {loading ? (
@@ -157,6 +192,13 @@ function ClusterManagerApp(): JSX.Element {
                     </span>
                 )}
             </footer>
+            <NewFolderDialog
+                isOpen={isDialogOpen}
+                folders={customizations?.folders ?? []}
+                onCreate={handleCreateFolder}
+                onCancel={handleDialogCancel}
+                errorMessage={dialogError}
+            />
         </div>
     );
 }

@@ -5,7 +5,7 @@ feature_id:
   - cluster-folder-organization
 spec_id:
   - cluster-manager-webview-spec
-status: pending
+status: completed
 ---
 
 # Add New Folder Button and Dialog
