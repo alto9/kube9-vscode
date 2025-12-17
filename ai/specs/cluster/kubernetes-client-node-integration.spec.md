@@ -18,6 +18,53 @@ Replace kubectl process spawning with the `@kubernetes/client-node` library to e
 
 See [api-client-architecture](../../diagrams/cluster/api-client-architecture.diagram.md) for visual representation of the new architecture.
 
+### Lazy Loading Strategy
+
+To optimize initial tree load performance, especially with multiple clusters or unreachable clusters, cluster status checks are lazy-loaded when a cluster is first expanded rather than eagerly loaded on initial tree display.
+
+**Initial Tree Load (Immediate)**:
+- Clusters are displayed immediately from kubeconfig
+- No connectivity checks performed
+- No operator status queries
+- No ArgoCD installation checks
+- Tree appears instantly with all clusters visible
+
+**First Cluster Expansion (Lazy Loading)**:
+When a user expands a cluster for the first time:
+1. `checkSingleClusterConnectivity()` - Checks cluster reachability
+2. `checkOperatorStatus()` - Queries kube9-operator-status ConfigMap (5-minute cache)
+3. `checkArgoCDStatus()` - Checks ArgoCD installation (5-minute cache)
+4. Cluster item appearance updates asynchronously as checks complete
+
+**Benefits**:
+- **Instant tree load**: No waiting for unreachable clusters
+- **Reduced API calls**: Only check clusters the user interacts with
+- **Better UX**: Users can browse clusters immediately
+- **Scalable**: Works efficiently with dozens of clusters
+
+**Implementation Location**:
+- `ClusterTreeProvider.getCategories()` - Triggers lazy loading on first expansion
+- `ClusterTreeProvider.checkSingleClusterConnectivity()` - Lazy connectivity check
+- `ClusterTreeProvider.checkOperatorStatus()` - Lazy operator status check
+- `ClusterTreeProvider.checkArgoCDStatus()` - Lazy ArgoCD check
+
+### Targeted Namespace Refresh
+
+When a user changes the active namespace for a cluster, only the affected cluster item refreshes rather than rebuilding the entire tree.
+
+**Namespace Change Flow**:
+1. User selects "Set as Active Namespace" on a namespace item
+2. `namespaceCommands.setActiveNamespaceCommand()` updates kubectl context
+3. `ClusterTreeProvider.refreshForNamespaceChange(contextName)` called
+4. Resource cache for that context invalidated using regex pattern
+5. Only the specific cluster item is refreshed via `_onDidChangeTreeData.fire(clusterItem)`
+
+**Benefits**:
+- **50ms refresh time** instead of full tree rebuild
+- **Preserves UI state** for other clusters
+- **Efficient cache invalidation** - only affected context
+- **Better user experience** - no flickering or delays
+
 ## Implementation Details
 
 ### Dependency Addition

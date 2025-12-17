@@ -243,3 +243,9 @@ Scenario: Tree view displays folders with clusters
   And clicking on clusters opens their details as usual
 ```
 
+
+
+
+
+
+

@@ -4,6 +4,7 @@ import { TreeItemData } from '../../TreeItemTypes';
 import { WorkloadCommands } from '../../../kubectl/WorkloadCommands';
 import { PodTreeItem } from '../../items/PodTreeItem';
 import { KubectlError } from '../../../kubernetes/KubectlError';
+import { getNamespaceForContext } from '../../../utils/kubectlContext';
 
 /**
  * Type for error handler callback.
@@ -32,10 +33,25 @@ export class DeploymentsSubcategory {
         const contextName = resourceData.context.name;
         const clusterName = resourceData.cluster?.name || contextName;
         
-        // Query deployments using kubectl
+        // Get the currently selected namespace from kubectl context (not the default namespace)
+        // This respects namespace selection made in the UI via "Set as Active Namespace"
+        let namespace: string | undefined;
+        try {
+            const currentNamespace = await getNamespaceForContext(contextName);
+            // If a namespace is set in kubectl context, use it for filtering
+            // If null (cluster-wide view), pass undefined to fetch all namespaces
+            namespace = currentNamespace || undefined;
+        } catch (error) {
+            console.warn('Failed to get current namespace, fetching all deployments:', error);
+            // Fall back to fetching all deployments if we can't determine current namespace
+            namespace = undefined;
+        }
+        
+        // Query deployments using kubectl (filtered by namespace if set)
         const result = await WorkloadCommands.getDeployments(
             kubeconfigPath,
-            contextName
+            contextName,
+            namespace
         );
 
         // Handle errors if they occurred

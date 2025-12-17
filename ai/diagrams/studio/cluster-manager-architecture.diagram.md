@@ -245,3 +245,9 @@ This diagram shows the component architecture for the Cluster Organizer, which p
 - Tree provider subscribes to customization changes
 - Both stay synchronized via ClusterCustomizationService events
 
+
+
+
+
+
+

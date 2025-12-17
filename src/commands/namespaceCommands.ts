@@ -49,14 +49,14 @@ export async function setActiveNamespaceCommand(item: ClusterTreeItem): Promise<
             // This ensures the tree view reflects the change immediately without waiting for watcher polling
             try {
                 await getContextInfo(); // Updates cache with new state
-                // Refresh the tree view immediately to show the updated namespace selection
-                getClusterTreeProvider().refresh();
+                // Targeted refresh for only the affected cluster - more efficient than full tree refresh
+                getClusterTreeProvider().refreshForNamespaceChange(contextName);
             } catch (refreshError) {
                 // Log error but don't fail the operation - the watcher will eventually catch up
                 console.error('Failed to immediately refresh tree after namespace change:', refreshError);
-                // Fallback: trigger a general refresh anyway
+                // Fallback: trigger a targeted refresh anyway
                 try {
-                    getClusterTreeProvider().refresh();
+                    getClusterTreeProvider().refreshForNamespaceChange(contextName);
                 } catch (e) {
                     // Ignore refresh errors - watcher will catch up eventually
                 }
@@ -118,14 +118,14 @@ export async function clearActiveNamespaceCommand(item: ClusterTreeItem): Promis
             // This ensures the tree view reflects the change immediately without waiting for watcher polling
             try {
                 await getContextInfo(); // Updates cache with new state
-                // Refresh the tree view immediately to show the updated namespace selection
-                getClusterTreeProvider().refresh();
+                // Targeted refresh for only the affected cluster - more efficient than full tree refresh
+                getClusterTreeProvider().refreshForNamespaceChange(contextName);
             } catch (refreshError) {
                 // Log error but don't fail the operation - the watcher will eventually catch up
                 console.error('Failed to immediately refresh tree after namespace clear:', refreshError);
-                // Fallback: trigger a general refresh anyway
+                // Fallback: trigger a targeted refresh anyway
                 try {
-                    getClusterTreeProvider().refresh();
+                    getClusterTreeProvider().refreshForNamespaceChange(contextName);
                 } catch (e) {
                     // Ignore refresh errors - watcher will catch up eventually
                 }

@@ -83,3 +83,30 @@ Scenario: Authentication methods are supported transparently
   And the extension should use the same credentials as kubectl
 ```
 
+```gherkin
+Scenario: Lazy loading of cluster status on expansion
+  Given the tree view is loaded with multiple clusters
+  When the tree initially displays
+  Then cluster items should appear immediately without connection checks
+  And no connectivity checks should be performed
+  And no operator status checks should be performed
+  And no ArgoCD checks should be performed
+  
+  When the user expands a cluster for the first time
+  Then connectivity check should be performed for that cluster only
+  And operator status should be queried with 5-minute cache
+  And ArgoCD status should be queried with 5-minute cache
+  And the cluster item appearance should update when checks complete
+  And unreachable clusters should not block the tree view loading
+```
+
+```gherkin
+Scenario: Namespace changes trigger targeted refresh
+  Given a user has a cluster expanded in the tree view
+  When the user sets an active namespace for that cluster
+  Then only the affected cluster item should refresh
+  And resource cache for that context should be invalidated
+  And other clusters should remain unchanged
+  And the refresh should complete in under 50ms
+```
+

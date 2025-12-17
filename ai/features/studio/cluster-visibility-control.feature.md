@@ -204,3 +204,9 @@ Scenario: Visibility priority over folder deletion
   And the clusters can be unhidden later
 ```
 
+
+
+
+
+
+
