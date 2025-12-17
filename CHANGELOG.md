@@ -1,3 +1,26 @@
+# [1.7.0](https://github.com/alto9/kube9-vscode/compare/v1.6.0...v1.7.0) (2025-12-17)
+
+
+### Bug Fixes
+
+* add comprehensive error handling with user-friendly messages ([bb277fd](https://github.com/alto9/kube9-vscode/commit/bb277fd61dd9d28c6be9758e623e4fd0c02b4b5c))
+* tree navigation timing and concurrency issues ([a3a4bfe](https://github.com/alto9/kube9-vscode/commit/a3a4bfe270b0f2f221725381b53e526e6997c389))
+* tree refresh issue ([913e18e](https://github.com/alto9/kube9-vscode/commit/913e18ee33cb98de87bbb7ed578999754577de0f))
+
+
+### Features
+
+* add cache invalidation on tree refresh ([fadbf22](https://github.com/alto9/kube9-vscode/commit/fadbf2241043eaad89e2f82c4ab048a63db909b1))
+* add cache statistics debug command ([0de4fcd](https://github.com/alto9/kube9-vscode/commit/0de4fcd89dafb8be0faa4d45fc86c39dc5b7b301))
+* add TTL-based cache infrastructure for Kubernetes resources ([157b606](https://github.com/alto9/kube9-vscode/commit/157b606efe8c5f911440015ff719a280d8ef7219))
+* create Kubernetes API client singleton ([343cc77](https://github.com/alto9/kube9-vscode/commit/343cc77e3b65ed7e0a9277d0b440766a7475ea51))
+* create resource fetcher functions for Kubernetes API client ([0108f15](https://github.com/alto9/kube9-vscode/commit/0108f150fb9b9cfb5f919674885e65c6ea32940e))
+
+
+### Performance Improvements
+
+* implement parallel resource loading in tree provider ([7eb73b2](https://github.com/alto9/kube9-vscode/commit/7eb73b2e8afe3cc3d43a23a1ee2a7bff6a35bfc3))
+
 # [1.6.0](https://github.com/alto9/kube9-vscode/compare/v1.5.0...v1.6.0) (2025-12-17)
 
 
