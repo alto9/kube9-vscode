@@ -1,7 +1,7 @@
 ---
 diagram_id: cluster-manager-architecture
-name: Cluster Manager Architecture
-description: Architecture for the Cluster Manager webview that enables cluster organization, hiding, and aliasing
+name: Cluster Organizer Architecture
+description: Architecture for the Cluster Organizer webview that enables cluster organization, hiding, and aliasing
 type: components
 spec_id:
   - cluster-manager-webview-spec
@@ -10,9 +10,9 @@ feature_id:
   - cluster-manager-webview
 ---
 
-# Cluster Manager Architecture
+# Cluster Organizer Architecture
 
-This diagram shows the component architecture for the Cluster Manager, which provides a webview interface for organizing, hiding, and aliasing clusters.
+This diagram shows the component architecture for the Cluster Organizer, which provides a webview interface for organizing, hiding, and aliasing clusters.
 
 ```json
 {
@@ -32,7 +32,7 @@ This diagram shows the component architecture for the Cluster Manager, which pro
       "position": { "x": 50, "y": 150 },
       "data": {
         "label": "Command Palette",
-        "description": "VS Code command: Kube9: Cluster Manager"
+        "description": "VS Code command: Kube9: Cluster Organizer"
       }
     },
     {
@@ -110,7 +110,7 @@ This diagram shows the component architecture for the Cluster Manager, which pro
       "id": "e1",
       "source": "user",
       "target": "command-palette",
-      "label": "executes Kube9: Cluster Manager",
+      "label": "executes Kube9: Cluster Organizer",
       "type": "smoothstep"
     },
     {
@@ -175,9 +175,9 @@ This diagram shows the component architecture for the Cluster Manager, which pro
 
 ## Component Interactions
 
-### Opening Cluster Manager
+### Opening Cluster Organizer
 ```
-1. User executes "Kube9: Cluster Manager" command
+1. User executes "Kube9: Cluster Organizer" command
 2. ClusterManagerCommand creates/shows ClusterManagerWebview
 3. Webview requests cluster list from KubeconfigService
 4. Webview requests customizations from ClusterCustomizationService

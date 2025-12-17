@@ -8,7 +8,7 @@ spec_id:
 status: completed
 ---
 
-# Register Cluster Manager Command
+# Register Cluster Organizer Command
 
 ## Objective
 
@@ -16,20 +16,20 @@ Register the `kube9.openClusterManager` command in VS Code and add it to package
 
 ## Context
 
-Users need a way to open the Cluster Manager. This command will be the entry point that creates and shows the webview panel.
+Users need a way to open the Cluster Organizer. This command will be the entry point that creates and shows the webview panel.
 
 See:
 - `ai/specs/studio/cluster-manager-webview-spec.spec.md` - Command Registration section
-- `ai/features/studio/cluster-manager-webview.feature.md` - Opening Cluster Manager scenario
+- `ai/features/studio/cluster-manager-webview.feature.md` - Opening Cluster Organizer scenario
 
 ## Acceptance Criteria
 
 1. Add command to `package.json`:
    - Command ID: `kube9.openClusterManager`
-   - Title: "Kube9: Cluster Manager"
+   - Title: "Kube9: Cluster Organizer"
    - Category: "Kube9"
 2. Register command in `src/extension.ts` `activate()` function
-3. Command handler should log "Cluster Manager opening..." (webview comes later)
+3. Command handler should log "Cluster Organizer opening..." (webview comes later)
 4. Test command appears in Command Palette after extension loads
 
 ## Files to Modify
@@ -43,7 +43,7 @@ See:
 // In extension.ts
 context.subscriptions.push(
   vscode.commands.registerCommand('kube9.openClusterManager', async () => {
-    console.log('Cluster Manager opening...');
+    console.log('Cluster Organizer opening...');
     // Webview creation comes in next story
   })
 );
@@ -53,7 +53,7 @@ Add to package.json commands array:
 ```json
 {
   "command": "kube9.openClusterManager",
-  "title": "Cluster Manager",
+  "title": "Cluster Organizer",
   "category": "Kube9"
 }
 ```

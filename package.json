@@ -72,7 +72,7 @@
       },
       {
         "command": "kube9.openClusterManager",
-        "title": "Kube9: Cluster Manager",
+        "title": "Cluster Organizer",
         "category": "Kube9"
       },
       {

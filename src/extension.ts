@@ -387,7 +387,7 @@ function registerCommands(): void {
     context.subscriptions.push(openDataCollectionReportCommand);
     disposables.push(openDataCollectionReportCommand);
     
-    // Register open Cluster Manager command
+    // Register open Cluster Organizer command
     const openClusterManagerCmd = vscode.commands.registerCommand(
         'kube9.openClusterManager',
         async () => {

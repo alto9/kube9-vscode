@@ -53,7 +53,7 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
 
     // Get display name (alias if exists, otherwise context name)
     const displayName = customization?.alias ?? cluster.contextName;
-    const hasAlias = customization?.alias !== null && customization.alias !== undefined;
+    const hasAlias = customization?.alias !== null && customization?.alias !== undefined;
     
     // Determine if cluster is hidden (default to false if not set)
     const isHidden = customization?.hidden === true;
@@ -149,7 +149,7 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
                 </>
             ) : (
                 <>
-                    <span className="cluster-item-name">
+                    <span className="cluster-item-name" onClick={handleEditClick} style={{ cursor: 'pointer' }} title="Click to edit alias">
                         {highlightText(displayName, searchTerm || '')}
                     </span>
                     <button
@@ -158,7 +158,7 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
                         title={isHidden ? 'Click to show cluster' : 'Click to hide cluster'}
                         aria-label={isHidden ? 'Show cluster' : 'Hide cluster'}
                     >
-                        {isHidden ? 'Hidden' : 'Visible'}
+                        {isHidden ? '👁️‍🗨️ Show' : '👁️ Hide'}
                     </button>
                     <button
                         className="cluster-item-edit-button"
@@ -166,7 +166,7 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
                         title="Click to edit alias"
                         aria-label="Edit alias"
                     >
-                        <span className="codicon codicon-edit"></span>
+                        ✏️
                     </button>
                 </>
             )}

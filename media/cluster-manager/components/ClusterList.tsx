@@ -51,7 +51,9 @@ function getClustersInFolder(
     return clusters
         .filter(cluster => {
             const config = customizations.clusters[cluster.contextName];
-            const matchesFolder = config?.folderId === folderId;
+            // Treat clusters without config as root-level (folderId: null)
+            const clusterFolderId = config?.folderId ?? null;
+            const matchesFolder = clusterFolderId === folderId;
             
             // Apply visibility filter if enabled
             if (showHiddenOnly) {

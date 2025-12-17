@@ -20,7 +20,7 @@ The ClusterManagerWebview wraps VS Code's webview panel and handles message pass
 
 See:
 - `ai/specs/studio/cluster-manager-webview-spec.spec.md` - Webview Panel Configuration, Singleton Pattern
-- `ai/features/studio/cluster-manager-webview.feature.md` - Only one Cluster Manager can be open
+- `ai/features/studio/cluster-manager-webview.feature.md` - Only one Cluster Organizer can be open
 
 ## Acceptance Criteria
 
@@ -29,10 +29,10 @@ See:
 3. Implement `createOrShow()` static method (reveal if exists, create if not)
 4. Create webview panel with:
    - viewType: `kube9.clusterManager`
-   - title: "Cluster Manager"
+   - title: "Cluster Organizer"
    - enableScripts: true
    - retainContextWhenHidden: true
-5. Load basic HTML with placeholder content ("Cluster Manager - Under Construction")
+5. Load basic HTML with placeholder content ("Cluster Organizer - Under Construction")
 6. Set up message handler (listener only, no messages yet)
 7. Update command handler in extension.ts to call `ClusterManagerWebview.createOrShow()`
 

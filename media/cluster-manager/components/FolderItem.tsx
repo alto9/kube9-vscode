@@ -199,15 +199,14 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
         }
     };
 
-    const arrowIcon = folder.expanded ? 'codicon-chevron-down' : 'codicon-chevron-right';
-    const folderIcon = folder.expanded ? 'codicon-folder-opened' : 'codicon-folder';
+    const arrowIcon = '▶'; // Right arrow that will rotate when expanded
+    const folderIcon = folder.expanded ? '📂' : '📁';
 
     return (
         <div className="folder-item">
             <div
                 ref={headerRef}
                 className={`folder-item-header ${isDragOver ? (isInvalidDrop ? 'drag-over-invalid' : 'drag-over') : ''}`}
-                style={{ paddingLeft: `${level * 20}px` }}
                 onClick={handleClick}
                 onContextMenu={handleContextMenu}
                 onDragOver={handleDragOver}
@@ -228,8 +227,8 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
                     }
                 }}
             >
-                <span className={`codicon ${arrowIcon} folder-item-arrow`}></span>
-                <span className={`codicon ${folderIcon} folder-item-icon`}></span>
+                <span className={`folder-item-arrow ${folder.expanded ? 'expanded' : ''}`}>{arrowIcon}</span>
+                <span className="folder-item-icon">{folderIcon}</span>
                 {isEditing ? (
                     <input
                         ref={inputRef}

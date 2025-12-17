@@ -13,15 +13,15 @@ spec_id:
 Feature: Cluster Visibility Control
 
 Background:
-  Given the Cluster Manager is open
+  Given the Cluster Organizer is open
   And the user has multiple clusters configured
 
 Scenario: Hiding a cluster from tree view
   Given a cluster "test-cluster" is visible in the tree view
-  When the user opens the Cluster Manager
+  When the user opens the Cluster Organizer
   And toggles the visibility switch for "test-cluster" to "hidden"
-  Then the cluster displays a "Hidden" badge in Cluster Manager
-  And the cluster appears grayed out in Cluster Manager
+  Then the cluster displays a "Hidden" badge in Cluster Organizer
+  And the cluster appears grayed out in Cluster Organizer
   And the tree view updates automatically
   And "test-cluster" no longer appears in the tree view
 
@@ -33,9 +33,9 @@ Scenario: Showing a hidden cluster
   And the tree view updates automatically
   And "test-cluster" appears in the tree view
 
-Scenario: Hidden clusters remain accessible in Cluster Manager
+Scenario: Hidden clusters remain accessible in Cluster Organizer
   Given a cluster "old-cluster" is hidden from tree view
-  When the user opens the Cluster Manager
+  When the user opens the Cluster Organizer
   Then "old-cluster" appears in the list
   And the cluster is grayed out
   And shows a "Hidden" badge
@@ -46,11 +46,11 @@ Scenario: Visibility persists across sessions
   When the user closes VS Code
   And reopens VS Code
   Then "test-cluster" remains hidden from tree view
-  When they open Cluster Manager
+  When they open Cluster Organizer
   Then "test-cluster" shows as hidden with badge
 
 Scenario: Visibility toggle is a switch control
-  Given the user views a cluster in Cluster Manager
+  Given the user views a cluster in Cluster Organizer
   Then a toggle switch appears next to the cluster
   And the switch shows "Visible" when on
   And the switch shows "Hidden" when off
@@ -59,7 +59,7 @@ Scenario: Visibility toggle is a switch control
 
 Scenario: Hidden cluster count in footer
   Given 3 clusters are hidden out of 10 total
-  When the user views Cluster Manager
+  When the user views Cluster Organizer
   Then the footer displays "7 visible / 10 total clusters"
   And the footer displays "3 hidden"
   And clicking "3 hidden" filters to show only hidden clusters
@@ -74,7 +74,7 @@ Scenario: Filtering to show only hidden clusters
 Scenario: Clearing hidden filter
   Given the view is filtered to show only hidden clusters
   When the user clicks "Show All" button
-  Then all clusters become visible in Cluster Manager
+  Then all clusters become visible in Cluster Organizer
   And both hidden and visible clusters are shown
   And the filter is cleared
 
@@ -126,7 +126,7 @@ Scenario: Hiding active cluster with confirmation
   And the user can still run kubectl commands against "prod-eks"
 
 Scenario: Bulk hide operation
-  Given the user selects 5 clusters in Cluster Manager (future enhancement)
+  Given the user selects 5 clusters in Cluster Organizer (future enhancement)
   When they click "Hide Selected" button
   Then all 5 clusters are hidden at once
   And the tree view updates to remove all 5
@@ -140,7 +140,7 @@ Scenario: Bulk show operation
   And the tree view updates to show all 5
   And a notification confirms "5 clusters shown"
 
-Scenario: Hidden indicator styling in Cluster Manager
+Scenario: Hidden indicator styling in Cluster Organizer
   Given a cluster is hidden
   Then the cluster row has 50% opacity
   And a "Hidden" badge appears with gray background
@@ -152,11 +152,11 @@ Scenario: Visibility does not affect kubectl operations
   When the user switches kubectl context to "test-cluster" externally
   Then kubectl commands still work normally
   And the cluster is still hidden in tree view
-  And Cluster Manager shows "Active" badge on hidden cluster
+  And Cluster Organizer shows "Active" badge on hidden cluster
 
 Scenario: Search includes hidden clusters
   Given a cluster "test-cluster" is hidden
-  When the user searches for "test" in Cluster Manager
+  When the user searches for "test" in Cluster Organizer
   Then "test-cluster" appears in search results
   And the cluster is shown with "Hidden" badge
   And the user can unhide it from search results
@@ -183,13 +183,13 @@ Scenario: Reset to defaults shows all clusters
 
 Scenario: Hidden status icon
   Given a cluster is hidden
-  When displayed in Cluster Manager
+  When displayed in Cluster Organizer
   Then an eye-off icon appears next to the visibility switch
   When the cluster is visible
   Then an eye icon appears next to the visibility switch
 
 Scenario: Quick toggle from context menu
-  Given the user views a cluster in Cluster Manager
+  Given the user views a cluster in Cluster Organizer
   When they right-click the cluster
   Then the context menu includes "Hide from Tree View"
   When they select this option

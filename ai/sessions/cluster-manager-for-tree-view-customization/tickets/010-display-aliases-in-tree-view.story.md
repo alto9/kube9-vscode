@@ -30,7 +30,7 @@ See:
 4. Display alias if present, otherwise use context name
 5. Set tooltip to show original context name when alias exists
 6. Refresh tree view when customizations change
-7. Test that setting alias in Cluster Manager updates tree immediately
+7. Test that setting alias in Cluster Organizer updates tree immediately
 
 ## Files to Modify
 

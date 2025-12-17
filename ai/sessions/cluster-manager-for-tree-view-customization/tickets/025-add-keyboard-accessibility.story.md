@@ -12,11 +12,11 @@ status: completed
 
 ## Objective
 
-Add keyboard navigation support to Cluster Manager webview with proper tab order, focus indicators, and keyboard shortcuts.
+Add keyboard navigation support to Cluster Organizer webview with proper tab order, focus indicators, and keyboard shortcuts.
 
 ## Context
 
-Users should be able to navigate the entire Cluster Manager with keyboard. This adds ARIA labels and keyboard event handlers.
+Users should be able to navigate the entire Cluster Organizer with keyboard. This adds ARIA labels and keyboard event handlers.
 
 See:
 - `ai/features/studio/cluster-manager-webview.feature.md` - Keyboard navigation scenario

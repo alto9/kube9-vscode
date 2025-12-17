@@ -16,7 +16,7 @@ diagram_id:
 
 ## Overview
 
-The ClusterCustomizationService manages the persistence and retrieval of cluster customizations (folders, aliases, visibility) using VS Code's Global State API. It provides real-time synchronization between the Cluster Manager webview and the tree view.
+The ClusterCustomizationService manages the persistence and retrieval of cluster customizations (folders, aliases, visibility) using VS Code's Global State API. It provides real-time synchronization between the Cluster Organizer webview and the tree view.
 
 ## Architecture
 
@@ -380,7 +380,7 @@ customizationService.onDidChangeCustomizations((event) => {
 });
 ```
 
-**Cluster Manager Webview**:
+**Cluster Organizer Webview**:
 ```typescript
 customizationService.onDidChangeCustomizations((event) => {
   this.sendMessageToWebview({
@@ -583,9 +583,9 @@ When a cluster appears in kubeconfig that isn't in customizations:
 ### Handling Removed Clusters
 
 When a cluster in customizations is not in kubeconfig:
-- Mark as "inactive" in Cluster Manager UI
+- Mark as "inactive" in Cluster Organizer UI
 - Keep customizations (don't delete)
-- Show warning badge in Cluster Manager
+- Show warning badge in Cluster Organizer
 - Don't show in tree view
 - Allow user to delete manually
 

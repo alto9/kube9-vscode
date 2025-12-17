@@ -16,7 +16,7 @@ Display folders in the webview with expand/collapse functionality, nesting indic
 
 ## Context
 
-Users need to see folders in the Cluster Manager. This adds the folder display UI with hierarchical visualization.
+Users need to see folders in the Cluster Organizer. This adds the folder display UI with hierarchical visualization.
 
 See:
 - `ai/features/studio/cluster-folder-organization.feature.md` - Expanding/collapsing folders, creating nested structure

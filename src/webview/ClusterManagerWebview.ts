@@ -226,13 +226,14 @@ export class ClusterManagerWebview {
         // Create webview panel
         this.panel = vscode.window.createWebviewPanel(
             'kube9.clusterManager',
-            'Cluster Manager',
+            'Cluster Organizer',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: [
-                    vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'cluster-manager')
+                    vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'cluster-manager'),
+                    vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode', 'codicons')
                 ]
             }
         );
@@ -643,7 +644,7 @@ export class ClusterManagerWebview {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval'; font-src ${webview.cspSource};">
     <link rel="stylesheet" href="${codiconsUri}">
-    <title>Cluster Manager</title>
+    <title>Cluster Organizer</title>
 </head>
 <body>
     <div id="root"></div>

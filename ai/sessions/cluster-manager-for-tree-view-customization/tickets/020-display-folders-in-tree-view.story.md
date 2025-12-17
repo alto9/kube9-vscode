@@ -16,7 +16,7 @@ Update ClusterTreeProvider to display folders as expandable tree items containin
 
 ## Context
 
-The tree view needs to show the folder organization users created in Cluster Manager. This completes the folder feature by reflecting folders in main navigation.
+The tree view needs to show the folder organization users created in Cluster Organizer. This completes the folder feature by reflecting folders in main navigation.
 
 See:
 - `ai/features/studio/cluster-folder-organization.feature.md` - Tree view displays folders with clusters
@@ -33,7 +33,7 @@ See:
 4. Place clusters in their respective folders
 5. Root-level clusters appear without folder
 6. Respect cluster order within folders
-7. Test that creating folder in Cluster Manager updates tree
+7. Test that creating folder in Cluster Organizer updates tree
 
 ## Files to Modify
 

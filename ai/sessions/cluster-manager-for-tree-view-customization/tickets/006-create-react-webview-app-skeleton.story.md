@@ -12,7 +12,7 @@ status: completed
 
 ## Objective
 
-Create the React application skeleton for the Cluster Manager webview with TypeScript, basic layout structure, and VS Code theme integration.
+Create the React application skeleton for the Cluster Organizer webview with TypeScript, basic layout structure, and VS Code theme integration.
 
 ## Context
 
@@ -20,14 +20,14 @@ The webview UI is built with React and needs to display clusters, folders, and p
 
 See:
 - `ai/specs/studio/cluster-manager-webview-spec.spec.md` - React Component Structure, UI/UX Requirements
-- `ai/features/studio/cluster-manager-webview.feature.md` - Cluster Manager displays all clusters
+- `ai/features/studio/cluster-manager-webview.feature.md` - Cluster Organizer displays all clusters
 
 ## Acceptance Criteria
 
 1. Create React app entry point at `media/cluster-manager/index.tsx`
 2. Set up TypeScript React component: `ClusterManagerApp`
 3. Create basic layout structure:
-   - Header with title "Cluster Manager"
+   - Header with title "Cluster Organizer"
    - Toolbar area (empty for now)
    - Main content area
    - Footer area (empty for now)

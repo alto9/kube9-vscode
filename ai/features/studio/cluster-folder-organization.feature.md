@@ -13,7 +13,7 @@ spec_id:
 Feature: Cluster Folder Organization
 
 Background:
-  Given the Cluster Manager is open
+  Given the Cluster Organizer is open
   And the user has multiple clusters configured
 
 Scenario: Creating a new root-level folder
@@ -173,7 +173,7 @@ Scenario: Folder expansion state persists
   Given a folder "Production" is expanded
   When the user closes VS Code
   And reopens VS Code
-  And opens the Cluster Manager
+  And opens the Cluster Organizer
   Then the "Production" folder is still expanded
 
 Scenario: Creating nested folder structure
@@ -229,8 +229,8 @@ Scenario: Collapse all subfolders
 
 Scenario: Tree view synchronizes with folder changes
   Given the tree view is visible
-  And the Cluster Manager is open
-  When the user creates a new folder "Production" in Cluster Manager
+  And the Cluster Organizer is open
+  When the user creates a new folder "Production" in Cluster Organizer
   Then the tree view automatically refreshes
   And the "Production" folder appears in the tree view
 

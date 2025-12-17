@@ -28,6 +28,17 @@ interface VSCodeAPI {
 declare function acquireVsCodeApi(): VSCodeAPI;
 
 /**
+ * VS Code API singleton - only acquire once
+ */
+let vscodeApi: VSCodeAPI | null = null;
+function getVSCodeAPI(): VSCodeAPI {
+    if (!vscodeApi) {
+        vscodeApi = acquireVsCodeApi();
+    }
+    return vscodeApi;
+}
+
+/**
  * Main Cluster Manager App Component
  */
 function ClusterManagerApp(): JSX.Element {
@@ -42,8 +53,8 @@ function ClusterManagerApp(): JSX.Element {
     const [dialogParentId, setDialogParentId] = useState<string | null>(null);
 
     useEffect(() => {
-        // Acquire VS Code API
-        const vscode = acquireVsCodeApi();
+        // Get VS Code API (singleton)
+        const vscode = getVSCodeAPI();
 
         // Set up message listener
         const handleMessage = (event: MessageEvent<ExtensionToWebviewMessage>): void => {
@@ -81,7 +92,7 @@ function ClusterManagerApp(): JSX.Element {
 
     // Handle setting alias
     const handleSetAlias = (contextName: string, alias: string | null): void => {
-        const vscode = acquireVsCodeApi();
+        const vscode = getVSCodeAPI();
         vscode.postMessage({
             type: 'setAlias',
             data: {
@@ -93,7 +104,7 @@ function ClusterManagerApp(): JSX.Element {
 
     // Handle toggling visibility
     const handleToggleVisibility = (contextName: string, hidden: boolean): void => {
-        const vscode = acquireVsCodeApi();
+        const vscode = getVSCodeAPI();
         vscode.postMessage({
             type: 'toggleVisibility',
             data: {
@@ -140,7 +151,7 @@ function ClusterManagerApp(): JSX.Element {
 
     // Handle creating folder
     const handleCreateFolder = (name: string, parentId: string | null): void => {
-        const vscode = acquireVsCodeApi();
+        const vscode = getVSCodeAPI();
         setDialogError('');
         vscode.postMessage({
             type: 'createFolder',
@@ -153,7 +164,7 @@ function ClusterManagerApp(): JSX.Element {
 
     // Handle moving cluster to folder
     const handleMoveCluster = (contextName: string, folderId: string | null, order: number): void => {
-        const vscode = acquireVsCodeApi();
+        const vscode = getVSCodeAPI();
         vscode.postMessage({
             type: 'moveCluster',
             data: {
@@ -166,7 +177,7 @@ function ClusterManagerApp(): JSX.Element {
 
     // Handle renaming folder
     const handleRenameFolder = (folderId: string, newName: string): void => {
-        const vscode = acquireVsCodeApi();
+        const vscode = getVSCodeAPI();
         vscode.postMessage({
             type: 'renameFolder',
             data: {
@@ -178,7 +189,7 @@ function ClusterManagerApp(): JSX.Element {
 
     // Handle deleting folder
     const handleDeleteFolder = (folderId: string, moveToRoot: boolean): void => {
-        const vscode = acquireVsCodeApi();
+        const vscode = getVSCodeAPI();
         vscode.postMessage({
             type: 'deleteFolder',
             data: {
@@ -204,7 +215,7 @@ function ClusterManagerApp(): JSX.Element {
 
     // Handle export click
     const handleExportClick = (): void => {
-        const vscode = acquireVsCodeApi();
+        const vscode = getVSCodeAPI();
         vscode.postMessage({
             type: 'exportConfiguration'
         });
@@ -212,7 +223,7 @@ function ClusterManagerApp(): JSX.Element {
 
     // Handle import click
     const handleImportClick = (): void => {
-        const vscode = acquireVsCodeApi();
+        const vscode = getVSCodeAPI();
         vscode.postMessage({
             type: 'importConfiguration'
         });
@@ -231,7 +242,7 @@ function ClusterManagerApp(): JSX.Element {
     return (
         <div className={`cluster-manager-app theme-${theme}`}>
             <header className="cluster-manager-header">
-                <h1>Cluster Manager</h1>
+                <h1>Cluster Organizer</h1>
             </header>
             <Toolbar
                 searchValue={searchTerm}

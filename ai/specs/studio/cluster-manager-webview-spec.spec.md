@@ -1,7 +1,7 @@
 ---
 spec_id: cluster-manager-webview-spec
-name: Cluster Manager Webview Specification
-description: Technical specification for the Cluster Manager webview interface
+name: Cluster Organizer Webview Specification
+description: Technical specification for the Cluster Organizer webview interface
 feature_id:
   - cluster-manager-webview
   - cluster-folder-organization
@@ -12,11 +12,11 @@ diagram_id:
   - cluster-manager-workflow
 ---
 
-# Cluster Manager Webview Specification
+# Cluster Organizer Webview Specification
 
 ## Overview
 
-The Cluster Manager webview provides a React-based interface for organizing, hiding, and aliasing Kubernetes clusters. It integrates with VS Code's webview API and communicates with the extension host via message passing.
+The Cluster Organizer webview provides a React-based interface for organizing, hiding, and aliasing Kubernetes clusters. It integrates with VS Code's webview API and communicates with the extension host via message passing.
 
 ## Architecture
 
@@ -27,7 +27,7 @@ See [cluster-manager-architecture](../../diagrams/studio/cluster-manager-archite
 ### Command: `kube9.openClusterManager`
 
 **Activation**:
-- Command Palette: "Kube9: Cluster Manager"
+- Command Palette: "Kube9: Cluster Organizer"
 - Keyboard Shortcut: None (optional future enhancement)
 
 **Implementation**:
@@ -45,7 +45,7 @@ vscode.commands.registerCommand('kube9.openClusterManager', async () => {
 ```typescript
 interface WebviewPanelOptions {
   viewType: 'kube9.clusterManager';
-  title: 'Cluster Manager';
+  title: 'Cluster Organizer';
   showOptions: {
     viewColumn: vscode.ViewColumn.One,
     preserveFocus: false
@@ -62,7 +62,7 @@ interface WebviewPanelOptions {
 
 ### Singleton Pattern
 
-Only one Cluster Manager webview can be open at a time:
+Only one Cluster Organizer webview can be open at a time:
 - If panel already exists, reveal and focus it
 - If panel closed, create new instance
 - Store panel reference in static class property

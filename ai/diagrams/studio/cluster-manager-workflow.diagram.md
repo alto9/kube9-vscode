@@ -1,6 +1,6 @@
 ---
 diagram_id: cluster-manager-workflow
-name: Cluster Manager User Workflow
+name: Cluster Organizer User Workflow
 description: User workflow for organizing clusters using folders, aliases, and visibility controls
 type: flows
 spec_id:
@@ -13,9 +13,9 @@ feature_id:
   - cluster-visibility-control
 ---
 
-# Cluster Manager User Workflow
+# Cluster Organizer User Workflow
 
-This diagram shows the complete user workflow for managing cluster customizations through the Cluster Manager webview.
+This diagram shows the complete user workflow for managing cluster customizations through the Cluster Organizer webview.
 
 ```json
 {
@@ -25,7 +25,7 @@ This diagram shows the complete user workflow for managing cluster customization
       "type": "default",
       "position": { "x": 100, "y": 50 },
       "data": {
-        "label": "Open Cluster Manager",
+        "label": "Open Cluster Organizer",
         "description": "User executes command from palette"
       }
     },
@@ -206,7 +206,7 @@ This diagram shows the complete user workflow for managing cluster customization
 
 ### Scenario 1: Create Folder Structure
 ```
-1. User opens Cluster Manager
+1. User opens Cluster Organizer
 2. Clicks "New Folder" button
 3. Enters folder name (e.g., "Production")
 4. Folder appears in list

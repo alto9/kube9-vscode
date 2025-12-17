@@ -13,7 +13,7 @@ spec_id:
 Feature: Cluster Alias Management
 
 Background:
-  Given the Cluster Manager is open
+  Given the Cluster Organizer is open
   And the user has clusters configured
 
 Scenario: Setting an alias for a cluster
@@ -30,7 +30,7 @@ Scenario: Setting an alias for a cluster
 Scenario: Viewing original context name via tooltip
   Given a cluster has alias "Prod EKS"
   And the original context name is "arn:aws:eks:us-east-1:123456789:cluster/prod-eks"
-  When the user hovers over the cluster name in Cluster Manager
+  When the user hovers over the cluster name in Cluster Organizer
   Then a tooltip appears
   And the tooltip displays "Original: arn:aws:eks:us-east-1:123456789:cluster/prod-eks"
 
@@ -91,16 +91,16 @@ Scenario: Multiple clusters can have same alias
 
 Scenario: Alias persists across sessions
   Given a cluster has alias "Prod EKS"
-  When the user closes the Cluster Manager
+  When the user closes the Cluster Organizer
   And closes VS Code
   And reopens VS Code
-  And opens the Cluster Manager
+  And opens the Cluster Organizer
   Then the cluster still displays alias "Prod EKS"
 
 Scenario: Alias updates in tree view immediately
   Given the tree view is open and visible
   And a cluster "arn:aws:eks:..." is displayed in the tree
-  When the user sets alias "Prod EKS" in Cluster Manager
+  When the user sets alias "Prod EKS" in Cluster Organizer
   Then the tree view updates immediately
   And the cluster in the tree view displays "Prod EKS"
   And no manual refresh is required
@@ -188,7 +188,7 @@ Scenario: Alias does not affect kubectl commands
 
 Scenario: Icon next to aliased cluster
   Given a cluster has an alias
-  When displayed in the Cluster Manager
+  When displayed in the Cluster Organizer
   Then a small edit icon appears next to the name
   And hovering the icon shows tooltip "Click to edit alias"
   And the icon is always visible (not only on hover)

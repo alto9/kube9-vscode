@@ -16,10 +16,10 @@ Render the cluster list in the React webview, displaying cluster names (context 
 
 ## Context
 
-Users need to see their clusters displayed in the Cluster Manager. This implements the basic cluster list UI without customizations yet.
+Users need to see their clusters displayed in the Cluster Organizer. This implements the basic cluster list UI without customizations yet.
 
 See:
-- `ai/features/studio/cluster-manager-webview.feature.md` - Cluster Manager displays all clusters, shows current active cluster
+- `ai/features/studio/cluster-manager-webview.feature.md` - Cluster Organizer displays all clusters, shows current active cluster
 
 ## Acceptance Criteria
 

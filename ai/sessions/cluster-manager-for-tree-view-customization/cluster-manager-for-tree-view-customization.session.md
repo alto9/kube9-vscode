@@ -7,23 +7,23 @@ changed_files:
   - path: ai/features/studio/cluster-manager-webview.feature.md
     change_type: added
     scenarios_added:
-      - Opening Cluster Manager from Command Palette
-      - Cluster Manager displays all clusters
-      - Cluster Manager shows current active cluster
-      - Cluster Manager displays existing customizations
-      - Cluster Manager supports theme switching
-      - Only one Cluster Manager can be open
-      - Cluster Manager retains state when hidden
-      - Cluster Manager updates when kubeconfig changes
-      - Cluster Manager toolbar displays action buttons
+      - Opening Cluster Organizer from Command Palette
+      - Cluster Organizer displays all clusters
+      - Cluster Organizer shows current active cluster
+      - Cluster Organizer displays existing customizations
+      - Cluster Organizer supports theme switching
+      - Only one Cluster Organizer can be open
+      - Cluster Organizer retains state when hidden
+      - Cluster Organizer updates when kubeconfig changes
+      - Cluster Organizer toolbar displays action buttons
       - Search filters clusters by name
       - Search filters clusters by original context name
       - Clearing search shows all clusters again
-      - Cluster Manager shows status footer
-      - Cluster Manager handles empty kubeconfig
-      - Cluster Manager handles corrupted customization configuration
-      - Keyboard navigation in Cluster Manager
-      - Cluster Manager displays inactive clusters
+      - Cluster Organizer shows status footer
+      - Cluster Organizer handles empty kubeconfig
+      - Cluster Organizer handles corrupted customization configuration
+      - Keyboard navigation in Cluster Organizer
+      - Cluster Organizer displays inactive clusters
   - path: ai/features/studio/cluster-folder-organization.feature.md
     change_type: added
     scenarios_added:
@@ -86,7 +86,7 @@ changed_files:
     scenarios_added:
       - Hiding a cluster from tree view
       - Showing a hidden cluster
-      - Hidden clusters remain accessible in Cluster Manager
+      - Hidden clusters remain accessible in Cluster Organizer
       - Visibility persists across sessions
       - Visibility toggle is a switch control
       - Hidden cluster count in footer
@@ -100,7 +100,7 @@ changed_files:
       - Hiding active cluster with confirmation
       - Bulk hide operation
       - Bulk show operation
-      - Hidden indicator styling in Cluster Manager
+      - Hidden indicator styling in Cluster Organizer
       - Visibility does not affect kubectl operations
       - Search includes hidden clusters
       - Export includes visibility settings
@@ -122,7 +122,7 @@ Users working with many Kubernetes clusters need better organization tools. Long
 2. **Alias Management**: Enable friendly, readable names for clusters with long technical identifiers
 3. **Visibility Control**: Provide the ability to hide unused clusters from the tree view while keeping them accessible
 4. **Persistent Configuration**: Store all customizations installation-wide in VS Code Global State, surviving restarts and updates
-5. **Real-time Synchronization**: Keep tree view and Cluster Manager webview synchronized automatically via event system
+5. **Real-time Synchronization**: Keep tree view and Cluster Organizer webview synchronized automatically via event system
 6. **Import/Export**: Support configuration backup and sharing through JSON import/export
 
 ## Approach
@@ -160,7 +160,7 @@ Users working with many Kubernetes clusters need better organization tools. Long
 ### 2. Source of Truth Pattern
 **Decision**: kubeconfig is source of truth for available clusters; customizations overlay on top
 **Rationale**: Prevents customization drift; new clusters auto-detected; removed clusters handled gracefully
-**Impact**: Cluster Manager always shows current kubeconfig state with customizations applied
+**Impact**: Cluster Organizer always shows current kubeconfig state with customizations applied
 
 ### 3. Folder Structure as Flat Array with Parent References
 **Decision**: Store folders as flat array with `parentId` field for relationships
@@ -173,7 +173,7 @@ Users working with many Kubernetes clusters need better organization tools. Long
 **Impact**: No save button needed; all changes persist immediately
 
 ### 5. Singleton Webview Pattern
-**Decision**: Only one Cluster Manager webview can be open at a time
+**Decision**: Only one Cluster Organizer webview can be open at a time
 **Rationale**: Prevents conflicting edits; simpler state management; standard VS Code pattern
 **Impact**: Opening command reveals existing panel if already open
 
@@ -183,7 +183,7 @@ Users working with many Kubernetes clusters need better organization tools. Long
 **Impact**: Users can create rich hierarchies without excessive complexity
 
 ### 7. Hidden Clusters Still in Manager
-**Decision**: Hidden clusters appear in Cluster Manager (grayed out with badge)
+**Decision**: Hidden clusters appear in Cluster Organizer (grayed out with badge)
 **Rationale**: Users need access to unhide; prevents "where did it go?" confusion
 **Impact**: Clear visibility of all clusters regardless of tree view state
 
@@ -208,7 +208,7 @@ Users working with many Kubernetes clusters need better organization tools. Long
 
 **Phase 1 - Core Functionality**:
 1. ClusterCustomizationService with Global State storage
-2. Basic Cluster Manager webview (list clusters, no customizations)
+2. Basic Cluster Organizer webview (list clusters, no customizations)
 3. Message protocol between extension and webview
 
 **Phase 2 - Alias Management** (Simplest feature):
@@ -257,7 +257,7 @@ Users working with many Kubernetes clusters need better organization tools. Long
 - Tags/labels for clusters
 - Auto-organization rules based on naming patterns
 - Shared configurations for teams (requires separate storage)
-- Quick actions in Cluster Manager (switch context, open dashboard)
+- Quick actions in Cluster Organizer (switch context, open dashboard)
 - Bulk operations (select multiple, hide all, show all)
 - Folder templates (create common structures quickly)
 

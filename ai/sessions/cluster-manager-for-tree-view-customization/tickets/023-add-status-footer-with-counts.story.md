@@ -13,14 +13,14 @@ status: completed
 
 ## Objective
 
-Add footer to Cluster Manager webview displaying cluster counts (visible/total, hidden count) with clickable hidden count to filter view.
+Add footer to Cluster Organizer webview displaying cluster counts (visible/total, hidden count) with clickable hidden count to filter view.
 
 ## Context
 
 Users need to see at a glance how many clusters are visible vs hidden. The footer provides this summary information.
 
 See:
-- `ai/features/studio/cluster-manager-webview.feature.md` - Cluster Manager shows status footer
+- `ai/features/studio/cluster-manager-webview.feature.md` - Cluster Organizer shows status footer
 - `ai/features/studio/cluster-visibility-control.feature.md` - Hidden cluster count, filtering
 
 ## Acceptance Criteria

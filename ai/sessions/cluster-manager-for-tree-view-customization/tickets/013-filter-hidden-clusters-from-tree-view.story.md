@@ -12,11 +12,11 @@ status: completed
 
 ## Objective
 
-Update ClusterTreeProvider to exclude hidden clusters from the tree view while keeping them accessible in the Cluster Manager.
+Update ClusterTreeProvider to exclude hidden clusters from the tree view while keeping them accessible in the Cluster Organizer.
 
 ## Context
 
-Hidden clusters should not appear in the tree view but remain accessible in the Cluster Manager. This implements the core visibility filtering logic.
+Hidden clusters should not appear in the tree view but remain accessible in the Cluster Organizer. This implements the core visibility filtering logic.
 
 See:
 - `ai/features/studio/cluster-visibility-control.feature.md` - Hiding a cluster from tree view
@@ -27,7 +27,7 @@ See:
 1. When building cluster list in tree provider, check customization for each cluster
 2. Skip clusters where `customization.hidden === true`
 3. Ensure tree refreshes when visibility changes
-4. Test that toggling visibility in Cluster Manager updates tree immediately
+4. Test that toggling visibility in Cluster Organizer updates tree immediately
 
 ## Files to Modify
 

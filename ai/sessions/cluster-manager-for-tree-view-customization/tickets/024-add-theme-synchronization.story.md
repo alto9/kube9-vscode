@@ -19,7 +19,7 @@ Synchronize VS Code theme (light/dark) with webview, sending theme change messag
 The webview must adapt to VS Code theme changes. This adds theme detection and synchronization.
 
 See:
-- `ai/features/studio/cluster-manager-webview.feature.md` - Cluster Manager supports theme switching
+- `ai/features/studio/cluster-manager-webview.feature.md` - Cluster Organizer supports theme switching
 - `ai/specs/studio/cluster-manager-webview-spec.spec.md` - Theme Changed message
 
 ## Acceptance Criteria
