@@ -1,7 +1,7 @@
 ---
 session_id: cluster-manager-for-tree-view-customization
 start_time: '2025-12-16T03:32:04.478Z'
-status: development
+status: completed
 problem_statement: cluster-manager-for-tree-view-customization
 changed_files:
   - path: ai/features/studio/cluster-manager-webview.feature.md
