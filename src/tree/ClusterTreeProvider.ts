@@ -1035,6 +1035,20 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             // Get current kubectl context to identify which cluster is affected
             const contextInfo = await getContextInfo();
             
+            // Invalidate all caches for this context to ensure fresh data is fetched
+            try {
+                // Invalidate API client cache
+                const cache = getResourceCache();
+                cache.invalidatePattern(new RegExp(`^${contextInfo.contextName}:`));
+                
+                // Invalidate cluster resources cache (pre-fetched nodes, namespaces, pods)
+                this.clusterResourcesCache.delete(contextInfo.contextName);
+                
+                console.log(`Invalidated caches for context ${contextInfo.contextName} after namespace change`);
+            } catch (cacheError) {
+                console.warn('Failed to invalidate cache during namespace change:', cacheError);
+            }
+            
             // Look up the cluster item from cache
             const clusterItem = this.clusterItemsCache.get(contextInfo.contextName);
             
