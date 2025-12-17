@@ -1,4 +1,4 @@
-<!-- forge-hash: 262930671a1b9f1a5ae678b40b0457a10cefab3cfaa7869fd4da21201e88ca74 -->
+<!-- forge-hash: a6e7a25e3e9ad4816cf3c37bd7f393d83410739e4f4de981b2e9ce6651104a6e -->
 
 # Forge Scribe
 
@@ -6,16 +6,7 @@ This command distills a completed design session into actionable Stories and Tas
 
 ## Prerequisites
 
-If you're not familiar with Forge, run `/forge` first to understand the documentation system.
-
 You must have a session in 'scribe' status before running this command.
-
-## Finding the Session
-
-1. **Seek out the open design session** in Scribe mode in the current project
-2. **Look for session files** in `ai/sessions/` with status: 'scribe'
-3. **Or use the session name** if provided by the user in the prompt
-4. **Read the session file** at `ai/sessions/<session-id>/<session-id>.session.md`
 
 ## What This Command Does
 

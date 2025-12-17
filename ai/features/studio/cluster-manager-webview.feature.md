@@ -154,3 +154,9 @@ Scenario: Cluster Organizer displays inactive clusters
   And the user can delete the inactive cluster manually
 ```
 
+
+
+
+
+
+

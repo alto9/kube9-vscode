@@ -1,6 +1,10 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
+import { fetchServices } from '../kubernetes/resourceFetchers';
+import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import * as k8s from '@kubernetes/client-node';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -109,13 +113,6 @@ interface ServiceItem {
 }
 
 /**
- * Interface for kubectl service list response.
- */
-interface ServiceListResponse {
-    items?: ServiceItem[];
-}
-
-/**
  * Interface for kubectl service response (single service).
  */
 interface ServiceResponse {
@@ -150,47 +147,44 @@ interface ServiceResponse {
  */
 export class ServiceCommands {
     /**
-     * Retrieves the list of services from all namespaces using kubectl.
-     * Uses kubectl get services command with --all-namespaces and JSON output for parsing.
+     * Retrieves the list of services using the Kubernetes API client.
+     * Uses direct API calls with caching to improve performance.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
+     * @param namespace Optional namespace to filter services (if not provided, fetches from all namespaces)
      * @returns ServicesResult with services array and optional error information
      */
     public static async getServices(
         kubeconfigPath: string,
-        contextName: string
+        contextName: string,
+        namespace?: string
     ): Promise<ServicesResult> {
         try {
-            // Build kubectl command arguments
-            // Always use the namespace (either from context or 'default')
-            // kubectl will automatically use the context namespace if set
-            const args = [
-                'get',
-                'services',
-                '--output=json',
-                `--kubeconfig=${kubeconfigPath}`,
-                `--context=${contextName}`
-            ];
-
-            // Execute kubectl get services with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                args,
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: ServiceListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract service information from the items array
-            const services: ServiceInfo[] = response.items?.map((item: ServiceItem) => {
-                return this.mapServiceItemToServiceInfo(item);
-            }) || [];
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = namespace 
+                ? `${contextName}:services:${namespace}`
+                : `${contextName}:services`;
+            const cached = cache.get<ServiceInfo[]>(cacheKey);
+            if (cached) {
+                return { services: cached };
+            }
+            
+            // Fetch from API
+            const v1Services = await fetchServices({ 
+                namespace, 
+                timeout: 10 
+            });
+            
+            // Transform k8s.V1Service[] to ServiceInfo[] format
+            const services: ServiceInfo[] = v1Services.map(svc => 
+                this.mapV1ServiceToServiceInfo(svc)
+            );
             
             // Sort services by namespace first, then by name
             services.sort((a, b) => {
@@ -201,42 +195,16 @@ export class ServiceCommands {
                 return a.name.localeCompare(b.name);
             });
             
+            // Cache result
+            cache.set(cacheKey, services, CACHE_TTL.SERVICES);
+            
             return { services };
         } catch (error: unknown) {
-            // Check if stdout contains valid JSON even though an error was thrown
-            // This can happen if kubectl writes warnings to stderr but valid data to stdout
-            const err = error as { stdout?: Buffer | string; stderr?: Buffer | string };
-            const stdout = err.stdout 
-                ? (Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout).trim()
-                : '';
-            
-            if (stdout) {
-                try {
-                    // Try to parse stdout as valid JSON
-                    const response: ServiceListResponse = JSON.parse(stdout);
-                    
-                    // Extract service information from the items array
-                    const services: ServiceInfo[] = response.items?.map((item: ServiceItem) => {
-                        return this.mapServiceItemToServiceInfo(item);
-                    }) || [];
-                    
-                    // Sort services by namespace first, then by name
-                    services.sort((a, b) => {
-                        const namespaceCompare = a.namespace.localeCompare(b.namespace);
-                        if (namespaceCompare !== 0) {
-                            return namespaceCompare;
-                        }
-                        return a.name.localeCompare(b.name);
-                    });
-                    
-                    return { services };
-                } catch (parseError) {
-                    // stdout is not valid JSON, treat as real error
-                }
-            }
-            
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Service query failed for context ${contextName}${namespace ? ` in namespace ${namespace}` : ''}: ${kubectlError.getDetails()}`);
             
             return {
                 services: [],
@@ -394,6 +362,61 @@ export class ServiceCommands {
         };
         
         return this.mapServiceItemToServiceInfo(item);
+    }
+
+    /**
+     * Maps a k8s.V1Service from Kubernetes API client to ServiceInfo.
+     * 
+     * @param v1Service V1Service from Kubernetes API client
+     * @returns ServiceInfo with extracted service data
+     */
+    private static mapV1ServiceToServiceInfo(v1Service: k8s.V1Service): ServiceInfo {
+        const name = v1Service.metadata?.name || 'Unknown';
+        const namespace = v1Service.metadata?.namespace || 'Unknown';
+        const spec = v1Service.spec || {};
+        
+        // Extract service type with validation
+        const serviceType = spec.type || 'ClusterIP';
+        const type: 'ClusterIP' | 'NodePort' | 'LoadBalancer' | 'ExternalName' = 
+            (serviceType === 'ClusterIP' || serviceType === 'NodePort' || 
+             serviceType === 'LoadBalancer' || serviceType === 'ExternalName')
+            ? serviceType
+            : 'ClusterIP'; // Default to ClusterIP if invalid
+        
+        const clusterIP = spec.clusterIP || '';
+        
+        // Extract external IP from status.loadBalancer.ingress or spec.externalIPs
+        let externalIP: string | undefined;
+        if (v1Service.status?.loadBalancer?.ingress && v1Service.status.loadBalancer.ingress.length > 0) {
+            externalIP = v1Service.status.loadBalancer.ingress[0].ip || 
+                        v1Service.status.loadBalancer.ingress[0].hostname;
+        } else if (spec.externalIPs && spec.externalIPs.length > 0) {
+            externalIP = spec.externalIPs[0];
+        }
+        
+        // Map ports array
+        const ports: ServicePort[] = (spec.ports || []).map((port) => ({
+            port: port.port || 0,
+            targetPort: port.targetPort !== undefined ? port.targetPort : 0,
+            protocol: (port.protocol === 'TCP' || port.protocol === 'UDP' || port.protocol === 'SCTP')
+                ? port.protocol
+                : 'TCP', // Default to TCP if missing or invalid
+            nodePort: port.nodePort
+        }));
+        
+        // Extract selectors (default to empty object)
+        const selectors = spec.selector || {};
+        
+        return {
+            name,
+            namespace,
+            type,
+            clusterIP,
+            externalIP,
+            ports,
+            selectors,
+            endpoints: undefined // Deferred implementation per story
+        };
     }
 }
 

@@ -1,17 +1,9 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import * as k8s from '@kubernetes/client-node';
 import { WorkloadEntry, PodHealthSummary, HealthCheckStats, PodConditionSummary } from '../types/workloadData';
 import { KubectlError } from './KubectlError';
-
-/**
- * Timeout for kubectl commands in milliseconds.
- */
-const KUBECTL_TIMEOUT_MS = 30000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
+import { fetchPods } from './resourceFetchers';
+import { getResourceCache, CACHE_TTL } from './cache';
+import { getKubernetesApiClient } from './apiClient';
 
 /**
  * Minimal interface for Kubernetes Pod structure.
@@ -37,13 +29,6 @@ interface Pod {
             };
         }>;
     };
-}
-
-/**
- * Interface for kubectl pod list response.
- */
-interface PodListResponse {
-    items?: Pod[];
 }
 
 /**
@@ -81,32 +66,32 @@ export class PodHealthAnalyzer {
                 return [];
             }
 
-            // Execute kubectl get pods with label selector
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'pods',
-                    `--namespace=${namespace}`,
-                    `--selector=${workload.selector}`,
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: PodListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract pods from the items array
-            return response.items || [];
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = `${contextName}:pods:${namespace}:${workload.selector}`;
+            const cached = cache.get<k8s.V1Pod[]>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
+            // Fetch from API
+            const v1Pods = await fetchPods({ 
+                namespace, 
+                labelSelector: workload.selector, 
+                timeout: 10 
+            });
+            
+            // Cache result
+            cache.set(cacheKey, v1Pods, CACHE_TTL.PODS);
+            
+            // Return V1Pod[] directly (matches Pod interface)
+            return v1Pods;
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging

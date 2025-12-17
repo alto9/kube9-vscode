@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as k8s from '@kubernetes/client-node';
 import { ClusterTreeItem, ClusterStatus } from './ClusterTreeItem';
 import { TreeItemType } from './TreeItemTypes';
 import { TreeItemFactory } from './TreeItemFactory';
@@ -7,6 +8,9 @@ import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { KubectlErrorType } from '../kubernetes/KubectlError';
 import { NodesCategory } from './categories/NodesCategory';
 import { NamespacesCategory } from './categories/NamespacesCategory';
+import { fetchClusterResources } from '../kubernetes/resourceFetchers';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import { getResourceCache } from '../kubernetes/cache';
 import { WorkloadsCategory } from './categories/WorkloadsCategory';
 import { DeploymentsSubcategory } from './categories/workloads/DeploymentsSubcategory';
 import { StatefulSetsSubcategory } from './categories/workloads/StatefulSetsSubcategory';
@@ -124,6 +128,18 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private customizationSubscription?: vscode.Disposable;
 
     /**
+     * Cache of pre-fetched cluster resources (nodes, namespaces, pods).
+     * Used to avoid sequential fetching when categories are expanded.
+     * Maps context name to cached resources with timestamp.
+     */
+    private clusterResourcesCache: Map<string, {
+        nodes: k8s.V1Node[];
+        namespaces: k8s.V1Namespace[];
+        pods: k8s.V1Pod[];
+        timestamp: number;
+    }> = new Map();
+
+    /**
      * Creates a new ClusterTreeProvider instance.
      * 
      * @param customizationService - Optional cluster customization service for managing aliases
@@ -199,11 +215,40 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Pre-fetch cluster resources (nodes, namespaces, pods) in parallel.
+     * This method is called when a cluster is expanded to improve performance
+     * when categories are later expanded. Results are cached for 30 seconds.
+     * 
+     * @param contextName The context name of the cluster to pre-fetch resources for
+     */
+    private async prefetchClusterResources(contextName: string): Promise<void> {
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            const { nodes, namespaces, pods } = await fetchClusterResources();
+            
+            this.clusterResourcesCache.set(contextName, {
+                nodes,
+                namespaces,
+                pods,
+                timestamp: Date.now()
+            });
+        } catch (error) {
+            // Log error but don't block - individual fetches will still work
+            console.warn(`Failed to pre-fetch cluster resources for ${contextName}:`, error);
+        }
+    }
+
+    /**
      * Get resource categories for a cluster.
      * Returns categories with Dashboard always appearing first, followed by conditional and standard categories:
      * - Dashboard always appears first (for all clusters)
      * - If operator status is NOT Basic: Reports appears second, followed by Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources
      * - If operator status is Basic or undefined: Returns Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources (no Reports)
+     * 
+     * Also triggers parallel pre-fetch of cluster resources (nodes, namespaces, pods) to improve performance.
+     * Lazy-loads cluster connectivity, operator status, and ArgoCD status on first expansion.
      * 
      * @param clusterElement The cluster tree item to get categories for
      * @returns Array of category tree items
@@ -211,6 +256,20 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private getCategories(clusterElement: ClusterTreeItem): ClusterTreeItem[] {
         if (!clusterElement.resourceData) {
             return [];
+        }
+
+        // Lazy load cluster checks on first expansion
+        const contextName = clusterElement.resourceData.context.name;
+        
+        // Check if this is first expansion (no cached status)
+        const hasStatus = this.clusterStatusCache.has(contextName);
+        
+        if (!hasStatus) {
+            // First expansion - trigger all checks asynchronously
+            // These run in background and will update the tree item when complete
+            void this.checkSingleClusterConnectivity(clusterElement);
+            void this.checkOperatorStatus(clusterElement, false);
+            void this.checkArgoCDStatus(clusterElement, false);
         }
 
         const categories = [
@@ -223,6 +282,15 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             TreeItemFactory.createConfigurationCategory(clusterElement.resourceData),
             TreeItemFactory.createCustomResourcesCategory(clusterElement.resourceData)
         ];
+
+        // Insert ArgoCD category after Configuration if ArgoCD is installed
+        if (clusterElement.argoCDInstalled === true) {
+            const insertIndex = categories.length - 1; // Before Custom Resources
+            categories.splice(insertIndex, 0, TreeItemFactory.createArgoCDCategory(clusterElement.resourceData));
+        }
+
+        // Trigger parallel pre-fetch (fire-and-forget)
+        void this.prefetchClusterResources(contextName);
 
         // Prepend Reports category if operator is installed (status is NOT Basic)
         if (clusterElement.operatorStatus !== undefined && clusterElement.operatorStatus !== OperatorStatusMode.Basic) {
@@ -283,6 +351,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     /**
      * Get children for a category tree item.
      * Delegates to category-specific handlers for fetching and displaying resources.
+     * Uses cached pre-fetched resources when available to avoid sequential fetching.
      * 
      * @param categoryElement The category tree item to get children for
      * @returns Array of child tree items for the category
@@ -292,23 +361,50 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return [];
         }
 
+        // Check cache for pre-fetched resources
+        const contextName = categoryElement.resourceData.context.name;
+        const cached = this.clusterResourcesCache.get(contextName);
+        const cacheAge = cached ? Date.now() - cached.timestamp : Infinity;
+        const useCache = cached && cacheAge < 30000; // 30 second TTL
+
         let items: ClusterTreeItem[] = [];
 
         switch (categoryElement.type) {
             case 'nodes':
-                items = await NodesCategory.getNodeItems(
-                    categoryElement.resourceData,
-                    this.kubeconfig.filePath,
-                    (error, clusterName) => this.handleKubectlError(error, clusterName)
-                );
+                if (useCache && cached && cached.nodes.length > 0) {
+                    // Use cached nodes
+                    items = await NodesCategory.getNodeItemsFromCache(
+                        categoryElement.resourceData,
+                        cached.nodes,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName)
+                    );
+                } else {
+                    // Fall back to existing fetch
+                    items = await NodesCategory.getNodeItems(
+                        categoryElement.resourceData,
+                        this.kubeconfig.filePath,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName)
+                    );
+                }
                 break;
             
             case 'namespaces':
-                items = await NamespacesCategory.getNamespaceItems(
-                    categoryElement.resourceData,
-                    this.kubeconfig.filePath,
-                    (error, clusterName) => this.handleKubectlError(error, clusterName)
-                );
+                if (useCache && cached && cached.namespaces.length > 0) {
+                    // Use cached namespaces
+                    items = await NamespacesCategory.getNamespaceItemsFromCache(
+                        categoryElement.resourceData,
+                        cached.namespaces,
+                        this.kubeconfig.filePath,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName)
+                    );
+                } else {
+                    // Fall back to existing fetch
+                    items = await NamespacesCategory.getNamespaceItems(
+                        categoryElement.resourceData,
+                        this.kubeconfig.filePath,
+                        (error, clusterName) => this.handleKubectlError(error, clusterName)
+                    );
+                }
                 break;
             
             case 'workloads':
@@ -717,24 +813,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             }
         });
 
-        // Check connectivity for all clusters asynchronously
-        this.checkAllClustersConnectivity(clusterItems);
-
-        // Check operator status for all clusters asynchronously
-        const validClusters = clusterItems.filter(item => 
-            item.type === 'cluster' && 
-            item.resourceData?.context?.name
-        );
-        
-        const forceRefresh = this.forceOperatorRefreshFlag;
-        validClusters.forEach(item => {
-            void this.checkOperatorStatus(item, forceRefresh);
-        });
-        
-        // Clear the flag after use
-        if (this.forceOperatorRefreshFlag) {
-            this.forceOperatorRefreshFlag = false;
-        }
+        // Connectivity, operator status, and ArgoCD checks are now lazy-loaded
+        // when a cluster is first expanded (see getCategories method)
 
         return clusterItems;
     }
@@ -811,24 +891,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             }
         });
 
-        // Check connectivity for all clusters asynchronously
-        this.checkAllClustersConnectivity(clusterItems);
-
-        // Check operator status for all clusters asynchronously
-        const validClusters = clusterItems.filter(item => 
-            item.type === 'cluster' && 
-            item.resourceData?.context?.name
-        );
-        
-        const forceRefresh = this.forceOperatorRefreshFlag;
-        validClusters.forEach(item => {
-            void this.checkOperatorStatus(item, forceRefresh);
-        });
-        
-        // Clear the flag after use
-        if (this.forceOperatorRefreshFlag) {
-            this.forceOperatorRefreshFlag = false;
-        }
+        // Connectivity, operator status, and ArgoCD checks are now lazy-loaded
+        // when a cluster is first expanded (see getCategories method)
 
         return clusterItems;
     }
@@ -869,12 +933,13 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             item.description = cluster.name;
         }
 
-        // Initialize with unknown status
-        item.status = ClusterStatus.Unknown;
-        
-        // Set initial icon and tooltip (will be updated after connectivity check)
+        // Set default icon (neutral, non-spinning) - will be updated when status is known
+        // Use circle-outline as a neutral default that doesn't indicate loading or connectivity status
         const isCurrentContext = context.name === this.kubeconfig!.currentContext;
-        this.updateTreeItemAppearance(item, isCurrentContext, ClusterStatus.Unknown, item.operatorStatus);
+        item.iconPath = new vscode.ThemeIcon('circle-outline');
+        item.tooltip = isCurrentContext 
+            ? `${displayName} (current context)` 
+            : displayName;
 
         return item;
     }
@@ -952,6 +1017,20 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             // Get current kubectl context to identify which cluster is affected
             const contextInfo = await getContextInfo();
             
+            // Invalidate all caches for this context to ensure fresh data is fetched
+            try {
+                // Invalidate API client cache
+                const cache = getResourceCache();
+                cache.invalidatePattern(new RegExp(`^${contextInfo.contextName}:`));
+                
+                // Invalidate cluster resources cache (pre-fetched nodes, namespaces, pods)
+                this.clusterResourcesCache.delete(contextInfo.contextName);
+                
+                console.log(`Invalidated caches for context ${contextInfo.contextName} after namespace change`);
+            } catch (cacheError) {
+                console.warn('Failed to invalidate cache during namespace change:', cacheError);
+            }
+            
             // Look up the cluster item from cache
             const clusterItem = this.clusterItemsCache.get(contextInfo.contextName);
             
@@ -1004,6 +1083,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Call this method to trigger a complete refresh of the tree view.
      * VS Code will call getChildren() again to rebuild the tree.
      * 
+     * This is for MANUAL refresh operations only (e.g., refresh button).
+     * For namespace changes, use refreshForNamespaceChange() instead.
+     * 
      * @param forceOperatorRefresh If true, forces operator status refresh for all clusters, bypassing cache
      */
     refresh(forceOperatorRefresh = false): void {
@@ -1011,6 +1093,21 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // The flag will be checked in getClusters() when cluster items are created
         if (forceOperatorRefresh) {
             this.forceOperatorRefreshFlag = true;
+        }
+        
+        // Invalidate cache for current context to ensure fresh data is fetched
+        try {
+            const apiClient = getKubernetesApiClient();
+            const currentContext = apiClient.getCurrentContext();
+            
+            // Only invalidate if we have a current context
+            if (currentContext) {
+                const cache = getResourceCache();
+                cache.invalidatePattern(new RegExp(`^${currentContext}:`));
+            }
+        } catch (error) {
+            // Log error but don't block refresh - cache invalidation is best effort
+            console.warn('Failed to invalidate cache during refresh:', error);
         }
         
         // Fire tree data change event to refresh the tree view
@@ -1028,6 +1125,36 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      */
     refreshItem(element?: ClusterTreeItem): void {
         this._onDidChangeTreeData.fire(element);
+    }
+
+    /**
+     * Refresh tree after namespace change.
+     * Only refreshes the affected cluster item and invalidates its resource cache.
+     * More efficient than full tree refresh.
+     * 
+     * @param contextName The context name whose namespace changed
+     */
+    refreshForNamespaceChange(contextName: string): void {
+        try {
+            // Invalidate resource cache for this context only
+            const cache = getResourceCache();
+            cache.invalidatePattern(new RegExp(`^${contextName}:`));
+            
+            // Find the cluster item for this context
+            const clusterItem = this.clusterItemsCache.get(contextName);
+            
+            if (clusterItem) {
+                // Targeted refresh - only this cluster and its children
+                this._onDidChangeTreeData.fire(clusterItem);
+            } else {
+                // Fallback to full refresh if we can't find the item
+                this._onDidChangeTreeData.fire();
+            }
+        } catch (error) {
+            console.warn('Failed to perform targeted namespace refresh:', error);
+            // Fallback to full refresh
+            this._onDidChangeTreeData.fire();
+        }
     }
 
     /**
@@ -1102,6 +1229,53 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Check connectivity for a single cluster asynchronously.
+     * This is called when a cluster is first expanded to lazy-load its status.
+     * 
+     * @param clusterItem The cluster tree item to check
+     */
+    private async checkSingleClusterConnectivity(clusterItem: ClusterTreeItem): Promise<void> {
+        if (!clusterItem.resourceData?.context?.name || !this.kubeconfig) {
+            return;
+        }
+
+        const contextName = clusterItem.resourceData.context.name;
+
+        try {
+            const result = await ClusterConnectivity.checkMultipleConnectivity(
+                this.kubeconfig.filePath,
+                [contextName]
+            );
+
+            const connectivityResult = result[0];
+            
+            // Update status
+            clusterItem.status = connectivityResult.status;
+            this.clusterStatusCache.set(contextName, connectivityResult.status);
+
+            // Handle errors
+            if (connectivityResult.error) {
+                const clusterName = clusterItem.resourceData.cluster?.name || contextName;
+                this.handleKubectlError(connectivityResult.error, clusterName);
+            }
+
+            // Update appearance
+            const isCurrentContext = contextName === this.kubeconfig.currentContext;
+            this.updateTreeItemAppearance(
+                clusterItem, 
+                isCurrentContext, 
+                connectivityResult.status, 
+                clusterItem.operatorStatus
+            );
+
+            // Refresh this cluster item only
+            this._onDidChangeTreeData.fire(clusterItem);
+        } catch (error) {
+            console.error(`Error checking connectivity for cluster ${contextName}:`, error);
+        }
+    }
+
+    /**
      * Check operator status for a single cluster and update the tree item.
      * This method runs asynchronously and updates the cluster item with operator status
      * information when available.
@@ -1156,6 +1330,46 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             // Leave operatorStatus undefined - tree will show connectivity-based icon
             // No error dialogs shown to users - errors are logged to OutputChannel only
+        }
+    }
+
+    /**
+     * Check ArgoCD installation status for a single cluster and update the tree item.
+     * This method runs asynchronously and updates the cluster item with ArgoCD installation
+     * status when available.
+     * 
+     * @param item The cluster tree item to check ArgoCD status for
+     * @param forceRefresh If true, bypasses cache and queries the cluster directly
+     */
+    private async checkArgoCDStatus(item: ClusterTreeItem, forceRefresh = false): Promise<void> {
+        // Validate prerequisites
+        if (!this.kubeconfig || !item.resourceData?.context?.name) {
+            return;
+        }
+
+        const contextName = item.resourceData.context.name;
+
+        try {
+            // Get or create ArgoCDService
+            const argoCDService = this.getArgoCDService();
+            if (!argoCDService) {
+                return;
+            }
+
+            // Check if ArgoCD is installed (uses caching internally unless forceRefresh=true)
+            const installationStatus = await argoCDService.isInstalled(contextName, forceRefresh);
+
+            // Update item with ArgoCD installation status
+            item.argoCDInstalled = installationStatus.installed;
+
+            // Refresh just this tree item to update categories
+            this._onDidChangeTreeData.fire(item);
+        } catch (error) {
+            // Handle unexpected errors gracefully - leave argoCDInstalled undefined
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[ERROR] Unexpected error in checkArgoCDStatus for cluster ${contextName}: ${errorMessage}`);
+            
+            // Leave argoCDInstalled undefined - category will not be shown
         }
     }
 

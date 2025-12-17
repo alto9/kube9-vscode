@@ -62,6 +62,13 @@ export class ClusterTreeItem extends vscode.TreeItem {
      * Used to identify the folder and maintain stable IDs.
      */
     public folderId?: string;
+    
+    /**
+     * Whether ArgoCD is installed on the cluster.
+     * Only relevant for cluster-type tree items.
+     * Used to conditionally display the ArgoCD Applications category.
+     */
+    public argoCDInstalled?: boolean;
 
     /**
      * Creates a new ClusterTreeItem.

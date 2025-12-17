@@ -194,3 +194,9 @@ Scenario: Icon next to aliased cluster
   And the icon is always visible (not only on hover)
 ```
 
+
+
+
+
+
+

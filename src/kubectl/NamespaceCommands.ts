@@ -1,16 +1,7 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
-
-/**
- * Timeout for kubectl commands in milliseconds.
- */
-const KUBECTL_TIMEOUT_MS = 5000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
+import { fetchNamespaces } from '../kubernetes/resourceFetchers';
+import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 
 /**
  * Information about a Kubernetes namespace.
@@ -38,33 +29,14 @@ export interface NamespacesResult {
 }
 
 /**
- * Interface for kubectl namespace response items.
- */
-interface NamespaceItem {
-    metadata?: {
-        name?: string;
-    };
-    status?: {
-        phase?: string;
-    };
-}
-
-/**
- * Interface for kubectl namespace list response.
- */
-interface NamespaceListResponse {
-    items?: NamespaceItem[];
-}
-
-/**
  * Utility class for kubectl namespace operations.
  */
 export class NamespaceCommands {
     /**
-     * Retrieves the list of namespaces from a cluster using kubectl.
-     * Uses kubectl get namespaces command with JSON output for parsing.
+     * Retrieves the list of namespaces from a cluster using the Kubernetes API client.
+     * Uses direct API calls with caching to improve performance.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @returns NamespacesResult with namespaces array and optional error information
      */
@@ -73,45 +45,36 @@ export class NamespaceCommands {
         contextName: string
     ): Promise<NamespacesResult> {
         try {
-            // Execute kubectl get namespaces with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: NamespaceListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract namespace information from the items array
-            const namespaces: NamespaceInfo[] = response.items?.map((item: NamespaceItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                
-                // Determine namespace status from phase
-                const status = item.status?.phase || 'Unknown';
-                
-                return {
-                    name,
-                    status
-                };
-            }) || [];
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = `${contextName}:namespaces`;
+            const cached = cache.get<NamespaceInfo[]>(cacheKey);
+            if (cached) {
+                return { namespaces: cached };
+            }
+            
+            // Fetch from API
+            const v1Namespaces = await fetchNamespaces({ timeout: 10 });
+            
+            // Transform to NamespaceInfo format
+            const namespaces: NamespaceInfo[] = v1Namespaces.map(ns => ({
+                name: ns.metadata?.name || 'Unknown',
+                status: ns.status?.phase || 'Unknown'
+            }));
             
             // Sort namespaces alphabetically by name
             namespaces.sort((a, b) => a.name.localeCompare(b.name));
             
+            // Cache result
+            cache.set(cacheKey, namespaces, CACHE_TTL.NAMESPACES);
+            
             return { namespaces };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging

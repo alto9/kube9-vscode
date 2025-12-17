@@ -2,6 +2,9 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { WorkloadEntry, WorkloadHealth } from '../types/workloadData';
+import { fetchPods, fetchDeployments } from '../kubernetes/resourceFetchers';
+import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -198,34 +201,6 @@ export interface ScaleResult {
     error?: KubectlError;
 }
 
-/**
- * Interface for kubectl deployment response items.
- */
-interface DeploymentItem {
-    metadata?: {
-        name?: string;
-        namespace?: string;
-    };
-    spec?: {
-        replicas?: number;
-        selector?: {
-            matchLabels?: {
-                [key: string]: string;
-            };
-        };
-    };
-    status?: {
-        readyReplicas?: number;
-        replicas?: number;
-    };
-}
-
-/**
- * Interface for kubectl deployment list response.
- */
-interface DeploymentListResponse {
-    items?: DeploymentItem[];
-}
 
 /**
  * Interface for kubectl pod response items.
@@ -468,64 +443,61 @@ interface WorkloadListResponse<T> {
  */
 export class WorkloadCommands {
     /**
-     * Retrieves the list of deployments from all namespaces using kubectl.
-     * Uses kubectl get deployments command with JSON output for parsing.
+     * Retrieves the list of deployments using the Kubernetes API client.
+     * Uses direct API calls with caching to improve performance.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
+     * @param namespace Optional namespace to filter deployments (if not provided, fetches from all namespaces)
      * @returns DeploymentsResult with deployments array and optional error information
      */
     public static async getDeployments(
         kubeconfigPath: string,
-        contextName: string
+        contextName: string,
+        namespace?: string
     ): Promise<DeploymentsResult> {
         try {
-            // Build kubectl command arguments
-            // Always use the namespace (either from context or 'default')
-            // kubectl will automatically use the context namespace if set
-            const args = [
-                'get',
-                'deployments',
-                '--output=json',
-                `--kubeconfig=${kubeconfigPath}`,
-                `--context=${contextName}`
-            ];
-
-            // Execute kubectl get deployments with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                args,
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: DeploymentListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract deployment information from the items array
-            const deployments: DeploymentInfo[] = response.items?.map((item: DeploymentItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const namespace = item.metadata?.namespace || 'default';
-                const replicas = item.spec?.replicas || 0;
-                const readyReplicas = item.status?.readyReplicas || 0;
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = namespace 
+                ? `${contextName}:deployments:${namespace}`
+                : `${contextName}:deployments`;
+            const cached = cache.get<DeploymentInfo[]>(cacheKey);
+            if (cached) {
+                return { deployments: cached };
+            }
+            
+            // Fetch from API
+            const v1Deployments = await fetchDeployments({ 
+                namespace, 
+                timeout: 10 
+            });
+            
+            // Transform k8s.V1Deployment[] to DeploymentInfo[] format
+            const deployments: DeploymentInfo[] = v1Deployments.map(deploy => {
+                const name = deploy.metadata?.name || 'Unknown';
+                const deployNamespace = deploy.metadata?.namespace || 'default';
+                const replicas = deploy.spec?.replicas || 0;
+                const readyReplicas = deploy.status?.readyReplicas || 0;
                 
                 // Build label selector from matchLabels
-                const matchLabels = item.spec?.selector?.matchLabels || {};
+                const matchLabels = deploy.spec?.selector?.matchLabels || {};
                 const selector = Object.entries(matchLabels)
                     .map(([key, value]) => `${key}=${value}`)
                     .join(',');
                 
                 return {
                     name,
-                    namespace,
+                    namespace: deployNamespace,
                     readyReplicas,
                     replicas,
                     selector
                 };
-            }) || [];
+            });
             
             // Sort deployments by namespace, then by name
             deployments.sort((a, b) => {
@@ -533,56 +505,16 @@ export class WorkloadCommands {
                 return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
             });
             
+            // Cache result
+            cache.set(cacheKey, deployments, CACHE_TTL.DEPLOYMENTS);
+            
             return { deployments };
         } catch (error: unknown) {
-            // Check if stdout contains valid JSON even though an error was thrown
-            // This can happen if kubectl writes warnings to stderr but valid data to stdout
-            const err = error as { stdout?: Buffer | string; stderr?: Buffer | string };
-            const stdout = err.stdout 
-                ? (Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout).trim()
-                : '';
-            
-            if (stdout) {
-                try {
-                    // Try to parse stdout as valid JSON
-                    const response: DeploymentListResponse = JSON.parse(stdout);
-                    
-                    // Extract deployment information from the items array
-                    const deployments: DeploymentInfo[] = response.items?.map((item: DeploymentItem) => {
-                        const name = item.metadata?.name || 'Unknown';
-                        const namespace = item.metadata?.namespace || 'default';
-                        const replicas = item.spec?.replicas || 0;
-                        const readyReplicas = item.status?.readyReplicas || 0;
-                        
-                        // Build label selector from matchLabels
-                        const matchLabels = item.spec?.selector?.matchLabels || {};
-                        const selector = Object.entries(matchLabels)
-                            .map(([key, value]) => `${key}=${value}`)
-                            .join(',');
-                        
-                        return {
-                            name,
-                            namespace,
-                            readyReplicas,
-                            replicas,
-                            selector
-                        };
-                    }) || [];
-                    
-                    // Sort deployments by namespace, then by name
-                    deployments.sort((a, b) => {
-                        const nsCompare = a.namespace.localeCompare(b.namespace);
-                        return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
-                    });
-                    
-                    return { deployments };
-                } catch (parseError) {
-                    // stdout is not valid JSON, treat as real error
-                }
-            }
-            
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Deployment query failed for context ${contextName}${namespace ? ` in namespace ${namespace}` : ''}: ${kubectlError.getDetails()}`);
             
             return {
                 deployments: [],
@@ -775,49 +707,47 @@ export class WorkloadCommands {
                 return { pods: [] };
             }
 
-            // Execute kubectl get pods with label selector
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'pods',
-                    '-n',
-                    namespace,
-                    '--selector',
-                    labelSelector,
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: PodListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract pod information from the items array
-            const pods: PodInfo[] = response.items?.map((item: PodItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const podNamespace = item.metadata?.namespace || namespace;
-                const phase = item.status?.phase || 'Unknown';
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = `${contextName}:pods:${namespace}:${labelSelector}`;
+            const cached = cache.get<PodInfo[]>(cacheKey);
+            if (cached) {
+                return { pods: cached };
+            }
+
+            // Fetch from API
+            const v1Pods = await fetchPods({ 
+                namespace, 
+                labelSelector, 
+                timeout: 10 
+            });
+            
+            // Transform k8s.V1Pod[] to PodInfo[] format
+            const pods: PodInfo[] = v1Pods.map(pod => {
+                const name = pod.metadata?.name || 'Unknown';
+                const podNamespace = pod.metadata?.namespace || namespace;
+                const phase = pod.status?.phase || 'Unknown';
                 
                 return {
                     name,
                     namespace: podNamespace,
                     phase
                 };
-            }) || [];
+            });
             
             // Sort pods alphabetically by name
             pods.sort((a, b) => a.name.localeCompare(b.name));
             
+            // Cache result
+            cache.set(cacheKey, pods, CACHE_TTL.PODS);
+            
             return { pods };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
