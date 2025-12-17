@@ -1,3 +1,39 @@
+# [1.6.0](https://github.com/alto9/kube9-vscode/compare/v1.5.0...v1.6.0) (2025-12-17)
+
+
+### Bug Fixes
+
+* cluster organizer rename and enhanced UI ([6c970bd](https://github.com/alto9/kube9-vscode/commit/6c970bd69492dc52e4825f4b8d118de35b6cf540))
+
+
+### Features
+
+* add event system to ClusterCustomizationService ([7886536](https://github.com/alto9/kube9-vscode/commit/788653614c3425ee772a6ad01c7c0681ed3d94a4))
+* add folder context menu with rename and delete operations ([4b857ac](https://github.com/alto9/kube9-vscode/commit/4b857ac9ba81b3dd957818f8033e1e65c94ce7c9))
+* add folder list UI in cluster manager webview ([90d1c72](https://github.com/alto9/kube9-vscode/commit/90d1c72e3fc3a27ba56488346b32ed8e603ac4b2))
+* add import/export configuration for cluster customizations ([4a821df](https://github.com/alto9/kube9-vscode/commit/4a821df391f6ad15fa3bf677bec40d093d94bcc3))
+* add inline alias editing UI in Cluster Manager webview ([3e6def3](https://github.com/alto9/kube9-vscode/commit/3e6def32eb2a71096df482a3e7e4e28efabdde3e))
+* add keyboard accessibility to cluster manager webview ([eec4fbd](https://github.com/alto9/kube9-vscode/commit/eec4fbda851ccbbff32beabbc0c896898d4b3c34))
+* add new folder button and dialog to cluster manager ([e6b0125](https://github.com/alto9/kube9-vscode/commit/e6b01257723c1e34c2bc0ead05ff75685a8d3324))
+* add React webview app skeleton for Cluster Manager ([8f755e3](https://github.com/alto9/kube9-vscode/commit/8f755e38e4ccadc51ec415e3ed66f5231875fed3))
+* add search filter to cluster manager webview ([b632d57](https://github.com/alto9/kube9-vscode/commit/b632d57e33f55fad3ac2f369e127430ba09410ad))
+* add setVisibility method to ClusterCustomizationService ([b8dfe0e](https://github.com/alto9/kube9-vscode/commit/b8dfe0e94324f6a1f67d4f9409e7d1b5a4bffea1))
+* add status footer with cluster counts and hidden filter ([110057b](https://github.com/alto9/kube9-vscode/commit/110057bf30ce9bc1397c82a68608dada1d751afe))
+* add theme synchronization to cluster manager webview ([c8afe10](https://github.com/alto9/kube9-vscode/commit/c8afe1049ade8488e2ef1f92e4cb059b61679b7c))
+* add visibility toggle UI in cluster manager webview ([21ba917](https://github.com/alto9/kube9-vscode/commit/21ba9177ed264a5c66dd08c6f011871c4f73dda9))
+* create ClusterCustomizationService skeleton ([602f796](https://github.com/alto9/kube9-vscode/commit/602f7966bace25fd41282d820ac3de6f34a5f4dc))
+* create ClusterManagerWebview class with singleton pattern ([89e4486](https://github.com/alto9/kube9-vscode/commit/89e44864e054cc3bd97a8ac6191f1c4f1827b855))
+* display cluster aliases in tree view ([794ade5](https://github.com/alto9/kube9-vscode/commit/794ade58b27bf35c35f75245175f60e23a8f7531))
+* display cluster list in Cluster Manager webview ([82d9788](https://github.com/alto9/kube9-vscode/commit/82d9788b34a747e88947e01c5a5fd82bda0d098f))
+* display folders in tree view ([dd73f1f](https://github.com/alto9/kube9-vscode/commit/dd73f1f26ea1d0fc94d5863914cfecb1a23b9c0d))
+* filter hidden clusters from tree view ([d122dc5](https://github.com/alto9/kube9-vscode/commit/d122dc57444b009c45eb0c7329a2e3e6c35f2dea))
+* implement alias CRUD operations in ClusterCustomizationService ([30c29a5](https://github.com/alto9/kube9-vscode/commit/30c29a5f100ea3ddc81cc2be8507ca342ff40098))
+* implement drag-and-drop cluster to folder ([84189a4](https://github.com/alto9/kube9-vscode/commit/84189a42fa542f845c9a272820efe777a07c2fd3))
+* implement folder CRUD operations in ClusterCustomizationService ([c6f3814](https://github.com/alto9/kube9-vscode/commit/c6f38148f8283d00deda17389711749e5927f60c))
+* implement get clusters message protocol for cluster manager webview ([6ce95da](https://github.com/alto9/kube9-vscode/commit/6ce95da0635bb0b16a1b4bbce42932dfa836c2f9))
+* implement moveCluster operation for cluster organization ([e357d44](https://github.com/alto9/kube9-vscode/commit/e357d445641189e9dd257cf6e7e9c0a2b05647e4))
+* register Cluster Manager command ([7d803ed](https://github.com/alto9/kube9-vscode/commit/7d803ed364e59a5eb6cf292c219c392db97d92e2))
+
 # [1.5.0](https://github.com/alto9/kube9-vscode/compare/v1.4.1...v1.5.0) (2025-12-16)
 
 
