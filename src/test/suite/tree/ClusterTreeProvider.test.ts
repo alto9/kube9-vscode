@@ -7,6 +7,7 @@ import { ParsedKubeconfig } from '../../../kubernetes/KubeconfigParser';
 import { KubectlError, KubectlErrorType } from '../../../kubernetes/KubectlError';
 import * as kubectlContextModule from '../../../utils/kubectlContext';
 import * as vscode from '../../mocks/vscode';
+import { ClusterCustomizationService } from '../../../services/ClusterCustomizationService';
 
 suite('ClusterTreeProvider Test Suite', () => {
     let provider: ClusterTreeProvider;
@@ -541,6 +542,215 @@ suite('ClusterTreeProvider Test Suite', () => {
             
             // Items should have been updated (though we can't directly check since refresh was called)
             assert.ok(items.length >= 2);
+        });
+    });
+
+    suite('Visibility Filtering Tests', () => {
+        let mockCustomizationService: ClusterCustomizationService;
+        let mockContext: vscode.ExtensionContext;
+        let mockMemento: vscode.Memento;
+        let storage: Map<string, unknown>;
+
+        setup(() => {
+            // Create a mock memento (globalState)
+            storage = new Map<string, unknown>();
+            mockMemento = {
+                keys: () => Array.from(storage.keys()),
+                get: <T>(key: string, defaultValue?: T): T => {
+                    return storage.has(key) ? (storage.get(key) as T) : (defaultValue as T);
+                },
+                update: async (key: string, value: unknown): Promise<void> => {
+                    if (value === undefined) {
+                        storage.delete(key);
+                    } else {
+                        storage.set(key, value);
+                    }
+                }
+            } as vscode.Memento;
+
+            // Create a mock extension context with setKeysForSync
+            const globalStateWithSync = Object.assign(mockMemento, {
+                setKeysForSync: (): void => {
+                    // No-op for testing
+                }
+            });
+
+            mockContext = {
+                globalState: globalStateWithSync,
+                subscriptions: [],
+                extensionPath: '',
+                extensionUri: vscode.Uri.file(''),
+                environmentVariableCollection: {},
+                storagePath: undefined,
+                globalStoragePath: '',
+                logPath: '',
+                extensionMode: vscode.ExtensionMode.Test,
+                storageUri: undefined,
+                globalStorageUri: vscode.Uri.file(''),
+                logUri: vscode.Uri.file(''),
+                workspaceState: {} as vscode.Memento,
+                secrets: {
+                    get: async () => undefined,
+                    store: async () => {},
+                    delete: async () => {},
+                    keys: async () => [],
+                    onDidChange: {}
+                } as vscode.SecretStorage,
+                extension: {},
+                languageModelAccessInformation: {},
+                asAbsolutePath: (relativePath: string) => relativePath
+            };
+
+            // Create service instance
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            mockCustomizationService = new ClusterCustomizationService(mockContext as any);
+        });
+
+        test('Should filter out hidden clusters from tree view', async () => {
+            // Set up kubeconfig with 3 clusters
+            const kubeconfigWithThreeClusters: ParsedKubeconfig = {
+                filePath: '/test/kubeconfig.yaml',
+                clusters: [
+                    { name: 'test-cluster-1', server: 'https://api.test1.com:6443' },
+                    { name: 'test-cluster-2', server: 'https://api.test2.com:6443' },
+                    { name: 'test-cluster-3', server: 'https://api.test3.com:6443' }
+                ],
+                contexts: [
+                    { name: 'context-1', cluster: 'test-cluster-1', user: 'user-1' },
+                    { name: 'context-2', cluster: 'test-cluster-2', user: 'user-2' },
+                    { name: 'context-3', cluster: 'test-cluster-3', user: 'user-3' }
+                ],
+                users: [
+                    { name: 'user-1' },
+                    { name: 'user-2' },
+                    { name: 'user-3' }
+                ],
+                currentContext: 'context-1'
+            };
+
+            // Mark context-2 as hidden
+            await mockCustomizationService.setVisibility('context-2', true);
+
+            // Create provider with customization service
+            const providerWithCustomization = new ClusterTreeProvider(mockCustomizationService);
+
+            // Mock connectivity check
+            ClusterConnectivity.checkMultipleConnectivity = async () => [
+                { status: ClusterStatus.Connected },
+                { status: ClusterStatus.Connected },
+                { status: ClusterStatus.Connected }
+            ];
+
+            providerWithCustomization.setKubeconfig(kubeconfigWithThreeClusters);
+            const items = await providerWithCustomization.getChildren();
+
+            // Filter to only clusters (folders may also be present)
+            const clusterItems = items.filter(item => item.type === 'cluster');
+            
+            // Should only have 2 clusters (context-1 and context-3), context-2 should be filtered out
+            assert.strictEqual(clusterItems.length, 2);
+            assert.strictEqual(clusterItems[0].label, 'context-1');
+            assert.strictEqual(clusterItems[1].label, 'context-3');
+            
+            // Verify context-2 is not in the list
+            const contextNames = clusterItems.map(item => item.resourceData?.context?.name).filter(Boolean);
+            assert.ok(!contextNames.includes('context-2'), 'Hidden cluster should not appear in tree');
+
+            providerWithCustomization.dispose();
+        });
+
+        test('Should show all clusters when none are hidden', async () => {
+            // Clear any previous visibility settings
+            await mockCustomizationService.setVisibility('context-1', false);
+            await mockCustomizationService.setVisibility('context-2', false);
+
+            // Create provider with customization service
+            const providerWithCustomization = new ClusterTreeProvider(mockCustomizationService);
+
+            // Mock connectivity check
+            ClusterConnectivity.checkMultipleConnectivity = async () => [
+                { status: ClusterStatus.Connected },
+                { status: ClusterStatus.Connected }
+            ];
+
+            providerWithCustomization.setKubeconfig(mockKubeconfig);
+            const items = await providerWithCustomization.getChildren();
+
+            // Filter to only clusters (folders may also be present)
+            const clusterItems = items.filter(item => item.type === 'cluster');
+            
+            // Should have both clusters
+            assert.strictEqual(clusterItems.length, 2);
+            assert.strictEqual(clusterItems[0].label, 'context-1');
+            assert.strictEqual(clusterItems[1].label, 'context-2');
+
+            providerWithCustomization.dispose();
+        });
+
+        test('Should show clusters when customization service is not provided', async () => {
+            // Create provider without customization service
+            const providerWithoutCustomization = new ClusterTreeProvider();
+
+            // Mock connectivity check
+            ClusterConnectivity.checkMultipleConnectivity = async () => [
+                { status: ClusterStatus.Connected },
+                { status: ClusterStatus.Connected }
+            ];
+
+            providerWithoutCustomization.setKubeconfig(mockKubeconfig);
+            const items = await providerWithoutCustomization.getChildren();
+
+            // Filter to only clusters (folders may also be present)
+            const clusterItems = items.filter(item => item.type === 'cluster');
+
+            // Should have both clusters (no filtering when service is not available)
+            assert.strictEqual(clusterItems.length, 2);
+            assert.strictEqual(clusterItems[0].label, 'context-1');
+            assert.strictEqual(clusterItems[1].label, 'context-2');
+
+            providerWithoutCustomization.dispose();
+        });
+
+        test('Should update tree when visibility changes', async () => {
+            // Clear any previous visibility settings
+            await mockCustomizationService.setVisibility('context-1', false);
+            await mockCustomizationService.setVisibility('context-2', false);
+
+            // Create provider with customization service
+            const providerWithCustomization = new ClusterTreeProvider(mockCustomizationService);
+
+            // Mock connectivity check
+            ClusterConnectivity.checkMultipleConnectivity = async () => [
+                { status: ClusterStatus.Connected },
+                { status: ClusterStatus.Connected }
+            ];
+
+            providerWithCustomization.setKubeconfig(mockKubeconfig);
+            let items = await providerWithCustomization.getChildren();
+
+            // Filter to only clusters (folders may also be present)
+            let clusterItems = items.filter(item => item.type === 'cluster');
+            
+            // Initially should have both clusters
+            assert.strictEqual(clusterItems.length, 2);
+
+            // Hide context-2
+            await mockCustomizationService.setVisibility('context-2', true);
+
+            // Wait a bit for event to propagate
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // Get items again (tree should have refreshed via event subscription)
+            items = await providerWithCustomization.getChildren();
+
+            // Filter to only clusters (folders may also be present)
+            clusterItems = items.filter(item => item.type === 'cluster');
+
+            // Should now only have context-1
+            assert.strictEqual(clusterItems.length, 1);
+            assert.strictEqual(clusterItems[0].label, 'context-1');
+
+            providerWithCustomization.dispose();
         });
     });
 });

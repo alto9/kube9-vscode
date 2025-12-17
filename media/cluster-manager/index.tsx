@@ -1,0 +1,310 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { createRoot } from 'react-dom/client';
+import './styles.css';
+import type {
+    ClusterInfo,
+    ClusterCustomizationConfig,
+    ExtensionToWebviewMessage,
+    WebviewToExtensionMessage
+} from './types';
+import { ClusterList } from './components/ClusterList';
+import { Toolbar } from './components/Toolbar';
+import { NewFolderDialog } from './components/NewFolderDialog';
+import { Footer } from './components/Footer';
+import { useDebouncedValue } from './hooks/useDebouncedValue';
+
+/**
+ * VS Code API interface
+ */
+interface VSCodeAPI {
+    postMessage(message: WebviewToExtensionMessage): void;
+    getState(): unknown;
+    setState(state: unknown): void;
+}
+
+/**
+ * Acquire VS Code API (available in webview context)
+ */
+declare function acquireVsCodeApi(): VSCodeAPI;
+
+/**
+ * VS Code API singleton - only acquire once
+ */
+let vscodeApi: VSCodeAPI | null = null;
+function getVSCodeAPI(): VSCodeAPI {
+    if (!vscodeApi) {
+        vscodeApi = acquireVsCodeApi();
+    }
+    return vscodeApi;
+}
+
+/**
+ * Main Cluster Manager App Component
+ */
+function ClusterManagerApp(): JSX.Element {
+    const [loading, setLoading] = useState<boolean>(true);
+    const [clusters, setClusters] = useState<ClusterInfo[]>([]);
+    const [customizations, setCustomizations] = useState<ClusterCustomizationConfig | null>(null);
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [searchTerm, setSearchTerm] = useState<string>('');
+    const [showHiddenOnly, setShowHiddenOnly] = useState<boolean>(false);
+    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+    const [dialogError, setDialogError] = useState<string>('');
+    const [dialogParentId, setDialogParentId] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Get VS Code API (singleton)
+        const vscode = getVSCodeAPI();
+
+        // Set up message listener
+        const handleMessage = (event: MessageEvent<ExtensionToWebviewMessage>): void => {
+            const message = event.data;
+            if (message.type === 'initialize') {
+                setClusters(message.data.clusters);
+                setCustomizations(message.data.customizations);
+                setTheme(message.data.theme);
+                setLoading(false);
+            } else if (message.type === 'customizationsUpdated') {
+                setCustomizations(message.data);
+                // Close dialog and clear error on successful update
+                setIsDialogOpen(false);
+                setDialogError('');
+                // Reset hidden filter when customizations change
+                setShowHiddenOnly(false);
+            } else if (message.type === 'themeChanged') {
+                setTheme(message.data.theme);
+            } else if (message.type === 'error') {
+                // Show error in dialog
+                setDialogError(message.message);
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+
+        // Request clusters on mount
+        vscode.postMessage({ type: 'getClusters' });
+
+        // Cleanup
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, []);
+
+    // Handle setting alias
+    const handleSetAlias = (contextName: string, alias: string | null): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'setAlias',
+            data: {
+                contextName,
+                alias
+            }
+        });
+    };
+
+    // Handle toggling visibility
+    const handleToggleVisibility = (contextName: string, hidden: boolean): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'toggleVisibility',
+            data: {
+                contextName,
+                hidden
+            }
+        });
+    };
+
+    // Debounce search term for performance
+    const debouncedSearchTerm = useDebouncedValue(searchTerm, 300);
+
+    // Filter clusters based on search term
+    const filteredClusters = useMemo(() => {
+        if (!debouncedSearchTerm.trim()) {
+            return clusters;
+        }
+
+        const searchLower = debouncedSearchTerm.toLowerCase();
+        return clusters.filter(cluster => {
+            const customization = customizations?.clusters[cluster.contextName];
+            const displayName = customization?.alias || cluster.contextName;
+            return displayName.toLowerCase().includes(searchLower) ||
+                   cluster.contextName.toLowerCase().includes(searchLower);
+        });
+    }, [clusters, customizations, debouncedSearchTerm]);
+
+    // Handle search change
+    const handleSearchChange = (value: string): void => {
+        setSearchTerm(value);
+    };
+
+    // Handle search clear
+    const handleSearchClear = (): void => {
+        setSearchTerm('');
+    };
+
+    // Handle new folder button click
+    const handleNewFolderClick = (): void => {
+        setDialogError('');
+        setDialogParentId(null);
+        setIsDialogOpen(true);
+    };
+
+    // Handle creating folder
+    const handleCreateFolder = (name: string, parentId: string | null): void => {
+        const vscode = getVSCodeAPI();
+        setDialogError('');
+        vscode.postMessage({
+            type: 'createFolder',
+            data: {
+                name,
+                parentId
+            }
+        });
+    };
+
+    // Handle moving cluster to folder
+    const handleMoveCluster = (contextName: string, folderId: string | null, order: number): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'moveCluster',
+            data: {
+                contextName,
+                folderId,
+                order
+            }
+        });
+    };
+
+    // Handle renaming folder
+    const handleRenameFolder = (folderId: string, newName: string): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'renameFolder',
+            data: {
+                folderId,
+                newName
+            }
+        });
+    };
+
+    // Handle deleting folder
+    const handleDeleteFolder = (folderId: string, moveToRoot: boolean): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'deleteFolder',
+            data: {
+                folderId,
+                moveToRoot
+            }
+        });
+    };
+
+    // Handle creating subfolder
+    const handleCreateSubfolder = (parentId: string): void => {
+        setDialogError('');
+        setDialogParentId(parentId);
+        setIsDialogOpen(true);
+    };
+
+    // Handle dialog cancel
+    const handleDialogCancel = (): void => {
+        setIsDialogOpen(false);
+        setDialogError('');
+        setDialogParentId(null);
+    };
+
+    // Handle export click
+    const handleExportClick = (): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'exportConfiguration'
+        });
+    };
+
+    // Handle import click
+    const handleImportClick = (): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'importConfiguration'
+        });
+    };
+
+    // Handle filtering to hidden clusters
+    const handleFilterHidden = (): void => {
+        setShowHiddenOnly(true);
+    };
+
+    // Handle showing all clusters
+    const handleShowAll = (): void => {
+        setShowHiddenOnly(false);
+    };
+
+    return (
+        <div className={`cluster-manager-app theme-${theme}`}>
+            <header className="cluster-manager-header">
+                <h1>Cluster Organizer</h1>
+            </header>
+            <Toolbar
+                searchValue={searchTerm}
+                onSearchChange={handleSearchChange}
+                onSearchClear={handleSearchClear}
+                onNewFolderClick={handleNewFolderClick}
+                onExportClick={handleExportClick}
+                onImportClick={handleImportClick}
+            />
+            <main className="cluster-manager-content">
+                {loading ? (
+                    <div className="cluster-manager-loading">Loading...</div>
+                ) : (
+                    <ClusterList
+                        clusters={filteredClusters}
+                        customizations={customizations ?? {
+                            version: '1.0',
+                            folders: [],
+                            clusters: {}
+                        }}
+                        onSetAlias={handleSetAlias}
+                        onToggleVisibility={handleToggleVisibility}
+                        searchTerm={debouncedSearchTerm}
+                        showHiddenOnly={showHiddenOnly}
+                        onMoveCluster={handleMoveCluster}
+                        onRenameFolder={handleRenameFolder}
+                        onDeleteFolder={handleDeleteFolder}
+                        onCreateSubfolder={handleCreateSubfolder}
+                    />
+                )}
+            </main>
+            {!loading && (
+                <Footer
+                    clusters={clusters}
+                    customizations={customizations ?? {
+                        version: '1.0',
+                        folders: [],
+                        clusters: {}
+                    }}
+                    onFilterHidden={handleFilterHidden}
+                    onShowAll={handleShowAll}
+                    showHiddenOnly={showHiddenOnly}
+                />
+            )}
+            <NewFolderDialog
+                isOpen={isDialogOpen}
+                folders={customizations?.folders ?? []}
+                onCreate={handleCreateFolder}
+                onCancel={handleDialogCancel}
+                errorMessage={dialogError}
+                initialParentId={dialogParentId}
+            />
+        </div>
+    );
+}
+
+// Render the app
+const container = document.getElementById('root');
+if (container) {
+    const root = createRoot(container);
+    root.render(<ClusterManagerApp />);
+} else {
+    console.error('Root element not found');
+}
+

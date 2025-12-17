@@ -57,6 +57,13 @@ export class ClusterTreeItem extends vscode.TreeItem {
     public operatorStatusDetails?: OperatorStatus;
 
     /**
+     * Folder ID for folder-type tree items.
+     * Only relevant for folder-type tree items.
+     * Used to identify the folder and maintain stable IDs.
+     */
+    public folderId?: string;
+
+    /**
      * Creates a new ClusterTreeItem.
      * 
      * @param label The display label for the tree item
@@ -84,6 +91,9 @@ export class ClusterTreeItem extends vscode.TreeItem {
         if (!categoryTypes.includes(type)) {
             this.id = this.generateStableId(label, type, resourceData);
         }
+        
+        // For folder items, update ID after folderId is set (if needed)
+        // This will be handled when folderId is assigned
     }
     
     /**
@@ -98,6 +108,13 @@ export class ClusterTreeItem extends vscode.TreeItem {
      * @returns A unique, stable ID string
      */
     private generateStableId(label: string, type: TreeItemType, resourceData?: TreeItemData): string {
+        // For folder items, use folder ID if available (set after construction), otherwise use label
+        if (type === 'folder') {
+            // If folderId is set, use it for stable ID; otherwise use label
+            // This allows updating the ID after folderId is assigned
+            return this.folderId ? `folder/${this.folderId}` : `folder/${label}`;
+        }
+        
         const contextName = resourceData?.context?.name || 'unknown';
         
         // For cluster-level items, just use context/type

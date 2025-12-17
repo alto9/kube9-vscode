@@ -1,0 +1,810 @@
+/* VS Code Theme Integration */
+:root {
+    --vscode-font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+/* Global focus indicator for accessibility */
+*:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+body {
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-editor-background);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#root {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.cluster-manager-app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+/* Header */
+.cluster-manager-header {
+    padding: 12px 16px;
+    background-color: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.cluster-manager-header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+/* Toolbar */
+.cluster-manager-toolbar {
+    padding: 8px 16px;
+    background-color: var(--vscode-editor-background);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-height: 40px;
+}
+
+/* Search Filter */
+.search-filter {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    max-width: 400px;
+    position: relative;
+}
+
+.search-filter-input {
+    flex: 1;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 4px 8px;
+    outline: none;
+    min-width: 200px;
+}
+
+.search-filter-input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.search-filter-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+.search-filter-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--vscode-icon-foreground);
+    opacity: 0.7;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+    border-radius: 3px;
+}
+
+.search-filter-clear:hover {
+    opacity: 1;
+    background-color: var(--vscode-toolbar-hoverBackground);
+}
+
+.search-filter-clear:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.search-filter-clear .codicon {
+    font-size: 14px;
+}
+
+/* Main Content */
+.cluster-manager-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: var(--vscode-editor-background);
+}
+
+/* Footer */
+.cluster-manager-footer {
+    padding: 8px 16px;
+    background-color: var(--vscode-editor-background);
+    border-top: 1px solid var(--vscode-panel-border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    min-height: 32px;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+}
+
+.footer-hidden-link {
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+    text-decoration: underline;
+    user-select: none;
+}
+
+.footer-hidden-link:hover {
+    color: var(--vscode-textLink-activeForeground);
+}
+
+.footer-hidden-link:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+.footer-show-all-button {
+    padding: 4px 12px;
+    font-size: 12px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 2px;
+    cursor: pointer;
+    outline: none;
+}
+
+.footer-show-all-button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.footer-show-all-button:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.footer-show-all-button:active {
+    background-color: var(--vscode-button-activeBackground);
+}
+
+/* Loading State */
+.cluster-manager-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--vscode-descriptionForeground);
+    font-size: 14px;
+}
+
+.cluster-manager-loading::before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--vscode-panel-border);
+    border-top-color: var(--vscode-button-background);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Cluster List */
+.cluster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Cluster Item */
+.cluster-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+    cursor: grab;
+}
+
+.cluster-item:active {
+    cursor: grabbing;
+}
+
+.cluster-item:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.cluster-item-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+}
+
+.cluster-item-name mark {
+    background-color: var(--vscode-textBlockQuote-background);
+    color: var(--vscode-foreground);
+    padding: 0;
+    font-weight: 600;
+}
+
+.cluster-item-edit-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--vscode-icon-foreground);
+    opacity: 0.7;
+    transition: opacity 0.15s ease, color 0.15s ease;
+    border-radius: 3px;
+}
+
+.cluster-item-edit-button:hover {
+    opacity: 1;
+    background-color: var(--vscode-toolbar-hoverBackground);
+    color: var(--vscode-icon-foreground);
+}
+
+.cluster-item-edit-button:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.cluster-item-edit-button .codicon {
+    font-size: 14px;
+}
+
+.cluster-item-input {
+    flex: 1;
+    font-size: 14px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 4px 8px;
+    outline: none;
+}
+
+.cluster-item-input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.cluster-item-active-badge {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+}
+
+/* Hidden Cluster Styling */
+.cluster-item.hidden {
+    opacity: 0.5;
+}
+
+.cluster-item.hidden .cluster-item-name {
+    color: var(--vscode-descriptionForeground);
+}
+
+/* Dragging Cluster Styling */
+.cluster-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+.cluster-item-hidden-badge {
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: var(--vscode-descriptionForeground);
+    color: var(--vscode-editor-background);
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+}
+
+.cluster-item-visibility-toggle {
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.cluster-item-visibility-toggle:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.cluster-item-visibility-toggle:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Folder Item */
+.folder-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.folder-item-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background-color: var(--vscode-sideBar-background, var(--vscode-list-inactiveSelectionBackground));
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    user-select: none;
+    font-weight: 600;
+}
+
+.folder-item-header:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.folder-item-header:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Drag Over Styling */
+.folder-item-header.drag-over {
+    border-color: var(--vscode-focusBorder);
+    border-width: 2px;
+    background-color: var(--vscode-list-activeSelectionBackground);
+}
+
+.folder-item-header.drag-over-invalid {
+    border-color: var(--vscode-errorForeground);
+    border-width: 2px;
+    cursor: not-allowed;
+}
+
+.folder-item-arrow {
+    font-size: 14px;
+    color: var(--vscode-icon-foreground);
+    opacity: 0.7;
+    transition: transform 0.2s ease, opacity 0.15s ease;
+    flex-shrink: 0;
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.folder-item-arrow.expanded {
+    transform: rotate(90deg);
+}
+
+.folder-item-icon {
+    font-size: 16px;
+    color: var(--vscode-icon-foreground);
+    opacity: 0.8;
+    flex-shrink: 0;
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.folder-item-name {
+    flex: 1;
+    font-size: 14px;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+    font-weight: 500;
+}
+
+.folder-item-name-input {
+    flex: 1;
+    font-size: 14px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 4px 8px;
+    outline: none;
+}
+
+.folder-item-name-input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.folder-context-menu {
+    background-color: var(--vscode-menu-background);
+    border: 1px solid var(--vscode-menu-border);
+    border-radius: 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    padding: 4px 0;
+    min-width: 180px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.folder-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-menu-foreground);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s ease;
+    width: 100%;
+}
+
+.folder-context-menu-item:hover {
+    background-color: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
+}
+
+.folder-context-menu-item:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.folder-context-menu-item .codicon {
+    font-size: 16px;
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.folder-item-children {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+    margin-left: 24px;
+    padding-left: 12px;
+    border-left: 1px solid var(--vscode-panel-border);
+}
+
+/* Empty State */
+.cluster-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    color: var(--vscode-descriptionForeground);
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Toolbar Button */
+.cluster-manager-toolbar-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.cluster-manager-toolbar-button:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.cluster-manager-toolbar-button:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.cluster-manager-toolbar-button .codicon {
+    font-size: 16px;
+}
+
+/* New Folder Dialog */
+.new-folder-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.new-folder-dialog {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    min-width: 400px;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.new-folder-dialog-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.new-folder-dialog-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.new-folder-dialog-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.new-folder-dialog-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.new-folder-dialog-field label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+}
+
+.new-folder-dialog-input {
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 6px 8px;
+    outline: none;
+}
+
+.new-folder-dialog-input:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.new-folder-dialog-input.error {
+    border-color: var(--vscode-errorForeground);
+}
+
+.new-folder-dialog-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+.new-folder-dialog-select {
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-input-foreground);
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: 2px;
+    padding: 6px 8px;
+    outline: none;
+    cursor: pointer;
+}
+
+.new-folder-dialog-select:focus {
+    border-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.new-folder-dialog-error {
+    font-size: 12px;
+    color: var(--vscode-errorForeground);
+    margin-top: 4px;
+}
+
+.new-folder-dialog-actions {
+    padding: 16px;
+    border-top: 1px solid var(--vscode-panel-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.new-folder-dialog-button {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.new-folder-dialog-button-primary {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border-color: var(--vscode-button-border);
+}
+
+.new-folder-dialog-button-primary:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.new-folder-dialog-button-secondary {
+    color: var(--vscode-button-secondaryForeground);
+    background-color: var(--vscode-button-secondaryBackground);
+    border-color: var(--vscode-button-border);
+}
+
+.new-folder-dialog-button-secondary:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.new-folder-dialog-button:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Delete Folder Dialog */
+.delete-folder-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.delete-folder-dialog {
+    background-color: var(--vscode-editor-background);
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    min-width: 400px;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+}
+
+.delete-folder-dialog-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.delete-folder-dialog-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.delete-folder-dialog-content {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.delete-folder-dialog-content p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--vscode-foreground);
+    line-height: 1.5;
+}
+
+.delete-folder-dialog-content p strong {
+    font-weight: 600;
+}
+
+.delete-folder-dialog-actions {
+    padding: 16px;
+    border-top: 1px solid var(--vscode-panel-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.delete-folder-dialog-button {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.delete-folder-dialog-button-primary {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border-color: var(--vscode-button-border);
+}
+
+.delete-folder-dialog-button-primary:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.delete-folder-dialog-button-secondary {
+    color: var(--vscode-button-secondaryForeground);
+    background-color: var(--vscode-button-secondaryBackground);
+    border-color: var(--vscode-button-border);
+}
+
+.delete-folder-dialog-button-secondary:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.delete-folder-dialog-button:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+

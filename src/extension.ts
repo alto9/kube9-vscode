@@ -4,7 +4,9 @@ import { WelcomeWebview } from './webview/WelcomeWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DescribeWebview } from './webview/DescribeWebview';
 import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
+import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
+import { ClusterCustomizationService } from './services/ClusterCustomizationService';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { setActiveNamespaceCommand, clearActiveNamespaceCommand } from './commands/namespaceCommands';
 import { showDeleteConfirmation, executeKubectlDelete, DeleteResult, createCategoryTreeItemForRefresh } from './commands/deleteResource';
@@ -61,6 +63,12 @@ let namespaceStatusBar: NamespaceStatusBar | undefined;
  * Manages YAML editor instances for Kubernetes resources.
  */
 let yamlEditorManager: YAMLEditorManager | undefined;
+
+/**
+ * Global cluster customization service instance.
+ * Manages cluster customizations (folders, aliases, visibility).
+ */
+let clusterCustomizationService: ClusterCustomizationService | undefined;
 
 /**
  * Get the extension context.
@@ -121,8 +129,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // This ensures commands are available when tree items are clicked
         registerCommands();
         
-        // Initialize and register tree view provider
-        clusterTreeProvider = new ClusterTreeProvider();
+        // Initialize cluster customization service
+        // This service manages aliases, folders, and visibility customizations
+        clusterCustomizationService = new ClusterCustomizationService(context);
+        context.subscriptions.push(clusterCustomizationService);
+        disposables.push(clusterCustomizationService);
+        
+        // Initialize and register tree view provider with customization service
+        clusterTreeProvider = new ClusterTreeProvider(clusterCustomizationService);
         const treeViewDisposable = vscode.window.registerTreeDataProvider(
             'kube9ClusterView',
             clusterTreeProvider
@@ -372,6 +386,36 @@ function registerCommands(): void {
     
     context.subscriptions.push(openDataCollectionReportCommand);
     disposables.push(openDataCollectionReportCommand);
+    
+    // Register open Cluster Organizer command
+    const openClusterManagerCmd = vscode.commands.registerCommand(
+        'kube9.openClusterManager',
+        async () => {
+            try {
+                console.log('Cluster Manager opening...');
+                
+                // Service should already be initialized during activation
+                // But check just in case for safety
+                if (!clusterCustomizationService) {
+                    clusterCustomizationService = new ClusterCustomizationService(context);
+                    context.subscriptions.push(clusterCustomizationService);
+                    disposables.push(clusterCustomizationService);
+                }
+                
+                ClusterManagerWebview.createOrShow(
+                    context.extensionUri,
+                    clusterCustomizationService,
+                    context
+                );
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Cluster Manager:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open Cluster Manager: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(openClusterManagerCmd);
+    disposables.push(openClusterManagerCmd);
     
     // Register describe resource command
     const describeResourceCmd = vscode.commands.registerCommand(
