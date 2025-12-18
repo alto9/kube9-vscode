@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/alto9/kube9-vscode/compare/v1.7.0...v1.8.0) (2025-12-18)
+
+
+### Features
+
+* events viewer ([0ed9ce8](https://github.com/alto9/kube9-vscode/commit/0ed9ce8133eb7070fee2b9227e8dce31740adbc8))
+
 # [1.7.0](https://github.com/alto9/kube9-vscode/compare/v1.6.0...v1.7.0) (2025-12-17)
 
 
