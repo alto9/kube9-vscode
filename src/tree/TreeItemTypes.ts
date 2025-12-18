@@ -32,6 +32,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - argocd: ArgoCD Applications category
  * - customResources: Custom Resources category
  * - reports: Reports category
+ * - events: Events category (appears when operator is installed)
  * - compliance: Compliance subcategory (under Reports)
  * 
  * Individual resource types (items within categories):
@@ -89,6 +90,7 @@ export type TreeItemType =
     | 'argocdApplication'
     | 'customResources'
     | 'reports'
+    | 'events'
     | 'compliance'
     | 'crd'
     | 'dataCollection';

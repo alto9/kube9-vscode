@@ -35,6 +35,7 @@ import {
     copyNamespaceCommand
 } from './commands/ArgoCDCommands';
 import { showCacheStatsCommand } from './commands/cacheStats';
+import { EventsCommands } from './commands/EventsCommands';
 
 /**
  * Global extension context accessible to all components.
@@ -987,6 +988,75 @@ function registerCommands(): void {
     );
     context.subscriptions.push(showCacheStatsCmd);
     disposables.push(showCacheStatsCmd);
+    
+    // Register Events commands
+    if (clusterTreeProvider) {
+        const eventsProvider = clusterTreeProvider.getEventsProvider();
+        const eventsCommands = new EventsCommands(eventsProvider, clusterTreeProvider);
+        
+        const filterNamespaceCmd = vscode.commands.registerCommand(
+            'kube9.events.filterNamespace',
+            (category) => eventsCommands.filterNamespace(category)
+        );
+        context.subscriptions.push(filterNamespaceCmd);
+        disposables.push(filterNamespaceCmd);
+        
+        const filterTypeCmd = vscode.commands.registerCommand(
+            'kube9.events.filterType',
+            (category) => eventsCommands.filterType(category)
+        );
+        context.subscriptions.push(filterTypeCmd);
+        disposables.push(filterTypeCmd);
+        
+        const filterTimeRangeCmd = vscode.commands.registerCommand(
+            'kube9.events.filterTimeRange',
+            (category) => eventsCommands.filterTimeRange(category)
+        );
+        context.subscriptions.push(filterTimeRangeCmd);
+        disposables.push(filterTimeRangeCmd);
+        
+        const filterResourceTypeCmd = vscode.commands.registerCommand(
+            'kube9.events.filterResourceType',
+            (category) => eventsCommands.filterResourceType(category)
+        );
+        context.subscriptions.push(filterResourceTypeCmd);
+        disposables.push(filterResourceTypeCmd);
+        
+        const searchCmd = vscode.commands.registerCommand(
+            'kube9.events.search',
+            (category) => eventsCommands.search(category)
+        );
+        context.subscriptions.push(searchCmd);
+        disposables.push(searchCmd);
+        
+        const clearFiltersCmd = vscode.commands.registerCommand(
+            'kube9.events.clearFilters',
+            (category) => eventsCommands.clearFilters(category)
+        );
+        context.subscriptions.push(clearFiltersCmd);
+        disposables.push(clearFiltersCmd);
+        
+        const refreshCmd = vscode.commands.registerCommand(
+            'kube9.events.refresh',
+            (category) => eventsCommands.refresh(category)
+        );
+        context.subscriptions.push(refreshCmd);
+        disposables.push(refreshCmd);
+        
+        const toggleAutoRefreshCmd = vscode.commands.registerCommand(
+            'kube9.events.toggleAutoRefresh',
+            (category) => eventsCommands.toggleAutoRefresh(category)
+        );
+        context.subscriptions.push(toggleAutoRefreshCmd);
+        disposables.push(toggleAutoRefreshCmd);
+        
+        const showDetailsCmd = vscode.commands.registerCommand(
+            'kube9.events.showDetails',
+            (event) => eventsCommands.showDetails(event)
+        );
+        context.subscriptions.push(showDetailsCmd);
+        disposables.push(showDetailsCmd);
+    }
 }
 
 /**

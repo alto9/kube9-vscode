@@ -30,6 +30,9 @@ import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
 import { ArgoCDCategory } from './categories/ArgoCDCategory';
 import { ReportsCategory } from './categories/ReportsCategory';
 import { ComplianceSubcategory } from './categories/reports/ComplianceSubcategory';
+import { EventsCategory } from './categories/EventsCategory';
+import { EventsProvider } from '../services/EventsProvider';
+import { EventTreeItem } from './items/EventTreeItem';
 import { ArgoCDService } from '../services/ArgoCDService';
 import { namespaceWatcher } from '../services/namespaceCache';
 import { OperatorStatusClient, getOperatorStatusOutputChannel } from '../services/OperatorStatusClient';
@@ -102,6 +105,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Created lazily when needed, requires kubeconfigPath to be available.
      */
     private argoCDService?: ArgoCDService;
+
+    /**
+     * Provider for retrieving Kubernetes events from the kube9-operator CLI.
+     * Used to display events in the Events category when operator is installed.
+     */
+    private eventsProvider: EventsProvider = new EventsProvider();
 
     /**
      * Flag to indicate that operator status should be force refreshed.
@@ -292,11 +301,13 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // Trigger parallel pre-fetch (fire-and-forget)
         void this.prefetchClusterResources(contextName);
 
-        // Prepend Reports category if operator is installed (status is NOT Basic)
+        // Prepend Reports and Events categories if operator is installed (status is NOT Basic)
         if (clusterElement.operatorStatus !== undefined && clusterElement.operatorStatus !== OperatorStatusMode.Basic) {
+            const eventsCategory = new EventsCategory(clusterElement) as unknown as ClusterTreeItem;
             return [
                 TreeItemFactory.createDashboardCategory(clusterElement.resourceData),
                 TreeItemFactory.createReportsCategory(clusterElement.resourceData),
+                eventsCategory,
                 ...categories
             ];
         }
@@ -344,6 +355,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'argocd' ||
                type === 'customResources' ||
                type === 'reports' ||
+               type === 'events' ||
                type === 'compliance' ||
                type === 'dataCollection';
     }
@@ -589,6 +601,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 );
                 break;
             
+            case 'events':
+                items = await this.getEventItems(categoryElement);
+                break;
+            
             case 'compliance':
                 items = await ComplianceSubcategory.getComplianceReportItems(
                     categoryElement.resourceData
@@ -703,6 +719,32 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
         // Return "All Namespaces" first, followed by individual namespaces
         return [allNamespacesItem, ...namespaceItems];
+    }
+
+    /**
+     * Get event items from the kube9-operator CLI.
+     * Called when the Events category is expanded.
+     * 
+     * @param categoryElement The events category tree item
+     * @returns Array of event tree items, or error item on failure
+     */
+    private async getEventItems(categoryElement: ClusterTreeItem): Promise<ClusterTreeItem[]> {
+        try {
+            if (!categoryElement.resourceData) {
+                throw new Error('Missing resource data');
+            }
+            
+            const clusterContext = categoryElement.resourceData.context.name;
+            const events = await this.eventsProvider.getEvents(clusterContext);
+            
+            return events.map(event => new EventTreeItem(event) as unknown as ClusterTreeItem);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorItem = new vscode.TreeItem(`Error: ${errorMessage}`) as unknown as ClusterTreeItem;
+            errorItem.iconPath = new vscode.ThemeIcon('error');
+            errorItem.tooltip = 'Failed to retrieve events. Check operator health.';
+            return [errorItem];
+        }
     }
 
     /**
@@ -1057,6 +1099,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      */
     getKubeconfigPath(): string | undefined {
         return this.kubeconfig?.filePath;
+    }
+
+    /**
+     * Get the EventsProvider instance used by this tree provider.
+     * @returns The EventsProvider instance
+     */
+    getEventsProvider(): EventsProvider {
+        return this.eventsProvider;
     }
 
     /**
