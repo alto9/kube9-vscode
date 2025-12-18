@@ -5,7 +5,7 @@ feature_id:
   - cluster-events-tree
 spec_id:
   - events-tree-spec
-status: pending
+status: completed
 ---
 
 # Register Filter Commands

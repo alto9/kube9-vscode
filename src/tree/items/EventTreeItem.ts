@@ -1,36 +1,16 @@
----
-story_id: 005-create-event-tree-item-class
-session_id: add-events-category-to-tree-view-for-cluster-troub
-feature_id:
-  - cluster-events-tree
-spec_id:
-  - events-tree-spec
-status: completed
----
-
-# Create EventTreeItem Class
-
-## Objective
-
-Create the `EventTreeItem` class that displays individual events in the tree with color coding, tooltips, and click command to show details.
-
-## Context
-
-Each event becomes a tree item with color-coded icon based on type (Normal, Warning, Error). Clicking shows full details in Output Panel.
-
-## Files to Create/Modify
-
-- `src/tree/items/EventTreeItem.ts` (new file)
-
-## Implementation
-
-Create EventTreeItem class:
-
-```typescript
 import * as vscode from 'vscode';
 import { KubernetesEvent } from '../../types/Events';
 
+/**
+ * EventTreeItem represents a single Kubernetes event in the tree view.
+ * Displays events with color-coded icons, formatted descriptions, and detailed tooltips.
+ */
 export class EventTreeItem extends vscode.TreeItem {
+    /**
+     * Creates a new EventTreeItem.
+     * 
+     * @param event The Kubernetes event to display
+     */
     constructor(public readonly event: KubernetesEvent) {
         super(event.reason, vscode.TreeItemCollapsibleState.None);
         
@@ -45,6 +25,14 @@ export class EventTreeItem extends vscode.TreeItem {
         };
     }
 
+    /**
+     * Gets the color-coded icon for the event type.
+     * - Normal: green pass icon
+     * - Warning: yellow warning icon
+     * - Error: red error icon
+     * 
+     * @returns ThemeIcon with appropriate color
+     */
     private getIconForEventType(): vscode.ThemeIcon {
         switch (this.event.type) {
             case 'Normal':
@@ -61,6 +49,12 @@ export class EventTreeItem extends vscode.TreeItem {
         }
     }
 
+    /**
+     * Builds a detailed tooltip in Markdown format.
+     * Shows reason, type, resource, namespace, message, count, and age.
+     * 
+     * @returns MarkdownString with formatted event details
+     */
     private buildTooltip(): vscode.MarkdownString {
         const md = new vscode.MarkdownString();
         md.appendMarkdown(`**${this.event.reason}**\n\n`);
@@ -73,6 +67,13 @@ export class EventTreeItem extends vscode.TreeItem {
         return md;
     }
 
+    /**
+     * Formats a timestamp as a human-readable age.
+     * Examples: "just now", "5m", "2h", "3d"
+     * 
+     * @param timestamp ISO 8601 timestamp string
+     * @returns Formatted age string
+     */
     private formatAge(timestamp: string): string {
         const eventTime = new Date(timestamp).getTime();
         const now = Date.now();
@@ -93,26 +94,4 @@ export class EventTreeItem extends vscode.TreeItem {
         }
     }
 }
-```
-
-## Acceptance Criteria
-
-- [ ] EventTreeItem class created extending `vscode.TreeItem`
-- [ ] Label shows event reason
-- [ ] Description shows namespace/kind/name
-- [ ] Icon color-coded by type (Normal=green, Warning=yellow, Error=red)
-- [ ] Tooltip shows full event details in Markdown
-- [ ] Click command configured to show details
-- [ ] Age formatted as human-readable (e.g., "5m", "2h", "3d")
-- [ ] contextValue set to `'kube9.event'`
-
-## Related Files
-
-- Spec: `ai/specs/tree/events-tree-spec.spec.md` (EventTreeItem section)
-- Types: `src/types/Events.ts`
-- Feature: `ai/features/cluster/cluster-events-tree.feature.md`
-
-## Estimated Time
-
-< 25 minutes
 

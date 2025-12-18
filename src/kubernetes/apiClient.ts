@@ -106,6 +106,16 @@ export class KubernetesApiClient {
     public get networking(): k8s.NetworkingV1Api {
         return this.networkingApi;
     }
+
+    /**
+     * Gets the underlying KubeConfig instance.
+     * Required for advanced operations like Exec API.
+     * 
+     * @returns KubeConfig instance
+     */
+    public getKubeConfig(): k8s.KubeConfig {
+        return this.kubeConfig;
+    }
 }
 
 /**

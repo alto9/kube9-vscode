@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - events-tree-spec
   - operator-status-api-spec
-status: pending
+status: completed
 ---
 
 # Add Events Category to ClusterTreeProvider

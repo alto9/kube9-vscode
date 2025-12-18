@@ -1,7 +1,7 @@
 ---
 session_id: add-events-category-to-tree-view-for-cluster-troub
 start_time: '2025-12-18T02:08:34.789Z'
-status: development
+status: completed
 problem_statement: Add Events category to tree view for cluster troubleshooting
 changed_files:
   - path: ai/features/cluster/cluster-events-tree.feature.md

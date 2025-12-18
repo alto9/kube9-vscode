@@ -169,6 +169,59 @@
         "command": "kube9.showCacheStats",
         "title": "Show Cache Statistics",
         "category": "kube9"
+      },
+      {
+        "command": "kube9.events.filterNamespace",
+        "title": "Filter by Namespace",
+        "category": "kube9",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "kube9.events.filterType",
+        "title": "Filter by Type",
+        "category": "kube9",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "kube9.events.filterTimeRange",
+        "title": "Filter by Time Range",
+        "category": "kube9",
+        "icon": "$(clock)"
+      },
+      {
+        "command": "kube9.events.filterResourceType",
+        "title": "Filter by Resource Type",
+        "category": "kube9",
+        "icon": "$(symbol-class)"
+      },
+      {
+        "command": "kube9.events.search",
+        "title": "Search Events",
+        "category": "kube9",
+        "icon": "$(search)"
+      },
+      {
+        "command": "kube9.events.clearFilters",
+        "title": "Clear Filters",
+        "category": "kube9",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "kube9.events.refresh",
+        "title": "Refresh Events",
+        "category": "kube9",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "kube9.events.toggleAutoRefresh",
+        "title": "Toggle Auto-Refresh",
+        "category": "kube9",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "kube9.events.showDetails",
+        "title": "Show Event Details",
+        "category": "kube9"
       }
     ],
     "menus": {
@@ -254,6 +307,46 @@
           "command": "kube9.argocd.copyNamespace",
           "when": "view == kube9ClusterView && viewItem == argocd-application",
           "group": "argocd@3"
+        },
+        {
+          "command": "kube9.events.filterNamespace",
+          "when": "view == kube9ClusterView && viewItem == kube9.events.category",
+          "group": "inline@1"
+        },
+        {
+          "command": "kube9.events.filterType",
+          "when": "view == kube9ClusterView && viewItem == kube9.events.category",
+          "group": "inline@2"
+        },
+        {
+          "command": "kube9.events.filterTimeRange",
+          "when": "view == kube9ClusterView && viewItem == kube9.events.category",
+          "group": "inline@3"
+        },
+        {
+          "command": "kube9.events.filterResourceType",
+          "when": "view == kube9ClusterView && viewItem == kube9.events.category",
+          "group": "inline@4"
+        },
+        {
+          "command": "kube9.events.search",
+          "when": "view == kube9ClusterView && viewItem == kube9.events.category",
+          "group": "inline@5"
+        },
+        {
+          "command": "kube9.events.clearFilters",
+          "when": "view == kube9ClusterView && viewItem == kube9.events.category",
+          "group": "inline@6"
+        },
+        {
+          "command": "kube9.events.refresh",
+          "when": "view == kube9ClusterView && viewItem == kube9.events.category",
+          "group": "inline@7"
+        },
+        {
+          "command": "kube9.events.toggleAutoRefresh",
+          "when": "view == kube9ClusterView && viewItem == kube9.events.category",
+          "group": "inline@8"
         }
       ],
       "editor/context": [
