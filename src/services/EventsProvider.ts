@@ -24,6 +24,13 @@ export class EventsProvider {
     ): Promise<KubernetesEvent[]> {
         const activeFilters = filters || this.getFilters(clusterContext);
         
+        // Check cache first
+        const cached = this.cache.get(clusterContext);
+        if (cached && this.filtersMatch(cached.filters, activeFilters)) {
+            // Return cached events if filters match
+            return cached.events;
+        }
+        
         // Build CLI command with filters
         const cmd = this.buildQueryCommand(activeFilters);
         
@@ -47,6 +54,23 @@ export class EventsProvider {
         });
         
         return limited;
+    }
+
+    /**
+     * Check if two filter objects are equal.
+     * 
+     * @param filters1 First filter object
+     * @param filters2 Second filter object
+     * @returns True if filters are equal
+     */
+    private filtersMatch(filters1: EventFilters, filters2: EventFilters): boolean {
+        return (
+            filters1.namespace === filters2.namespace &&
+            filters1.type === filters2.type &&
+            filters1.since === filters2.since &&
+            filters1.resourceType === filters2.resourceType &&
+            filters1.searchText === filters2.searchText
+        );
     }
 
     /**
@@ -167,9 +191,9 @@ export class EventsProvider {
                 podName,
                 'kube9-operator',
                 commandArgs,
-                process.stdout,
-                process.stderr,
-                process.stdin,
+                null, // stdout stream - we'll capture via WebSocket
+                null, // stderr stream - we'll capture via WebSocket
+                null, // stdin stream
                 false, // tty
                 (status) => {
                     if (status.status === 'Success') {
@@ -180,11 +204,15 @@ export class EventsProvider {
                 }
             ).then(ws => {
                 // Capture stdout/stderr from WebSocket
-                ws.on('message', (channel: number, data: Buffer) => {
+                // The first byte is the channel: 0=stdin, 1=stdout, 2=stderr, 3=error
+                ws.on('message', (data: Buffer) => {
+                    const channel = data[0];
+                    const content = data.slice(1).toString();
+                    
                     if (channel === 1) { // stdout
-                        stdout += data.toString();
+                        stdout += content;
                     } else if (channel === 2) { // stderr
-                        stderr += data.toString();
+                        stderr += content;
                     }
                 });
             }).catch(error => {

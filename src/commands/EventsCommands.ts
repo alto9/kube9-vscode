@@ -4,6 +4,7 @@ import { EventsProvider } from '../services/EventsProvider';
 import { fetchNamespaces } from '../kubernetes/resourceFetchers';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { KubernetesEvent } from '../types/Events';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 
 export class EventsCommands {
     constructor(
@@ -17,6 +18,12 @@ export class EventsCommands {
             return;
         }
         
+        const clusterContext = eventsCategory.resourceData.context.name;
+        
+        // Set the API client context before fetching namespaces
+        const apiClient = getKubernetesApiClient();
+        apiClient.setContext(clusterContext);
+        
         const namespaces = await fetchNamespaces();
         const namespaceNames = namespaces.map(ns => ns.metadata?.name || '');
         const items = ['All Namespaces', ...namespaceNames];
@@ -27,7 +34,6 @@ export class EventsCommands {
         
         if (selected) {
             const namespace = selected === 'All Namespaces' ? 'all' : selected;
-            const clusterContext = eventsCategory.resourceData.context.name;
             this.eventsProvider.setFilter(clusterContext, { namespace });
             this.treeProvider.refreshItem(eventsCategory);
         }
