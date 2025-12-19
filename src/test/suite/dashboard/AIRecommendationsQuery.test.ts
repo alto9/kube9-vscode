@@ -8,7 +8,9 @@ const originalRequire = Module.prototype.require;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockGetConfigMapResponse: { configMap: any; error?: any } | null = null;
 const mockKubeconfigPath = '/test/kubeconfig';
+const mockNamespace = 'test-namespace';
 let getConfigMapCalls: Array<{ name: string; namespace: string; context: string }> = [];
+let resolverCalls: Array<string> = [];
 let isProxyActive = false;
 
 suite('AIRecommendationsQuery Test Suite', () => {
@@ -20,6 +22,7 @@ suite('AIRecommendationsQuery Test Suite', () => {
     setup(() => {
         // Reset call tracking
         getConfigMapCalls = [];
+        resolverCalls = [];
         mockGetConfigMapResponse = null;
         isProxyActive = true;
 
@@ -80,6 +83,27 @@ suite('AIRecommendationsQuery Test Suite', () => {
                             } else {
                                 return originalModule.KubeconfigParser.getKubeconfigPath();
                             }
+                        }
+                    }
+                };
+            }
+
+            // Intercept OperatorNamespaceResolver
+            if (id.endsWith('services/OperatorNamespaceResolver')) {
+                const originalModule = currentRequire.apply(this, [id]);
+                
+                return {
+                    ...originalModule,
+                    getOperatorNamespaceResolver: () => {
+                        if (isProxyActive) {
+                            return {
+                                resolveNamespace: async (clusterContext: string) => {
+                                    resolverCalls.push(clusterContext);
+                                    return mockNamespace;
+                                }
+                            };
+                        } else {
+                            return originalModule.getOperatorNamespaceResolver();
                         }
                     }
                 };
@@ -160,10 +184,14 @@ suite('AIRecommendationsQuery Test Suite', () => {
             assert.strictEqual(result?.insights?.length, 1, 'Should have 1 insight');
             assert.strictEqual(result?.insights?.[0].category, 'Performance');
 
+            // Verify resolver was called with correct context
+            assert.strictEqual(resolverCalls.length, 1);
+            assert.strictEqual(resolverCalls[0], TEST_CONTEXT, 'Resolver should be called with test context');
+            
             // Verify getConfigMap was called with correct parameters
             assert.strictEqual(getConfigMapCalls.length, 1);
             assert.strictEqual(getConfigMapCalls[0].name, 'kube9-ai-recommendations');
-            assert.strictEqual(getConfigMapCalls[0].namespace, 'kube9-system');
+            assert.strictEqual(getConfigMapCalls[0].namespace, mockNamespace, 'Should use resolved namespace');
             assert.strictEqual(getConfigMapCalls[0].context, TEST_CONTEXT);
         });
 
