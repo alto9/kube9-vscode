@@ -2,7 +2,7 @@
 story_id: 007-create-event-viewer-panel-class
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-panel
   - event-viewer-actions
@@ -23,24 +23,24 @@ New webview panel to replace tree-based event display. Follows singleton-per-clu
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/EventViewerPanel.ts`
-- [ ] Implement singleton pattern with static `panels` Map
-- [ ] Implement static `show()` method (create or reveal)
-- [ ] Implement private constructor
-- [ ] Create webview panel with proper options (retainContextWhenHidden, enableScripts, etc.)
-- [ ] Implement `setupMessageHandling()` for bidirectional communication
-- [ ] Implement message handlers: ready, load, refresh, filter, export, copy, navigate, viewYaml, toggleAutoRefresh
-- [ ] Implement `loadEvents()` method
-- [ ] Implement `sendInitialState()` method
-- [ ] Implement `sendMessage()` helper
-- [ ] Implement `getWebviewContent()` with HTML, CSP, nonces
-- [ ] Implement `dispose()` cleanup method
-- [ ] Implement `handleExport()` with JSON/CSV support
-- [ ] Implement `convertToCSV()` helper method
-- [ ] Implement `handleCopy()` for clipboard operations
-- [ ] Implement `handleNavigate()` and `handleViewYaml()` for tree integration
-- [ ] Add proper TypeScript types for all methods
-- [ ] Panel title shows cluster name: `"Events: {cluster-name}"`
+- [x] Create `src/webview/EventViewerPanel.ts`
+- [x] Implement singleton pattern with static `panels` Map
+- [x] Implement static `show()` method (create or reveal)
+- [x] Implement private constructor
+- [x] Create webview panel with proper options (retainContextWhenHidden, enableScripts, etc.)
+- [x] Implement `setupMessageHandling()` for bidirectional communication
+- [x] Implement message handlers: ready, load, refresh, filter, export, copy, navigate, viewYaml, toggleAutoRefresh
+- [x] Implement `loadEvents()` method
+- [x] Implement `sendInitialState()` method
+- [x] Implement `sendMessage()` helper
+- [x] Implement `getWebviewContent()` with HTML, CSP, nonces
+- [x] Implement `dispose()` cleanup method
+- [x] Implement `handleExport()` with JSON/CSV support
+- [x] Implement `convertToCSV()` helper method
+- [x] Implement `handleCopy()` for clipboard operations
+- [x] Implement `handleNavigate()` and `handleViewYaml()` for tree integration
+- [x] Add proper TypeScript types for all methods
+- [x] Panel title shows cluster name: `"Events: {cluster-name}"`
 
 ## Files Affected
 
