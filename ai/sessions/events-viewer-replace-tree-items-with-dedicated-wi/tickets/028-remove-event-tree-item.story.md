@@ -2,7 +2,7 @@
 story_id: 028-remove-event-tree-item
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-panel
 spec_id: []
@@ -20,12 +20,12 @@ EventsCategory no longer expands to show tree children. EventTreeItem is obsolet
 
 ## Acceptance Criteria
 
-- [ ] Delete `src/tree/items/EventTreeItem.ts` file
-- [ ] Remove any imports of EventTreeItem from other files
-- [ ] Remove EventTreeItem from tree provider's getChildren logic for EventsCategory
-- [ ] Verify EventsCategory no longer returns children
-- [ ] Test that clicking Events category opens webview (not tree expansion)
-- [ ] No broken imports or references remain
+- [x] Delete `src/tree/items/EventTreeItem.ts` file
+- [x] Remove any imports of EventTreeItem from other files
+- [x] Remove EventTreeItem from tree provider's getChildren logic for EventsCategory
+- [x] Verify EventsCategory no longer returns children
+- [x] Test that clicking Events category opens webview (not tree expansion)
+- [x] No broken imports or references remain
 
 ## Files Affected
 

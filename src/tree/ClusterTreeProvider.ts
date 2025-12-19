@@ -32,7 +32,6 @@ import { ReportsCategory } from './categories/ReportsCategory';
 import { ComplianceSubcategory } from './categories/reports/ComplianceSubcategory';
 import { EventsCategory } from './categories/EventsCategory';
 import { EventsProvider } from '../services/EventsProvider';
-import { EventTreeItem } from './items/EventTreeItem';
 import { ArgoCDService } from '../services/ArgoCDService';
 import { namespaceWatcher } from '../services/namespaceCache';
 import { OperatorStatusClient, getOperatorStatusOutputChannel } from '../services/OperatorStatusClient';
@@ -602,7 +601,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 break;
             
             case 'events':
-                items = await this.getEventItems(categoryElement);
+                // EventsCategory now opens webview, no children
+                items = [];
                 break;
             
             case 'compliance':
@@ -719,32 +719,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
         // Return "All Namespaces" first, followed by individual namespaces
         return [allNamespacesItem, ...namespaceItems];
-    }
-
-    /**
-     * Get event items from the kube9-operator CLI.
-     * Called when the Events category is expanded.
-     * 
-     * @param categoryElement The events category tree item
-     * @returns Array of event tree items, or error item on failure
-     */
-    private async getEventItems(categoryElement: ClusterTreeItem): Promise<ClusterTreeItem[]> {
-        try {
-            if (!categoryElement.resourceData) {
-                throw new Error('Missing resource data');
-            }
-            
-            const clusterContext = categoryElement.resourceData.context.name;
-            const events = await this.eventsProvider.getEvents(clusterContext);
-            
-            return events.map(event => new EventTreeItem(event) as unknown as ClusterTreeItem);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            const errorItem = new vscode.TreeItem(`Error: ${errorMessage}`) as unknown as ClusterTreeItem;
-            errorItem.iconPath = new vscode.ThemeIcon('error');
-            errorItem.tooltip = 'Failed to retrieve events. Check operator health.';
-            return [errorItem];
-        }
     }
 
     /**
