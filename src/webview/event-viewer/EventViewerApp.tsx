@@ -167,6 +167,7 @@ export const EventViewerApp: React.FC = () => {
                 loading={state.loading}
                 error={state.error}
                 sendMessage={sendMessage}
+                onRetry={handleRefresh}
             />
             <StatusBar
                 eventCount={state.filteredEvents.length}

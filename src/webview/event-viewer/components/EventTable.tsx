@@ -3,7 +3,9 @@ import { FixedSizeList as List } from 'react-window';
 import { KubernetesEvent } from '../../../types/Events';
 import { TableHeader, SortColumn, SortDirection } from './TableHeader';
 import { EventRow } from './EventRow';
-import { LoadingState, ErrorState, EmptyState } from './TableStates';
+import { LoadingState } from './LoadingState';
+import { ErrorState } from './ErrorState';
+import { EmptyState } from './EmptyState';
 
 /**
  * Props for EventTable component.
@@ -15,6 +17,7 @@ interface EventTableProps {
     loading: boolean;
     error: string | null;
     height: string;
+    onRetry?: () => void;
 }
 
 /**
@@ -27,7 +30,8 @@ export const EventTable: React.FC<EventTableProps> = ({
     onEventSelect,
     loading,
     error,
-    height
+    height,
+    onRetry
 }) => {
     const [sortColumn, setSortColumn] = useState<SortColumn>('time');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -119,7 +123,7 @@ export const EventTable: React.FC<EventTableProps> = ({
     if (error) {
         return (
             <div className="event-table" style={containerStyle} ref={containerRef}>
-                <ErrorState error={error} />
+                <ErrorState error={error} onRetry={onRetry} />
             </div>
         );
     }

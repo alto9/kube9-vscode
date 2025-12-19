@@ -16,6 +16,7 @@ interface ThreePaneLayoutProps {
     loading: boolean;
     error: string | null;
     sendMessage: (message: any) => void;
+    onRetry?: () => void;
 }
 
 /**
@@ -30,7 +31,8 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
     onFilterChange,
     loading,
     error,
-    sendMessage
+    sendMessage,
+    onRetry
 }) => {
     const [filterPaneWidth, setFilterPaneWidth] = useState(250);
     const [detailsPaneHeight, setDetailsPaneHeight] = useState(200);
@@ -73,6 +75,7 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
                     loading={loading}
                     error={error}
                     height={eventTableHeight}
+                    onRetry={onRetry}
                 />
                 <EventDetails
                     event={selectedEvent}

@@ -2,7 +2,7 @@
 story_id: 022-create-table-state-components
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,15 +21,15 @@ Table needs to display appropriate UI for different states instead of just event
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/LoadingState.tsx`
-- [ ] Create `src/webview/event-viewer/components/EmptyState.tsx`
-- [ ] Create `src/webview/event-viewer/components/ErrorState.tsx`
-- [ ] LoadingState: spinning indicator with "Loading events..." message
-- [ ] EmptyState: icon/illustration with "No events found" and filter suggestions
-- [ ] ErrorState: error icon with error message and "Retry" button
-- [ ] All states centered in table area
-- [ ] Use VS Code theme colors
-- [ ] TypeScript types for props (ErrorState accepts error string)
+- [x] Create `src/webview/event-viewer/components/LoadingState.tsx`
+- [x] Create `src/webview/event-viewer/components/EmptyState.tsx`
+- [x] Create `src/webview/event-viewer/components/ErrorState.tsx`
+- [x] LoadingState: spinning indicator with "Loading events..." message
+- [x] EmptyState: icon/illustration with "No events found" and filter suggestions
+- [x] ErrorState: error icon with error message and "Retry" button
+- [x] All states centered in table area
+- [x] Use VS Code theme colors
+- [x] TypeScript types for props (ErrorState accepts error string)
 
 ## Files Affected
 
