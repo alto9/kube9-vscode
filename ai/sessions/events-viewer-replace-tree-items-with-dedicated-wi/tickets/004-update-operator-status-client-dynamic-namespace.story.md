@@ -2,7 +2,7 @@
 story_id: 004-update-operator-status-client-dynamic-namespace
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - dynamic-namespace-discovery
 spec_id:

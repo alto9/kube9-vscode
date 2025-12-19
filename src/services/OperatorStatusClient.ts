@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigurationCommands } from '../kubectl/ConfigurationCommands';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 import { OperatorStatusMode, OperatorStatus } from '../kubernetes/OperatorStatusTypes';
+import { getOperatorNamespaceResolver } from './OperatorNamespaceResolver';
 
 /**
  * ConfigMap response structure from kubectl.
@@ -64,8 +65,8 @@ function getOutputChannel(): vscode.OutputChannel {
 /**
  * Client for querying and caching operator status from the kube9-operator-status ConfigMap.
  * 
- * This client queries the ConfigMap in the kube9-system namespace and caches results
- * for 5 minutes to minimize kubectl calls. Status is determined based on operator
+ * This client queries the ConfigMap using dynamically resolved namespace (via OperatorNamespaceResolver)
+ * and caches results for 5 minutes to minimize kubectl calls. Status is determined based on operator
  * presence, mode, tier, health, and registration state.
  */
 export class OperatorStatusClient {
@@ -83,11 +84,6 @@ export class OperatorStatusClient {
      * Name of the operator status ConfigMap.
      */
     private readonly STATUS_CONFIGMAP_NAME = 'kube9-operator-status';
-
-    /**
-     * Namespace where the operator status ConfigMap is located.
-     */
-    private readonly STATUS_NAMESPACE = 'kube9-system';
 
     /**
      * Retrieves the operator status for a cluster, using cache when available.
@@ -117,10 +113,14 @@ export class OperatorStatusClient {
 
         // Query cluster for operator status
         try {
+            // Resolve namespace dynamically using OperatorNamespaceResolver
+            const resolver = getOperatorNamespaceResolver();
+            const namespace = await resolver.resolveNamespace(contextName);
+
             // Note: getConfigMap will be added in story 002. Using type assertion for now.
             const result = await (ConfigurationCommands as {getConfigMap: (name: string, namespace: string, kubeconfigPath: string, contextName: string) => Promise<unknown>}).getConfigMap(
                 this.STATUS_CONFIGMAP_NAME,
-                this.STATUS_NAMESPACE,
+                namespace,
                 kubeconfigPath,
                 contextName
             ) as ConfigMapResult;
@@ -139,7 +139,7 @@ export class OperatorStatusClient {
                     };
                     this.cache.set(cacheKey, basicStatus);
                     getOutputChannel().appendLine(
-                        `[DEBUG] Operator status ConfigMap not found for context ${contextName} (expected if operator not installed)`
+                        `[DEBUG] Operator status ConfigMap not found in namespace '${namespace}' for context ${contextName} (expected if operator not installed)`
                     );
                     return basicStatus;
                 }
@@ -151,17 +151,17 @@ export class OperatorStatusClient {
                 if (errorType === KubectlErrorType.PermissionDenied) {
                     // RBAC permission error - log warning and fall back
                     getOutputChannel().appendLine(
-                        `[WARNING] RBAC permission denied when checking operator status for context ${contextName}: ${errorDetails}`
+                        `[WARNING] RBAC permission denied when checking operator status in namespace '${namespace}' for context ${contextName}: ${errorDetails}`
                     );
                 } else if (errorType === KubectlErrorType.ConnectionFailed || errorType === KubectlErrorType.Timeout) {
                     // Network/connectivity error - log error and fall back
                     getOutputChannel().appendLine(
-                        `[ERROR] Network/connectivity error when checking operator status for context ${contextName}: ${errorDetails}`
+                        `[ERROR] Network/connectivity error when checking operator status in namespace '${namespace}' for context ${contextName}: ${errorDetails}`
                     );
                 } else {
                     // Unknown error - log error and fall back
                     getOutputChannel().appendLine(
-                        `[ERROR] Unexpected error when checking operator status for context ${contextName}: ${error.getUserMessage()} (${errorDetails})`
+                        `[ERROR] Unexpected error when checking operator status in namespace '${namespace}' for context ${contextName}: ${error.getUserMessage()} (${errorDetails})`
                     );
                 }
                 
@@ -283,8 +283,17 @@ export class OperatorStatusClient {
             const errorMessage = error instanceof Error ? error.message : String(error);
             const errorStack = error instanceof Error ? error.stack : undefined;
             
+            // Resolve namespace for error message (may have been resolved earlier, but need it here too)
+            let namespaceForError = 'unknown';
+            try {
+                const resolver = getOperatorNamespaceResolver();
+                namespaceForError = await resolver.resolveNamespace(contextName);
+            } catch {
+                // If resolution fails, use 'unknown'
+            }
+            
             getOutputChannel().appendLine(
-                `[ERROR] Unexpected error querying operator status for context ${contextName}: ${errorMessage}`
+                `[ERROR] Unexpected error querying operator status in namespace '${namespaceForError}' for context ${contextName}: ${errorMessage}`
             );
             if (errorStack) {
                 getOutputChannel().appendLine(`[ERROR] Stack trace: ${errorStack}`);
