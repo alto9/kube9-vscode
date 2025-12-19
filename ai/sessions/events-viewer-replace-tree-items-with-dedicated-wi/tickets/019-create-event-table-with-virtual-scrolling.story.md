@@ -2,7 +2,7 @@
 story_id: 019-create-event-table-with-virtual-scrolling
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,23 +21,27 @@ EventTable is the main center pane displaying events. Uses react-window for virt
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/EventTable.tsx`
-- [ ] Accept props: events, selectedEvent, onEventSelect, loading, error, height
-- [ ] Implement sorting by column (level, time, source, eventId, category)
-- [ ] Use `useMemo` for sorted events
-- [ ] Use `FixedSizeList` from react-window for virtualization
-- [ ] Render TableHeader for column headers
-- [ ] Render EventRow for each event (virtualized)
-- [ ] Show LoadingState when loading
-- [ ] Show ErrorState when error exists
-- [ ] Show EmptyState when no events
-- [ ] Track sortColumn and sortDirection in state
-- [ ] Handle sort direction toggle (asc ↔ desc)
-- [ ] TypeScript types for all props and state
+- [x] Create `src/webview/event-viewer/components/EventTable.tsx`
+- [x] Accept props: events, selectedEvent, onEventSelect, loading, error, height
+- [x] Implement sorting by column (level, time, source, eventId, category)
+- [x] Use `useMemo` for sorted events
+- [x] Use `FixedSizeList` from react-window for virtualization
+- [x] Render TableHeader for column headers
+- [x] Render EventRow for each event (virtualized)
+- [x] Show LoadingState when loading
+- [x] Show ErrorState when error exists
+- [x] Show EmptyState when no events
+- [x] Track sortColumn and sortDirection in state
+- [x] Handle sort direction toggle (asc ↔ desc)
+- [x] TypeScript types for all props and state
 
 ## Files Affected
 
 - **Create**: `src/webview/event-viewer/components/EventTable.tsx`
+- **Create**: `src/webview/event-viewer/components/TableHeader.tsx`
+- **Create**: `src/webview/event-viewer/components/EventRow.tsx`
+- **Create**: `src/webview/event-viewer/components/TableStates.tsx`
+- **Create**: `src/webview/event-viewer/utils/dateUtils.ts`
 
 ## Implementation Notes
 
