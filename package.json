@@ -222,6 +222,11 @@
         "command": "kube9.events.showDetails",
         "title": "Show Event Details",
         "category": "kube9"
+      },
+      {
+        "command": "kube9.openEventsViewer",
+        "title": "Kube9: Open Events Viewer",
+        "category": "Kube9"
       }
     ],
     "menus": {

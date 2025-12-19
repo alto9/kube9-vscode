@@ -36,6 +36,8 @@ import {
 } from './commands/ArgoCDCommands';
 import { showCacheStatsCommand } from './commands/cacheStats';
 import { EventsCommands } from './commands/EventsCommands';
+import { EventViewerPanel } from './webview/EventViewerPanel';
+import { EventsCategory } from './tree/categories/EventsCategory';
 
 /**
  * Global extension context accessible to all components.
@@ -1056,7 +1058,70 @@ function registerCommands(): void {
         );
         context.subscriptions.push(showDetailsCmd);
         disposables.push(showDetailsCmd);
+        
+        // Register command to open Events Viewer from tree category click
+        const openEventsViewerCmd = vscode.commands.registerCommand(
+            'kube9.events.openViewer',
+            async (eventsCategory: EventsCategory) => {
+                try {
+                    if (!eventsCategory.clusterElement.resourceData) {
+                        throw new Error('Invalid events category: missing resource data');
+                    }
+                    if (!clusterTreeProvider) {
+                        throw new Error('Cluster tree provider not initialized');
+                    }
+                    const clusterContext = eventsCategory.clusterElement.resourceData.context.name;
+                    const eventsProvider = clusterTreeProvider.getEventsProvider();
+                    EventViewerPanel.show(context, clusterContext, eventsProvider);
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error('Failed to open Events Viewer:', errorMessage);
+                    vscode.window.showErrorMessage(`Failed to open Events Viewer: ${errorMessage}`);
+                }
+            }
+        );
+        context.subscriptions.push(openEventsViewerCmd);
+        disposables.push(openEventsViewerCmd);
     }
+    
+    // Register command to open Events Viewer from command palette
+    const openEventsViewerFromPaletteCmd = vscode.commands.registerCommand(
+        'kube9.openEventsViewer',
+        async (clusterContext?: string) => {
+            try {
+                if (!clusterContext) {
+                    const kubeconfig = await KubeconfigParser.parseKubeconfig();
+                    if (!kubeconfig.contexts || kubeconfig.contexts.length === 0) {
+                        vscode.window.showWarningMessage('No clusters configured');
+                        return;
+                    }
+                    const selected = await vscode.window.showQuickPick(
+                        kubeconfig.contexts.map(ctx => ({
+                            label: ctx.name,
+                            context: ctx.name
+                        })),
+                        { placeHolder: 'Select cluster to view events' }
+                    );
+                    if (!selected) {
+                        return;
+                    }
+                    clusterContext = selected.context;
+                }
+                
+                if (!clusterTreeProvider) {
+                    throw new Error('Cluster tree provider not initialized');
+                }
+                const eventsProvider = clusterTreeProvider.getEventsProvider();
+                EventViewerPanel.show(context, clusterContext, eventsProvider);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Events Viewer:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open Events Viewer: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(openEventsViewerFromPaletteCmd);
+    disposables.push(openEventsViewerFromPaletteCmd);
 }
 
 /**

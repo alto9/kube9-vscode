@@ -2,7 +2,7 @@
 story_id: 009-register-events-viewer-commands
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-panel
 spec_id:
@@ -21,15 +21,15 @@ Need two commands: one for tree category click (with context), one for command p
 
 ## Acceptance Criteria
 
-- [ ] Register `kube9.events.openViewer` command in `extension.ts`
-- [ ] Command handler accepts EventsCategory parameter
-- [ ] Extract cluster context from EventsCategory
-- [ ] Call `EventViewerPanel.show()` with context, clusterContext, eventsProvider
-- [ ] Register `kube9.openEventsViewer` command for command palette
-- [ ] Command palette version shows QuickPick for cluster selection if no context
-- [ ] Add commands to `package.json` contributions
-- [ ] Add command palette entry with title "Kube9: Open Events Viewer"
-- [ ] Ensure eventsProvider instance is accessible in extension.ts
+- [x] Register `kube9.events.openViewer` command in `extension.ts`
+- [x] Command handler accepts EventsCategory parameter
+- [x] Extract cluster context from EventsCategory
+- [x] Call `EventViewerPanel.show()` with context, clusterContext, eventsProvider
+- [x] Register `kube9.openEventsViewer` command for command palette
+- [x] Command palette version shows QuickPick for cluster selection if no context
+- [x] Add commands to `package.json` contributions
+- [x] Add command palette entry with title "Kube9: Open Events Viewer"
+- [x] Ensure eventsProvider instance is accessible in extension.ts
 
 ## Files Affected
 
