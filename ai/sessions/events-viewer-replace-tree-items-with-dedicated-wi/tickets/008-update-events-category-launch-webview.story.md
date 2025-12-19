@@ -2,7 +2,7 @@
 story_id: 008-update-events-category-launch-webview
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-panel
 spec_id:
@@ -21,11 +21,11 @@ Currently EventsCategory is collapsible and shows EventTreeItem children. Should
 
 ## Acceptance Criteria
 
-- [ ] Change `TreeItemCollapsibleState` from `Collapsed` to `None`
-- [ ] Add `command` property to execute `kube9.events.openViewer`
-- [ ] Pass `this` as argument to command
-- [ ] Keep icon, description, tooltip, contextValue unchanged
-- [ ] No children should be shown (webview replaces tree display)
+- [x] Change `TreeItemCollapsibleState` from `Collapsed` to `None`
+- [x] Add `command` property to execute `kube9.events.openViewer`
+- [x] Pass `this` as argument to command
+- [x] Keep icon, description, tooltip, contextValue unchanged
+- [x] No children should be shown (webview replaces tree display)
 
 ## Files Affected
 
