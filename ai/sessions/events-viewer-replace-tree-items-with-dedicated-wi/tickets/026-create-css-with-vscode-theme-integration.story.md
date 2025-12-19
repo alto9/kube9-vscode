@@ -2,7 +2,7 @@
 story_id: 026-create-css-with-vscode-theme-integration
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,9 +21,9 @@ Webview must integrate seamlessly with VS Code themes (dark/light) using CSS var
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/index.css`
-- [ ] Define styles for all components
-- [ ] Use VS Code CSS variables for colors:
+- [x] Create `src/webview/event-viewer/index.css`
+- [x] Define styles for all components
+- [x] Use VS Code CSS variables for colors:
   - `--vscode-editor-background`
   - `--vscode-editor-foreground`
   - `--vscode-sideBar-background`
@@ -32,16 +32,16 @@ Webview must integrate seamlessly with VS Code themes (dark/light) using CSS var
   - `--vscode-inputValidation-errorBackground`
   - `--vscode-button-background`
   - `--vscode-button-foreground`
-- [ ] Color-code event rows by type (normal, warning, error)
-- [ ] Style selected row state
-- [ ] Style hover states
-- [ ] Style toolbar and buttons
-- [ ] Style filter pane and controls
-- [ ] Style table header and cells
-- [ ] Style details pane
-- [ ] Style status bar
-- [ ] Style resize handles
-- [ ] Ensure readability in both light and dark themes
+- [x] Color-code event rows by type (normal, warning, error)
+- [x] Style selected row state
+- [x] Style hover states
+- [x] Style toolbar and buttons
+- [x] Style filter pane and controls
+- [x] Style table header and cells
+- [x] Style details pane
+- [x] Style status bar
+- [x] Style resize handles
+- [x] Ensure readability in both light and dark themes
 
 ## Files Affected
 
