@@ -2,7 +2,7 @@
 story_id: 024-create-event-details-action-buttons
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-actions
 spec_id:
@@ -21,14 +21,14 @@ Users need quick actions on selected event from details pane.
 
 ## Acceptance Criteria
 
-- [ ] Add details-actions section to EventDetails component
-- [ ] "Copy Message" button: sends copy message to extension with event.message
-- [ ] "Go to Resource" button: sends navigate message with resource info
-- [ ] "View YAML" button: sends viewYaml message with resource info
-- [ ] All buttons use codicon icons (copy, go-to-file, file-code)
-- [ ] Buttons are disabled when no event selected
-- [ ] Buttons have tooltips
-- [ ] TypeScript types for click handlers
+- [x] Add details-actions section to EventDetails component
+- [x] "Copy Message" button: sends copy message to extension with event.message
+- [x] "Go to Resource" button: sends navigate message with resource info
+- [x] "View YAML" button: sends viewYaml message with resource info
+- [x] All buttons use codicon icons (copy, go-to-file, file-code)
+- [x] Buttons are disabled when no event selected
+- [x] Buttons have tooltips
+- [x] TypeScript types for click handlers
 
 ## Files Affected
 
