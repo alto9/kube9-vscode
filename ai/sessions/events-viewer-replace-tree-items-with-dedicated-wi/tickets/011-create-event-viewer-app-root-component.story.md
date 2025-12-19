@@ -2,7 +2,7 @@
 story_id: 011-create-event-viewer-app-root-component
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
   - event-viewer-panel
@@ -22,20 +22,20 @@ Root component coordinates all UI state, message handling, and child component r
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/EventViewerApp.tsx`
-- [ ] Define `EventViewerState` interface with all state properties
-- [ ] Use `useState` for managing: events, filters, selectedEvent, loading, error, autoRefreshEnabled, clusterContext
-- [ ] Implement `sendMessage` callback using `vscode.postMessage()`
-- [ ] Implement message listener in `useEffect` for: initialState, events, loading, error, autoRefreshState
-- [ ] Send `ready` message on component mount
-- [ ] Implement `handleRefresh` callback
-- [ ] Implement `handleFilterChange` callback
-- [ ] Implement `handleExport` callback
-- [ ] Implement `handleToggleAutoRefresh` callback
-- [ ] Implement `handleEventSelect` callback
-- [ ] Render Toolbar, ThreePaneLayout, and StatusBar components
-- [ ] Pass appropriate props to each child component
-- [ ] Add TypeScript types for all callbacks and state
+- [x] Create `src/webview/event-viewer/EventViewerApp.tsx`
+- [x] Define `EventViewerState` interface with all state properties
+- [x] Use `useState` for managing: events, filters, selectedEvent, loading, error, autoRefreshEnabled, clusterContext
+- [x] Implement `sendMessage` callback using `vscode.postMessage()`
+- [x] Implement message listener in `useEffect` for: initialState, events, loading, error, autoRefreshState
+- [x] Send `ready` message on component mount
+- [x] Implement `handleRefresh` callback
+- [x] Implement `handleFilterChange` callback
+- [x] Implement `handleExport` callback
+- [x] Implement `handleToggleAutoRefresh` callback
+- [x] Implement `handleEventSelect` callback
+- [x] Render Toolbar, ThreePaneLayout, and StatusBar components
+- [x] Pass appropriate props to each child component
+- [x] Add TypeScript types for all callbacks and state
 
 ## Files Affected
 

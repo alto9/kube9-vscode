@@ -23,7 +23,8 @@
     "node_modules",
     "out",
     ".vscode-test",
-    "src/webview/argocd-application"
+    "src/webview/argocd-application",
+    "src/webview/event-viewer"
   ]
 }
 
