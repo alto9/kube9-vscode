@@ -2,7 +2,7 @@
 story_id: 002-add-settings-schema-operator-namespace
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - dynamic-namespace-discovery
 spec_id:
@@ -21,13 +21,13 @@ Users may install kube9-operator in custom namespaces. This setting provides fal
 
 ## Acceptance Criteria
 
-- [ ] Add `kube9.operatorNamespace` to `contributes.configuration` in `package.json`
-- [ ] Support both string (all clusters) and object (per-cluster) types
-- [ ] Set default to `null` (auto-detection preferred)
-- [ ] Include markdown description with examples
-- [ ] Provide string example: `"my-kube9"`
-- [ ] Provide object example: `{ "production": "kube9-prod", "staging": "kube9-staging" }`
-- [ ] Document that auto-detection is primary method
+- [x] Add `kube9.operatorNamespace` to `contributes.configuration` in `package.json`
+- [x] Support both string (all clusters) and object (per-cluster) types
+- [x] Set default to `null` (auto-detection preferred)
+- [x] Include markdown description with examples
+- [x] Provide string example: `"my-kube9"`
+- [x] Provide object example: `{ "production": "kube9-prod", "staging": "kube9-staging" }`
+- [x] Document that auto-detection is primary method
 
 ## Files Affected
 
