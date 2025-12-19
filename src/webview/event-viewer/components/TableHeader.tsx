@@ -78,7 +78,11 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
                 key={column}
                 style={{
                     ...columnStyle,
-                    flex: flex || 1
+                    flex: flex || 1,
+                    fontWeight: isActive ? 700 : 600,
+                    color: isActive 
+                        ? 'var(--vscode-textLink-foreground)' 
+                        : 'var(--vscode-foreground)'
                 }}
                 onClick={() => onSort(column)}
                 onMouseEnter={(e) => {

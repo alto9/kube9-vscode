@@ -2,7 +2,7 @@
 story_id: 021-create-table-header-with-sorting
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,15 +21,15 @@ Table header displays column names and handles click events for sorting.
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/TableHeader.tsx`
-- [ ] Accept props: sortColumn, sortDirection, onSort
-- [ ] Render column headers: Level, Date/Time, Source, Event ID, Category
-- [ ] Make headers clickable for sorting
-- [ ] Show sort indicator (↑ or ↓) on active sort column
-- [ ] Toggle sort direction on click of same column
-- [ ] Change sort column on click of different column
-- [ ] Use appropriate cursor (pointer) on hover
-- [ ] TypeScript types for props
+- [x] Create `src/webview/event-viewer/components/TableHeader.tsx`
+- [x] Accept props: sortColumn, sortDirection, onSort
+- [x] Render column headers: Level, Date/Time, Source, Event ID, Category
+- [x] Make headers clickable for sorting
+- [x] Show sort indicator (↑ or ↓) on active sort column
+- [x] Toggle sort direction on click of same column
+- [x] Change sort column on click of different column
+- [x] Use appropriate cursor (pointer) on hover
+- [x] TypeScript types for props
 
 ## Files Affected
 
