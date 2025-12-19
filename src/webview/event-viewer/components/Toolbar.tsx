@@ -4,6 +4,7 @@ import { RefreshButton } from './RefreshButton';
 import { AutoRefreshToggle } from './AutoRefreshToggle';
 import { ExportButton } from './ExportButton';
 import { ClearFiltersButton } from './ClearFiltersButton';
+import { SearchBox } from './SearchBox';
 
 /**
  * Props for Toolbar component.
@@ -71,7 +72,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 />
             </div>
             <div className="toolbar-right" style={toolbarRightStyle}>
-                {/* SearchBox will be added in story 014 */}
+                <SearchBox 
+                    value={filters.searchText || ''}
+                    onChange={(text) => onFilterChange({ ...filters, searchText: text })}
+                />
             </div>
         </div>
     );

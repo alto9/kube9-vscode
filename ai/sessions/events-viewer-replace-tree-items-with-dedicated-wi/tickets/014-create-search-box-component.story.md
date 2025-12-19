@@ -2,7 +2,7 @@
 story_id: 014-create-search-box-component
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-filtering
 spec_id:
@@ -21,15 +21,15 @@ Search box provides quick filtering by text across event fields.
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/SearchBox.tsx`
-- [ ] Accept `value` and `onChange` props
-- [ ] Render input with placeholder "Search events..."
-- [ ] Debounce onChange calls by ~300ms to avoid excessive updates
-- [ ] Clear button appears when text is entered
-- [ ] Handle Escape key to clear search
-- [ ] Include search icon (codicon-search)
-- [ ] Add proper aria-label for accessibility
-- [ ] TypeScript types for all props
+- [x] Create `src/webview/event-viewer/components/SearchBox.tsx`
+- [x] Accept `value` and `onChange` props
+- [x] Render input with placeholder "Search events..."
+- [x] Debounce onChange calls by ~300ms to avoid excessive updates
+- [x] Clear button appears when text is entered
+- [x] Handle Escape key to clear search
+- [x] Include search icon (codicon-search)
+- [x] Add proper aria-label for accessibility
+- [x] TypeScript types for all props
 
 ## Files Affected
 
