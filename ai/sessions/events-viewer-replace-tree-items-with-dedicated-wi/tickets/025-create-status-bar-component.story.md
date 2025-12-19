@@ -2,7 +2,7 @@
 story_id: 025-create-status-bar-component
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,15 +21,15 @@ Status bar provides at-a-glance information about current view state.
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/StatusBar.tsx`
-- [ ] Accept props: eventCount, totalCount, filters, autoRefreshEnabled
-- [ ] Display: "{eventCount} events" or "{eventCount} of {totalCount} events" when filtered
-- [ ] Display: "{n} filters active" when filters applied
-- [ ] Display: "Auto-refresh: On (30s)" or "Auto-refresh: Off"
+- [x] Create `src/webview/event-viewer/components/StatusBar.tsx`
+- [x] Accept props: eventCount, totalCount, filters, autoRefreshEnabled
+- [x] Display: "{eventCount} events" or "{eventCount} of {totalCount} events" when filtered
+- [x] Display: "{n} filters active" when filters applied
+- [x] Display: "Auto-refresh: On (30s)" or "Auto-refresh: Off"
 - [ ] Display: "Updated: {relative time} ago" (optional, future enhancement)
-- [ ] Layout items horizontally with appropriate spacing
-- [ ] Use subtle styling consistent with VS Code status bars
-- [ ] TypeScript types for props
+- [x] Layout items horizontally with appropriate spacing
+- [x] Use subtle styling consistent with VS Code status bars
+- [x] TypeScript types for props
 
 ## Files Affected
 
