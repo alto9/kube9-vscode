@@ -1,17 +1,6 @@
 import * as vscode from 'vscode';
 import { EventsProvider } from '../services/EventsProvider';
-import { KubernetesEvent, EventFilters } from '../types/Events';
-
-/**
- * Message types sent from extension to webview.
- */
-type ExtensionMessage =
-    | { type: 'loading'; loading: boolean }
-    | { type: 'events'; events: KubernetesEvent[]; loading: false }
-    | { type: 'error'; error: string; loading: false }
-    | { type: 'initialState'; clusterContext: string; filters: EventFilters; autoRefreshEnabled: boolean }
-    | { type: 'autoRefreshState'; enabled: boolean }
-    | { type: 'autoRefreshInterval'; interval: number };
+import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from '../types/Events';
 
 /**
  * EventViewerPanel manages webview panels for Events Viewer.
@@ -119,7 +108,7 @@ export class EventViewerPanel {
      */
     private setupMessageHandling(): void {
         this.panel.webview.onDidReceiveMessage(
-            async (message) => {
+            async (message: WebviewMessage) => {
                 switch (message.type) {
                     case 'ready':
                         await this.sendInitialState();

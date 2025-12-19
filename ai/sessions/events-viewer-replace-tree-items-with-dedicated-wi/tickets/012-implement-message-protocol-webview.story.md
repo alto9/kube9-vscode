@@ -2,7 +2,7 @@
 story_id: 012-implement-message-protocol-webview
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-panel
 spec_id:
@@ -21,15 +21,15 @@ Webview and extension communicate via postMessage. Need type-safe message defini
 
 ## Acceptance Criteria
 
-- [ ] Create `src/types/Events.ts` if not exists
-- [ ] Define `KubernetesEvent` interface
-- [ ] Define `EventFilters` interface
-- [ ] Define `ExtensionMessage` union type (6 message types)
-- [ ] Define `WebviewMessage` union type (10 message types)
-- [ ] Export `DEFAULT_EVENT_FILTERS` constant
-- [ ] Document each message type with JSDoc comments
-- [ ] Ensure type safety for message handlers in EventViewerApp
-- [ ] Ensure type safety for message handlers in EventViewerPanel
+- [x] Create `src/types/Events.ts` if not exists
+- [x] Define `KubernetesEvent` interface
+- [x] Define `EventFilters` interface
+- [x] Define `ExtensionMessage` union type (6 message types)
+- [x] Define `WebviewMessage` union type (10 message types)
+- [x] Export `DEFAULT_EVENT_FILTERS` constant
+- [x] Document each message type with JSDoc comments
+- [x] Ensure type safety for message handlers in EventViewerApp
+- [x] Ensure type safety for message handlers in EventViewerPanel
 
 ## Files Affected
 

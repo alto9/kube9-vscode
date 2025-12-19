@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { KubernetesEvent, EventFilters } from '../../types/Events';
+import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from '../../types/Events';
 import { Toolbar } from './components/Toolbar';
 import { ThreePaneLayout } from './components/ThreePaneLayout';
 import { StatusBar } from './components/StatusBar';
@@ -22,17 +22,6 @@ interface EventViewerState {
 }
 
 /**
- * Message types sent from extension to webview.
- */
-type ExtensionMessage =
-    | { type: 'initialState'; clusterContext: string; filters: EventFilters; autoRefreshEnabled: boolean }
-    | { type: 'events'; events: KubernetesEvent[]; loading: false }
-    | { type: 'loading'; loading: boolean }
-    | { type: 'error'; error: string; loading: false }
-    | { type: 'autoRefreshState'; enabled: boolean }
-    | { type: 'autoRefreshInterval'; interval: number };
-
-/**
  * Root component for Events Viewer webview.
  * Manages all UI state, message handling, and renders child components.
  */
@@ -49,7 +38,7 @@ export const EventViewerApp: React.FC = () => {
     });
 
     // Send message to extension
-    const sendMessage = useCallback((message: any) => {
+    const sendMessage = useCallback((message: WebviewMessage) => {
         if (vscode) {
             vscode.postMessage(message);
         }
@@ -104,6 +93,10 @@ export const EventViewerApp: React.FC = () => {
                         ...prev,
                         autoRefreshEnabled: message.enabled
                     }));
+                    break;
+
+                case 'autoRefreshInterval':
+                    // Interval updates are handled by extension, no state change needed
                     break;
 
                 default:
