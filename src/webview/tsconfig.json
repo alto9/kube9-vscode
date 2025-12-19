@@ -10,7 +10,8 @@
     "moduleResolution": "node"
   },
   "include": [
-    "./argocd-application/**/*"
+    "./argocd-application/**/*",
+    "./event-viewer/**/*"
   ]
 }
 

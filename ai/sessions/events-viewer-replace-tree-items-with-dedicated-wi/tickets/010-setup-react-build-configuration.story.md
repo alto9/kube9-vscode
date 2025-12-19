@@ -2,7 +2,7 @@
 story_id: 010-setup-react-build-configuration
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,16 +21,16 @@ Webview requires compiled React code. Need webpack/esbuild configuration to bund
 
 ## Acceptance Criteria
 
-- [ ] Add React dependencies to package.json: `react`, `react-dom`, `@types/react`, `@types/react-dom`
-- [ ] Add react-window for virtual scrolling: `react-window`, `@types/react-window`
-- [ ] Configure webpack/esbuild to build webview code
-- [ ] Set entry point: `src/webview/event-viewer/index.tsx`
-- [ ] Set output: `media/event-viewer/index.js`
-- [ ] Include CSS bundling for `src/webview/event-viewer/index.css`
-- [ ] Configure TypeScript for JSX support
-- [ ] Ensure source maps for debugging
-- [ ] Add build script to package.json if needed
-- [ ] Test build produces valid output files
+- [x] Add React dependencies to package.json: `react`, `react-dom`, `@types/react`, `@types/react-dom` (already present)
+- [x] Add react-window for virtual scrolling: `react-window`, `@types/react-window`
+- [x] Configure webpack/esbuild to build webview code (using esbuild, following existing pattern)
+- [x] Set entry point: `src/webview/event-viewer/index.tsx`
+- [x] Set output: `media/event-viewer/index.js`
+- [x] Include CSS bundling for `src/webview/event-viewer/index.css` (CSS handled separately in webview provider, following existing pattern)
+- [x] Configure TypeScript for JSX support (updated webview tsconfig.json)
+- [x] Ensure source maps for debugging (esbuild handles source maps)
+- [x] Add build script to package.json if needed (updated build:webview script)
+- [x] Test build produces valid output files
 
 ## Files Affected
 
