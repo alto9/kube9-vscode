@@ -2,7 +2,7 @@
 story_id: 020-create-event-row-component
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,19 +21,19 @@ Each row displays event details in columns with color-coded background based on 
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/EventRow.tsx`
-- [ ] Accept props: event, selected, onClick, style (for virtual scrolling)
-- [ ] Display columns: Level, Date/Time, Source, Event ID, Category
-- [ ] Level column: icon + type text
-- [ ] Date/Time column: relative time (e.g., "2 minutes ago")
-- [ ] Source column: namespace/kind/name format
-- [ ] Event ID column: reason with count badge if count > 1
-- [ ] Category column: count value
-- [ ] Apply color-coding class based on event.type (normal, warning, error)
-- [ ] Apply 'selected' class when selected
-- [ ] Handle onClick for row selection
-- [ ] Support keyboard navigation (tabIndex, role="row", aria-selected)
-- [ ] TypeScript types for props
+- [x] Create `src/webview/event-viewer/components/EventRow.tsx`
+- [x] Accept props: event, selected, onClick, style (for virtual scrolling)
+- [x] Display columns: Level, Date/Time, Source, Event ID, Category
+- [x] Level column: icon + type text
+- [x] Date/Time column: relative time (e.g., "2 minutes ago")
+- [x] Source column: namespace/kind/name format
+- [x] Event ID column: reason with count badge if count > 1
+- [x] Category column: count value
+- [x] Apply color-coding class based on event.type (normal, warning, error)
+- [x] Apply 'selected' class when selected
+- [x] Handle onClick for row selection
+- [x] Support keyboard navigation (tabIndex, role="row", aria-selected)
+- [x] TypeScript types for props
 
 ## Files Affected
 

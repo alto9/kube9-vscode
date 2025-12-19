@@ -1,6 +1,7 @@
 import React from 'react';
 import { KubernetesEvent } from '../../../types/Events';
-import { formatRelativeTime } from '../utils/dateUtils';
+import { formatRelativeTime } from '../utils/formatTime';
+import { EventTypeIcon } from './EventTypeIcon';
 
 /**
  * Props for EventRow component.
@@ -24,32 +25,6 @@ export const EventRow: React.FC<EventRowProps> = ({
 }) => {
     const eventTypeClass = event.type.toLowerCase();
     const source = `${event.involvedObject.namespace}/${event.involvedObject.kind}/${event.involvedObject.name}`;
-
-    const getEventTypeIcon = (type: string): string => {
-        switch (type) {
-            case 'Normal':
-                return 'codicon-check';
-            case 'Warning':
-                return 'codicon-warning';
-            case 'Error':
-                return 'codicon-error';
-            default:
-                return 'codicon-circle-filled';
-        }
-    };
-
-    const getEventTypeColor = (type: string): string => {
-        switch (type) {
-            case 'Normal':
-                return 'var(--vscode-testing-iconPassed)';
-            case 'Warning':
-                return 'var(--vscode-testing-iconQueued)';
-            case 'Error':
-                return 'var(--vscode-testing-iconFailed)';
-            default:
-                return 'var(--vscode-foreground)';
-        }
-    };
 
     const rowStyle: React.CSSProperties = {
         ...style,
@@ -81,11 +56,6 @@ export const EventRow: React.FC<EventRowProps> = ({
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap'
-    };
-
-    const iconStyle: React.CSSProperties = {
-        fontSize: '14px',
-        color: getEventTypeColor(event.type)
     };
 
     const countBadgeStyle: React.CSSProperties = {
@@ -124,7 +94,7 @@ export const EventRow: React.FC<EventRowProps> = ({
             }}
         >
             <div className="event-cell level" style={cellStyle}>
-                <span className={getEventTypeIcon(event.type)} style={iconStyle}></span>
+                <EventTypeIcon type={event.type} />
                 <span>{event.type}</span>
             </div>
             <div className="event-cell time" style={cellStyle} title={event.lastTimestamp}>
