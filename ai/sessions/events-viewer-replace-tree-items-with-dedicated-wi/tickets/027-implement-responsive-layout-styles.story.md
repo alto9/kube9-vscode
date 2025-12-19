@@ -2,7 +2,7 @@
 story_id: 027-implement-responsive-layout-styles
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,16 +21,16 @@ Layout should adapt gracefully to different window sizes, with filter pane colla
 
 ## Acceptance Criteria
 
-- [ ] Add media queries to `index.css` for:
+- [x] Add media queries to `index.css` for:
   - Wide screens (>1200px): All panes visible, comfortable sizing
   - Medium screens (768px-1200px): FilterPane narrower or collapsible
   - Narrow screens (<768px): FilterPane as overlay, table full width
-- [ ] Filter pane auto-collapses on narrow screens
-- [ ] Table columns may be hidden based on priority on narrow screens
-- [ ] Details pane may default to collapsed on narrow screens
-- [ ] Horizontal scrolling available when needed
-- [ ] Layout remains usable at minimum window size
-- [ ] No content cut off or inaccessible
+- [x] Filter pane auto-collapses on narrow screens
+- [x] Table columns may be hidden based on priority on narrow screens
+- [x] Details pane may default to collapsed on narrow screens
+- [x] Horizontal scrolling available when needed
+- [x] Layout remains usable at minimum window size
+- [x] No content cut off or inaccessible
 
 ## Files Affected
 

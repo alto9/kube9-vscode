@@ -817,7 +817,27 @@ body {
    Responsive Design
    ========================================================================== */
 
+/* Medium screens (768px - 1200px) */
+@media (min-width: 768px) and (max-width: 1200px) {
+    .filter-pane {
+        min-width: 200px;
+        max-width: 300px;
+    }
+    
+    .table-header,
+    .event-row {
+        grid-template-columns: 100px 140px 1fr 180px 80px;
+    }
+    
+    /* Slightly reduce column widths for better fit */
+    .event-cell.category {
+        font-size: var(--font-size-xs);
+    }
+}
+
+/* Narrow screens (<768px) */
 @media (max-width: 768px) {
+    /* Toolbar adjustments */
     .toolbar {
         flex-direction: column;
         align-items: stretch;
@@ -832,23 +852,89 @@ body {
         width: 100%;
     }
     
-    .filter-pane {
-        position: absolute;
-        z-index: 10;
-        height: 100%;
-        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+    /* Filter pane overlay behavior */
+    .three-pane-layout {
+        position: relative;
     }
     
+    .filter-pane {
+        position: absolute;
+        left: -250px;
+        top: 0;
+        z-index: 100;
+        height: 100%;
+        width: 250px;
+        transition: left 0.3s ease;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+        background-color: var(--vscode-sideBar-background);
+    }
+    
+    .filter-pane.open {
+        left: 0;
+    }
+    
+    /* Overlay backdrop when filter pane is open */
+    .three-pane-layout::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.3);
+        z-index: 99;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+    
+    .three-pane-layout.filter-pane-open::before {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    
+    /* Main content takes full width */
+    .main-and-details {
+        width: 100%;
+    }
+    
+    /* Table adjustments - hide Category (5th column), keep Level, Date/Time, Source */
     .table-header,
     .event-row {
         grid-template-columns: 100px 120px 1fr;
     }
     
+    /* Hide Event ID (4th column) and Category (5th column) on narrow screens */
     .table-header-column:nth-child(4),
     .table-header-column:nth-child(5),
     .event-cell:nth-child(4),
     .event-cell:nth-child(5) {
         display: none;
     }
+    
+    /* Enable horizontal scrolling for table if needed */
+    .event-table {
+        overflow-x: auto;
+    }
+    
+    /* Ensure table container can scroll horizontally when content overflows */
+    .main-and-details {
+        overflow-x: auto;
+    }
+    
+    /* Details pane defaults to collapsed on narrow screens */
+    .event-details {
+        min-height: 30px;
+    }
+    
+    .details-content {
+        display: none;
+    }
+    
+    .event-details:not(.collapsed) .details-content {
+        display: flex;
+    }
 }
+
+/* Wide screens (>1200px) - default styles apply, no media query needed */
 
