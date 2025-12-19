@@ -2,7 +2,7 @@
 story_id: 023-create-event-details-component
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,16 +21,16 @@ Bottom pane shows detailed event information when user selects event from table.
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/EventDetails.tsx`
-- [ ] Accept props: event, height, onHeightChange, collapsed, onToggleCollapse, sendMessage
-- [ ] Render ResizeHandle for height adjustment
-- [ ] Render details header with "Event Details" title and collapse button
-- [ ] Show empty message when no event selected
-- [ ] Display event fields when event selected: Reason, Type, Message, Namespace, Resource, Count, First/Last Occurrence
-- [ ] Use DetailRow component for each field (label/value pairs)
-- [ ] Handle collapse/expand via chevron button
-- [ ] Adjust height via inline style
-- [ ] TypeScript types for all props
+- [x] Create `src/webview/event-viewer/components/EventDetails.tsx`
+- [x] Accept props: event, height, onHeightChange, collapsed, onToggleCollapse, sendMessage
+- [x] Render ResizeHandle for height adjustment
+- [x] Render details header with "Event Details" title and collapse button
+- [x] Show empty message when no event selected
+- [x] Display event fields when event selected: Reason, Type, Message, Namespace, Resource, Count, First/Last Occurrence
+- [x] Use DetailRow component for each field (label/value pairs)
+- [x] Handle collapse/expand via chevron button
+- [x] Adjust height via inline style
+- [x] TypeScript types for all props
 
 ## Files Affected
 

@@ -1,6 +1,8 @@
 import React from 'react';
 import { KubernetesEvent } from '../../../types/Events';
 import { ResizeHandle } from './ResizeHandle';
+import { DetailRow } from './DetailRow';
+import { formatRelativeTime } from '../utils/formatTime';
 
 /**
  * Props for EventDetails component.
@@ -15,9 +17,9 @@ interface EventDetailsProps {
 }
 
 /**
- * EventDetails component stub.
+ * EventDetails component.
  * Bottom pane displaying detailed event information.
- * Will be fully implemented in story 023.
+ * Shows full event details when an event is selected, or empty state when none selected.
  */
 export const EventDetails: React.FC<EventDetailsProps> = ({
     event,
@@ -51,7 +53,8 @@ export const EventDetails: React.FC<EventDetailsProps> = ({
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    borderBottom: '1px solid var(--vscode-panel-border)'
+                    borderBottom: '1px solid var(--vscode-panel-border)',
+                    flexShrink: 0
                 }}
             >
                 <span>Event Details</span>
@@ -71,16 +74,47 @@ export const EventDetails: React.FC<EventDetailsProps> = ({
                 </button>
             </div>
             {!collapsed && (
-                <div className="details-content" style={{ padding: '12px', flex: 1, overflow: 'auto' }}>
+                <div 
+                    className="details-content" 
+                    style={{ 
+                        flex: 1, 
+                        overflow: 'auto',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }}
+                >
                     {event ? (
-                        <div>
-                            <div>EventDetails (placeholder)</div>
-                            <div>Reason: {event.reason}</div>
-                            <div>Type: {event.type}</div>
-                            <div>Message: {event.message}</div>
-                        </div>
+                        <>
+                            <DetailRow label="Reason" value={event.reason} />
+                            <DetailRow label="Type" value={event.type} />
+                            <DetailRow label="Message" value={event.message} />
+                            <DetailRow label="Namespace" value={event.involvedObject.namespace} />
+                            <DetailRow 
+                                label="Resource" 
+                                value={`${event.involvedObject.kind}/${event.involvedObject.name}`} 
+                            />
+                            <DetailRow label="Count" value={event.count.toString()} />
+                            <DetailRow 
+                                label="First Occurrence" 
+                                value={formatRelativeTime(event.firstTimestamp)} 
+                            />
+                            <DetailRow 
+                                label="Last Occurrence" 
+                                value={formatRelativeTime(event.lastTimestamp)} 
+                            />
+                        </>
                     ) : (
-                        <div>Select an event to view details</div>
+                        <div 
+                            style={{
+                                padding: '24px',
+                                textAlign: 'center',
+                                color: 'var(--vscode-descriptionForeground)',
+                                fontFamily: 'var(--vscode-font-family)',
+                                fontSize: '13px'
+                            }}
+                        >
+                            Select an event to view details
+                        </div>
                     )}
                 </div>
             )}
