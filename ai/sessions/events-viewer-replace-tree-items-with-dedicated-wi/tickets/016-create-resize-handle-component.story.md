@@ -2,7 +2,7 @@
 story_id: 016-create-resize-handle-component
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,15 +21,15 @@ Resizable panes allow users to adjust layout to their preference.
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/ResizeHandle.tsx`
-- [ ] Accept props: orientation ('horizontal' | 'vertical'), onResize callback
-- [ ] Change cursor on hover (resize cursor)
-- [ ] Handle mousedown to start drag
-- [ ] Handle mousemove to resize (call onResize with delta)
-- [ ] Handle mouseup to end drag
-- [ ] Clean up event listeners properly
-- [ ] Visual feedback during drag (optional)
-- [ ] TypeScript types for props
+- [x] Create `src/webview/event-viewer/components/ResizeHandle.tsx`
+- [x] Accept props: orientation ('horizontal' | 'vertical'), onResize callback
+- [x] Change cursor on hover (resize cursor)
+- [x] Handle mousedown to start drag
+- [x] Handle mousemove to resize (call onResize with delta)
+- [x] Handle mouseup to end drag
+- [x] Clean up event listeners properly
+- [x] Visual feedback during drag (optional)
+- [x] TypeScript types for props
 
 ## Files Affected
 
