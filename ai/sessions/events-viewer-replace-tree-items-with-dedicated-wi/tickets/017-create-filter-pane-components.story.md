@@ -2,7 +2,7 @@
 story_id: 017-create-filter-pane-components
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-filtering
 spec_id:
@@ -21,20 +21,20 @@ FilterPane is the left sidebar containing all filter controls organized in colla
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/FilterPane.tsx`
-- [ ] Create `src/webview/event-viewer/components/FilterSection.tsx`
-- [ ] FilterPane accepts: width, onWidthChange, filters, onFilterChange, events
-- [ ] Calculate filter counts from events (useMemo)
-- [ ] Render filter header "Filters"
-- [ ] Render multiple FilterSection children
-- [ ] Include ResizeHandle for width adjustment
-- [ ] FilterSection accepts: title, children
-- [ ] FilterSection is collapsible (expand/collapse)
-- [ ] TypeScript types for all props
+- [x] Create `src/webview/event-viewer/components/FilterPane.tsx`
+- [x] Create `src/webview/event-viewer/components/FilterSection.tsx`
+- [x] FilterPane accepts: width, onWidthChange, filters, onFilterChange, events
+- [x] Calculate filter counts from events (useMemo)
+- [x] Render filter header "Filters"
+- [x] Render multiple FilterSection children
+- [x] Include ResizeHandle for width adjustment
+- [x] FilterSection accepts: title, children
+- [x] FilterSection is collapsible (expand/collapse)
+- [x] TypeScript types for all props
 
 ## Files Affected
 
-- **Create**: `src/webview/event-viewer/components/FilterPane.tsx`
+- **Modify**: `src/webview/event-viewer/components/FilterPane.tsx` (completed stub implementation)
 - **Create**: `src/webview/event-viewer/components/FilterSection.tsx`
 
 ## Implementation Notes
