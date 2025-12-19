@@ -2,7 +2,7 @@
 story_id: 015-create-three-pane-layout-component
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-ui
 spec_id:
@@ -21,15 +21,15 @@ Three-pane layout is the main content area with resizable panes.
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/ThreePaneLayout.tsx`
-- [ ] Accept props: events, selectedEvent, onEventSelect, filters, onFilterChange, loading, error, sendMessage
-- [ ] Manage state for: filterPaneWidth, detailsPaneHeight, detailsCollapsed
-- [ ] Render FilterPane (left, resizable)
-- [ ] Render main-and-details column with EventTable and EventDetails
-- [ ] Pass appropriate props to child components
-- [ ] Support pane resizing via ResizeHandle
-- [ ] Calculate heights dynamically based on details collapsed state
-- [ ] TypeScript types for all props and state
+- [x] Create `src/webview/event-viewer/components/ThreePaneLayout.tsx`
+- [x] Accept props: events, selectedEvent, onEventSelect, filters, onFilterChange, loading, error, sendMessage
+- [x] Manage state for: filterPaneWidth, detailsPaneHeight, detailsCollapsed
+- [x] Render FilterPane (left, resizable)
+- [x] Render main-and-details column with EventTable and EventDetails
+- [x] Pass appropriate props to child components
+- [x] Support pane resizing via ResizeHandle
+- [x] Calculate heights dynamically based on details collapsed state
+- [x] TypeScript types for all props and state
 
 ## Files Affected
 
