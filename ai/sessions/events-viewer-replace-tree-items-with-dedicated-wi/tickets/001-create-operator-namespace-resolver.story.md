@@ -2,7 +2,7 @@
 story_id: 001-create-operator-namespace-resolver
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - dynamic-namespace-discovery
 spec_id:
