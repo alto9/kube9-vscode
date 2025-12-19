@@ -2,7 +2,7 @@
 story_id: 018-create-individual-filter-components
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: story
-status: pending
+status: completed
 feature_id:
   - event-viewer-filtering
 spec_id:
@@ -21,18 +21,18 @@ Individual filter controls allow users to narrow down events by various criteria
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/event-viewer/components/TypeFilter.tsx`
-- [ ] Create `src/webview/event-viewer/components/TimeRangeFilter.tsx`
-- [ ] Create `src/webview/event-viewer/components/NamespaceFilter.tsx`
-- [ ] Create `src/webview/event-viewer/components/ResourceTypeFilter.tsx`
-- [ ] TypeFilter: Radio or checkbox for Normal/Warning/Error with counts
-- [ ] TimeRangeFilter: Dropdown with quick options (1h, 24h, 7d, All) + Custom option
-- [ ] NamespaceFilter: Dropdown with namespace list and counts
-- [ ] ResourceTypeFilter: Dropdown with resource types (Pod, Deployment, etc.) and counts
-- [ ] All filters accept: selected value(s), onChange callback, counts/events
-- [ ] Support "All" option for each filter
-- [ ] Show counts next to each option
-- [ ] TypeScript types for all props
+- [x] Create `src/webview/event-viewer/components/TypeFilter.tsx`
+- [x] Create `src/webview/event-viewer/components/TimeRangeFilter.tsx`
+- [x] Create `src/webview/event-viewer/components/NamespaceFilter.tsx`
+- [x] Create `src/webview/event-viewer/components/ResourceTypeFilter.tsx`
+- [x] TypeFilter: Radio or checkbox for Normal/Warning/Error with counts
+- [x] TimeRangeFilter: Dropdown with quick options (1h, 24h, 7d, All) + Custom option
+- [x] NamespaceFilter: Dropdown with namespace list and counts
+- [x] ResourceTypeFilter: Dropdown with resource types (Pod, Deployment, etc.) and counts
+- [x] All filters accept: selected value(s), onChange callback, counts/events
+- [x] Support "All" option for each filter
+- [x] Show counts next to each option
+- [x] TypeScript types for all props
 
 ## Files Affected
 

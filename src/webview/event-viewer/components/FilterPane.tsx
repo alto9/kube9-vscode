@@ -2,6 +2,10 @@ import React, { useMemo } from 'react';
 import { EventFilters, KubernetesEvent } from '../../../types/Events';
 import { ResizeHandle } from './ResizeHandle';
 import { FilterSection } from './FilterSection';
+import { TypeFilter } from './TypeFilter';
+import { TimeRangeFilter } from './TimeRangeFilter';
+import { NamespaceFilter } from './NamespaceFilter';
+import { ResourceTypeFilter } from './ResourceTypeFilter';
 
 /**
  * Props for FilterPane component.
@@ -58,28 +62,31 @@ export const FilterPane: React.FC<FilterPaneProps> = ({
             </div>
             <div className="filter-sections" style={filterSectionsStyle}>
                 <FilterSection title="Type">
-                    {/* TypeFilter component will be added in story 018 */}
-                    <div style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
-                        Type filter (to be implemented)
-                    </div>
+                    <TypeFilter
+                        selected={filters.type}
+                        onChange={(type) => onFilterChange({ ...filters, type })}
+                        counts={typeCounts}
+                    />
                 </FilterSection>
                 <FilterSection title="Time Range">
-                    {/* TimeRangeFilter component will be added in story 018 */}
-                    <div style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
-                        Time range filter (to be implemented)
-                    </div>
+                    <TimeRangeFilter
+                        selected={filters.since}
+                        onChange={(since) => onFilterChange({ ...filters, since })}
+                    />
                 </FilterSection>
                 <FilterSection title="Namespace">
-                    {/* NamespaceFilter component will be added in story 018 */}
-                    <div style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
-                        Namespace filter (to be implemented)
-                    </div>
+                    <NamespaceFilter
+                        selected={filters.namespace}
+                        onChange={(namespace) => onFilterChange({ ...filters, namespace })}
+                        events={events}
+                    />
                 </FilterSection>
                 <FilterSection title="Resource Type">
-                    {/* ResourceTypeFilter component will be added in story 018 */}
-                    <div style={{ fontSize: '12px', color: 'var(--vscode-descriptionForeground)' }}>
-                        Resource type filter (to be implemented)
-                    </div>
+                    <ResourceTypeFilter
+                        selected={filters.resourceType}
+                        onChange={(resourceType) => onFilterChange({ ...filters, resourceType })}
+                        events={events}
+                    />
                 </FilterSection>
             </div>
             <ResizeHandle
