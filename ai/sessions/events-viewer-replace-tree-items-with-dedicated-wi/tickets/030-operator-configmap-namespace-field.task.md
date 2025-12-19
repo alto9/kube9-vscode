@@ -2,7 +2,7 @@
 task_id: 030-operator-configmap-namespace-field
 session_id: events-viewer-replace-tree-items-with-dedicated-wi
 type: task
-status: pending
+status: completed
 feature_id:
   - dynamic-namespace-discovery
 spec_id:
@@ -21,9 +21,9 @@ For optimal namespace discovery, the operator should self-report its namespace i
 
 ## Requirements
 
-- [ ] Operator deployment should detect its own namespace (from environment or downward API)
-- [ ] Status ConfigMap should include `namespace` field in data
-- [ ] ConfigMap structure:
+- [x] Operator deployment should detect its own namespace (from environment or downward API)
+- [x] Status ConfigMap should include `namespace` field in data
+- [x] ConfigMap structure:
   ```yaml
   data:
     namespace: ${OPERATOR_NAMESPACE}
