@@ -1,6 +1,7 @@
 import * as k8s from '@kubernetes/client-node';
 import { KubernetesEvent, EventFilters, EventCache, DEFAULT_EVENT_FILTERS } from '../types/Events';
 import { getKubernetesApiClient, KubernetesApiClient } from '../kubernetes/apiClient';
+import { getOperatorNamespaceResolver } from './OperatorNamespaceResolver';
 
 /**
  * EventsProvider service.
@@ -175,8 +176,12 @@ export class EventsProvider {
         const apiClient = getKubernetesApiClient();
         apiClient.setContext(clusterContext);
         
+        // Resolve operator namespace dynamically
+        const resolver = getOperatorNamespaceResolver();
+        const namespace = await resolver.resolveNamespace(clusterContext);
+        
         // Get operator pod name
-        const podName = await this.getOperatorPodName(apiClient);
+        const podName = await this.getOperatorPodName(apiClient, namespace);
         
         // Use Kubernetes Exec API
         const exec = new k8s.Exec(apiClient.getKubeConfig());
@@ -187,7 +192,7 @@ export class EventsProvider {
             let stderr = '';
             
             exec.exec(
-                'kube9-system',
+                namespace,
                 podName,
                 'kube9-operator',
                 commandArgs,
@@ -226,19 +231,23 @@ export class EventsProvider {
      * Discovers the kube9-operator pod by label.
      * 
      * @param apiClient The Kubernetes API client
+     * @param namespace The namespace where operator is installed
      * @returns The name of the operator pod
      * @throws Error if operator pod is not found
      */
-    private async getOperatorPodName(apiClient: KubernetesApiClient): Promise<string> {
+    private async getOperatorPodName(
+        apiClient: KubernetesApiClient,
+        namespace: string
+    ): Promise<string> {
         const pods = await apiClient.core.listNamespacedPod({
-            namespace: 'kube9-system'
+            namespace: namespace
         });
         const operatorPod = pods.items.find(pod => 
             pod.metadata?.labels?.['app'] === 'kube9-operator'
         );
         
         if (!operatorPod || !operatorPod.metadata?.name) {
-            throw new Error('kube9-operator pod not found');
+            throw new Error(`kube9-operator pod not found in namespace '${namespace}'`);
         }
         
         return operatorPod.metadata.name;
