@@ -20,12 +20,22 @@ export class EventsCategory extends ClusterTreeItem {
      * @param clusterElement The parent cluster tree item
      */
     constructor(public readonly clusterElement: ClusterTreeItem) {
-        super('Events', 'events', vscode.TreeItemCollapsibleState.Collapsed, clusterElement.resourceData);
+        super('Events', 'events', vscode.TreeItemCollapsibleState.None, clusterElement.resourceData);
         
         this.contextValue = 'kube9.events.category';
         this.iconPath = new vscode.ThemeIcon('output');
         this.description = 'Cluster Events';
         this.tooltip = 'Kubernetes events for troubleshooting';
+        
+        // Set command to open Events Viewer webview
+        // Pass only the cluster context name to avoid circular reference issues
+        if (clusterElement.resourceData?.context?.name) {
+            this.command = {
+                command: 'kube9.events.openViewer',
+                title: 'Open Events Viewer',
+                arguments: [clusterElement.resourceData.context.name]
+            };
+        }
     }
 }
 

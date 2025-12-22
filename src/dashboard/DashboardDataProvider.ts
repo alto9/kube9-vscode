@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { WorkloadCounts, NodeInfo, OperatorDashboardData, OperatorMetrics } from './types';
 import { ConfigurationCommands } from '../kubectl/ConfigurationCommands';
+import { getOperatorNamespaceResolver } from '../services/OperatorNamespaceResolver';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -307,10 +308,14 @@ export class DashboardDataProvider {
         contextName: string
     ): Promise<OperatorDashboardData | null> {
         try {
+            // Resolve namespace dynamically using OperatorNamespaceResolver
+            const resolver = getOperatorNamespaceResolver();
+            const namespace = await resolver.resolveNamespace(contextName);
+            
             // Query the operator dashboard data ConfigMap
             const result = await ConfigurationCommands.getConfigMap(
                 'kube9-dashboard-data',
-                'kube9-system',
+                namespace,
                 kubeconfigPath,
                 contextName
             );

@@ -1,6 +1,29 @@
 import * as k8s from '@kubernetes/client-node';
+import { Writable } from 'stream';
 import { KubernetesEvent, EventFilters, EventCache, DEFAULT_EVENT_FILTERS } from '../types/Events';
 import { getKubernetesApiClient, KubernetesApiClient } from '../kubernetes/apiClient';
+import { getOperatorNamespaceResolver } from './OperatorNamespaceResolver';
+
+/**
+ * Operator event format from kube9-operator CLI.
+ * The operator returns events in a different format than K8s native events.
+ */
+interface OperatorEvent {
+    severity?: string;
+    description?: string;
+    title?: string;
+    event_type?: string;
+    object_kind?: string;
+    object_namespace?: string;
+    object_name?: string;
+    created_at?: string;
+    metadata?: {
+        reason?: string;
+        count?: number;
+        first_timestamp?: string;
+        last_timestamp?: string;
+    };
+}
 
 /**
  * EventsProvider service.
@@ -43,8 +66,8 @@ export class EventsProvider {
         // Apply client-side filters
         const filtered = this.applyFilters(events, activeFilters);
         
-        // Limit to 500 events
-        const limited = filtered.slice(0, 500);
+        // Limit to 100 events to keep UI responsive and avoid buffer issues
+        const limited = filtered.slice(0, 100);
         
         // Cache results
         this.cache.set(clusterContext, {
@@ -175,8 +198,12 @@ export class EventsProvider {
         const apiClient = getKubernetesApiClient();
         apiClient.setContext(clusterContext);
         
+        // Resolve operator namespace dynamically
+        const resolver = getOperatorNamespaceResolver();
+        const namespace = await resolver.resolveNamespace(clusterContext);
+        
         // Get operator pod name
-        const podName = await this.getOperatorPodName(apiClient);
+        const podName = await this.getOperatorPodName(apiClient, namespace);
         
         // Use Kubernetes Exec API
         const exec = new k8s.Exec(apiClient.getKubeConfig());
@@ -186,13 +213,31 @@ export class EventsProvider {
             let stdout = '';
             let stderr = '';
             
+            // Create writable streams to capture output
+            // Use larger highWaterMark to handle large responses (up to 1MB)
+            const stdoutStream = new Writable({
+                highWaterMark: 1024 * 1024, // 1MB buffer
+                write(chunk: Buffer, _encoding: string, callback: () => void) {
+                    stdout += chunk.toString();
+                    callback();
+                }
+            });
+            
+            const stderrStream = new Writable({
+                highWaterMark: 1024 * 1024, // 1MB buffer
+                write(chunk: Buffer, _encoding: string, callback: () => void) {
+                    stderr += chunk.toString();
+                    callback();
+                }
+            });
+            
             exec.exec(
-                'kube9-system',
+                namespace,
                 podName,
-                'kube9-operator',
+                'operator', // Container name in the kube9-operator pod
                 commandArgs,
-                null, // stdout stream - we'll capture via WebSocket
-                null, // stderr stream - we'll capture via WebSocket
+                stdoutStream, // stdout stream
+                stderrStream, // stderr stream
                 null, // stdin stream
                 false, // tty
                 (status) => {
@@ -202,20 +247,7 @@ export class EventsProvider {
                         reject(new Error(`Operator CLI error: ${stderr || status.message}`));
                     }
                 }
-            ).then(ws => {
-                // Capture stdout/stderr from WebSocket
-                // The first byte is the channel: 0=stdin, 1=stdout, 2=stderr, 3=error
-                ws.on('message', (data: Buffer) => {
-                    const channel = data[0];
-                    const content = data.slice(1).toString();
-                    
-                    if (channel === 1) { // stdout
-                        stdout += content;
-                    } else if (channel === 2) { // stderr
-                        stderr += content;
-                    }
-                });
-            }).catch(error => {
+            ).catch(error => {
                 reject(new Error(`Failed to execute operator CLI: ${error.message}`));
             });
         });
@@ -226,19 +258,62 @@ export class EventsProvider {
      * Discovers the kube9-operator pod by label.
      * 
      * @param apiClient The Kubernetes API client
+     * @param namespace The namespace where operator is installed
      * @returns The name of the operator pod
      * @throws Error if operator pod is not found
      */
-    private async getOperatorPodName(apiClient: KubernetesApiClient): Promise<string> {
+    private async getOperatorPodName(
+        apiClient: KubernetesApiClient,
+        namespace: string
+    ): Promise<string> {
         const pods = await apiClient.core.listNamespacedPod({
-            namespace: 'kube9-system'
+            namespace: namespace
         });
-        const operatorPod = pods.items.find(pod => 
-            pod.metadata?.labels?.['app'] === 'kube9-operator'
-        );
         
-        if (!operatorPod || !operatorPod.metadata?.name) {
-            throw new Error('kube9-operator pod not found');
+        // Look for operator pod using standard Kubernetes label or legacy label
+        // Filter to only Running pods
+        const operatorPods = pods.items.filter(pod => {
+            const labels = pod.metadata?.labels;
+            const hasLabel = labels?.['app.kubernetes.io/name'] === 'kube9-operator' ||
+                           labels?.['app'] === 'kube9-operator';
+            const isRunning = pod.status?.phase === 'Running';
+            const hasContainerReady = pod.status?.containerStatuses?.some(
+                cs => cs.name === 'operator' && cs.ready === true
+            );
+            
+            return hasLabel && isRunning && hasContainerReady;
+        });
+        
+        if (operatorPods.length === 0) {
+            // Provide more helpful error if pod exists but isn't ready
+            const anyOperatorPod = pods.items.find(pod => {
+                const labels = pod.metadata?.labels;
+                return labels?.['app.kubernetes.io/name'] === 'kube9-operator' ||
+                       labels?.['app'] === 'kube9-operator';
+            });
+            
+            if (anyOperatorPod) {
+                const containerStatus = anyOperatorPod.status?.containerStatuses?.find(cs => cs.name === 'operator');
+                const podPhase = anyOperatorPod.status?.phase;
+                
+                if (containerStatus && !containerStatus.ready) {
+                    const state = containerStatus.state;
+                    if (state?.waiting) {
+                        throw new Error(`kube9-operator pod is not ready: ${state.waiting.reason || 'Waiting'} - ${state.waiting.message || 'Container is waiting to start'}`);
+                    } else if (state?.terminated) {
+                        throw new Error(`kube9-operator container crashed: ${state.terminated.reason || 'Terminated'} (exit code ${state.terminated.exitCode}). Check pod logs: kubectl logs -n ${namespace} ${anyOperatorPod.metadata?.name}`);
+                    }
+                    throw new Error(`kube9-operator pod exists but container is not ready (pod phase: ${podPhase})`);
+                }
+            }
+            
+            throw new Error(`No running kube9-operator pod found in namespace '${namespace}'. Ensure the operator is deployed and running.`);
+        }
+        
+        // Use the first running pod
+        const operatorPod = operatorPods[0];
+        if (!operatorPod.metadata?.name) {
+            throw new Error(`kube9-operator pod has no name in namespace '${namespace}'`);
         }
         
         return operatorPod.metadata.name;
@@ -246,50 +321,161 @@ export class EventsProvider {
 
     /**
      * Build operator CLI query command with filters.
-     * Constructs the command string with appropriate filter arguments.
+     * Constructs the command string with appropriate filter arguments for the operator CLI.
+     * 
+     * Command structure: kube9-operator query events list [options]
      * 
      * @param filters The event filters to apply
      * @returns The complete command string
      */
     private buildQueryCommand(filters: EventFilters): string {
-        const parts = ['kube9-operator', 'query', 'events'];
+        const parts = ['kube9-operator', 'query', 'events', 'list'];
         
+        // Object namespace filter
         if (filters.namespace && filters.namespace !== 'all') {
-            parts.push(`--namespace=${filters.namespace}`);
+            parts.push(`--object-namespace=${filters.namespace}`);
         }
         
+        // Type filter (cluster, operator, insight, assessment, health, system)
         if (filters.type && filters.type !== 'all') {
             parts.push(`--type=${filters.type}`);
         }
         
+        // Since filter - convert to ISO 8601 if needed
         if (filters.since && filters.since !== 'all') {
-            parts.push(`--since=${filters.since}`);
+            const sinceDate = this.parseSinceFilter(filters.since);
+            if (sinceDate) {
+                parts.push(`--since=${sinceDate}`);
+            }
         }
         
+        // Object kind filter
         if (filters.resourceType && filters.resourceType !== 'all') {
-            parts.push(`--resource-type=${filters.resourceType}`);
+            parts.push(`--object-kind=${filters.resourceType}`);
         }
         
-        parts.push('--limit=500');
+        // Limit to 100 events to keep response size manageable (< 64KB)
+        parts.push('--limit=100');
         parts.push('--format=json');
         
         return parts.join(' ');
     }
 
     /**
-     * Parse JSON event response from operator CLI.
+     * Parse "since" filter value to ISO 8601 datetime.
+     * Converts relative time strings (e.g., "1h", "24h", "7d") to ISO 8601 datetime strings.
      * 
-     * @param json The JSON string from operator CLI
+     * @param since The since filter value (e.g., "1h", "24h", "7d", or ISO 8601 string)
+     * @returns ISO 8601 datetime string or null if invalid
+     */
+    private parseSinceFilter(since: string): string | null {
+        // If already an ISO 8601 string, return as-is
+        if (since.includes('T') || since.includes('Z')) {
+            return since;
+        }
+        
+        // Parse relative time (e.g., "1h", "24h", "7d")
+        const match = since.match(/^(\d+)([smhd])$/);
+        if (!match) {
+            return null;
+        }
+        
+        const value = parseInt(match[1], 10);
+        const unit = match[2];
+        
+        let milliseconds = 0;
+        switch (unit) {
+            case 's': milliseconds = value * 1000; break;
+            case 'm': milliseconds = value * 60 * 1000; break;
+            case 'h': milliseconds = value * 60 * 60 * 1000; break;
+            case 'd': milliseconds = value * 24 * 60 * 60 * 1000; break;
+            default: return null;
+        }
+        
+        const date = new Date(Date.now() - milliseconds);
+        return date.toISOString();
+    }
+
+    /**
+     * Parse JSON event response from operator CLI.
+     * Filters out log lines, extracts the response, and transforms operator events to KubernetesEvent format.
+     * 
+     * @param output The raw output from operator CLI (may contain log lines + response)
      * @returns Array of parsed Kubernetes events
      * @throws Error if JSON parsing fails
      */
-    private parseEventResponse(json: string): KubernetesEvent[] {
+    private parseEventResponse(output: string): KubernetesEvent[] {
         try {
-            const data = JSON.parse(json);
-            return data.events || [];
+            const lines = output.trim().split('\n');
+            
+            // Find the start of the response JSON (first line that starts with "{" and is NOT a complete log line)
+            let responseStartIndex = 0;
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('{')) {
+                    try {
+                        const parsed = JSON.parse(line);
+                        // If it's a complete JSON object with "level", it's a log line - skip it
+                        if (parsed.level !== undefined) {
+                            continue;
+                        }
+                        // Otherwise, this is the start of our response
+                        responseStartIndex = i;
+                        break;
+                    } catch {
+                        // Line starts with "{" but isn't complete JSON - this is the start of multi-line response
+                        responseStartIndex = i;
+                        break;
+                    }
+                }
+            }
+            
+            // Join all lines from responseStartIndex onwards to reconstruct the multi-line JSON
+            const responseJson = lines.slice(responseStartIndex).join('\n');
+            
+            if (!responseJson) {
+                return [];
+            }
+            
+            const data = JSON.parse(responseJson);
+            const operatorEvents = data.events || [];
+            
+            // Transform operator events to KubernetesEvent format
+            return operatorEvents.map((evt: OperatorEvent) => this.transformOperatorEvent(evt));
         } catch (error) {
             throw new Error(`Failed to parse event response: ${(error as Error).message}`);
         }
+    }
+
+    /**
+     * Transform operator event format to KubernetesEvent format.
+     * Operator events have different field names and structure than K8s events.
+     * 
+     * @param operatorEvent Event from operator CLI
+     * @returns Transformed KubernetesEvent
+     */
+    private transformOperatorEvent(operatorEvent: OperatorEvent): KubernetesEvent {
+        // Map severity to event type
+        let type: 'Normal' | 'Warning' | 'Error' = 'Normal';
+        if (operatorEvent.severity === 'error' || operatorEvent.severity === 'critical') {
+            type = 'Error';
+        } else if (operatorEvent.severity === 'warning') {
+            type = 'Warning';
+        }
+        
+        return {
+            reason: operatorEvent.metadata?.reason || operatorEvent.event_type || 'Unknown',
+            type: type,
+            message: operatorEvent.description || operatorEvent.title || '',
+            involvedObject: {
+                kind: operatorEvent.object_kind || 'Unknown',
+                namespace: operatorEvent.object_namespace || '',
+                name: operatorEvent.object_name || ''
+            },
+            count: operatorEvent.metadata?.count || 1,
+            firstTimestamp: operatorEvent.metadata?.first_timestamp || operatorEvent.created_at || new Date().toISOString(),
+            lastTimestamp: operatorEvent.metadata?.last_timestamp || operatorEvent.created_at || new Date().toISOString()
+        };
     }
 
     /**

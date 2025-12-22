@@ -1,5 +1,6 @@
 import { ConfigurationCommands } from '../kubectl/ConfigurationCommands';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
+import { getOperatorNamespaceResolver } from '../services/OperatorNamespaceResolver';
 import { AIRecommendationsData, AIRecommendation } from './types';
 
 /**
@@ -40,10 +41,14 @@ export async function getAIRecommendations(
         // Get kubeconfig path
         const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
         
+        // Resolve namespace dynamically using OperatorNamespaceResolver
+        const resolver = getOperatorNamespaceResolver();
+        const namespace = await resolver.resolveNamespace(clusterContext);
+        
         // Query the AI recommendations ConfigMap
         const result = await ConfigurationCommands.getConfigMap(
             'kube9-ai-recommendations',
-            'kube9-system',
+            namespace,
             kubeconfigPath,
             clusterContext
         );
