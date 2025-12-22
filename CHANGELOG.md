@@ -1,3 +1,10 @@
+## [1.9.2](https://github.com/alto9/kube9-vscode/compare/v1.9.1...v1.9.2) (2025-12-22)
+
+
+### Bug Fixes
+
+* **tree:** refresh should clear caches and force status re-check ([308baa9](https://github.com/alto9/kube9-vscode/commit/308baa94356f8050c54b3899d8839c53998b8a11))
+
 ## [1.9.1](https://github.com/alto9/kube9-vscode/compare/v1.9.0...v1.9.1) (2025-12-22)
 
 
