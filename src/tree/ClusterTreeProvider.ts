@@ -82,6 +82,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private clusterStatusCache: Map<string, ClusterStatus> = new Map();
 
     /**
+     * Cache of operator status to persist between tree refreshes.
+     * Maps context name to its last known operator status.
+     */
+    private operatorStatusCache: Map<string, OperatorStatusMode | undefined> = new Map();
+
+    /**
      * Timer for periodic connectivity checks.
      * Reserved for cleanup in dispose() method.
      */
@@ -819,6 +825,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 this.clusterItemsCache.set(contextName, item);
                 
                 const cachedStatus = this.clusterStatusCache.get(contextName);
+                const cachedOperatorStatus = this.operatorStatusCache.get(contextName);
+                
+                // Restore cached operator status
+                if (cachedOperatorStatus !== undefined) {
+                    item.operatorStatus = cachedOperatorStatus;
+                }
                 
                 if (cachedStatus !== undefined) {
                     // Use cached status if available
@@ -897,6 +909,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 this.clusterItemsCache.set(contextName, item);
                 
                 const cachedStatus = this.clusterStatusCache.get(contextName);
+                const cachedOperatorStatus = this.operatorStatusCache.get(contextName);
+                
+                // Restore cached operator status
+                if (cachedOperatorStatus !== undefined) {
+                    item.operatorStatus = cachedOperatorStatus;
+                }
                 
                 if (cachedStatus !== undefined) {
                     // Use cached status if available
@@ -1329,6 +1347,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             item.operatorStatus = cachedStatus.mode;
             item.operatorStatusDetails = cachedStatus.status ?? undefined;
 
+            // Cache operator status for tree refreshes
+            this.operatorStatusCache.set(contextName, item.operatorStatus);
+
             // Update appearance with operator status (prioritizes operator status over connectivity)
             const isCurrentContext = contextName === this.kubeconfig.currentContext;
             const currentStatus = item.status || ClusterStatus.Unknown;
@@ -1666,8 +1687,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // Clean up error tracking
         this.shownErrorTypes.clear();
         
-        // Clear status cache
+        // Clear status caches
         this.clusterStatusCache.clear();
+        this.operatorStatusCache.clear();
     }
 }
 
