@@ -37,7 +37,6 @@ import {
 import { showCacheStatsCommand } from './commands/cacheStats';
 import { EventsCommands } from './commands/EventsCommands';
 import { EventViewerPanel } from './webview/EventViewerPanel';
-import { EventsCategory } from './tree/categories/EventsCategory';
 
 /**
  * Global extension context accessible to all components.

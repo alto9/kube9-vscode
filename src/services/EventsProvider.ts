@@ -1,7 +1,29 @@
 import * as k8s from '@kubernetes/client-node';
+import { Writable } from 'stream';
 import { KubernetesEvent, EventFilters, EventCache, DEFAULT_EVENT_FILTERS } from '../types/Events';
 import { getKubernetesApiClient, KubernetesApiClient } from '../kubernetes/apiClient';
 import { getOperatorNamespaceResolver } from './OperatorNamespaceResolver';
+
+/**
+ * Operator event format from kube9-operator CLI.
+ * The operator returns events in a different format than K8s native events.
+ */
+interface OperatorEvent {
+    severity?: string;
+    description?: string;
+    title?: string;
+    event_type?: string;
+    object_kind?: string;
+    object_namespace?: string;
+    object_name?: string;
+    created_at?: string;
+    metadata?: {
+        reason?: string;
+        count?: number;
+        first_timestamp?: string;
+        last_timestamp?: string;
+    };
+}
 
 /**
  * EventsProvider service.
@@ -193,8 +215,6 @@ export class EventsProvider {
             
             // Create writable streams to capture output
             // Use larger highWaterMark to handle large responses (up to 1MB)
-            const { Writable } = require('stream');
-            
             const stdoutStream = new Writable({
                 highWaterMark: 1024 * 1024, // 1MB buffer
                 write(chunk: Buffer, _encoding: string, callback: () => void) {
@@ -421,7 +441,7 @@ export class EventsProvider {
             const operatorEvents = data.events || [];
             
             // Transform operator events to KubernetesEvent format
-            return operatorEvents.map((evt: any) => this.transformOperatorEvent(evt));
+            return operatorEvents.map((evt: OperatorEvent) => this.transformOperatorEvent(evt));
         } catch (error) {
             throw new Error(`Failed to parse event response: ${(error as Error).message}`);
         }
@@ -434,7 +454,7 @@ export class EventsProvider {
      * @param operatorEvent Event from operator CLI
      * @returns Transformed KubernetesEvent
      */
-    private transformOperatorEvent(operatorEvent: any): KubernetesEvent {
+    private transformOperatorEvent(operatorEvent: OperatorEvent): KubernetesEvent {
         // Map severity to event type
         let type: 'Normal' | 'Warning' | 'Error' = 'Normal';
         if (operatorEvent.severity === 'error' || operatorEvent.severity === 'critical') {

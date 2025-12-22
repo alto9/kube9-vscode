@@ -409,7 +409,7 @@ export class EventViewerPanel {
     private sendMessage(message: ExtensionMessage): void {
         const timestamp = new Date().toISOString();
         const messageType = message.type;
-        const eventsCount = message.type === 'events' && 'events' in message ? (message.events as any[]).length : 'N/A';
+        const eventsCount = message.type === 'events' && 'events' in message ? message.events.length : 'N/A';
         console.log(`[EventViewerPanel ${timestamp}] ➡️ Sending message: ${messageType} ${message.type === 'events' ? `(${eventsCount} events)` : ''}`);
         this.panel.webview.postMessage(message);
     }
