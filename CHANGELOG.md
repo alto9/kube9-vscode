@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/alto9/kube9-vscode/compare/v1.9.0...v1.9.1) (2025-12-22)
+
+
+### Bug Fixes
+
+* **tree:** preserve operator status across tree refresh ([b4f862c](https://github.com/alto9/kube9-vscode/commit/b4f862cb4c5ef0dfe43302d1fc549891d8daf6dd))
+
 # [1.9.0](https://github.com/alto9/kube9-vscode/compare/v1.8.0...v1.9.0) (2025-12-22)
 
 
