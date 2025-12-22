@@ -96,7 +96,8 @@ export class OperatorNamespaceResolver {
         // Bootstrap: determine where to look for ConfigMap
         const candidateNamespaces = [
             this.getNamespaceFromSettings(clusterContext),
-            OperatorNamespaceResolver.DEFAULT_NAMESPACE
+            OperatorNamespaceResolver.DEFAULT_NAMESPACE,
+            'default' // Also check 'default' namespace for operators not in kube9-system
         ].filter(Boolean) as string[];
 
         // Try each candidate namespace
@@ -109,27 +110,9 @@ export class OperatorNamespaceResolver {
                     namespace: namespace
                 });
 
-                // Check if ConfigMap has data field
-                if (!configMap.data) {
-                    // ConfigMap found but has no data field - return null to fall back to settings
-                    return null;
-                }
-
-                // Check if ConfigMap has namespace field
-                // The API returns V1ConfigMap directly
-                const namespaceField = configMap.data['namespace'];
-                if (namespaceField) {
-                    // Validate it matches or warn
-                    if (namespaceField !== namespace) {
-                        console.warn(
-                            `[OperatorNamespaceResolver] ConfigMap found in '${namespace}' but indicates namespace: '${namespaceField}'. ` +
-                            `Using '${namespaceField}' from ConfigMap.`
-                        );
-                    }
-                    return namespaceField;
-                }
-
-                // ConfigMap found but no namespace field, assume current namespace
+                // ConfigMap found! The operator is in this namespace.
+                // We don't need to read any fields from it - just finding it tells us the namespace.
+                console.log(`[OperatorNamespaceResolver] ConfigMap found in namespace: ${namespace}`);
                 return namespace;
             } catch (error) {
                 // ConfigMap not found in this namespace, try next

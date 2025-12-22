@@ -354,8 +354,8 @@ export class EventsProvider {
             parts.push(`--object-kind=${filters.resourceType}`);
         }
         
-        // Limit to 100 events to keep response size manageable (< 64KB)
-        parts.push('--limit=100');
+        // Limit to 25 events to keep response size manageable
+        parts.push('--limit=25');
         parts.push('--format=json');
         
         return parts.join(' ');
