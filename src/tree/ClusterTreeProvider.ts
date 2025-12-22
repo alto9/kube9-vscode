@@ -1131,11 +1131,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * @param forceOperatorRefresh If true, forces operator status refresh for all clusters, bypassing cache
      */
     refresh(forceOperatorRefresh = false): void {
-        // If manual refresh is requested, set flag to force refresh operator status
-        // The flag will be checked in getClusters() when cluster items are created
-        if (forceOperatorRefresh) {
-            this.forceOperatorRefreshFlag = true;
-        }
+        // Clear status caches to force re-check of connectivity and operator status
+        this.clusterStatusCache.clear();
+        this.operatorStatusCache.clear();
         
         // Invalidate cache for current context to ensure fresh data is fetched
         try {
@@ -1153,8 +1151,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         }
         
         // Fire tree data change event to refresh the tree view
-        // This will trigger getChildren() which calls getClusters()
-        // getClusters() will check forceOperatorRefreshFlag and pass it to checkOperatorStatus()
         this._onDidChangeTreeData.fire();
     }
 
