@@ -1,3 +1,10 @@
+## [1.9.4](https://github.com/alto9/kube9-vscode/compare/v1.9.3...v1.9.4) (2025-12-22)
+
+
+### Bug Fixes
+
+* **lint:** remove unused variables to fix test failures ([c311a34](https://github.com/alto9/kube9-vscode/commit/c311a346b887293d10391d0f14fd68a96069a0f9))
+
 ## [1.9.3](https://github.com/alto9/kube9-vscode/compare/v1.9.2...v1.9.3) (2025-12-22)
 
 
