@@ -52,6 +52,7 @@ export const EventViewerApp: React.FC = () => {
 
         const handleMessage = (event: MessageEvent) => {
             const message = event.data as ExtensionMessage;
+            console.log('[EventViewerApp] Received message:', message.type);
 
             switch (message.type) {
                 case 'initialState':
@@ -107,12 +108,14 @@ export const EventViewerApp: React.FC = () => {
         window.addEventListener('message', handleMessage);
 
         // Notify extension that webview is ready
+        console.log('[EventViewerApp] Sending ready message');
         sendMessage({ type: 'ready' });
 
         return () => {
+            console.log('[EventViewerApp] Cleaning up message listener');
             window.removeEventListener('message', handleMessage);
         };
-    }, [sendMessage]);
+    }, []); // Empty deps - only run once on mount
 
     // Handle refresh action
     const handleRefresh = useCallback(() => {

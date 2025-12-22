@@ -39,6 +39,21 @@ export class EventViewerPanel {
     private readonly extensionContext: vscode.ExtensionContext;
 
     /**
+     * Flag to prevent concurrent loads.
+     */
+    private isLoading: boolean = false;
+
+    /**
+     * Flag to track if initial load has been done.
+     */
+    private hasLoadedInitialEvents: boolean = false;
+
+    /**
+     * Counter for 'ready' messages received (debugging).
+     */
+    private readyMessageCount: number = 0;
+
+    /**
      * Show or create Events Viewer panel for a cluster.
      * 
      * @param context Extension context
@@ -99,8 +114,8 @@ export class EventViewerPanel {
         // Handle panel disposal
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
 
-        // Load initial events
-        this.loadEvents();
+        // NOTE: Do NOT load events here - wait for webview 'ready' message
+        // to avoid double-loading and flickering. Events will be loaded via sendInitialState().
     }
 
     /**
@@ -109,37 +124,53 @@ export class EventViewerPanel {
     private setupMessageHandling(): void {
         this.panel.webview.onDidReceiveMessage(
             async (message: WebviewMessage) => {
+                const timestamp = new Date().toISOString();
+                console.log(`[EventViewerPanel ${timestamp}] ⬅️ Received message: ${message.type}`);
+                
                 switch (message.type) {
                     case 'ready':
+                        this.readyMessageCount++;
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'ready' message #${this.readyMessageCount}`);
                         await this.sendInitialState();
                         break;
                     case 'load':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'load' message`);
                         await this.handleLoadEvents(message.filters);
                         break;
                     case 'refresh':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'refresh' message`);
                         await this.handleRefresh();
                         break;
                     case 'filter':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'filter' message`);
                         await this.handleFilterChange(message.filters);
                         break;
                     case 'export':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'export' message`);
                         await this.handleExport(message.format, message.events);
                         break;
                     case 'copy':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'copy' message`);
                         await this.handleCopy(message.content);
                         break;
                     case 'navigate':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'navigate' message`);
                         await this.handleNavigate(message.resource);
                         break;
                     case 'viewYaml':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'viewYaml' message`);
                         await this.handleViewYaml(message.resource);
                         break;
                     case 'toggleAutoRefresh':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'toggleAutoRefresh' message, enabled=${message.enabled}`);
                         await this.handleToggleAutoRefresh(message.enabled);
                         break;
                     case 'setAutoRefreshInterval':
+                        console.log(`[EventViewerPanel ${timestamp}] Processing 'setAutoRefreshInterval' message`);
                         await this.handleSetAutoRefreshInterval(message.interval);
                         break;
+                    default:
+                        console.log(`[EventViewerPanel ${timestamp}] ❌ Unknown message type:`, message);
                 }
             },
             null,
@@ -149,8 +180,24 @@ export class EventViewerPanel {
 
     /**
      * Load events and send to webview.
+     * NO AUTOMATIC REFRESH - only loads when explicitly called.
      */
     private async loadEvents(filters?: EventFilters): Promise<void> {
+        const timestamp = new Date().toISOString();
+        const stack = new Error().stack;
+        console.log(`[EventViewerPanel ${timestamp}] loadEvents called, filters:`, filters);
+        console.log(`[EventViewerPanel ${timestamp}] Call stack:\n${stack}`);
+        console.log(`[EventViewerPanel ${timestamp}] isLoading=${this.isLoading}`);
+        
+        // Prevent concurrent loads
+        if (this.isLoading) {
+            console.log(`[EventViewerPanel ${timestamp}] ⛔ BLOCKED: Skipping load - already loading`);
+            return;
+        }
+
+        this.isLoading = true;
+        console.log(`[EventViewerPanel ${timestamp}] ✅ PROCEEDING with load...`);
+
         try {
             this.sendMessage({
                 type: 'loading',
@@ -167,12 +214,16 @@ export class EventViewerPanel {
                 events: events,
                 loading: false
             });
+            console.log(`[EventViewerPanel ${timestamp}] ✅ Load complete, sent ${events.length} events`);
         } catch (error) {
+            console.log(`[EventViewerPanel ${timestamp}] ❌ Load failed:`, error);
             this.sendMessage({
                 type: 'error',
                 error: (error as Error).message,
                 loading: false
             });
+        } finally {
+            this.isLoading = false;
         }
     }
 
@@ -321,10 +372,24 @@ export class EventViewerPanel {
 
     /**
      * Send initial state to webview when ready.
+     * ONLY sends initial state ONCE - prevents duplicate loads.
      */
     private async sendInitialState(): Promise<void> {
+        const timestamp = new Date().toISOString();
+        console.log(`[EventViewerPanel ${timestamp}] sendInitialState called, hasLoadedInitialEvents=${this.hasLoadedInitialEvents}`);
+        
+        // Prevent multiple initial state sends
+        if (this.hasLoadedInitialEvents) {
+            console.log(`[EventViewerPanel ${timestamp}] ⛔ BLOCKED: Skipping - initial state already sent`);
+            return;
+        }
+
+        this.hasLoadedInitialEvents = true;
+        console.log(`[EventViewerPanel ${timestamp}] ✅ PROCEEDING with sendInitialState`);
+
         const filters = this.eventsProvider.getFilters(this.clusterContext);
         const autoRefreshEnabled = this.eventsProvider.isAutoRefreshEnabled(this.clusterContext);
+        console.log(`[EventViewerPanel ${timestamp}] autoRefreshEnabled=${autoRefreshEnabled}`);
 
         this.sendMessage({
             type: 'initialState',
@@ -333,7 +398,8 @@ export class EventViewerPanel {
             autoRefreshEnabled: autoRefreshEnabled
         });
 
-        // Load initial events
+        // Load initial events ONCE
+        console.log(`[EventViewerPanel ${timestamp}] Calling loadEvents from sendInitialState`);
         await this.loadEvents(filters);
     }
 
@@ -341,6 +407,10 @@ export class EventViewerPanel {
      * Send message to webview.
      */
     private sendMessage(message: ExtensionMessage): void {
+        const timestamp = new Date().toISOString();
+        const messageType = message.type;
+        const eventsCount = message.type === 'events' && 'events' in message ? (message.events as any[]).length : 'N/A';
+        console.log(`[EventViewerPanel ${timestamp}] ➡️ Sending message: ${messageType} ${message.type === 'events' ? `(${eventsCount} events)` : ''}`);
         this.panel.webview.postMessage(message);
     }
 

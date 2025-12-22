@@ -28,11 +28,14 @@ export class EventsCategory extends ClusterTreeItem {
         this.tooltip = 'Kubernetes events for troubleshooting';
         
         // Set command to open Events Viewer webview
-        this.command = {
-            command: 'kube9.events.openViewer',
-            title: 'Open Events Viewer',
-            arguments: [this]
-        };
+        // Pass only the cluster context name to avoid circular reference issues
+        if (clusterElement.resourceData?.context?.name) {
+            this.command = {
+                command: 'kube9.events.openViewer',
+                title: 'Open Events Viewer',
+                arguments: [clusterElement.resourceData.context.name]
+            };
+        }
     }
 }
 

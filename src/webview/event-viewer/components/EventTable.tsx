@@ -119,7 +119,7 @@ export const EventTable: React.FC<EventTableProps> = ({
         );
     }
 
-    // Show error state
+    // Show error state (NO AUTO-RETRY - user must click Retry button)
     if (error) {
         return (
             <div className="event-table" style={containerStyle} ref={containerRef}>

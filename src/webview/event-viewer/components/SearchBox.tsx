@@ -37,7 +37,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ value, onChange }) => {
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [localValue, onChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localValue]); // Don't include onChange - causes infinite loop when parent passes inline function
 
     // Handle Escape key to clear search
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
