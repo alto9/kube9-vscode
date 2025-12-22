@@ -1,7 +1,7 @@
 {
   "name": "kube9-vscode",
   "displayName": "Kube9 - Kubernetes Cluster Manager",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "license": "MIT",
   "author": "Alto9",
   "publisher": "Alto9",
@@ -338,7 +338,10 @@
           "scope": "application"
         },
         "kube9.operatorNamespace": {
-          "type": ["string", "object"],
+          "type": [
+            "string",
+            "object"
+          ],
           "default": null,
           "markdownDescription": "Custom namespace for kube9-operator. Leave empty for auto-detection.\n\n**String example** (applies to all clusters):\n```json\n\"kube9.operatorNamespace\": \"my-kube9\"\n```\n\n**Object example** (per-cluster):\n```json\n\"kube9.operatorNamespace\": {\n  \"production\": \"kube9-prod\",\n  \"staging\": \"kube9-staging\"\n}\n```"
         }

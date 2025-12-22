@@ -1,3 +1,29 @@
+# [1.9.0](https://github.com/alto9/kube9-vscode/compare/v1.8.0...v1.9.0) (2025-12-22)
+
+
+### Features
+
+* add action buttons to event details pane ([788477b](https://github.com/alto9/kube9-vscode/commit/788477b6f42274aa0964088a2337cb4c1a5ca79a))
+* add active column highlighting to table header ([0fff152](https://github.com/alto9/kube9-vscode/commit/0fff1521c0ade996d50d5c1beccb139aaf9fce31))
+* add namespace field to operator status ConfigMap ([356ae8b](https://github.com/alto9/kube9-vscode/commit/356ae8b98de41f84c6c899b1a9c73f4405f2def7))
+* add operator namespace settings schema ([0c75a39](https://github.com/alto9/kube9-vscode/commit/0c75a39bedc863dd9cae5eef29a3e573c52181cb))
+* add OperatorNamespaceResolver for dynamic namespace discovery ([1a4aed5](https://github.com/alto9/kube9-vscode/commit/1a4aed57e9f9105b5e457fb27bc2fdb0eb9a3c5d))
+* add SearchBox component for event viewer filtering ([a32b9f4](https://github.com/alto9/kube9-vscode/commit/a32b9f42df56629e49b8f4660bc11d6fe2a831f8))
+* create EventDetails and DetailRow components ([712c457](https://github.com/alto9/kube9-vscode/commit/712c4579126e51e2de28a181d9a163111125521b))
+* create EventRow component with color coding ([f8cbbc9](https://github.com/alto9/kube9-vscode/commit/f8cbbc9137c5d413d1ef0004c7cba122e1066171))
+* create EventViewerApp root component for events webview ([ddcc2b7](https://github.com/alto9/kube9-vscode/commit/ddcc2b705a816288ded48466df17fcd6efc4b6b5))
+* create EventViewerPanel class for Events Viewer webview ([0fe4110](https://github.com/alto9/kube9-vscode/commit/0fe41100daecf85adab02f9cca492a2f7e0e6f15))
+* create FilterPane and FilterSection components ([d43914b](https://github.com/alto9/kube9-vscode/commit/d43914bd7450da2bfc2841df147a49e524819422))
+* create individual filter components for event viewer ([d196f25](https://github.com/alto9/kube9-vscode/commit/d196f25b407c57638dc9b99b16dc4da476f3f118))
+* create ThreePaneLayout component with resizable panes ([6d79979](https://github.com/alto9/kube9-vscode/commit/6d79979ec13c077649c25e6efd6442e0a20639c3))
+* create toolbar component with action buttons for events viewer ([2ed1bb6](https://github.com/alto9/kube9-vscode/commit/2ed1bb6448c9ae354f62e10daa420cc61f40b701))
+* **events:** register commands for opening Events Viewer ([7aa432a](https://github.com/alto9/kube9-vscode/commit/7aa432aecd4db278807bceca0db8e4b6cff4b66f))
+* implement EventTable component with virtual scrolling ([c4352f1](https://github.com/alto9/kube9-vscode/commit/c4352f17d95737497384c0482dc3c586879f781f))
+* implement ResizeHandle drag functionality ([d86d7d0](https://github.com/alto9/kube9-vscode/commit/d86d7d066aad410ea7a5ad3589e436a0225225bf))
+* implement StatusBar component for Events Viewer ([c56bcc7](https://github.com/alto9/kube9-vscode/commit/c56bcc7d390b2d5ec64a884b116f225be220d169))
+* split table state components into separate files ([49daca9](https://github.com/alto9/kube9-vscode/commit/49daca9fd1d114715f1c97155802de9256f3ee9e))
+* update EventsCategory to launch webview instead of expanding tree ([89fec00](https://github.com/alto9/kube9-vscode/commit/89fec009e3da30f926c9d46d220343c57ac0cc09))
+
 # [1.8.0](https://github.com/alto9/kube9-vscode/compare/v1.7.0...v1.8.0) (2025-12-18)
 
 
