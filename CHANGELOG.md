@@ -1,3 +1,10 @@
+## [1.9.3](https://github.com/alto9/kube9-vscode/compare/v1.9.2...v1.9.3) (2025-12-22)
+
+
+### Bug Fixes
+
+* **events:** reduce event limit to 25 and improve namespace discovery ([48518f8](https://github.com/alto9/kube9-vscode/commit/48518f8948c4b4be16f9f0f4e757a69e6a70a1ba))
+
 ## [1.9.2](https://github.com/alto9/kube9-vscode/compare/v1.9.1...v1.9.2) (2025-12-22)
 
 
