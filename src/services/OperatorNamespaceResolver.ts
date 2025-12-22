@@ -103,9 +103,8 @@ export class OperatorNamespaceResolver {
         // Try each candidate namespace
         for (const namespace of candidateNamespaces) {
             try {
-                // Use the Kubernetes API client to read ConfigMap
-                // The readNamespacedConfigMap method takes an object with name and namespace
-                const configMap = await apiClient.core.readNamespacedConfigMap({
+                // Try to read the ConfigMap to check if it exists in this namespace
+                await apiClient.core.readNamespacedConfigMap({
                     name: OperatorNamespaceResolver.STATUS_CONFIGMAP_NAME,
                     namespace: namespace
                 });

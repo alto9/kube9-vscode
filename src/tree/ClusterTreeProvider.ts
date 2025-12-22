@@ -1127,10 +1127,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * 
      * This is for MANUAL refresh operations only (e.g., refresh button).
      * For namespace changes, use refreshForNamespaceChange() instead.
-     * 
-     * @param forceOperatorRefresh If true, forces operator status refresh for all clusters, bypassing cache
      */
-    refresh(forceOperatorRefresh = false): void {
+    refresh(): void {
         // Clear status caches to force re-check of connectivity and operator status
         this.clusterStatusCache.clear();
         this.operatorStatusCache.clear();
