@@ -126,5 +126,7 @@ export interface TreeItemData {
     namespace?: string;
     /** Optional label selector for workload resources */
     labelSelector?: string;
+    /** Optional forward ID for port forward items */
+    forwardId?: string;
 }
 

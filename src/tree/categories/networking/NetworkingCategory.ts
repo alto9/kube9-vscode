@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../../ClusterTreeItem';
 import { TreeItemData } from '../../TreeItemTypes';
+import { TreeItemFactory } from '../../TreeItemFactory';
 
 /**
  * Networking category handler.
@@ -18,7 +19,7 @@ export class NetworkingCategory {
     public static getNetworkingSubcategories(resourceData: TreeItemData): ClusterTreeItem[] {
         return [
             this.createServicesSubcategory(resourceData),
-            this.createPortForwardingSubcategory(resourceData)
+            TreeItemFactory.createPortForwardingSubcategory(resourceData)
         ];
     }
 
@@ -37,24 +38,6 @@ export class NetworkingCategory {
         );
         item.iconPath = new vscode.ThemeIcon('globe');
         item.tooltip = 'View all services across all namespaces';
-        return item;
-    }
-
-    /**
-     * Creates the Port Forwarding subcategory tree item.
-     * 
-     * @param resourceData Cluster context and cluster information
-     * @returns Configured Port Forwarding subcategory tree item
-     */
-    private static createPortForwardingSubcategory(resourceData: TreeItemData): ClusterTreeItem {
-        const item = new ClusterTreeItem(
-            'Port Forwarding',
-            'portForwarding',
-            vscode.TreeItemCollapsibleState.Collapsed,
-            resourceData
-        );
-        item.iconPath = new vscode.ThemeIcon('zap');
-        item.tooltip = 'Manage active port forwards';
         return item;
     }
 }

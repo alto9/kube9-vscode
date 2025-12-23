@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-tree-spec
-status: pending
+status: completed
 ---
 
 # Add TreeItemFactory Methods for Port Forwarding
@@ -96,15 +96,15 @@ public static createPortForwardItem(
 
 ## Acceptance Criteria
 
-- [ ] `createPortForwardingSubcategory()` creates subcategory item
-- [ ] Badge shows active forward count
-- [ ] `createPortForwardItem()` creates forward items
-- [ ] Label format: `localhost:PORT → namespace/pod:PORT`
-- [ ] Status icons reflect connection state
-- [ ] Tooltip shows detailed information
-- [ ] Description shows status and uptime
-- [ ] Uptime calculated from startTime on-demand
-- [ ] No TypeScript errors
+- [x] `createPortForwardingSubcategory()` creates subcategory item
+- [x] Badge shows active forward count
+- [x] `createPortForwardItem()` creates forward items
+- [x] Label format: `localhost:PORT → namespace/pod:PORT`
+- [x] Status icons reflect connection state
+- [x] Tooltip shows detailed information
+- [x] Description shows status and uptime
+- [x] Uptime calculated from startTime on-demand
+- [x] No TypeScript errors
 
 ## Files Modified
 

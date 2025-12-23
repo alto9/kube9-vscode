@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../../ClusterTreeItem';
 import { TreeItemData } from '../../TreeItemTypes';
-import { PortForwardManager, PortForwardInfo, PortForwardStatus } from '../../../services/PortForwardManager';
+import { PortForwardManager, PortForwardInfo } from '../../../services/PortForwardManager';
+import { TreeItemFactory } from '../../TreeItemFactory';
 
 /**
  * Port Forwarding subcategory handler.
@@ -31,9 +32,9 @@ export class PortForwardingSubcategory {
         // Sort forwards by namespace, pod name, local port
         const sorted = this.sortForwards(contextForwards);
         
-        // Create tree items
+        // Create tree items using TreeItemFactory
         return sorted.map(forward =>
-            this.createPortForwardItem(forward, resourceData)
+            TreeItemFactory.createPortForwardItem(forward, resourceData)
         );
     }
     
@@ -54,139 +55,6 @@ export class PortForwardingSubcategory {
         item.description = 'Right-click a running pod to start forwarding';
         item.contextValue = undefined; // No context menu
         return item;
-    }
-    
-    /**
-     * Creates a tree item for a single port forward.
-     * 
-     * @param forward Port forward information
-     * @param resourceData Cluster context and cluster information
-     * @returns Port forward tree item
-     */
-    private static createPortForwardItem(
-        forward: PortForwardInfo,
-        resourceData: TreeItemData
-    ): ClusterTreeItem {
-        // Label format: localhost:8080 → default/nginx-pod:80
-        const label = `localhost:${forward.localPort} → ${forward.namespace}/${forward.podName}:${forward.remotePort}`;
-        
-        const item = new ClusterTreeItem(
-            label,
-            'portForward',
-            vscode.TreeItemCollapsibleState.None,
-            {
-                ...resourceData,
-                resourceName: forward.podName,
-                namespace: forward.namespace
-            }
-        );
-        
-        // Set context value for context menu
-        item.contextValue = 'portForward';
-        
-        // Set icon based on status
-        item.iconPath = this.getForwardStatusIcon(forward.status);
-        
-        // Set description with status and uptime
-        item.description = this.buildForwardDescription(forward);
-        
-        // Set tooltip with detailed information
-        item.tooltip = this.buildForwardTooltip(forward);
-        
-        return item;
-    }
-    
-    /**
-     * Gets the appropriate icon for a port forward status.
-     * 
-     * @param status Port forward status
-     * @returns Theme icon for the status
-     */
-    private static getForwardStatusIcon(status: PortForwardStatus): vscode.ThemeIcon {
-        switch (status) {
-            case PortForwardStatus.Connected:
-                return new vscode.ThemeIcon(
-                    'circle-filled',
-                    new vscode.ThemeColor('testing.iconPassed')
-                );
-            case PortForwardStatus.Connecting:
-                return new vscode.ThemeIcon('sync~spin');
-            case PortForwardStatus.Error:
-                return new vscode.ThemeIcon(
-                    'circle-filled',
-                    new vscode.ThemeColor('testing.iconFailed')
-                );
-            case PortForwardStatus.Disconnected:
-                return new vscode.ThemeIcon(
-                    'circle-outline',
-                    new vscode.ThemeColor('editorWarning.foreground')
-                );
-            case PortForwardStatus.Stopped:
-                return new vscode.ThemeIcon('circle-outline');
-            default:
-                return new vscode.ThemeIcon('circle-outline');
-        }
-    }
-    
-    /**
-     * Builds the description text for a port forward item.
-     * Format: "connected • 5m 32s"
-     * 
-     * @param forward Port forward information
-     * @returns Description string
-     */
-    private static buildForwardDescription(forward: PortForwardInfo): string {
-        const statusText = forward.status.charAt(0).toUpperCase() + forward.status.slice(1);
-        const uptimeText = this.formatUptime(forward.uptime);
-        return `${statusText} • ${uptimeText}`;
-    }
-    
-    /**
-     * Builds the tooltip text for a port forward item.
-     * 
-     * @param forward Port forward information
-     * @returns Tooltip string
-     */
-    private static buildForwardTooltip(forward: PortForwardInfo): string {
-        const uptimeText = this.formatUptime(forward.uptime);
-        return `Port Forward: ${forward.podName}\n` +
-               `Namespace: ${forward.namespace}\n` +
-               `Local Port: ${forward.localPort}\n` +
-               `Remote Port: ${forward.remotePort}\n` +
-               `Status: ${forward.status}\n` +
-               `Uptime: ${uptimeText}\n` +
-               `Started: ${forward.startTime.toLocaleString()}`;
-    }
-    
-    /**
-     * Formats uptime in seconds to a human-readable string.
-     * Format: "45s", "1m 15s", "1h 5m"
-     * 
-     * @param seconds Uptime in seconds
-     * @returns Formatted uptime string
-     */
-    private static formatUptime(seconds: number): string {
-        if (seconds < 60) {
-            return `${seconds}s`;
-        }
-        
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        
-        if (minutes < 60) {
-            if (remainingSeconds === 0) {
-                return `${minutes}m`;
-            }
-            return `${minutes}m ${remainingSeconds}s`;
-        }
-        
-        const hours = Math.floor(minutes / 60);
-        const remainingMinutes = minutes % 60;
-        
-        if (remainingMinutes === 0) {
-            return `${hours}h`;
-        }
-        return `${hours}h ${remainingMinutes}m`;
     }
     
     /**
