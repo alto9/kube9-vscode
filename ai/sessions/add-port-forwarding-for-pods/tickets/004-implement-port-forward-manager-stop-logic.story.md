@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-manager-spec
-status: pending
+status: completed
 ---
 
 # Implement Port Forward Manager Stop Logic
@@ -70,13 +70,13 @@ private async killProcess(process: ChildProcess): Promise<void> {
 
 ## Acceptance Criteria
 
-- [ ] `stopForward()` terminates process gracefully
-- [ ] Process killed with SIGTERM, then SIGKILL if needed
-- [ ] Forward removed from state
-- [ ] Event emitted on stop
-- [ ] Status bar updates (decrements count)
-- [ ] `stopAllForwards()` stops all forwards
-- [ ] No orphaned processes remain
+- [x] `stopForward()` terminates process gracefully
+- [x] Process killed with SIGTERM, then SIGKILL if needed
+- [x] Forward removed from state
+- [x] Event emitted on stop
+- [x] Status bar updates (decrements count)
+- [x] `stopAllForwards()` stops all forwards
+- [x] No orphaned processes remain
 
 ## Files Modified
 

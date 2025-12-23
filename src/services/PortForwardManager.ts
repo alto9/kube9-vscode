@@ -234,10 +234,28 @@ export class PortForwardManager {
      * @param forwardId Unique identifier of the forward to stop
      * @throws Error if forward is not found
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public async stopForward(forwardId: string): Promise<void> {
-        // Stub implementation - will be fully implemented in subsequent stories
-        throw new Error('Not implemented');
+        // Retrieve forward record
+        const record = this.forwards.get(forwardId);
+        if (!record) {
+            throw new Error(`Forward ${forwardId} not found`);
+        }
+
+        // Update status to 'stopped' before killing process to prevent handleProcessExit from double-processing
+        record.status = PortForwardStatus.Stopped;
+
+        // Kill the process gracefully
+        await this.killProcess(record.process);
+
+        // Remove from state
+        this.forwards.delete(forwardId);
+
+        // Emit event and update status bar
+        this.emitForwardsChanged({
+            type: 'removed',
+            forwardId: forwardId
+        });
+        this.updateStatusBar();
     }
 
     /**
@@ -245,14 +263,11 @@ export class PortForwardManager {
      */
     public async stopAllForwards(): Promise<void> {
         const forwardIds = Array.from(this.forwards.keys());
-        for (const forwardId of forwardIds) {
-            try {
-                await this.stopForward(forwardId);
-            } catch (error) {
-                // Continue stopping other forwards even if one fails
-                console.error(`Failed to stop forward ${forwardId}:`, error);
-            }
-        }
+        await Promise.all(
+            forwardIds.map(id => this.stopForward(id).catch(err => {
+                console.error(`Failed to stop forward ${id}:`, err);
+            }))
+        );
     }
 
     /**
@@ -640,6 +655,35 @@ export class PortForwardManager {
             forwardId: record.id
         });
         this.updateStatusBar();
+    }
+
+    /**
+     * Gracefully terminate a child process with SIGTERM, then SIGKILL if needed.
+     * 
+     * @param process Child process to terminate
+     * @returns Promise that resolves when process is terminated
+     */
+    private async killProcess(process: ChildProcess): Promise<void> {
+        return new Promise((resolve) => {
+            if (!process.pid) {
+                resolve();
+                return;
+            }
+            
+            process.kill('SIGTERM');
+            
+            const timeout = setTimeout(() => {
+                if (!process.killed) {
+                    process.kill('SIGKILL');
+                }
+                resolve();
+            }, 1000);
+            
+            process.once('exit', () => {
+                clearTimeout(timeout);
+                resolve();
+            });
+        });
     }
 }
 
