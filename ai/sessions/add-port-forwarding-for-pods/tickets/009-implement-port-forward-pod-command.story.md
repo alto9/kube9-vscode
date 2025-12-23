@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-command-spec
-status: pending
+status: completed
 ---
 
 # Implement Port Forward Pod Command
@@ -72,17 +72,17 @@ if (action === 'Open Browser') {
 
 ## Acceptance Criteria
 
-- [ ] Command file created
-- [ ] Tree item validation works
-- [ ] Pod status check (must be Running)
-- [ ] Container ports queried from pod spec
-- [ ] Remote port selection dialog shows ports + custom option
-- [ ] Local port selection with intelligent default
-- [ ] Port availability check before starting
-- [ ] Calls PortForwardManager.startForward()
-- [ ] Success notification with action buttons
-- [ ] Error handling for all scenarios
-- [ ] Progress indication during start
+- [x] Command file created
+- [x] Tree item validation works
+- [x] Pod status check (must be Running)
+- [x] Container ports queried from pod spec
+- [x] Remote port selection dialog shows ports + custom option
+- [x] Local port selection with intelligent default
+- [x] Port availability check before starting
+- [x] Calls PortForwardManager.startForward()
+- [x] Success notification with action buttons
+- [x] Error handling for all scenarios
+- [x] Progress indication during start
 
 ## Files Created
 
