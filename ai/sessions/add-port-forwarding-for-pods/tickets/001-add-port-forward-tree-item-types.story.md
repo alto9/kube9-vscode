@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-tree-spec
-status: pending
+status: completed
 ---
 
 # Add Port Forward Tree Item Types
@@ -36,10 +36,12 @@ export type TreeItemType =
 
 ## Acceptance Criteria
 
-- [ ] `portForwarding` type added to TreeItemType union
-- [ ] `portForward` type added to TreeItemType union
-- [ ] No TypeScript compilation errors
-- [ ] File compiles successfully
+- [x] `portForwarding` type added to TreeItemType union
+- [x] `portForward` type added to TreeItemType union
+- [x] JSDoc comments updated to document new types
+- [x] No TypeScript compilation errors
+- [x] File compiles successfully
+- [x] Tests pass
 
 ## Files Modified
 
