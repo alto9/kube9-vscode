@@ -262,7 +262,7 @@ function buildUpsellCTA(): UpsellCTAContent {
       'Access advanced analytics and reporting'
     ],
     ctaText: 'Configure API Key',
-    ctaAction: () => window.open('https://portal.kube9.dev')
+    ctaAction: () => window.open('https://portal.kube9.io')
   };
 }
 ```
@@ -522,7 +522,7 @@ ${renderConditionalContent(operatorStatus)}
 async function handleUpgrade() {
   // Opens portal with API key setup instructions
   // User configures API key at the operator level, not in VSCode extension
-  window.open('https://portal.kube9.dev');
+  window.open('https://portal.kube9.io');
 }
 ```
 

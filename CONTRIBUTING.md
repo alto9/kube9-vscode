@@ -69,7 +69,7 @@ This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDU
 Before reporting a bug, please:
 - Check existing [GitHub Issues](https://github.com/alto9/kube9-vscode/issues) to see if it's already reported
 - Try to reproduce the issue with the latest version
-- Check the [troubleshooting guide](https://docs.kube9.dev/troubleshooting) if available
+- Check the [troubleshooting guide](https://alto9.github.io/) if available
 
 When reporting a bug, use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml) and include:
 - VS Code version

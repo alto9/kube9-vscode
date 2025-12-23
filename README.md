@@ -1,83 +1,59 @@
 # Kube9
 
-**Proactive Kubernetes Intelligence - Right in Your IDE**
+**Visual Kubernetes Cluster Management - Right in Your IDE**
 
-![kube9 Logo](https://img.shields.io/badge/Status-MVP-blue) ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
+![kube9 Logo](https://img.shields.io/badge/Status-Active-green) ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
 
 ## Overview
 
-Kube9 is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. Start with powerful free features, then unlock advanced AI-powered insights and rich dashboards with a Pro account.
+Kube9 is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. It provides a modern, intuitive interface for managing your Kubernetes resources without leaving your IDE.
 
-### Freemium Model
+### Key Features
 
-**Free Tier** - Visual kubectl replacement:
-- ✅ Tree view cluster navigation
-- ✅ Resource detail viewer (form + YAML)
-- ✅ Edit and save resources to cluster
-- ✅ Launch workloads with freeform YAML
-- ✅ Multi-cluster support via kubeconfig
-- ✅ ArgoCD integration with drift detection and application monitoring
-
-**Pro Tier** - AI-powered intelligence ([Learn More →](https://app.kube9.io)):
-- ✨ Advanced dashboards with real-time charts
-- ✨ AI-powered recommendations and insights
-- ✨ Historical metrics and trends
-- ✨ Log aggregation with advanced search
-- ✨ Anomaly detection and alerts
-- ✨ Team collaboration features
+- 🌲 Tree view cluster navigation
+- 📝 Resource detail viewer (form + YAML)
+- ✏️ Edit and save resources to cluster
+- 🚀 Launch workloads with freeform YAML
+- 🔄 Multi-cluster support via kubeconfig
+- 📦 ArgoCD integration with drift detection and application monitoring
+- 📊 Enhanced metrics and monitoring with kube9-operator
 
 ## Architecture
 
-Kube9 uses a **progressive enhancement** architecture that adapts to user tier:
+Kube9 provides a clean separation between local development tooling and cluster-side monitoring:
 
 ```
 ┌─────────────────────────────────────┐
-│  VSCode Extension (Smart Router)    │
-│  ┌────────────────────────────────┐ │
-│  │  Free Tier:                    │ │
-│  │  - Generates HTML locally      │ │
-│  │  - Simple webviews             │ │
-│  │  - Basic CRUD operations       │ │
-│  └────────────────────────────────┘ │
-│  ┌────────────────────────────────┐ │
-│  │  Pro Tier (with operator):    │ │
-│  │  - Loads from kube9-server    │ │
-│  │  - Rich web applications      │ │
-│  │  - No CSP restrictions        │ │
-│  └────────────────────────────────┘ │
+│  VSCode Extension                   │
+│  - Generates HTML locally           │
+│  - Webviews for resource management │
+│  - Direct kubectl operations        │
+│  - Uses your kubeconfig             │
 └─────────────────────────────────────┘
                   │
-                  ↓ (Pro users only)
+                  ↓ (kubectl API)
 ┌─────────────────────────────────────┐
-│  kube9-server                       │
-│  - Receives metrics from operator   │
-│  - Serves rich UI applications      │
-│  - AI analysis and recommendations  │
-└─────────────────────────────────────┘
-                  ↑
-                  │ (Pro users only)
-┌─────────────────────────────────────┐
-│  kube9-operator (in cluster)        │
-│  - Collects sanitized metrics      │
-│  - Pushes to kube9-server          │
-│  - No cluster ingress needed       │
+│  Kubernetes Cluster                 │
+│  - Your workloads and resources     │
+│  - Optional: kube9-operator         │
 └─────────────────────────────────────┘
 ```
 
 ### How It Works
 
-**Free Users:**
-- Extension uses your kubeconfig to interact with clusters
+**Core Extension:**
+- Uses your kubeconfig to interact with clusters
 - All UI is generated locally in VS Code webviews
-- Simple, functional interfaces with CSP restrictions
+- Direct kubectl operations for resource management
 - No data sent to external servers
-
-**Pro Users:**
-- Install [kube9-operator](../kube9-operator) in your cluster
-- Operator pushes sanitized metrics to [kube9-server](../kube9-server)
-- Extension loads rich web UIs from kube9-server in iframes
-- Advanced features: AI insights, charts, historical data
 - Your kubeconfig never leaves your machine
+
+**Enhanced with kube9-operator (Optional):**
+- Install [kube9-operator](../kube9-operator) in your cluster for enhanced monitoring
+- Operator collects metrics and cluster health data
+- Extension automatically detects operator and provides enhanced views
+- Sanitized metrics only (no secrets, credentials, or sensitive data)
+- No cluster ingress needed
 
 ## Getting Started
 
@@ -98,9 +74,9 @@ npm run compile
 # Press F5 to launch Extension Development Host
 ```
 
-### Quick Start (Free Tier)
+### Quick Start
 
-1. **Open kube9**
+1. **Open Kube9**
    - Look for the Kube9 icon in VS Code activity bar
    - Extension automatically reads your `~/.kube/config`
 
@@ -119,32 +95,21 @@ npm run compile
    - Paste or write YAML manifests
    - Apply to cluster with one click
 
-### Upgrade to Pro
+### Optional: Install kube9-operator for Enhanced Monitoring
 
-#### Step 1: Install Operator
-The operator runs in your cluster to enable Pro features. Visit [app.kube9.io](https://app.kube9.io) for complete installation instructions including API key setup.
+The kube9-operator enhances the extension with cluster metrics and monitoring capabilities. It runs in your cluster and provides enriched data to the extension.
 
-**Option A: Automatic (requires Helm)**
+**Install with Helm:**
 ```bash
-# Extension detects Helm and offers one-click install
-# Or run manually:
 helm repo add kube9 https://charts.kube9.io
 helm install kube9-operator kube9/kube9-operator \
   --namespace kube9-system \
   --create-namespace
 ```
 
-**Option B: Manual**
-```bash
-kubectl apply -f https://install.kube9.io/operator.yaml
-```
+Once installed, the extension automatically detects the operator and provides enhanced resource views with metrics and health data. See the [kube9-operator documentation](../kube9-operator) for configuration options.
 
-#### Step 2: Configure Operator
-Follow the operator configuration instructions at [app.kube9.io](https://app.kube9.io) to enable Pro tier features.
-
-That's it! The extension automatically detects the operator and enables Pro features.
-
-### ArgoCD Integration (Free Tier)
+### ArgoCD Integration
 
 Kube9 provides seamless ArgoCD integration for GitOps workflows. View and manage your ArgoCD Applications directly from VS Code.
 
@@ -162,66 +127,45 @@ Kube9 provides seamless ArgoCD integration for GitOps workflows. View and manage
 
 For detailed setup instructions, usage guide, and troubleshooting, see [ArgoCD Integration Documentation](docs/argocd-integration.md).
 
-## Features by Tier
+## Features
 
-### Free Tier Features
-
-**Resource Management**
+### Resource Management
 - Tree view navigation (clusters → namespaces → resources)
 - Resource detail viewer with form and YAML tabs
 - Edit common fields (replicas, image, labels, etc.)
 - Save changes back to cluster
 - Delete resources with confirmation
 
-**YAML Operations**
+### YAML Operations
 - Syntax-highlighted YAML editor
 - Apply arbitrary YAML manifests
 - Dry-run validation
 - Quick templates (Deployment, Service, Pod, ConfigMap)
 
-**Multi-Cluster**
+### Multi-Cluster Support
 - Automatic kubeconfig parsing
 - Switch between clusters and contexts
 - Multiple kubeconfig file support
+- Manage multiple clusters from one interface
 
-**ArgoCD Integration**
+### ArgoCD Integration
 - View ArgoCD Applications in tree view with sync/health status
 - Monitor GitOps deployments and detect configuration drift
 - Sync, refresh, and hard refresh applications directly from VS Code
 - Application details webview with drift information
 - Works with ArgoCD 2.5+ in both operated and basic modes
 
-### Pro Tier Features
-
-**Advanced Dashboards**
-- Real-time cluster metrics with interactive charts
-- Resource usage trends and forecasting
-- Pod health visualization
-- Network traffic analysis
-
-**AI-Powered Insights**
-- Intelligent recommendations for resource optimization
-- Security vulnerability detection
-- Cost optimization suggestions
-- Configuration best practices
-- Anomaly detection and alerts
-
-**Enhanced Resource Views**
-- Rich tabbed interfaces (Overview, Metrics, Logs, Events, YAML)
-- Historical data and trend analysis
-- Log aggregation with advanced search
-- Event timeline visualization
-- Dependency graph views
-
-**Team Features**
-- Shared cluster annotations
-- Team activity feed
-- Collaborative troubleshooting
+### Enhanced Monitoring (with kube9-operator)
+When the kube9-operator is installed in your cluster:
+- Resource metrics and usage data
+- Cluster health monitoring
+- Enhanced resource views with real-time data
+- Historical trend information
 
 ## Project Structure
 
 ```
-kube9/
+kube9-vscode/
 ├── src/
 │   ├── extension.ts           # Main entry point
 │   ├── providers/
@@ -229,11 +173,8 @@ kube9/
 │   │   └── NamespaceWebview.ts
 │   ├── commands/              # Command implementations
 │   ├── services/
-│   │   ├── KubernetesService.ts
-│   │   └── TierManager.ts     # Free vs Pro logic
-│   ├── webviews/
-│   │   ├── free/              # Local HTML generators
-│   │   └── pro/               # Remote URL loaders
+│   │   └── KubernetesService.ts
+│   ├── webviews/              # Local HTML generators
 │   └── utils/
 ├── ai/                        # Forge context files
 │   ├── contexts/
@@ -272,18 +213,19 @@ npm test
 npm run package
 ```
 
-### Testing Tiers
+### Testing
 
-**Testing Free Tier:**
-- Don't install the kube9-operator
+**Basic Extension Testing:**
 - Extension should show local webviews
-- Verify basic CRUD operations work
+- Verify resource navigation works
+- Verify CRUD operations work
+- Test ArgoCD integration if available
 
-**Testing Pro Tier:**
-- Set up local kube9-server instance
-- Install and configure kube9-operator in test cluster
-- Extension should load remote webviews
-- Verify advanced features appear
+**Testing with kube9-operator:**
+- Install kube9-operator in test cluster
+- Extension should detect operator
+- Verify enhanced metrics views appear
+- Test operator-provided data display
 
 ## Technology Stack
 
@@ -305,13 +247,11 @@ npm run package
 }
 ```
 
-Pro tier features are automatically enabled when the kube9-operator is installed in your cluster.
+Enhanced monitoring features are automatically enabled when the kube9-operator is detected in your cluster.
 
 ## Related Projects
 
-- **[kube9-server](../kube9-server)** - Backend API and UI server for Pro features
-- **[kube9-operator](../kube9-operator)** - Kubernetes operator for metrics collection
-- **[kube9-portal](../kube9-portal)** - User portal for account management
+- **[kube9-operator](../kube9-operator)** - Kubernetes operator for enhanced cluster monitoring and metrics collection. Install this in your cluster to unlock enhanced monitoring features in the VSCode extension.
 
 ## Contributing
 
@@ -348,18 +288,19 @@ npm run watch
 
 For security concerns, please see our [Security Policy](SECURITY.md).
 
-### Free Tier
+### Extension Security
 - All data stays on your machine
 - Uses your kubeconfig for cluster access
 - No external API calls
 - No data collection
+- Your kubeconfig never leaves VS Code
 
-### Pro Tier
+### With kube9-operator (Optional)
+When using the kube9-operator:
 - Operator sends only sanitized metrics (no secrets, credentials, or sensitive data)
-- Communication over HTTPS
 - Data sanitization at source (operator level)
 - User controls what operator can access via RBAC
-- API keys managed at operator level, not in VSCode extension
+- All communication uses standard Kubernetes RBAC and authentication
 
 **To report a security vulnerability**, please email **security@alto9.com** (do not open a public issue).
 
@@ -369,13 +310,12 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- [Documentation](https://docs.kube9.dev)
+- [Documentation](https://alto9.github.io/)
 - [GitHub Issues](https://github.com/alto9/kube9-vscode/issues) - Report bugs, request features
 - [GitHub Discussions](https://github.com/alto9/kube9-vscode/discussions) - Ask questions, share ideas
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute
 - [Security Policy](SECURITY.md) - Security reporting
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
-- [Portal Support](https://app.kube9.io/support)
 
 ---
 

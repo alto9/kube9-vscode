@@ -63,7 +63,7 @@ export class WelcomeWebview {
 
                     case 'openDocs':
                         // Open the kube9 documentation in external browser
-                        vscode.env.openExternal(vscode.Uri.parse('https://kube9.io/docs'));
+                        vscode.env.openExternal(vscode.Uri.parse('https://alto9.github.io/'));
                         break;
 
                     case 'openExternal':

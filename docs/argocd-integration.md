@@ -593,7 +593,7 @@ Right-click any application in the tree view or use buttons in the webview to:
 - **ArgoCD Official Documentation**: https://argo-cd.readthedocs.io/
 - **ArgoCD Getting Started Guide**: https://argo-cd.readthedocs.io/en/stable/getting_started/
 - **ArgoCD Application CRD Reference**: https://argo-cd.readthedocs.io/en/stable/operator-manual/declarative-setup/#applications
-- **Kube9 Documentation**: https://docs.kube9.dev
+- **Kube9 Documentation**: https://alto9.github.io/
 - **Kube9 GitHub Issues**: https://github.com/alto9/kube9-vscode/issues
 - **Kube9 GitHub Discussions**: https://github.com/alto9/kube9-vscode/discussions
 

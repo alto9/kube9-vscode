@@ -57,18 +57,18 @@
       {
         "command": "kube9.refreshClusters",
         "title": "Refresh Clusters",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(refresh)"
       },
       {
         "command": "kube9.openNamespace",
         "title": "Open Namespace",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.openDataCollectionReport",
         "title": "Open Data Collection Report",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.openClusterManager",
@@ -78,22 +78,22 @@
       {
         "command": "kube9.setActiveNamespace",
         "title": "Set as Active Namespace",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.clearActiveNamespace",
         "title": "Clear Active Namespace",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.describeResource",
         "title": "Describe",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.describeResourceRaw",
         "title": "Describe (Raw)",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.viewResourceYAML",
@@ -108,27 +108,27 @@
       {
         "command": "kube9.deleteResource",
         "title": "Delete Resource",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.scaleWorkload",
         "title": "Scale",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.openDashboard",
         "title": "Open Dashboard",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.openTerminal",
         "title": "Open Terminal",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.applyYAML",
         "title": "Apply YAML",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.restartWorkload",
@@ -138,98 +138,225 @@
       {
         "command": "kube9.argocd.sync",
         "title": "Sync Application",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.argocd.refresh",
         "title": "Refresh Application",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.argocd.hardRefresh",
         "title": "Hard Refresh Application",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.argocd.viewDetails",
         "title": "View Details",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.argocd.copyName",
         "title": "Copy Application Name",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.argocd.copyNamespace",
         "title": "Copy Namespace",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.showCacheStats",
         "title": "Show Cache Statistics",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.events.filterNamespace",
         "title": "Filter by Namespace",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(folder)"
       },
       {
         "command": "kube9.events.filterType",
         "title": "Filter by Type",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(filter)"
       },
       {
         "command": "kube9.events.filterTimeRange",
         "title": "Filter by Time Range",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(clock)"
       },
       {
         "command": "kube9.events.filterResourceType",
         "title": "Filter by Resource Type",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(symbol-class)"
       },
       {
         "command": "kube9.events.search",
         "title": "Search Events",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(search)"
       },
       {
         "command": "kube9.events.clearFilters",
         "title": "Clear Filters",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(clear-all)"
       },
       {
         "command": "kube9.events.refresh",
         "title": "Refresh Events",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(refresh)"
       },
       {
         "command": "kube9.events.toggleAutoRefresh",
         "title": "Toggle Auto-Refresh",
-        "category": "kube9",
+        "category": "Kube9",
         "icon": "$(sync)"
       },
       {
         "command": "kube9.events.showDetails",
         "title": "Show Event Details",
-        "category": "kube9"
+        "category": "Kube9"
       },
       {
         "command": "kube9.openEventsViewer",
-        "title": "Kube9: Open Events Viewer",
+        "title": "Open Events Viewer",
         "category": "Kube9"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "kube9.refreshClusters"
+        },
+        {
+          "command": "kube9.openClusterManager"
+        },
+        {
+          "command": "kube9.openDataCollectionReport"
+        },
+        {
+          "command": "kube9.applyYAML"
+        },
+        {
+          "command": "kube9.showCacheStats"
+        },
+        {
+          "command": "kube9.openEventsViewer"
+        },
+        {
+          "command": "kube9.viewResourceYAMLFromPalette"
+        },
+        {
+          "command": "kube9.openNamespace",
+          "when": "false"
+        },
+        {
+          "command": "kube9.setActiveNamespace",
+          "when": "false"
+        },
+        {
+          "command": "kube9.clearActiveNamespace",
+          "when": "false"
+        },
+        {
+          "command": "kube9.describeResource",
+          "when": "false"
+        },
+        {
+          "command": "kube9.describeResourceRaw",
+          "when": "false"
+        },
+        {
+          "command": "kube9.viewResourceYAML",
+          "when": "false"
+        },
+        {
+          "command": "kube9.deleteResource",
+          "when": "false"
+        },
+        {
+          "command": "kube9.scaleWorkload",
+          "when": "false"
+        },
+        {
+          "command": "kube9.openDashboard",
+          "when": "false"
+        },
+        {
+          "command": "kube9.openTerminal",
+          "when": "false"
+        },
+        {
+          "command": "kube9.restartWorkload",
+          "when": "false"
+        },
+        {
+          "command": "kube9.argocd.sync",
+          "when": "false"
+        },
+        {
+          "command": "kube9.argocd.refresh",
+          "when": "false"
+        },
+        {
+          "command": "kube9.argocd.hardRefresh",
+          "when": "false"
+        },
+        {
+          "command": "kube9.argocd.viewDetails",
+          "when": "false"
+        },
+        {
+          "command": "kube9.argocd.copyName",
+          "when": "false"
+        },
+        {
+          "command": "kube9.argocd.copyNamespace",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.filterNamespace",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.filterType",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.filterTimeRange",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.filterResourceType",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.search",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.clearFilters",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.refresh",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.toggleAutoRefresh",
+          "when": "false"
+        },
+        {
+          "command": "kube9.events.showDetails",
+          "when": "false"
+        }
+      ],
       "view/title": [
         {
           "command": "kube9.refreshClusters",
@@ -323,12 +450,12 @@
       ]
     },
     "configuration": {
-      "title": "kube9",
+      "title": "Kube9",
       "properties": {
         "kube9.serverUrl": {
           "type": "string",
-          "default": "https://api.kube9.dev",
-          "description": "kube9 server URL",
+          "default": "https://api.kube9.io",
+          "description": "Kube9 server URL",
           "scope": "application"
         },
         "kube9.debugMode": {
