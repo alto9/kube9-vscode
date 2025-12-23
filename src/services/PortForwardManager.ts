@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { ChildProcess } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import * as net from 'net';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Configuration for starting a port forward.
@@ -143,10 +144,88 @@ export class PortForwardManager {
      * @returns Port forward information
      * @throws Error if configuration is invalid or forward cannot be started
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public async startForward(config: PortForwardConfig): Promise<PortForwardInfo> {
-        // Stub implementation - will be fully implemented in subsequent stories
-        throw new Error('Not implemented');
+        // 1. Validate configuration
+        this.validateConfig(config);
+
+        // 2. Check port availability
+        const portAvailable = await this.isPortAvailable(config.localPort);
+        if (!portAvailable) {
+            const alternativePort = await this.findNextAvailablePort(config.localPort + 1).catch(() => null);
+            const suggestion = alternativePort ? ` Try port ${alternativePort} instead.` : '';
+            throw new Error(`Local port ${config.localPort} is already in use.${suggestion}`);
+        }
+
+        // 3. Check for existing forward (prevent duplicates)
+        const existingForward = this.findExistingForward(config);
+        if (existingForward) {
+            if (existingForward.status === PortForwardStatus.Connected) {
+                // Return existing forward info
+                return this.getForwardInfo(existingForward);
+            } else if (existingForward.status === PortForwardStatus.Connecting || 
+                       existingForward.status === PortForwardStatus.Disconnected) {
+                // Stop existing forward and proceed with new one
+                await this.stopForward(existingForward.id).catch(() => {
+                    // Continue even if stop fails
+                });
+            }
+        }
+
+        // 4. Build kubectl command
+        const args = this.buildKubectlCommand(config);
+
+        // 5. Spawn kubectl process
+        const kubectlProcess = spawn('kubectl', args, {
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: { ...process.env }
+        });
+
+        // Handle spawn error (kubectl not found, etc.)
+        if (!kubectlProcess.pid) {
+            throw new Error('Failed to start kubectl process: Process PID is undefined');
+        }
+
+        // 6. Generate UUID for forward ID
+        const forwardId = uuidv4();
+
+        // 7. Create PortForwardRecord with status 'connecting'
+        const record: PortForwardRecord = {
+            id: forwardId,
+            config: config,
+            processId: kubectlProcess.pid,
+            process: kubectlProcess,
+            status: PortForwardStatus.Connecting,
+            startTime: new Date()
+        };
+
+        // 8. Store record in forwards Map
+        this.forwards.set(forwardId, record);
+
+        // 9. Set up process monitoring
+        this.setupProcessMonitoring(record);
+
+        // 10. Wait for connection confirmation (10 second timeout)
+        try {
+            await this.waitForConnection(record, 10000);
+        } catch (error) {
+            // Clean up on timeout or error
+            this.forwards.delete(forwardId);
+            if (kubectlProcess.pid) {
+                kubectlProcess.kill('SIGTERM');
+            }
+            throw error;
+        }
+
+        // 11. Update status bar and emit event
+        this.emitForwardsChanged({
+            type: 'added',
+            forwardId: forwardId,
+            forwardInfo: this.getForwardInfo(record)
+        });
+        this.updateStatusBar();
+
+        // 12. Return PortForwardInfo
+        return this.getForwardInfo(record);
     }
 
     /**
@@ -364,6 +443,203 @@ export class PortForwardManager {
      */
     private emitForwardsChanged(event: PortForwardEvent): void {
         this.eventEmitter.fire(event);
+    }
+
+    /**
+     * Find an existing forward with matching configuration.
+     * 
+     * @param config Port forward configuration to match
+     * @returns Existing forward record or undefined if not found
+     */
+    private findExistingForward(config: PortForwardConfig): PortForwardRecord | undefined {
+        return Array.from(this.forwards.values()).find(record =>
+            record.config.podName === config.podName &&
+            record.config.namespace === config.namespace &&
+            record.config.context === config.context &&
+            record.config.localPort === config.localPort
+        );
+    }
+
+    /**
+     * Wait for connection to be established with timeout.
+     * 
+     * @param record Port forward record to wait for
+     * @param timeoutMs Timeout in milliseconds
+     * @returns Promise that resolves when connected or rejects on timeout
+     */
+    private waitForConnection(record: PortForwardRecord, timeoutMs: number): Promise<void> {
+        return new Promise((resolve, reject) => {
+            // If already connected, resolve immediately
+            if (record.status === PortForwardStatus.Connected) {
+                resolve();
+                return;
+            }
+
+            // Set up timeout
+            const timeout = setTimeout(() => {
+                // Clean up on timeout
+                this.forwards.delete(record.id);
+                if (record.process.pid) {
+                    record.process.kill('SIGTERM');
+                }
+                reject(new Error(`Connection timeout: Port forward did not establish within ${timeoutMs}ms`));
+            }, timeoutMs);
+
+            // Watch for status change to connected
+            const checkInterval = setInterval(() => {
+                if (record.status === PortForwardStatus.Connected) {
+                    clearTimeout(timeout);
+                    clearInterval(checkInterval);
+                    resolve();
+                } else if (record.status === PortForwardStatus.Error || record.status === PortForwardStatus.Stopped) {
+                    clearTimeout(timeout);
+                    clearInterval(checkInterval);
+                    const errorMsg = record.error || 'Port forward failed';
+                    reject(new Error(errorMsg));
+                }
+            }, 100); // Check every 100ms
+
+            // Clean up interval on timeout
+            timeout.refresh();
+        });
+    }
+
+    /**
+     * Set up process monitoring for stdout, stderr, exit, and error events.
+     * 
+     * @param record Port forward record to monitor
+     */
+    private setupProcessMonitoring(record: PortForwardRecord): void {
+        // Monitor stdout for connection success
+        record.process.stdout?.on('data', (data: Buffer) => {
+            const output = data.toString();
+            record.lastActivity = new Date();
+
+            // Detect successful connection
+            if (output.includes('Forwarding from')) {
+                this.handleConnectionEstablished(record);
+            }
+        });
+
+        // Monitor stderr for errors
+        record.process.stderr?.on('data', (data: Buffer) => {
+            const error = data.toString();
+            record.lastActivity = new Date();
+
+            // Detect specific errors
+            if (error.includes('unable to forward') || error.includes('error forwarding port')) {
+                this.handleForwardError(record, 'Port forwarding failed');
+            } else if (error.includes('Forbidden') || error.includes('permission denied')) {
+                this.handleForwardError(record, 'Permission denied: Check RBAC permissions');
+            } else if (error.includes('pod') && error.includes('not found')) {
+                this.handleForwardError(record, 'Pod not found');
+            }
+        });
+
+        // Monitor process exit
+        record.process.on('exit', (code: number | null, signal: string | null) => {
+            this.handleProcessExit(record, code, signal);
+        });
+
+        // Monitor process spawn error
+        record.process.on('error', (err: Error) => {
+            this.handleProcessSpawnError(record, err);
+        });
+    }
+
+    /**
+     * Handle connection established event.
+     * 
+     * @param record Port forward record
+     */
+    private handleConnectionEstablished(record: PortForwardRecord): void {
+        if (record.status === PortForwardStatus.Connecting) {
+            record.status = PortForwardStatus.Connected;
+            this.emitForwardsChanged({
+                type: 'updated',
+                forwardId: record.id,
+                forwardInfo: this.getForwardInfo(record)
+            });
+            this.updateStatusBar();
+        }
+    }
+
+    /**
+     * Handle forward error event.
+     * 
+     * @param record Port forward record
+     * @param error Error message
+     */
+    private handleForwardError(record: PortForwardRecord, error: string): void {
+        record.status = PortForwardStatus.Error;
+        record.error = error;
+        this.emitForwardsChanged({
+            type: 'updated',
+            forwardId: record.id,
+            forwardInfo: this.getForwardInfo(record)
+        });
+        this.updateStatusBar();
+    }
+
+    /**
+     * Handle process exit event.
+     * 
+     * @param record Port forward record
+     * @param code Exit code
+     * @param signal Exit signal
+     */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    private handleProcessExit(record: PortForwardRecord, code: number | null, signal: string | null): void {
+        // Don't process if already marked as stopped (intentional)
+        if (record.status === PortForwardStatus.Stopped) {
+            return;
+        }
+
+        // Mark as disconnected
+        record.status = PortForwardStatus.Disconnected;
+
+        // Remove from active forwards
+        this.forwards.delete(record.id);
+
+        this.emitForwardsChanged({
+            type: 'removed',
+            forwardId: record.id
+        });
+        this.updateStatusBar();
+
+        // Show notification if unexpected exit
+        if (code !== 0 && code !== null) {
+            vscode.window.showWarningMessage(
+                `Port forward stopped unexpectedly: localhost:${record.config.localPort} → ${record.config.namespace}/${record.config.podName}:${record.config.remotePort}`
+            );
+        }
+    }
+
+    /**
+     * Handle process spawn error event.
+     * 
+     * @param record Port forward record
+     * @param err Error object
+     */
+    private handleProcessSpawnError(record: PortForwardRecord, err: Error): void {
+        // Handle ENOENT (kubectl not found)
+        const errnoError = err as NodeJS.ErrnoException;
+        if (errnoError.code === 'ENOENT') {
+            record.status = PortForwardStatus.Error;
+            record.error = 'kubectl not found: Please install kubectl and ensure it is in your PATH';
+        } else {
+            record.status = PortForwardStatus.Error;
+            record.error = err.message || 'Failed to spawn kubectl process';
+        }
+
+        // Remove from forwards Map
+        this.forwards.delete(record.id);
+
+        this.emitForwardsChanged({
+            type: 'removed',
+            forwardId: record.id
+        });
+        this.updateStatusBar();
     }
 }
 
