@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-tree-spec
-status: pending
+status: completed
 ---
 
 # Extend NetworkingCategory for Port Forwarding
@@ -44,10 +44,10 @@ public static getNetworkingSubcategories(resourceData: TreeItemData): ClusterTre
 
 ## Acceptance Criteria
 
-- [ ] Port Forwarding subcategory added after Services
-- [ ] Networking category shows both Services and Port Forwarding when expanded
-- [ ] No regression in existing Services functionality
-- [ ] Tree compiles without errors
+- [x] Port Forwarding subcategory added after Services
+- [x] Networking category shows both Services and Port Forwarding when expanded
+- [x] No regression in existing Services functionality
+- [x] Tree compiles without errors
 
 ## Files Modified
 
