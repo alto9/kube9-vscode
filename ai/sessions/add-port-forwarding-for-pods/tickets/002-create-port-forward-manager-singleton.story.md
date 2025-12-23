@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-manager-spec
-status: pending
+status: completed
 ---
 
 # Create PortForwardManager Singleton
@@ -123,13 +123,13 @@ export class PortForwardManager {
 
 ## Acceptance Criteria
 
-- [ ] PortForwardManager class created with singleton pattern
-- [ ] All data structures defined (interfaces, enums)
-- [ ] Core methods implemented with basic logic
-- [ ] Status bar item initialized (hidden by default)
-- [ ] Event emitter set up
-- [ ] Dispose method properly cleans up resources
-- [ ] No TypeScript compilation errors
+- [x] PortForwardManager class created with singleton pattern
+- [x] All data structures defined (interfaces, enums)
+- [x] Core methods implemented with basic logic
+- [x] Status bar item initialized (hidden by default)
+- [x] Event emitter set up
+- [x] Dispose method properly cleans up resources
+- [x] No TypeScript compilation errors
 
 ## Files Created
 
