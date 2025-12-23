@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-tree-spec
-status: pending
+status: completed
 ---
 
 # Create PortForwardingSubcategory Class
@@ -80,12 +80,12 @@ export class PortForwardingSubcategory {
 
 ## Acceptance Criteria
 
-- [ ] Class created with `getPortForwardItems()` method
-- [ ] Queries PortForwardManager for active forwards
-- [ ] Filters forwards by current context
-- [ ] Sorts forwards (namespace, pod, port)
-- [ ] Shows empty state when no forwards
-- [ ] No TypeScript errors
+- [x] Class created with `getPortForwardItems()` method
+- [x] Queries PortForwardManager for active forwards
+- [x] Filters forwards by current context
+- [x] Sorts forwards (namespace, pod, port)
+- [x] Shows empty state when no forwards
+- [x] No TypeScript errors
 
 ## Files Created
 
