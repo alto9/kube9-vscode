@@ -22,6 +22,7 @@ import { PersistentVolumeClaimsSubcategory } from './categories/storage/Persiste
 import { StorageClassesSubcategory } from './categories/storage/StorageClassesSubcategory';
 import { NetworkingCategory } from './categories/networking/NetworkingCategory';
 import { ServicesSubcategory } from './categories/networking/ServicesSubcategory';
+import { PortForwardingSubcategory } from './categories/networking/PortForwardingSubcategory';
 import { ConfigurationCategory } from './categories/ConfigurationCategory';
 import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubcategory';
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
@@ -351,6 +352,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'persistentVolume' ||
                type === 'persistentVolumeClaim' ||
                type === 'networking' ||
+               type === 'portForwarding' ||
                type === 'services' ||
                type === 'helm' || 
                type === 'configuration' || 
@@ -511,6 +513,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             case 'networking':
                 items = await NetworkingCategory.getNetworkingSubcategories(
+                    categoryElement.resourceData
+                );
+                break;
+            
+            case 'portForwarding':
+                items = PortForwardingSubcategory.getPortForwardItems(
                     categoryElement.resourceData
                 );
                 break;

@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-tree-spec
-status: pending
+status: completed
 ---
 
 # Integrate Port Forwarding in ClusterTreeProvider
