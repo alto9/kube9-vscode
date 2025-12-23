@@ -14,7 +14,7 @@ export class Settings {
      */
     public static getServerUrl(): string {
         const config = vscode.workspace.getConfiguration(this.CONFIGURATION_SECTION);
-        return config.get<string>('serverUrl') || 'https://api.kube9.dev';
+        return config.get<string>('serverUrl') || 'https://api.kube9.io';
     }
 
     /**

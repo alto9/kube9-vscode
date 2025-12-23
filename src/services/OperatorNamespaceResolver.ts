@@ -104,13 +104,19 @@ export class OperatorNamespaceResolver {
         for (const namespace of candidateNamespaces) {
             try {
                 // Try to read the ConfigMap to check if it exists in this namespace
-                await apiClient.core.readNamespacedConfigMap({
+                const configMap = await apiClient.core.readNamespacedConfigMap({
                     name: OperatorNamespaceResolver.STATUS_CONFIGMAP_NAME,
                     namespace: namespace
                 });
 
-                // ConfigMap found! The operator is in this namespace.
-                // We don't need to read any fields from it - just finding it tells us the namespace.
+                // ConfigMap found! Check if it has a namespace field in its data
+                if (configMap.data?.namespace) {
+                    // Use the namespace specified in ConfigMap data
+                    console.log(`[OperatorNamespaceResolver] ConfigMap found with namespace field: ${configMap.data.namespace}`);
+                    return configMap.data.namespace;
+                }
+
+                // No namespace field in data, use the namespace where ConfigMap was found
                 console.log(`[OperatorNamespaceResolver] ConfigMap found in namespace: ${namespace}`);
                 return namespace;
             } catch (error) {
