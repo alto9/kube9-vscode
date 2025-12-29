@@ -106,6 +106,7 @@ export class PortForwardManager {
     private forwards: Map<string, PortForwardRecord>;
     private eventEmitter: vscode.EventEmitter<PortForwardEvent>;
     private statusBarItem!: vscode.StatusBarItem;
+    private outputChannel!: vscode.OutputChannel;
 
     /**
      * Private constructor for singleton pattern.
@@ -114,6 +115,8 @@ export class PortForwardManager {
         this.forwards = new Map();
         this.eventEmitter = new vscode.EventEmitter<PortForwardEvent>();
         this.initializeStatusBar();
+        this.initializeOutputChannel();
+        this.watchContextChanges();
     }
 
     /**
@@ -357,6 +360,15 @@ export class PortForwardManager {
     }
 
     /**
+     * Initialize the output channel for error logging.
+     */
+    private initializeOutputChannel(): void {
+        if (!this.outputChannel) {
+            this.outputChannel = vscode.window.createOutputChannel('kube9 Port Forwarding');
+        }
+    }
+
+    /**
      * Update the status bar display based on active forward count.
      * Shows status bar when forwards are active, hides when none.
      */
@@ -413,9 +425,12 @@ export class PortForwardManager {
      * @returns Array of command arguments
      */
     private buildKubectlCommand(config: PortForwardConfig): string[] {
+        // Escape pod name if needed (kubectl handles this natively, but validate)
+        const podName = config.podName;
+        
         const args = [
             'port-forward',
-            config.podName,
+            `pod/${podName}`, // Use pod/ prefix for clarity
             `${config.localPort}:${config.remotePort}`,
             '-n', config.namespace,
             '--context', config.context
@@ -538,18 +553,48 @@ export class PortForwardManager {
 
         // Monitor stderr for errors
         record.process.stderr?.on('data', (data: Buffer) => {
-            const error = data.toString();
+            const message = data.toString();
             record.lastActivity = new Date();
 
-            // Detect specific errors
-            if (error.includes('unable to forward') || error.includes('error forwarding port')) {
+            // Log to output channel
+            this.outputChannel.appendLine(`[${record.config.podName}] stderr: ${message.trim()}`);
+
+            // kubectl not found
+            if (message.includes('command not found') || message.includes('not recognized')) {
+                this.handleKubectlNotFound(record);
+                return;
+            }
+
+            // RBAC permission denied
+            if (message.includes('Forbidden') || message.includes('pods/portforward')) {
+                this.handleRBACError(record, message);
+                return;
+            }
+
+            // Pod not found or deleted
+            if (message.includes('not found') || message.includes('NotFound')) {
+                this.handlePodNotFound(record);
+                return;
+            }
+
+            // Connection refused
+            if (message.includes('connection refused') || message.includes('unable to connect')) {
+                this.handleConnectionError(record, message);
+                return;
+            }
+
+            // Generic forwarding errors
+            if (message.includes('unable to forward') || message.includes('error forwarding port')) {
                 this.handleForwardError(record, 'Port forwarding failed');
-            } else if (error.includes('Forbidden') || error.includes('permission denied')) {
-                this.handleForwardError(record, 'Permission denied: Check RBAC permissions');
-            } else if (error.includes('pod') && error.includes('not found')) {
-                this.handleForwardError(record, 'Pod not found');
             }
         });
+
+        // Connection timeout monitoring
+        setTimeout(() => {
+            if (record.status === PortForwardStatus.Connecting) {
+                this.handleTimeout(record);
+            }
+        }, 10000); // 10 second timeout
 
         // Monitor process exit
         record.process.on('exit', (code: number | null, signal: string | null) => {
@@ -640,21 +685,140 @@ export class PortForwardManager {
         // Handle ENOENT (kubectl not found)
         const errnoError = err as NodeJS.ErrnoException;
         if (errnoError.code === 'ENOENT') {
-            record.status = PortForwardStatus.Error;
-            record.error = 'kubectl not found: Please install kubectl and ensure it is in your PATH';
+            this.handleKubectlNotFound(record);
         } else {
             record.status = PortForwardStatus.Error;
             record.error = err.message || 'Failed to spawn kubectl process';
+            this.outputChannel.appendLine(`[${record.config.podName}] Process spawn error: ${err.message}`);
+            this.outputChannel.show(true);
+
+            // Remove from forwards Map
+            this.forwards.delete(record.id);
+
+            this.emitForwardsChanged({
+                type: 'removed',
+                forwardId: record.id
+            });
+            this.updateStatusBar();
         }
+    }
 
-        // Remove from forwards Map
-        this.forwards.delete(record.id);
+    /**
+     * Handle kubectl not found error.
+     * 
+     * @param record Port forward record
+     */
+    private handleKubectlNotFound(record: PortForwardRecord): void {
+        const errorMsg = 'kubectl not found. Please install kubectl to use port forwarding.';
+        record.status = PortForwardStatus.Error;
+        record.error = errorMsg;
+        
+        this.outputChannel.appendLine(`[${record.config.podName}] Error: ${errorMsg}`);
+        this.outputChannel.show(true);
 
-        this.emitForwardsChanged({
-            type: 'removed',
-            forwardId: record.id
+        vscode.window.showErrorMessage(
+            errorMsg,
+            'Install kubectl'
+        ).then(action => {
+            if (action === 'Install kubectl') {
+                vscode.env.openExternal(vscode.Uri.parse('https://kubernetes.io/docs/tasks/tools/'));
+            }
         });
-        this.updateStatusBar();
+        
+        this.stopForward(record.id).catch(err => {
+            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after error: ${err.message}`);
+        });
+    }
+
+    /**
+     * Handle RBAC permission denied error.
+     * 
+     * @param record Port forward record
+     * @param message Error message from stderr
+     */
+    private handleRBACError(record: PortForwardRecord, message: string): void {
+        const errorMsg = `Permission denied: You need pods/portforward permission in namespace '${record.config.namespace}'`;
+        record.status = PortForwardStatus.Error;
+        record.error = errorMsg;
+        
+        this.outputChannel.appendLine(`[${record.config.podName}] RBAC Error: ${errorMsg}`);
+        this.outputChannel.appendLine(`[${record.config.podName}] stderr: ${message.trim()}`);
+        this.outputChannel.show(true);
+
+        vscode.window.showErrorMessage(
+            errorMsg,
+            'View RBAC Docs'
+        ).then(action => {
+            if (action === 'View RBAC Docs') {
+                vscode.env.openExternal(vscode.Uri.parse('https://kubernetes.io/docs/reference/access-authn-authz/rbac/'));
+            }
+        });
+        
+        this.stopForward(record.id).catch(err => {
+            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after error: ${err.message}`);
+        });
+    }
+
+    /**
+     * Handle pod not found or deleted error.
+     * 
+     * @param record Port forward record
+     */
+    private handlePodNotFound(record: PortForwardRecord): void {
+        const infoMsg = `Port forward stopped: Pod '${record.config.podName}' was deleted`;
+        record.status = PortForwardStatus.Error;
+        record.error = 'Pod not found';
+        
+        this.outputChannel.appendLine(`[${record.config.podName}] ${infoMsg}`);
+        this.outputChannel.show(true);
+
+        vscode.window.showInformationMessage(infoMsg);
+        
+        this.stopForward(record.id).catch(err => {
+            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after error: ${err.message}`);
+        });
+    }
+
+    /**
+     * Handle connection error.
+     * 
+     * @param record Port forward record
+     * @param message Error message from stderr
+     */
+    private handleConnectionError(record: PortForwardRecord, message: string): void {
+        const errorMsg = 'Connection failed: Unable to reach pod. Check cluster connectivity.';
+        record.status = PortForwardStatus.Error;
+        record.error = errorMsg;
+        
+        this.outputChannel.appendLine(`[${record.config.podName}] Connection Error: ${errorMsg}`);
+        this.outputChannel.appendLine(`[${record.config.podName}] stderr: ${message.trim()}`);
+        this.outputChannel.show(true);
+
+        vscode.window.showErrorMessage(errorMsg);
+        
+        this.stopForward(record.id).catch(err => {
+            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after error: ${err.message}`);
+        });
+    }
+
+    /**
+     * Handle connection timeout.
+     * 
+     * @param record Port forward record
+     */
+    private handleTimeout(record: PortForwardRecord): void {
+        const errorMsg = 'Port forward connection timed out. Check pod logs and try again.';
+        record.status = PortForwardStatus.Error;
+        record.error = errorMsg;
+        
+        this.outputChannel.appendLine(`[${record.config.podName}] Timeout: ${errorMsg}`);
+        this.outputChannel.show(true);
+
+        vscode.window.showErrorMessage(errorMsg);
+        
+        this.stopForward(record.id).catch(err => {
+            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after timeout: ${err.message}`);
+        });
     }
 
     /**
@@ -684,6 +848,18 @@ export class PortForwardManager {
                 resolve();
             });
         });
+    }
+
+    /**
+     * Watch for context changes.
+     * Note: Forwards persist across context switches (per decision in session).
+     * This is a placeholder for future context change handling.
+     */
+    private watchContextChanges(): void {
+        // Subscribe to context change events
+        // Note: Forwards persist across context switches (per decision in session)
+        // But we should track which context each forward belongs to
+        // This is a placeholder for future implementation
     }
 }
 

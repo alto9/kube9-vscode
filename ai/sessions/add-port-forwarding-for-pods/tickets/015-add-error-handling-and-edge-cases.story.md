@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - port-forwarding-manager-spec
   - port-forwarding-command-spec
-status: pending
+status: completed
 ---
 
 # Add Error Handling and Edge Cases
