@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../ClusterTreeItem';
 import { TreeItemData } from '../TreeItemTypes';
+import { PortForwardManager } from '../../services/PortForwardManager';
 
 /**
  * Pod status from Kubernetes API.
@@ -99,6 +100,31 @@ export class PodTreeItem extends ClusterTreeItem {
     }
 
     /**
+     * Updates the pod label and tooltip to show port forward badge if active forwards exist.
+     * Should be called after construction to reflect current port forward state.
+     */
+    public updatePortForwardBadge(): void {
+        const manager = PortForwardManager.getInstance();
+        const forwards = manager.getAllForwards();
+        
+        // Filter forwards matching this pod
+        const podForwards = forwards.filter(
+            fw => fw.podName === this.podInfo.name &&
+                  fw.namespace === this.podInfo.namespace &&
+                  fw.context === this.resourceData?.context.name
+        );
+        
+        if (podForwards.length > 0) {
+            // Add lightning bolt badge to label
+            this.label = `${this.podInfo.name} $(zap)`;
+            
+            // Update tooltip to include forward count
+            const originalTooltip = this.tooltip || '';
+            this.tooltip = `${originalTooltip}\n\nActive Port Forwards: ${podForwards.length}`;
+        }
+    }
+
+    /**
      * Factory method to create PodTreeItem from kubectl JSON response.
      * 
      * @param podData Raw pod data from kubectl get pods
@@ -130,7 +156,9 @@ export class PodTreeItem extends ClusterTreeItem {
             parentResource
         };
         
-        return new PodTreeItem(podInfo, resourceData);
+        const podItem = new PodTreeItem(podInfo, resourceData);
+        podItem.updatePortForwardBadge();
+        return podItem;
     }
 }
 

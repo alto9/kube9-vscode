@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-tree-spec
-status: pending
+status: completed
 ---
 
 # Add Pod Badges for Active Forwards
@@ -59,16 +59,20 @@ public static createPodItem(pod: any, resourceData: TreeItemData): ClusterTreeIt
 
 ## Acceptance Criteria
 
-- [ ] Pods with active forwards show lightning bolt badge
-- [ ] Badge format: `pod-name $(zap)`
-- [ ] Tooltip mentions number of active forwards
-- [ ] Badge updates when forwards start/stop (on tree refresh)
-- [ ] No badge shown for pods without forwards
-- [ ] Works correctly with manual tree refresh
+- [x] Pods with active forwards show lightning bolt badge
+- [x] Badge format: `pod-name $(zap)`
+- [x] Tooltip mentions number of active forwards
+- [x] Badge updates when forwards start/stop (on tree refresh)
+- [x] No badge shown for pods without forwards
+- [x] Works correctly with manual tree refresh
 
 ## Files Modified
 
-- Location where pod tree items are created (likely TreeItemFactory or similar)
+- `src/tree/items/PodTreeItem.ts` - Added `updatePortForwardBadge()` method
+- `src/tree/categories/workloads/DeploymentsSubcategory.ts` - Call badge update after pod creation
+- `src/tree/categories/workloads/StatefulSetsSubcategory.ts` - Call badge update after pod creation
+- `src/tree/categories/workloads/DaemonSetsSubcategory.ts` - Call badge update after pod creation
+- `src/tree/categories/workloads/CronJobsSubcategory.ts` - Call badge update after pod creation
 
 ## Dependencies
 

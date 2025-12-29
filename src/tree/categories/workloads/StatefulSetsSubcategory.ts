@@ -151,7 +151,7 @@ export class StatefulSetsSubcategory {
                 status = podInfo.phase as 'Running' | 'Pending' | 'Succeeded' | 'Failed';
             }
 
-            return new PodTreeItem(
+            const podItem = new PodTreeItem(
                 {
                     name: podInfo.name,
                     namespace: podInfo.namespace,
@@ -160,6 +160,8 @@ export class StatefulSetsSubcategory {
                 },
                 resourceData
             );
+            podItem.updatePortForwardBadge();
+            return podItem;
         });
 
         return podItems;
