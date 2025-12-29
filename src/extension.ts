@@ -40,6 +40,8 @@ import { EventViewerPanel } from './webview/EventViewerPanel';
 import { stopPortForwardCommand } from './commands/stopPortForward';
 import { stopAllPortForwardsCommand } from './commands/stopAllPortForwards';
 import { showPortForwardsCommand } from './commands/showPortForwards';
+import { PortForwardManager } from './services/PortForwardManager';
+import { portForwardPodCommand } from './commands/portForwardPod';
 
 /**
  * Global extension context accessible to all components.
@@ -130,6 +132,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // This is non-blocking and will gracefully handle missing/invalid configs
         const kubeconfig = await KubeconfigParser.parseKubeconfig();
         console.log(`Kubeconfig parsing completed. Found ${kubeconfig.clusters.length} cluster(s).`);
+        
+        // Initialize PortForwardManager singleton
+        const portForwardManager = PortForwardManager.getInstance();
+        
+        // Register for cleanup on deactivate
+        context.subscriptions.push({
+            dispose: () => portForwardManager.dispose()
+        });
         
         // Register commands first before populating the tree
         // This ensures commands are available when tree items are clicked
@@ -1125,6 +1135,14 @@ function registerCommands(): void {
     );
     context.subscriptions.push(openEventsViewerFromPaletteCmd);
     disposables.push(openEventsViewerFromPaletteCmd);
+    
+    // Register port forward pod command
+    const portForwardPodCmd = vscode.commands.registerCommand(
+        'kube9.portForwardPod',
+        portForwardPodCommand
+    );
+    context.subscriptions.push(portForwardPodCmd);
+    disposables.push(portForwardPodCmd);
     
     // Register stop port forward command
     const stopPortForwardCmd = vscode.commands.registerCommand(

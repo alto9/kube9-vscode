@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - port-forwarding-command-spec
   - port-forwarding-manager-spec
-status: pending
+status: completed
 ---
 
 # Register Commands and Manager in Extension
@@ -63,13 +63,13 @@ import { showPortForwardsCommand } from './commands/showPortForwards';
 
 ## Acceptance Criteria
 
-- [ ] PortForwardManager initialized in activate()
-- [ ] Manager registered for disposal on deactivate
-- [ ] All 4 commands registered
-- [ ] Commands properly imported
-- [ ] Extension activates without errors
-- [ ] Manager cleaned up properly on deactivate (all forwards stopped)
-- [ ] No orphaned kubectl processes
+- [x] PortForwardManager initialized in activate()
+- [x] Manager registered for disposal on deactivate
+- [x] All 4 commands registered
+- [x] Commands properly imported
+- [x] Extension activates without errors
+- [x] Manager cleaned up properly on deactivate (all forwards stopped)
+- [x] No orphaned kubectl processes
 
 ## Files Modified
 
