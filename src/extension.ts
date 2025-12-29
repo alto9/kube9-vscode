@@ -37,6 +37,9 @@ import {
 import { showCacheStatsCommand } from './commands/cacheStats';
 import { EventsCommands } from './commands/EventsCommands';
 import { EventViewerPanel } from './webview/EventViewerPanel';
+import { stopPortForwardCommand } from './commands/stopPortForward';
+import { stopAllPortForwardsCommand } from './commands/stopAllPortForwards';
+import { showPortForwardsCommand } from './commands/showPortForwards';
 
 /**
  * Global extension context accessible to all components.
@@ -1122,6 +1125,30 @@ function registerCommands(): void {
     );
     context.subscriptions.push(openEventsViewerFromPaletteCmd);
     disposables.push(openEventsViewerFromPaletteCmd);
+    
+    // Register stop port forward command
+    const stopPortForwardCmd = vscode.commands.registerCommand(
+        'kube9.stopPortForward',
+        stopPortForwardCommand
+    );
+    context.subscriptions.push(stopPortForwardCmd);
+    disposables.push(stopPortForwardCmd);
+    
+    // Register stop all port forwards command
+    const stopAllPortForwardsCmd = vscode.commands.registerCommand(
+        'kube9.stopAllPortForwards',
+        stopAllPortForwardsCommand
+    );
+    context.subscriptions.push(stopAllPortForwardsCmd);
+    disposables.push(stopAllPortForwardsCmd);
+    
+    // Register show port forwards command
+    const showPortForwardsCmd = vscode.commands.registerCommand(
+        'kube9.showPortForwards',
+        showPortForwardsCommand
+    );
+    context.subscriptions.push(showPortForwardsCmd);
+    disposables.push(showPortForwardsCmd);
 }
 
 /**

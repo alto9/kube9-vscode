@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-command-spec
-status: pending
+status: completed
 ---
 
 # Implement Stop Forward Commands
