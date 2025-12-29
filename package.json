@@ -227,6 +227,26 @@
         "command": "kube9.openEventsViewer",
         "title": "Open Events Viewer",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.portForwardPod",
+        "title": "Port Forward",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.stopPortForward",
+        "title": "Stop Port Forward",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.stopAllPortForwards",
+        "title": "Stop All Port Forwards",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.showPortForwards",
+        "title": "Show Port Forwards",
+        "category": "kube9"
       }
     ],
     "menus": {
@@ -355,6 +375,22 @@
         {
           "command": "kube9.events.showDetails",
           "when": "false"
+        },
+        {
+          "command": "kube9.portForwardPod",
+          "when": "false"
+        },
+        {
+          "command": "kube9.stopPortForward",
+          "when": "false"
+        },
+        {
+          "command": "kube9.showPortForwards",
+          "when": "true"
+        },
+        {
+          "command": "kube9.stopAllPortForwards",
+          "when": "true"
         }
       ],
       "view/title": [
@@ -439,6 +475,16 @@
           "command": "kube9.argocd.copyNamespace",
           "when": "view == kube9ClusterView && viewItem == argocd-application",
           "group": "argocd@3"
+        },
+        {
+          "command": "kube9.portForwardPod",
+          "when": "view == kube9ClusterView && viewItem == resource:Pod",
+          "group": "kube9-networking@1"
+        },
+        {
+          "command": "kube9.stopPortForward",
+          "when": "view == kube9ClusterView && viewItem == portForward",
+          "group": "kube9@1"
         }
       ],
       "editor/context": [

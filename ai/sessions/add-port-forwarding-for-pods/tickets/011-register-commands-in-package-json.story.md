@@ -5,7 +5,7 @@ feature_id:
   - pod-port-forwarding
 spec_id:
   - port-forwarding-command-spec
-status: pending
+status: completed
 ---
 
 # Register Commands in package.json
@@ -86,14 +86,14 @@ Need to register 4 commands with proper visibility conditions:
 
 ## Acceptance Criteria
 
-- [ ] All 4 commands registered in commands array
-- [ ] portForwardPod shows in Pod context menu only
-- [ ] stopPortForward shows in port forward item context menu only
-- [ ] stopAllPortForwards visible in command palette
-- [ ] showPortForwards visible in command palette
-- [ ] portForwardPod hidden from command palette
-- [ ] stopPortForward hidden from command palette
-- [ ] No JSON syntax errors
+- [x] All 4 commands registered in commands array
+- [x] portForwardPod shows in Pod context menu only
+- [x] stopPortForward shows in port forward item context menu only
+- [x] stopAllPortForwards visible in command palette
+- [x] showPortForwards visible in command palette
+- [x] portForwardPod hidden from command palette
+- [x] stopPortForward hidden from command palette
+- [x] No JSON syntax errors
 
 ## Files Modified
 
