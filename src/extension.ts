@@ -42,6 +42,9 @@ import { stopAllPortForwardsCommand } from './commands/stopAllPortForwards';
 import { showPortForwardsCommand } from './commands/showPortForwards';
 import { PortForwardManager } from './services/PortForwardManager';
 import { portForwardPodCommand } from './commands/portForwardPod';
+import { copyPortForwardURLCommand } from './commands/copyPortForwardURL';
+import { viewPortForwardPodCommand } from './commands/viewPortForwardPod';
+import { restartPortForwardCommand } from './commands/restartPortForward';
 
 /**
  * Global extension context accessible to all components.
@@ -1167,6 +1170,30 @@ function registerCommands(): void {
     );
     context.subscriptions.push(showPortForwardsCmd);
     disposables.push(showPortForwardsCmd);
+    
+    // Register copy port forward URL command
+    const copyPortForwardURLCmd = vscode.commands.registerCommand(
+        'kube9.copyPortForwardURL',
+        copyPortForwardURLCommand
+    );
+    context.subscriptions.push(copyPortForwardURLCmd);
+    disposables.push(copyPortForwardURLCmd);
+    
+    // Register view port forward pod command
+    const viewPortForwardPodCmd = vscode.commands.registerCommand(
+        'kube9.viewPortForwardPod',
+        viewPortForwardPodCommand
+    );
+    context.subscriptions.push(viewPortForwardPodCmd);
+    disposables.push(viewPortForwardPodCmd);
+    
+    // Register restart port forward command
+    const restartPortForwardCmd = vscode.commands.registerCommand(
+        'kube9.restartPortForward',
+        restartPortForwardCommand
+    );
+    context.subscriptions.push(restartPortForwardCmd);
+    disposables.push(restartPortForwardCmd);
 }
 
 /**
