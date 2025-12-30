@@ -48,6 +48,16 @@ export class PodLogsViewerPanel {
     private static preferencesManager: PreferencesManager | undefined;
 
     /**
+     * Map of pending log lines per contextName, waiting to be batched and sent.
+     */
+    private static pendingLogLines: Map<string, string[]> = new Map();
+
+    /**
+     * Map of batch interval timers per contextName for scheduled log sends.
+     */
+    private static batchIntervals: Map<string, NodeJS.Timeout> = new Map();
+
+    /**
      * Show a Pod Logs Viewer webview panel.
      * Creates a new panel or reveals an existing one for the given cluster.
      * For multi-container pods, prompts user to select a container.
@@ -188,9 +198,15 @@ export class PodLogsViewerPanel {
         // Set up message handling
         PodLogsViewerPanel.setupMessageHandling(panel, contextName, context);
 
+        // Start streaming logs
+        PodLogsViewerPanel.startStreaming(contextName);
+
         // Handle panel disposal
         panel.onDidDispose(
             () => {
+                // Clean up batching
+                PodLogsViewerPanel.cleanupBatching(contextName);
+                
                 const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
                 if (panelInfo?.logsProvider) {
                     panelInfo.logsProvider.dispose();
@@ -324,6 +340,189 @@ export class PodLogsViewerPanel {
         const timestamp = new Date().toISOString();
         console.log(`[PodLogsViewerPanel ${timestamp}] ➡️ Sending message: ${message.type}`);
         panel.webview.postMessage(message);
+    }
+
+    /**
+     * Start streaming logs from Kubernetes API for a panel.
+     * Gets preferences, calls LogsProvider.streamLogs(), and sets up batching.
+     * 
+     * @param contextName - The cluster context name
+     */
+    private static startStreaming(contextName: string): void {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] startStreaming called for context: ${contextName}`);
+
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ No panel found for context: ${contextName}`);
+            return;
+        }
+
+        // Ensure PreferencesManager is initialized
+        if (!PodLogsViewerPanel.preferencesManager && PodLogsViewerPanel.extensionContext) {
+            PodLogsViewerPanel.preferencesManager = new PreferencesManager(PodLogsViewerPanel.extensionContext);
+        }
+
+        if (!PodLogsViewerPanel.preferencesManager) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Cannot initialize PreferencesManager - no extension context`);
+            return;
+        }
+
+        try {
+            // Get preferences for this cluster
+            const preferences = PodLogsViewerPanel.preferencesManager.getPreferences(contextName);
+
+            // Initialize pending lines array for this context
+            PodLogsViewerPanel.pendingLogLines.set(contextName, []);
+
+            // Set up batching interval (100ms as per spec)
+            const batchInterval = setInterval(() => {
+                PodLogsViewerPanel.sendBatchedLines(contextName);
+            }, 100);
+            PodLogsViewerPanel.batchIntervals.set(contextName, batchInterval);
+
+            // Start streaming logs
+            panelInfo.logsProvider.streamLogs(
+                panelInfo.currentPod.namespace,
+                panelInfo.currentPod.name,
+                panelInfo.currentPod.container === 'all' ? '' : panelInfo.currentPod.container,
+                {
+                    follow: preferences.followMode,
+                    tailLines: preferences.lineLimit === 'all' ? undefined : preferences.lineLimit,
+                    timestamps: preferences.showTimestamps,
+                    previous: preferences.showPrevious
+                },
+                (chunk) => PodLogsViewerPanel.handleLogData(contextName, chunk),
+                (error) => PodLogsViewerPanel.handleStreamError(contextName, error),
+                () => PodLogsViewerPanel.handleStreamClose(contextName)
+            );
+
+            // Send connected status
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'streamStatus',
+                status: 'connected'
+            });
+
+            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Started streaming for pod: ${panelInfo.currentPod.name}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to start streaming: ${errorMessage}`);
+            PodLogsViewerPanel.handleStreamError(contextName, error as Error);
+        }
+    }
+
+    /**
+     * Handle log data chunk received from Kubernetes API.
+     * Splits chunk into lines and adds them to pending batch.
+     * 
+     * @param contextName - The cluster context name
+     * @param chunk - The log data chunk as a string
+     */
+    private static handleLogData(contextName: string, chunk: string): void {
+        const pendingLines = PodLogsViewerPanel.pendingLogLines.get(contextName);
+        if (!pendingLines) {
+            // Initialize if not exists (shouldn't happen, but be safe)
+            PodLogsViewerPanel.pendingLogLines.set(contextName, []);
+            return;
+        }
+
+        // Split chunk by newlines and filter empty strings
+        const lines = chunk.split('\n').filter(line => line.length > 0);
+        
+        // Add lines to pending batch
+        pendingLines.push(...lines);
+    }
+
+    /**
+     * Send batched log lines to webview.
+     * Called every 100ms by the batch interval timer.
+     * 
+     * @param contextName - The cluster context name
+     */
+    private static sendBatchedLines(contextName: string): void {
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            // Panel was disposed, cleanup will handle this
+            return;
+        }
+
+        const pendingLines = PodLogsViewerPanel.pendingLogLines.get(contextName);
+        if (!pendingLines || pendingLines.length === 0) {
+            // No lines to send
+            return;
+        }
+
+        // Send batched lines
+        PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+            type: 'logData',
+            data: [...pendingLines] // Send copy of array
+        });
+
+        // Clear pending lines
+        pendingLines.length = 0;
+    }
+
+    /**
+     * Handle stream error from Kubernetes API.
+     * Sends error status to webview and cleans up batching.
+     * 
+     * @param contextName - The cluster context name
+     * @param error - The error that occurred
+     */
+    private static handleStreamError(contextName: string, error: Error): void {
+        const timestamp = new Date().toISOString();
+        console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Stream error for context ${contextName}:`, error.message);
+
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (panelInfo) {
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'streamStatus',
+                status: 'error'
+            });
+        }
+
+        // Clean up batching
+        PodLogsViewerPanel.cleanupBatching(contextName);
+    }
+
+    /**
+     * Handle stream close from Kubernetes API.
+     * Sends disconnected status to webview and cleans up batching.
+     * 
+     * @param contextName - The cluster context name
+     */
+    private static handleStreamClose(contextName: string): void {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] Stream closed for context: ${contextName}`);
+
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (panelInfo) {
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'streamStatus',
+                status: 'disconnected'
+            });
+        }
+
+        // Clean up batching
+        PodLogsViewerPanel.cleanupBatching(contextName);
+    }
+
+    /**
+     * Clean up batching infrastructure for a context.
+     * Clears interval timer and pending lines.
+     * 
+     * @param contextName - The cluster context name
+     */
+    private static cleanupBatching(contextName: string): void {
+        // Clear batch interval
+        const interval = PodLogsViewerPanel.batchIntervals.get(contextName);
+        if (interval) {
+            clearInterval(interval);
+            PodLogsViewerPanel.batchIntervals.delete(contextName);
+        }
+
+        // Clear pending lines
+        PodLogsViewerPanel.pendingLogLines.delete(contextName);
     }
 
     /**
