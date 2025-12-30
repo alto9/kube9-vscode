@@ -14,7 +14,7 @@ export const App: React.FC = () => {
     const [initialState, setInitialState] = useState<InitialState | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
     const [lineCount, setLineCount] = useState<number>(0);
-    const [streamStatus, setStreamStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
+    const [streamStatus, setStreamStatus] = useState<'connected' | 'disconnected' | 'reconnecting' | 'error'>('disconnected');
     const [preferences, setPreferences] = useState<PanelPreferences | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [searchVisible, setSearchVisible] = useState<boolean>(false);
@@ -71,17 +71,42 @@ export const App: React.FC = () => {
                     
                     // Handle state transitions based on stream status
                     if (message.status === 'error') {
-                        setViewState('error');
-                        setErrorMessage('Failed to fetch logs. Please check your connection and try again.');
+                        // Only set error state if we don't have a specific error message
+                        if (!errorMessage) {
+                            setViewState('error');
+                            setErrorMessage('Failed to fetch logs. Please check your connection and try again.');
+                        }
+                    } else if (message.status === 'reconnecting') {
+                        // Keep logs visible during reconnection, don't change viewState
+                        // Footer will show reconnecting status
                     } else if (message.status === 'connected') {
-                        // Transition from error to loading when reconnecting
+                        // Transition from error/reconnecting to loaded when connected
                         setViewState(currentState => {
-                            if (currentState === 'error') {
-                                return 'loading';
+                            if (currentState === 'error' || currentState === 'loading') {
+                                // If we have logs, show loaded, otherwise keep loading
+                                return logs.length > 0 ? 'loaded' : 'loading';
                             }
                             return currentState;
                         });
-                        setErrorMessage('');
+                        // Clear error message on successful connection
+                        if (errorMessage) {
+                            setErrorMessage('');
+                        }
+                    } else if (message.status === 'disconnected') {
+                        // Keep current state, just update status
+                    }
+                    break;
+                case 'error':
+                    // Handle specific error messages
+                    setErrorMessage(message.error);
+                    setViewState('error');
+                    // Update stream status based on error type
+                    if (message.errorType === 'podNotFound' || message.errorType === 'permissionDenied') {
+                        // These errors don't trigger reconnection, so status is error
+                        setStreamStatus('error');
+                    } else if (message.errorType === 'maxReconnectAttempts') {
+                        // Max attempts reached, status is error
+                        setStreamStatus('error');
                     }
                     break;
                 default:
@@ -356,7 +381,11 @@ export const App: React.FC = () => {
                     onScrollUp={handleScrollUp}
                 />
             )}
-            <Footer lineCount={lineCount} streamStatus={streamStatus} />
+            <Footer 
+                lineCount={lineCount} 
+                streamStatus={streamStatus}
+                reconnecting={streamStatus === 'reconnecting'}
+            />
         </div>
     );
 };

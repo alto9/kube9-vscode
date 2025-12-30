@@ -31,14 +31,19 @@ export type ExtensionToWebviewMessage =
     | { type: 'logData'; data: string[] }
     /**
      * Sent when log stream connection status changes.
-     * Indicates whether log streaming is connected, disconnected, or in error state.
+     * Indicates whether log streaming is connected, disconnected, reconnecting, or in error state.
      */
-    | { type: 'streamStatus'; status: 'connected' | 'disconnected' | 'error' }
+    | { type: 'streamStatus'; status: 'connected' | 'disconnected' | 'reconnecting' | 'error' }
     /**
      * Sent when user preferences are updated in the extension.
      * Contains the updated preferences that should be reflected in the webview UI.
      */
-    | { type: 'preferencesUpdated'; preferences: PanelPreferences };
+    | { type: 'preferencesUpdated'; preferences: PanelPreferences }
+    /**
+     * Sent when an error occurs during log streaming.
+     * Contains error message and error type for appropriate handling in webview.
+     */
+    | { type: 'error'; error: string; errorType?: 'podNotFound' | 'permissionDenied' | 'connectionFailed' | 'maxReconnectAttempts' };
 
 /**
  * Message types sent from webview (React app) to extension host (PodLogsViewerPanel).
