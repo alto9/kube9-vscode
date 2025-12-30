@@ -1,3 +1,30 @@
+# [1.10.0](https://github.com/alto9/kube9-vscode/compare/v1.9.5...v1.10.0) (2025-12-30)
+
+
+### Bug Fixes
+
+* add comprehensive error handling for port forwarding edge cases ([20b0959](https://github.com/alto9/kube9-vscode/commit/20b0959c927a7d57885057cb4c7dfcf472edf330))
+* add tree refresh subscription for port forward events ([cef5919](https://github.com/alto9/kube9-vscode/commit/cef5919a10e4f5cb88a869505fd4bbfe44efab45))
+* unit test failures ([03dc6af](https://github.com/alto9/kube9-vscode/commit/03dc6af11ebc12904143eb41c02c82c89cda3b36))
+
+
+### Features
+
+* add additional context menu actions for port forwards ([f498229](https://github.com/alto9/kube9-vscode/commit/f4982290a70d8a7a32503b410d042561f9bb8d01))
+* add pod badges for active port forwards ([c3ff17f](https://github.com/alto9/kube9-vscode/commit/c3ff17f29ef10acc92663e694e13c5454cdf885b))
+* add port forward tree item types ([7bf2bf2](https://github.com/alto9/kube9-vscode/commit/7bf2bf2638cbe447c3e43ede8e39d3404d3fbf0c))
+* add port forwarding factory methods to TreeItemFactory ([2681e66](https://github.com/alto9/kube9-vscode/commit/2681e6639caa5996a20caf30279c4098ad157ddb))
+* add Port Forwarding subcategory to Networking category ([f51338c](https://github.com/alto9/kube9-vscode/commit/f51338cc34816ab9bcf80f5399916439a3602278))
+* create PortForwardingSubcategory class for port forward tree items ([d7ae674](https://github.com/alto9/kube9-vscode/commit/d7ae674611e33f1f7521daecd6319c869b3504bd))
+* create PortForwardManager singleton service ([80e7ddd](https://github.com/alto9/kube9-vscode/commit/80e7ddd55c933999b531604df56db316b5796749))
+* implement port forward manager start logic ([7fdd197](https://github.com/alto9/kube9-vscode/commit/7fdd1978dd63b0f95359bd2e545b237ca7cce74c))
+* implement port forward manager stop logic ([ded1b7a](https://github.com/alto9/kube9-vscode/commit/ded1b7a4503eaf2e17d27e28e4dd275c1b008750))
+* implement port forward pod command ([7d30463](https://github.com/alto9/kube9-vscode/commit/7d30463e18265dda49b4d852642da3741247a2f6))
+* implement stop port forward commands ([3b85cc3](https://github.com/alto9/kube9-vscode/commit/3b85cc3e36d26334fbe210d3d85a25d4ead497ff))
+* integrate port forwarding in tree provider ([dbda632](https://github.com/alto9/kube9-vscode/commit/dbda63283828b782255bba1164eb872664413a27))
+* register port forwarding commands in extension ([db11560](https://github.com/alto9/kube9-vscode/commit/db11560b81514fd8f418e0947e59aa4c762775ed))
+* register port forwarding commands in package.json ([44cac49](https://github.com/alto9/kube9-vscode/commit/44cac49ac071d86e37fd86847b4909ed74bbcd93))
+
 ## [1.9.5](https://github.com/alto9/kube9-vscode/compare/v1.9.4...v1.9.5) (2025-12-23)
 
 ## [1.9.4](https://github.com/alto9/kube9-vscode/compare/v1.9.3...v1.9.4) (2025-12-22)
