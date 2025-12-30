@@ -33,7 +33,12 @@ export type ExtensionToWebviewMessage =
      * Sent when log stream connection status changes.
      * Indicates whether log streaming is connected, disconnected, or in error state.
      */
-    | { type: 'streamStatus'; status: 'connected' | 'disconnected' | 'error' };
+    | { type: 'streamStatus'; status: 'connected' | 'disconnected' | 'error' }
+    /**
+     * Sent when user preferences are updated in the extension.
+     * Contains the updated preferences that should be reflected in the webview UI.
+     */
+    | { type: 'preferencesUpdated'; preferences: PanelPreferences };
 
 /**
  * Message types sent from webview (React app) to extension host (PodLogsViewerPanel).
@@ -56,6 +61,11 @@ export type WebviewToExtensionMessage =
      */
     | { type: 'toggleFollow'; enabled: boolean }
     /**
+     * Request to toggle timestamps display on/off.
+     * Sent when user toggles timestamps to show/hide timestamps in log lines.
+     */
+    | { type: 'toggleTimestamps'; enabled: boolean }
+    /**
      * Request to copy logs to clipboard.
      * Sent when user clicks copy button to copy all visible logs to clipboard.
      */
@@ -64,5 +74,11 @@ export type WebviewToExtensionMessage =
      * Request to export logs to a file.
      * Sent when user clicks export button to save logs to a file with customizable filename.
      */
-    | { type: 'export'; lines: string[]; podName: string; containerName: string; includeTimestamps: boolean };
+    | { type: 'export'; lines: string[]; podName: string; containerName: string; includeTimestamps: boolean }
+    /**
+     * Request to set line limit for log fetching.
+     * Sent when user selects a line limit from dropdown or enters a custom value.
+     * If limit is 'custom', extension will prompt for numeric input.
+     */
+    | { type: 'setLineLimit'; limit: number | 'all' | 'custom' };
 

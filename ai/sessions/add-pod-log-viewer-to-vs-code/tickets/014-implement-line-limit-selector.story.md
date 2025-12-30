@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-actions
 spec_id:
   - pod-logs-panel-spec
-status: pending
+status: completed
 ---
 
 # Implement Line Limit Selector and Custom Input

@@ -15,7 +15,7 @@ interface ToolbarProps {
     /** Handler for container selection change */
     onContainerChange: (container: string) => void;
     /** Handler for line limit change */
-    onLineLimitChange: (limit: number | 'all') => void;
+    onLineLimitChange: (limit: number | 'all' | 'custom') => void;
     /** Handler for timestamps toggle */
     onToggleTimestamps: () => void;
     /** Handler for follow mode toggle */
@@ -92,7 +92,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     value={lineLimitValue}
                     onChange={(e) => {
                         const value = e.target.value;
-                        onLineLimitChange(value === 'all' ? 'all' : parseInt(value, 10));
+                        if (value === 'custom') {
+                            onLineLimitChange('custom' as 'custom');
+                        } else {
+                            onLineLimitChange(value === 'all' ? 'all' : parseInt(value, 10));
+                        }
                     }}
                     title="Select line limit"
                     aria-label="Select line limit"
@@ -103,6 +107,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     <option value="1000">1000 lines</option>
                     <option value="5000">5000 lines</option>
                     <option value="all">All lines</option>
+                    <option value="custom">Custom...</option>
                 </select>
 
                 <button
