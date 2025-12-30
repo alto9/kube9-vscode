@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-panel
 spec_id:
   - pod-logs-ui-spec
-status: pending
+status: completed
 ---
 
 # Create Webview HTML Template with CSP
