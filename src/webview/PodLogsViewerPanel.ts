@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { LogsProvider } from '../providers/LogsProvider';
+import { PreferencesManager } from '../utils/PreferencesManager';
+import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InitialState } from '../types/messages';
 
 /**
  * Interface for storing pod information.
  * Represents the current pod being viewed in the panel.
  */
-interface PodInfo {
+export interface PodInfo {
     name: string;
     namespace: string;
     container: string;
@@ -39,6 +41,11 @@ export class PodLogsViewerPanel {
      * Extension context for managing subscriptions.
      */
     private static extensionContext: vscode.ExtensionContext | undefined;
+
+    /**
+     * Preferences manager instance for accessing user preferences.
+     */
+    private static preferencesManager: PreferencesManager | undefined;
 
     /**
      * Show a Pod Logs Viewer webview panel.
@@ -178,6 +185,9 @@ export class PodLogsViewerPanel {
             context.extensionUri
         );
 
+        // Set up message handling
+        PodLogsViewerPanel.setupMessageHandling(panel, contextName, context);
+
         // Handle panel disposal
         panel.onDidDispose(
             () => {
@@ -190,6 +200,130 @@ export class PodLogsViewerPanel {
             null,
             context.subscriptions
         );
+    }
+
+    /**
+     * Set up bidirectional message handling between extension and webview.
+     * 
+     * @param panel - The webview panel
+     * @param contextName - The cluster context name
+     * @param context - The VS Code extension context
+     */
+    private static setupMessageHandling(
+        panel: vscode.WebviewPanel,
+        contextName: string,
+        context: vscode.ExtensionContext
+    ): void {
+        panel.webview.onDidReceiveMessage(
+            async (message: WebviewToExtensionMessage) => {
+                const timestamp = new Date().toISOString();
+                console.log(`[PodLogsViewerPanel ${timestamp}] ⬅️ Received message: ${message.type}`);
+                
+                await PodLogsViewerPanel.handleMessage(contextName, message);
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Handle messages received from webview.
+     * 
+     * @param contextName - The cluster context name
+     * @param message - The message from webview
+     */
+    private static async handleMessage(
+        contextName: string,
+        message: WebviewToExtensionMessage
+    ): Promise<void> {
+        const timestamp = new Date().toISOString();
+        
+        switch (message.type) {
+            case 'ready':
+                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'ready' message`);
+                await PodLogsViewerPanel.sendInitialState(contextName);
+                break;
+            case 'refresh':
+                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'refresh' message`);
+                // TODO: Implement refresh in future story
+                break;
+            case 'toggleFollow':
+                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'toggleFollow' message, enabled=${message.enabled}`);
+                // TODO: Implement toggleFollow in future story
+                break;
+            default:
+                console.log(`[PodLogsViewerPanel ${timestamp}] ❌ Unknown message type:`, message);
+        }
+    }
+
+    /**
+     * Send initial state to webview when ready.
+     * 
+     * @param contextName - The cluster context name
+     */
+    private static async sendInitialState(contextName: string): Promise<void> {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] sendInitialState called for context: ${contextName}`);
+        
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ No panel found for context: ${contextName}`);
+            return;
+        }
+
+        // Ensure PreferencesManager is initialized
+        if (!PodLogsViewerPanel.preferencesManager && PodLogsViewerPanel.extensionContext) {
+            PodLogsViewerPanel.preferencesManager = new PreferencesManager(PodLogsViewerPanel.extensionContext);
+        }
+
+        if (!PodLogsViewerPanel.preferencesManager) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Cannot initialize PreferencesManager - no extension context`);
+            return;
+        }
+
+        try {
+            // Get preferences for this cluster
+            const preferences = PodLogsViewerPanel.preferencesManager.getPreferences(contextName);
+            
+            // Get containers for the pod
+            const containers = await panelInfo.logsProvider.getPodContainers(
+                panelInfo.currentPod.namespace,
+                panelInfo.currentPod.name
+            );
+
+            // Create initial state
+            const initialState: InitialState = {
+                pod: panelInfo.currentPod,
+                preferences: preferences,
+                containers: containers
+            };
+
+            // Send initial state message
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'initialState',
+                data: initialState
+            });
+
+            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Sent initialState for pod: ${panelInfo.currentPod.name}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to send initialState: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Send message to webview.
+     * 
+     * @param panel - The webview panel
+     * @param message - The message to send
+     */
+    private static sendMessage(
+        panel: vscode.WebviewPanel,
+        message: ExtensionToWebviewMessage
+    ): void {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] ➡️ Sending message: ${message.type}`);
+        panel.webview.postMessage(message);
     }
 
     /**
