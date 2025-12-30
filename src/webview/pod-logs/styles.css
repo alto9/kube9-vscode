@@ -36,6 +36,11 @@
     --warning-bg: var(--vscode-inputValidation-warningBackground);
     --warning-border: var(--vscode-inputValidation-warningBorder);
     
+    /* Status Bar Colors */
+    --status-bar-bg: var(--vscode-statusBar-background);
+    --status-bar-fg: var(--vscode-statusBar-foreground);
+    --status-bar-border: var(--vscode-statusBar-border);
+    
     /* Focus */
     --focus-border: var(--vscode-focusBorder);
     
@@ -83,7 +88,7 @@ body {
     background-color: var(--background);
     color: var(--foreground);
     font-family: var(--font-family);
-    padding: var(--spacing-xl);
+    padding: 0;
 }
 
 .pod-logs-viewer h1 {
@@ -97,5 +102,203 @@ body {
     font-size: var(--font-size);
     color: var(--description-foreground);
     margin: 0;
+}
+
+.loading-state {
+    padding: var(--spacing-xl);
+    text-align: center;
+    color: var(--description-foreground);
+}
+
+/* ==========================================================================
+   Toolbar Styles
+   ========================================================================== */
+
+.toolbar {
+    display: flex;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background-color: var(--vscode-editorWidget-background);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.toolbar-section.pod-info {
+    flex: 1;
+    min-width: 200px;
+}
+
+.toolbar-section.controls {
+    flex: 1;
+    min-width: 300px;
+    justify-content: center;
+}
+
+.toolbar-section.actions {
+    flex-shrink: 0;
+    justify-content: flex-end;
+}
+
+.pod-name,
+.namespace,
+.container-name {
+    font-size: var(--font-size);
+    color: var(--foreground);
+    white-space: nowrap;
+}
+
+.pod-name {
+    font-weight: 600;
+}
+
+.container-selector,
+.line-limit-selector {
+    padding: 4px 8px;
+    border: 1px solid var(--vscode-dropdown-border);
+    border-radius: var(--radius-md);
+    background-color: var(--vscode-dropdown-background);
+    color: var(--vscode-dropdown-foreground);
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    cursor: pointer;
+    min-width: 120px;
+}
+
+.container-selector:hover,
+.line-limit-selector:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.container-selector:focus,
+.line-limit-selector:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: -1px;
+}
+
+.btn-toggle {
+    padding: 6px 14px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    font-weight: 500;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--button-secondary-bg);
+    color: var(--button-secondary-fg);
+}
+
+.btn-toggle:hover {
+    opacity: 0.9;
+}
+
+.btn-toggle.active {
+    background-color: var(--button-primary-bg);
+    color: var(--button-primary-fg);
+}
+
+.btn-toggle .codicon {
+    font-size: 14px;
+}
+
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--font-size);
+    color: var(--foreground);
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--button-primary-bg);
+}
+
+.btn-icon {
+    padding: 6px;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    transition: background-color 0.15s ease, opacity 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    color: var(--foreground);
+    min-width: 28px;
+    height: 28px;
+}
+
+.btn-icon:hover {
+    background-color: var(--vscode-toolbar-hoverBackground);
+    opacity: 0.9;
+}
+
+.btn-icon:active {
+    opacity: 0.7;
+}
+
+.btn-icon .codicon {
+    font-size: 16px;
+}
+
+.btn-icon:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: -1px;
+}
+
+/* ==========================================================================
+   Footer Styles
+   ========================================================================== */
+
+.footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 8px;
+    background-color: var(--status-bar-bg);
+    color: var(--status-bar-fg);
+    font-size: var(--font-size-sm);
+    border-top: 1px solid var(--status-bar-border);
+    flex-shrink: 0;
+}
+
+.footer .line-count {
+    display: flex;
+    align-items: center;
+}
+
+.footer .stream-status {
+    display: flex;
+    align-items: center;
+}
+
+.footer .status-connected {
+    color: var(--vscode-testing-iconPassed);
+}
+
+.footer .status-disconnected {
+    color: var(--vscode-editorLineNumber-foreground);
+}
+
+.footer .status-error {
+    color: var(--vscode-errorForeground);
 }
 
