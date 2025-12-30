@@ -157,6 +157,44 @@ export class LogsProvider {
     }
 
     /**
+     * Checks if a container has crashed/restarted by examining pod status.
+     * A container is considered crashed if restartCount > 0 or lastState.terminated is defined.
+     * 
+     * @param namespace - The namespace containing the pod
+     * @param podName - The name of the pod
+     * @param containerName - The name of the container to check
+     * @returns Promise resolving to true if container has crashed, false otherwise
+     */
+    public async hasContainerCrashed(
+        namespace: string,
+        podName: string,
+        containerName: string
+    ): Promise<boolean> {
+        try {
+            const coreApi = this.kubeConfig.makeApiClient(k8s.CoreV1Api);
+            const pod = await coreApi.readNamespacedPod({
+                name: podName,
+                namespace: namespace
+            });
+            
+            const containerStatus = pod.status?.containerStatuses?.find(
+                (cs: k8s.V1ContainerStatus) => cs.name === containerName
+            );
+            
+            if (!containerStatus) {
+                return false;
+            }
+            
+            // Container has crashed if restartCount > 0 or lastState.terminated is defined
+            return (containerStatus.restartCount ?? 0) > 0 || containerStatus.lastState?.terminated !== undefined;
+        } catch (error) {
+            // If we can't fetch pod status, assume no crash
+            console.error(`Failed to check crash status for container ${containerName}:`, error);
+            return false;
+        }
+    }
+
+    /**
      * Disposes of all resources held by this provider.
      * Stops any active streams and cleans up.
      */

@@ -13,6 +13,8 @@ export interface PodInfo {
     container: string;
     contextName: string;
     clusterName: string;
+    /** Whether the container has crashed/restarted (has previous logs available) */
+    hasCrashed?: boolean;
 }
 
 /**
@@ -66,6 +68,18 @@ export class PodLogsViewerPanel {
      * Map tracking whether warning has been shown for "All" option exceeding 10,000 lines per contextName.
      */
     private static allLimitWarningsShown: Map<string, boolean> = new Map();
+
+    /**
+     * Map tracking active container streams for "all" containers mode.
+     * Key: contextName, Value: Set of container names with active streams.
+     */
+    private static activeContainerStreams: Map<string, Set<string>> = new Map();
+
+    /**
+     * Map tracking LogsProvider instances for "all" containers mode.
+     * Key: contextName, Value: Map of container name to LogsProvider instance.
+     */
+    private static allContainersLogsProviders: Map<string, Map<string, LogsProvider>> = new Map();
 
     /**
      * Show a Pod Logs Viewer webview panel.
@@ -135,7 +149,7 @@ export class PodLogsViewerPanel {
             }
 
             // Create a new panel with selected container
-            PodLogsViewerPanel.createPanel(
+            await PodLogsViewerPanel.createPanel(
                 context,
                 contextName,
                 clusterName,
@@ -163,7 +177,7 @@ export class PodLogsViewerPanel {
      * @param container - The container name (or 'all' for all containers)
      * @param logsProvider - The LogsProvider instance for this panel
      */
-    private static createPanel(
+    private static async createPanel(
         context: vscode.ExtensionContext,
         contextName: string,
         clusterName: string,
@@ -171,7 +185,7 @@ export class PodLogsViewerPanel {
         namespace: string,
         container: string,
         logsProvider: LogsProvider
-    ): void {
+    ): Promise<void> {
         // Create a new webview panel
         const panel = vscode.window.createWebviewPanel(
             'kube9PodLogs',
@@ -209,7 +223,7 @@ export class PodLogsViewerPanel {
         PodLogsViewerPanel.setupMessageHandling(panel, contextName, context);
 
         // Start streaming logs
-        PodLogsViewerPanel.startStreaming(contextName);
+        await PodLogsViewerPanel.startStreaming(contextName);
 
         // Handle panel disposal
         panel.onDidDispose(
@@ -218,8 +232,22 @@ export class PodLogsViewerPanel {
                 PodLogsViewerPanel.cleanupBatching(contextName);
                 
                 const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
-                if (panelInfo?.logsProvider) {
-                    panelInfo.logsProvider.dispose();
+                if (panelInfo) {
+                    // Clean up single container stream
+                    if (panelInfo.logsProvider) {
+                        panelInfo.logsProvider.dispose();
+                    }
+                    
+                    // Clean up "all" containers streams if active
+                    const containerProviders = PodLogsViewerPanel.allContainersLogsProviders.get(contextName);
+                    if (containerProviders) {
+                        for (const [, provider] of containerProviders) {
+                            provider.stopStream();
+                            provider.dispose();
+                        }
+                        PodLogsViewerPanel.allContainersLogsProviders.delete(contextName);
+                    }
+                    PodLogsViewerPanel.activeContainerStreams.delete(contextName);
                 }
                 PodLogsViewerPanel.openPanels.delete(contextName);
             },
@@ -293,6 +321,14 @@ export class PodLogsViewerPanel {
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'setLineLimit' message, limit=${message.limit}`);
                 await PodLogsViewerPanel.handleSetLineLimit(contextName, message.limit);
                 break;
+            case 'setPrevious':
+                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'setPrevious' message, enabled=${message.enabled}`);
+                await PodLogsViewerPanel.handleSetPrevious(contextName, message.enabled);
+                break;
+            case 'switchContainer':
+                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'switchContainer' message, container=${message.container}`);
+                await PodLogsViewerPanel.handleSwitchContainer(contextName, message.container);
+                break;
             default:
                 console.log(`[PodLogsViewerPanel ${timestamp}] ❌ Unknown message type:`, message);
         }
@@ -340,7 +376,7 @@ export class PodLogsViewerPanel {
             PodLogsViewerPanel.cleanupBatching(contextName);
             
             // Restart stream with new follow setting
-            PodLogsViewerPanel.startStreaming(contextName);
+            await PodLogsViewerPanel.startStreaming(contextName);
             
             console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Follow mode ${enabled ? 'enabled' : 'disabled'}`);
         } catch (error) {
@@ -391,12 +427,75 @@ export class PodLogsViewerPanel {
             PodLogsViewerPanel.cleanupBatching(contextName);
             
             // Restart stream with new timestamps setting
-            PodLogsViewerPanel.startStreaming(contextName);
+            await PodLogsViewerPanel.startStreaming(contextName);
             
             console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Timestamps ${enabled ? 'enabled' : 'disabled'}`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to toggle timestamps: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle set previous container logs request from webview.
+     * Updates preferences and restarts stream with new previous setting.
+     * 
+     * @param contextName - The cluster context name
+     * @param enabled - Whether to show previous container logs
+     */
+    private static async handleSetPrevious(contextName: string, enabled: boolean): Promise<void> {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] handleSetPrevious: enabled=${enabled}`);
+        
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ No panel found for context: ${contextName}`);
+            return;
+        }
+
+        // Ensure PreferencesManager is initialized
+        if (!PodLogsViewerPanel.preferencesManager && PodLogsViewerPanel.extensionContext) {
+            PodLogsViewerPanel.preferencesManager = new PreferencesManager(PodLogsViewerPanel.extensionContext);
+        }
+
+        if (!PodLogsViewerPanel.preferencesManager) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Cannot initialize PreferencesManager - no extension context`);
+            return;
+        }
+
+        try {
+            // Get current preferences
+            const preferences = PodLogsViewerPanel.preferencesManager.getPreferences(contextName);
+            
+            // Update showPrevious preference
+            const updatedPreferences = { ...preferences, showPrevious: enabled };
+            
+            // Save preferences to persist per cluster
+            await PodLogsViewerPanel.preferencesManager.savePreferences(contextName, updatedPreferences);
+            
+            // Stop current stream
+            panelInfo.logsProvider.stopStream();
+            PodLogsViewerPanel.cleanupBatching(contextName);
+            
+            // Clear logs in webview by sending empty logData
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'logData',
+                data: []
+            });
+            
+            // Send updated preferences to webview
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'preferencesUpdated',
+                preferences: updatedPreferences
+            });
+            
+            // Restart stream with new previous setting
+            PodLogsViewerPanel.startStreaming(contextName);
+            
+            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Previous logs ${enabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to set previous logs: ${errorMessage}`);
         }
     }
 
@@ -486,13 +585,84 @@ export class PodLogsViewerPanel {
             });
             
             // Restart stream with new line limit
-            PodLogsViewerPanel.startStreaming(contextName);
+            await PodLogsViewerPanel.startStreaming(contextName);
             
             console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Line limit set to: ${newLimit}`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to set line limit: ${errorMessage}`);
             vscode.window.showErrorMessage(`Failed to set line limit: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle container switch request from webview.
+     * Stops current stream(s), updates container, clears logs, and starts new stream(s).
+     * 
+     * @param contextName - The cluster context name
+     * @param container - The container name to switch to (or 'all' for all containers)
+     */
+    private static async handleSwitchContainer(contextName: string, container: string | 'all'): Promise<void> {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] handleSwitchContainer: container=${container}`);
+        
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ No panel found for context: ${contextName}`);
+            return;
+        }
+
+        try {
+            // Stop current stream(s)
+            if (panelInfo.currentPod.container === 'all') {
+                // Stop all container streams
+                const containerProviders = PodLogsViewerPanel.allContainersLogsProviders.get(contextName);
+                if (containerProviders) {
+                    for (const [, provider] of containerProviders) {
+                        provider.stopStream();
+                        provider.dispose();
+                    }
+                    PodLogsViewerPanel.allContainersLogsProviders.delete(contextName);
+                }
+                PodLogsViewerPanel.activeContainerStreams.delete(contextName);
+            } else {
+                // Stop single container stream
+                panelInfo.logsProvider.stopStream();
+            }
+            PodLogsViewerPanel.cleanupBatching(contextName);
+            
+            // Update currentPod.container
+            panelInfo.currentPod.container = container;
+            
+            // Clear webview logs by sending empty logData
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'logData',
+                data: []
+            });
+            
+            // Send updated pod info to webview
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'initialState',
+                data: {
+                    pod: panelInfo.currentPod,
+                    preferences: PodLogsViewerPanel.preferencesManager 
+                        ? PodLogsViewerPanel.preferencesManager.getPreferences(contextName)
+                        : { followMode: true, showTimestamps: false, lineLimit: 1000, showPrevious: false },
+                    containers: await panelInfo.logsProvider.getPodContainers(
+                        panelInfo.currentPod.namespace,
+                        panelInfo.currentPod.name
+                    )
+                }
+            });
+            
+            // Start new stream(s) for selected container
+            await PodLogsViewerPanel.startStreaming(contextName);
+            
+            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Container switched to: ${container}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to switch container: ${errorMessage}`);
+            vscode.window.showErrorMessage(`Failed to switch container: ${errorMessage}`);
         }
     }
 
@@ -618,9 +788,39 @@ export class PodLogsViewerPanel {
                 panelInfo.currentPod.name
             );
 
+            // Detect if container has crashed
+            let hasCrashed = false;
+            if (panelInfo.currentPod.container === 'all') {
+                // For 'all' containers, check if any container has crashed
+                for (const container of containers) {
+                    const crashed = await panelInfo.logsProvider.hasContainerCrashed(
+                        panelInfo.currentPod.namespace,
+                        panelInfo.currentPod.name,
+                        container
+                    );
+                    if (crashed) {
+                        hasCrashed = true;
+                        break;
+                    }
+                }
+            } else {
+                // For single container, check crash status
+                hasCrashed = await panelInfo.logsProvider.hasContainerCrashed(
+                    panelInfo.currentPod.namespace,
+                    panelInfo.currentPod.name,
+                    panelInfo.currentPod.container
+                );
+            }
+
+            // Create pod info with crash status
+            const podInfo: PodInfo = {
+                ...panelInfo.currentPod,
+                hasCrashed
+            };
+
             // Create initial state
             const initialState: InitialState = {
-                pod: panelInfo.currentPod,
+                pod: podInfo,
                 preferences: preferences,
                 containers: containers
             };
@@ -631,7 +831,7 @@ export class PodLogsViewerPanel {
                 data: initialState
             });
 
-            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Sent initialState for pod: ${panelInfo.currentPod.name}`);
+            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Sent initialState for pod: ${panelInfo.currentPod.name}, hasCrashed: ${hasCrashed}`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to send initialState: ${errorMessage}`);
@@ -656,10 +856,11 @@ export class PodLogsViewerPanel {
     /**
      * Start streaming logs from Kubernetes API for a panel.
      * Gets preferences, calls LogsProvider.streamLogs(), and sets up batching.
+     * For "all" containers mode, starts multiple streams (one per container) with prefixed log lines.
      * 
      * @param contextName - The cluster context name
      */
-    private static startStreaming(contextName: string): void {
+    private static async startStreaming(contextName: string): Promise<void> {
         const timestamp = new Date().toISOString();
         console.log(`[PodLogsViewerPanel ${timestamp}] startStreaming called for context: ${contextName}`);
 
@@ -698,29 +899,87 @@ export class PodLogsViewerPanel {
             }, 100);
             PodLogsViewerPanel.batchIntervals.set(contextName, batchInterval);
 
-            // Start streaming logs
-            panelInfo.logsProvider.streamLogs(
-                panelInfo.currentPod.namespace,
-                panelInfo.currentPod.name,
-                panelInfo.currentPod.container === 'all' ? '' : panelInfo.currentPod.container,
-                {
-                    follow: preferences.followMode,
-                    tailLines: preferences.lineLimit === 'all' ? undefined : preferences.lineLimit,
-                    timestamps: preferences.showTimestamps,
-                    previous: preferences.showPrevious
-                },
-                (chunk) => PodLogsViewerPanel.handleLogData(contextName, chunk),
-                (error) => PodLogsViewerPanel.handleStreamError(contextName, error),
-                () => PodLogsViewerPanel.handleStreamClose(contextName)
-            );
+            // Handle "all" containers mode vs single container
+            if (panelInfo.currentPod.container === 'all') {
+                // Get all containers for this pod
+                const containers = await panelInfo.logsProvider.getPodContainers(
+                    panelInfo.currentPod.namespace,
+                    panelInfo.currentPod.name
+                );
+
+                // Initialize tracking for this context
+                const containerProviders = new Map<string, LogsProvider>();
+                PodLogsViewerPanel.allContainersLogsProviders.set(contextName, containerProviders);
+                const activeStreams = new Set<string>();
+                PodLogsViewerPanel.activeContainerStreams.set(contextName, activeStreams);
+
+                // Start a stream for each container
+                for (const containerName of containers) {
+                    try {
+                        // Create a new LogsProvider for this container
+                        const containerProvider = new LogsProvider(contextName);
+                        containerProviders.set(containerName, containerProvider);
+                        activeStreams.add(containerName);
+
+                        // Start streaming with container-specific callback that prefixes lines
+                        containerProvider.streamLogs(
+                            panelInfo.currentPod.namespace,
+                            panelInfo.currentPod.name,
+                            containerName,
+                            {
+                                follow: preferences.followMode,
+                                tailLines: preferences.lineLimit === 'all' ? undefined : preferences.lineLimit,
+                                timestamps: preferences.showTimestamps,
+                                previous: preferences.showPrevious
+                            },
+                            (chunk) => PodLogsViewerPanel.handleLogData(contextName, chunk, containerName),
+                            (error) => {
+                                console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Stream error for container ${containerName}:`, error.message);
+                                activeStreams.delete(containerName);
+                                if (activeStreams.size === 0) {
+                                    PodLogsViewerPanel.handleStreamError(contextName, error);
+                                }
+                            },
+                            () => {
+                                console.log(`[PodLogsViewerPanel ${timestamp}] Stream closed for container: ${containerName}`);
+                                activeStreams.delete(containerName);
+                                if (activeStreams.size === 0) {
+                                    PodLogsViewerPanel.handleStreamClose(contextName);
+                                }
+                            }
+                        );
+                    } catch (error) {
+                        console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to start stream for container ${containerName}:`, error);
+                        activeStreams.delete(containerName);
+                    }
+                }
+
+                console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Started streaming for all containers (${containers.length} containers)`);
+            } else {
+                // Single container mode - use existing logic
+                panelInfo.logsProvider.streamLogs(
+                    panelInfo.currentPod.namespace,
+                    panelInfo.currentPod.name,
+                    panelInfo.currentPod.container,
+                    {
+                        follow: preferences.followMode,
+                        tailLines: preferences.lineLimit === 'all' ? undefined : preferences.lineLimit,
+                        timestamps: preferences.showTimestamps,
+                        previous: preferences.showPrevious
+                    },
+                    (chunk) => PodLogsViewerPanel.handleLogData(contextName, chunk),
+                    (error) => PodLogsViewerPanel.handleStreamError(contextName, error),
+                    () => PodLogsViewerPanel.handleStreamClose(contextName)
+                );
+
+                console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Started streaming for container: ${panelInfo.currentPod.container}`);
+            }
 
             // Send connected status
             PodLogsViewerPanel.sendMessage(panelInfo.panel, {
                 type: 'streamStatus',
                 status: 'connected'
             });
-
-            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Started streaming for pod: ${panelInfo.currentPod.name}`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to start streaming: ${errorMessage}`);
@@ -731,11 +990,13 @@ export class PodLogsViewerPanel {
     /**
      * Handle log data chunk received from Kubernetes API.
      * Splits chunk into lines and adds them to pending batch.
+     * If containerName is provided (for "all" containers mode), prefixes each line with [container-name].
      * 
      * @param contextName - The cluster context name
      * @param chunk - The log data chunk as a string
+     * @param containerName - Optional container name to prefix lines with (for "all" containers mode)
      */
-    private static handleLogData(contextName: string, chunk: string): void {
+    private static handleLogData(contextName: string, chunk: string, containerName?: string): void {
         const pendingLines = PodLogsViewerPanel.pendingLogLines.get(contextName);
         if (!pendingLines) {
             // Initialize if not exists (shouldn't happen, but be safe)
@@ -746,8 +1007,13 @@ export class PodLogsViewerPanel {
         // Split chunk by newlines and filter empty strings
         const lines = chunk.split('\n').filter(line => line.length > 0);
         
+        // Prefix lines with container name if provided (for "all" containers mode)
+        const prefixedLines = containerName 
+            ? lines.map(line => `[${containerName}] ${line}`)
+            : lines;
+        
         // Add lines to pending batch
-        pendingLines.push(...lines);
+        pendingLines.push(...prefixedLines);
     }
 
     /**
