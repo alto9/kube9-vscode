@@ -111,10 +111,26 @@ export const App: React.FC = () => {
 
     // Toolbar handlers
     const handleContainerChange = React.useCallback((container: string) => {
-        // TODO: Implement container change in future story
         console.log('[PodLogsApp] Container change requested:', container);
-        sendMessage({ type: 'refresh' });
-    }, [sendMessage]);
+        
+        // Clear existing logs
+        setLogs([]);
+        setLineCount(0);
+        
+        // Update pod state with new container
+        if (initialState) {
+            setInitialState({
+                ...initialState,
+                pod: {
+                    ...initialState.pod,
+                    container: container === 'all' ? 'all' : container
+                }
+            });
+        }
+        
+        // Send switchContainer message to extension
+        sendMessage({ type: 'switchContainer', container: container === 'all' ? 'all' : container });
+    }, [initialState, sendMessage]);
 
     const handleLineLimitChange = React.useCallback((limit: number | 'all' | 'custom') => {
         console.log('[PodLogsApp] Line limit change requested:', limit);
@@ -143,10 +159,10 @@ export const App: React.FC = () => {
 
     const handleTogglePrevious = React.useCallback(() => {
         if (preferences) {
-            const newPrefs = { ...preferences, showPrevious: !preferences.showPrevious };
+            const newShowPrevious = !preferences.showPrevious;
+            const newPrefs = { ...preferences, showPrevious: newShowPrevious };
             setPreferences(newPrefs);
-            // TODO: Send preference update to extension in future story
-            sendMessage({ type: 'refresh' });
+            sendMessage({ type: 'setPrevious', enabled: newShowPrevious });
         }
     }, [preferences, sendMessage]);
 
@@ -282,6 +298,11 @@ export const App: React.FC = () => {
                     onPreviousMatch={handlePreviousMatch}
                     onClose={handleSearchClose}
                 />
+            )}
+            {preferences?.showPrevious && (
+                <div className="previous-logs-badge">
+                    ⚠ Viewing previous container logs
+                </div>
             )}
             {initialState && preferences && (
                 <LogDisplay

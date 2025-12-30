@@ -132,7 +132,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                     Follow: {preferences.followMode ? 'On' : 'Off'}
                 </button>
 
-                {preferences.showPrevious !== undefined && (
+                {pod?.hasCrashed && (
                     <label className="checkbox-label">
                         <input
                             type="checkbox"

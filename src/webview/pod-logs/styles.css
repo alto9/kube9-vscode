@@ -266,6 +266,21 @@ body {
 }
 
 /* ==========================================================================
+   Previous Logs Badge Styles
+   ========================================================================== */
+
+.previous-logs-badge {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    color: var(--foreground);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
    Search Bar Styles
    ========================================================================== */
 

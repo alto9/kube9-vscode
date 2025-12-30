@@ -80,5 +80,17 @@ export type WebviewToExtensionMessage =
      * Sent when user selects a line limit from dropdown or enters a custom value.
      * If limit is 'custom', extension will prompt for numeric input.
      */
-    | { type: 'setLineLimit'; limit: number | 'all' | 'custom' };
+    | { type: 'setLineLimit'; limit: number | 'all' | 'custom' }
+    /**
+     * Request to switch container in multi-container pod.
+     * Sent when user selects a different container from the dropdown.
+     * Container can be a specific container name or 'all' for all containers.
+     */
+    | { type: 'switchContainer'; container: string | 'all' }
+    /**
+     * Request to toggle previous container logs on/off.
+     * Sent when user checks/unchecks the "Show previous container logs" checkbox.
+     * Only available for crashed/restarted containers.
+     */
+    | { type: 'setPrevious'; enabled: boolean };
 
