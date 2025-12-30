@@ -13,6 +13,10 @@ interface LogDisplayProps {
     followMode: boolean;
     /** Search query for highlighting matches */
     searchQuery: string;
+    /** Array of log line indices that match the search query */
+    searchMatches: number[];
+    /** Current match index (0-based) */
+    currentMatchIndex: number;
     /** Callback when user scrolls up (to disable follow mode) */
     onScrollUp: () => void;
 }
@@ -89,6 +93,8 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
     showTimestamps,
     followMode,
     searchQuery,
+    searchMatches,
+    currentMatchIndex,
     onScrollUp
 }) => {
     const listRef = useRef<List>(null);
@@ -117,6 +123,14 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
             wasFollowingRef.current = true;
         }
     }, [logs, followMode]);
+
+    // Scroll to current match when navigating search results
+    useEffect(() => {
+        if (searchMatches.length > 0 && currentMatchIndex >= 0 && currentMatchIndex < searchMatches.length && listRef.current) {
+            const matchLineIndex = searchMatches[currentMatchIndex];
+            listRef.current.scrollToItem(matchLineIndex, 'center');
+        }
+    }, [searchMatches, currentMatchIndex]);
 
     // Detect scroll up to disable follow mode
     const handleScroll = useCallback(({ scrollOffset, scrollUpdateWasRequested }: any) => {

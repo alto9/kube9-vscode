@@ -266,6 +266,81 @@ body {
 }
 
 /* ==========================================================================
+   Search Bar Styles
+   ========================================================================== */
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background-color: var(--vscode-editorWidget-background);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+    background-color: var(--vscode-input-background);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: var(--radius-md);
+    padding: 4px 8px;
+    gap: 6px;
+}
+
+.search-input-wrapper:focus-within {
+    outline: 1px solid var(--focus-border);
+    outline-offset: -1px;
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    color: var(--vscode-input-foreground);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    padding: 2px 0;
+}
+
+.search-input::placeholder {
+    color: var(--vscode-input-placeholderForeground);
+}
+
+.search-matches {
+    font-size: var(--font-size-sm);
+    color: var(--description-foreground);
+    white-space: nowrap;
+    min-width: 80px;
+    text-align: center;
+}
+
+.search-nav-btn {
+    min-width: 28px;
+    height: 28px;
+}
+
+.search-nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.search-nav-btn:disabled:hover {
+    background-color: transparent;
+}
+
+.search-close-btn {
+    min-width: 28px;
+    height: 28px;
+}
+
+/* ==========================================================================
    Footer Styles
    ========================================================================== */
 
