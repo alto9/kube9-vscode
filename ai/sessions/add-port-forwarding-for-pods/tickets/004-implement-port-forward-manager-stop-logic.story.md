@@ -1,0 +1,92 @@
+---
+story_id: 004-implement-port-forward-manager-stop-logic
+session_id: add-port-forwarding-for-pods
+feature_id:
+  - pod-port-forwarding
+spec_id:
+  - port-forwarding-manager-spec
+status: completed
+---
+
+# Implement Port Forward Manager Stop Logic
+
+## Objective
+
+Implement logic for stopping port forwards, including process termination and cleanup.
+
+## Context
+
+The stop logic must gracefully terminate kubectl processes and clean up state. Supports stopping individual forwards or all forwards at once.
+
+## Implementation
+
+### File: src/services/PortForwardManager.ts
+
+**Implement `stopForward()`**:
+1. Retrieve forward record by ID
+2. Update status to 'stopped'
+3. Send SIGTERM to process
+4. Wait 1 second, force SIGKILL if needed
+5. Remove from forwards map
+6. Emit event and update status bar
+
+**Implement `stopAllForwards()`**:
+```typescript
+public async stopAllForwards(): Promise<void> {
+  const forwardIds = Array.from(this.forwards.keys());
+  await Promise.all(
+    forwardIds.map(id => this.stopForward(id).catch(err => {
+      console.error(`Failed to stop forward ${id}:`, err);
+    }))
+  );
+}
+```
+
+**Graceful process termination**:
+```typescript
+private async killProcess(process: ChildProcess): Promise<void> {
+  return new Promise((resolve) => {
+    if (!process.pid) {
+      resolve();
+      return;
+    }
+    
+    process.kill('SIGTERM');
+    
+    const timeout = setTimeout(() => {
+      if (!process.killed) {
+        process.kill('SIGKILL');
+      }
+      resolve();
+    }, 1000);
+    
+    process.once('exit', () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
+}
+```
+
+## Acceptance Criteria
+
+- [x] `stopForward()` terminates process gracefully
+- [x] Process killed with SIGTERM, then SIGKILL if needed
+- [x] Forward removed from state
+- [x] Event emitted on stop
+- [x] Status bar updates (decrements count)
+- [x] `stopAllForwards()` stops all forwards
+- [x] No orphaned processes remain
+
+## Files Modified
+
+- `src/services/PortForwardManager.ts`
+
+## Dependencies
+
+- 003-implement-port-forward-manager-start-logic
+
+## Estimated Time
+
+15 minutes
+

@@ -127,7 +127,7 @@ export class YAMLEditorManager {
             const permissionLevel = await this.permissionChecker.checkResourcePermissions(resource);
             
             // Handle different permission levels
-            if (permissionLevel === PermissionLevel.None) {
+            if (permissionLevel === PermissionLevel.none) {
                 // User has no access to this resource at all
                 throw new Error(`Insufficient permissions to view ${resource.kind} '${resource.name}'.`);
             }
@@ -149,7 +149,7 @@ export class YAMLEditorManager {
             this.openEditors.set(resourceKey, editor);
             
             // Track read-only status and show notification if read-only
-            if (permissionLevel === PermissionLevel.ReadOnly || permissionLevel === PermissionLevel.Unknown) {
+            if (permissionLevel === PermissionLevel.readOnly || permissionLevel === PermissionLevel.unknown) {
                 this.readOnlyEditors.set(resourceKey, true);
                 vscode.window.showWarningMessage(
                     `Read-only: Insufficient permissions to edit ${resource.kind} '${resource.name}'`

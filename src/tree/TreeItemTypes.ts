@@ -16,6 +16,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - namespaces: Namespaces category
  * - networking: Networking category
  * - services: Services subcategory (under Networking)
+ * - portForwarding: Port Forwarding subcategory (under Networking)
  * - workloads: Workloads category
  * - deployments: Deployments subcategory (under Workloads)
  * - statefulsets: StatefulSets subcategory (under Workloads)
@@ -47,6 +48,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - configmap: Individual configmap item
  * - secret: Individual secret item
  * - service: Individual service item (under Services)
+ * - portForward: Individual port forward item (under Port Forwarding)
  * - argocdApplication: Individual ArgoCD Application item (under ArgoCD)
  * - crd: Individual Custom Resource Definition item
  * - dataCollection: Individual data collection report item (under Compliance)
@@ -83,9 +85,11 @@ export type TreeItemType =
     | 'configmaps'
     | 'secrets'
     | 'services'
+    | 'portForwarding'
     | 'configmap'
     | 'secret'
     | 'service'
+    | 'portForward'
     | 'argocd'
     | 'argocdApplication'
     | 'customResources'
@@ -122,5 +126,7 @@ export interface TreeItemData {
     namespace?: string;
     /** Optional label selector for workload resources */
     labelSelector?: string;
+    /** Optional forward ID for port forward items */
+    forwardId?: string;
 }
 

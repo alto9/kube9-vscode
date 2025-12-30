@@ -17,18 +17,18 @@ suite('PermissionChecker', () => {
 
     suite('PermissionLevel Enum', () => {
         test('should have correct enum values', () => {
-            assert.strictEqual(PermissionLevel.None, 'none');
-            assert.strictEqual(PermissionLevel.ReadOnly, 'readonly');
-            assert.strictEqual(PermissionLevel.ReadWrite, 'readwrite');
-            assert.strictEqual(PermissionLevel.Unknown, 'unknown');
+            assert.strictEqual(PermissionLevel.none, 'none');
+            assert.strictEqual(PermissionLevel.readOnly, 'readonly');
+            assert.strictEqual(PermissionLevel.readWrite, 'readwrite');
+            assert.strictEqual(PermissionLevel.unknown, 'unknown');
         });
 
         test('should have all required permission levels', () => {
             const levels = Object.values(PermissionLevel);
-            assert.ok(levels.includes(PermissionLevel.None));
-            assert.ok(levels.includes(PermissionLevel.ReadOnly));
-            assert.ok(levels.includes(PermissionLevel.ReadWrite));
-            assert.ok(levels.includes(PermissionLevel.Unknown));
+            assert.ok(levels.includes(PermissionLevel.none));
+            assert.ok(levels.includes(PermissionLevel.readOnly));
+            assert.ok(levels.includes(PermissionLevel.readWrite));
+            assert.ok(levels.includes(PermissionLevel.unknown));
         });
     });
 
@@ -118,7 +118,7 @@ suite('PermissionChecker', () => {
                 const result = await permissionChecker.checkResourcePermissions(resource);
                 
                 // Should return Unknown when kubectl fails, not throw
-                assert.strictEqual(result, PermissionLevel.Unknown);
+                assert.strictEqual(result, PermissionLevel.unknown);
             });
 
             test('should not throw errors for invalid kubectl responses', async () => {
@@ -154,10 +154,10 @@ suite('PermissionChecker', () => {
                 
                 // Verify result is one of the enum values
                 const validLevels = [
-                    PermissionLevel.None,
-                    PermissionLevel.ReadOnly,
-                    PermissionLevel.ReadWrite,
-                    PermissionLevel.Unknown
+                    PermissionLevel.none,
+                    PermissionLevel.readOnly,
+                    PermissionLevel.readWrite,
+                    PermissionLevel.unknown
                 ];
                 assert.ok(validLevels.includes(result as PermissionLevel));
             });
@@ -247,7 +247,7 @@ suite('PermissionChecker', () => {
 
                 // Should not throw, should return Unknown
                 const result = await permissionChecker.checkResourcePermissions(resource);
-                assert.strictEqual(result, PermissionLevel.Unknown);
+                assert.strictEqual(result, PermissionLevel.unknown);
             });
 
             test('should handle very long resource names', async () => {

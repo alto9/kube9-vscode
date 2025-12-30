@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../../ClusterTreeItem';
 import { TreeItemData } from '../../TreeItemTypes';
+import { TreeItemFactory } from '../../TreeItemFactory';
 
 /**
  * Networking category handler.
- * Provides the structure for networking subcategories (Services).
+ * Provides the structure for networking subcategories (Services, Port Forwarding).
  * This category doesn't fetch data itself but returns subcategory tree items.
  */
 export class NetworkingCategory {
@@ -17,7 +18,8 @@ export class NetworkingCategory {
      */
     public static getNetworkingSubcategories(resourceData: TreeItemData): ClusterTreeItem[] {
         return [
-            this.createServicesSubcategory(resourceData)
+            this.createServicesSubcategory(resourceData),
+            TreeItemFactory.createPortForwardingSubcategory(resourceData)
         ];
     }
 

@@ -46,7 +46,7 @@ export class ResourceQuickPick {
     /**
      * Cache TTL in milliseconds (30 seconds)
      */
-    private static readonly CACHE_TTL_MS = 30000;
+    private static readonly cacheTtlMs = 30000;
 
     /**
      * Cache for resource lists to avoid repeated kubectl calls
@@ -274,7 +274,7 @@ export class ResourceQuickPick {
                 const now = Date.now();
 
                 let resources: Array<{name: string; namespace?: string}>;
-                if (cached && (now - cached.timestamp) < this.CACHE_TTL_MS) {
+                if (cached && (now - cached.timestamp) < ResourceQuickPick.cacheTtlMs) {
                     // Use cached data
                     resources = cached.data;
                 } else {

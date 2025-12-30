@@ -65,6 +65,11 @@ export enum EndOfLine {
     LF = 1,
     CRLF = 2
 }
+
+export enum StatusBarAlignment {
+    Left = 1,
+    Right = 2
+}
 /* eslint-enable @typescript-eslint/naming-convention */
 
 export interface Memento {
@@ -206,6 +211,21 @@ export interface OutputChannel {
 }
 
 /**
+ * Mock StatusBarItem interface
+ */
+export interface StatusBarItem {
+    alignment: StatusBarAlignment;
+    priority?: number;
+    text: string;
+    tooltip: string | undefined;
+    color: string | ThemeColor | undefined;
+    command: string | Command | undefined;
+    show(): void;
+    hide(): void;
+    dispose(): void;
+}
+
+/**
  * Mock OutputChannel implementation
  */
 class MockOutputChannel implements OutputChannel {
@@ -240,6 +260,38 @@ class MockOutputChannel implements OutputChannel {
 
     _getContent(): string {
         return this.content.join('');
+    }
+}
+
+/**
+ * Mock StatusBarItem implementation
+ */
+class MockStatusBarItem implements StatusBarItem {
+    public text: string = '';
+    public tooltip: string | undefined;
+    public color: string | ThemeColor | undefined;
+    public command: string | Command | undefined;
+    private visible: boolean = false;
+
+    constructor(
+        public readonly alignment: StatusBarAlignment,
+        public readonly priority?: number
+    ) {}
+
+    show(): void {
+        this.visible = true;
+    }
+
+    hide(): void {
+        this.visible = false;
+    }
+
+    dispose(): void {
+        this.visible = false;
+    }
+
+    _isVisible(): boolean {
+        return this.visible;
     }
 }
 
@@ -354,6 +406,9 @@ export const window = {
             outputChannels.set(name, new MockOutputChannel(name));
         }
         return outputChannels.get(name)!;
+    },
+    createStatusBarItem: (alignment?: StatusBarAlignment, priority?: number): StatusBarItem => {
+        return new MockStatusBarItem(alignment || StatusBarAlignment.Left, priority);
     },
     createWebviewPanel: (
         viewType: string,
@@ -586,6 +641,7 @@ const vscodeModule = {
     ProgressLocation,
     ViewColumn,
     EndOfLine,
+    StatusBarAlignment,
     ThemeColor,
     ThemeIcon,
     TreeItem,
@@ -613,6 +669,7 @@ if (typeof module !== 'undefined' && module.exports) {
         ProgressLocation,
         ViewColumn,
         EndOfLine,
+        StatusBarAlignment,
         ThemeColor,
         ThemeIcon,
         TreeItem,

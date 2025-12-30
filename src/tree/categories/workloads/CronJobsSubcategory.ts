@@ -163,7 +163,7 @@ export class CronJobsSubcategory {
                     status = podInfo.phase as 'Running' | 'Pending' | 'Succeeded' | 'Failed';
                 }
 
-                return new PodTreeItem(
+                const podItem = new PodTreeItem(
                     {
                         name: podInfo.name,
                         namespace: podInfo.namespace,
@@ -172,6 +172,8 @@ export class CronJobsSubcategory {
                     },
                     resourceData
                 );
+                podItem.updatePortForwardBadge();
+                return podItem;
             });
 
             allPods.push(...podItems);

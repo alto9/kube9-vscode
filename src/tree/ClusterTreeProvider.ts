@@ -22,6 +22,7 @@ import { PersistentVolumeClaimsSubcategory } from './categories/storage/Persiste
 import { StorageClassesSubcategory } from './categories/storage/StorageClassesSubcategory';
 import { NetworkingCategory } from './categories/networking/NetworkingCategory';
 import { ServicesSubcategory } from './categories/networking/ServicesSubcategory';
+import { PortForwardingSubcategory } from './categories/networking/PortForwardingSubcategory';
 import { ConfigurationCategory } from './categories/ConfigurationCategory';
 import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubcategory';
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
@@ -39,6 +40,7 @@ import { ClusterCustomizationService } from '../services/ClusterCustomizationSer
 import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
 import { getContextInfo } from '../utils/kubectlContext';
 import { addDescribeCommandToItems } from './describeUtils';
+import { PortForwardManager } from '../services/PortForwardManager';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -142,6 +144,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private customizationSubscription?: vscode.Disposable;
 
     /**
+     * Subscription to port forward change events.
+     * Used to refresh tree view when port forwards are started or stopped.
+     */
+    private portForwardSubscription?: vscode.Disposable;
+
+    /**
      * Cache of pre-fetched cluster resources (nodes, namespaces, pods).
      * Used to avoid sequential fetching when categories are expanded.
      * Maps context name to cached resources with timestamp.
@@ -167,6 +175,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 this.refresh();
             });
         }
+
+        // Subscribe to port forward changes to refresh tree when forwards are started or stopped
+        const portForwardManager = PortForwardManager.getInstance();
+        this.portForwardSubscription = portForwardManager.onForwardsChanged(() => {
+            // Refresh tree when a forward is added, removed, or updated
+            // This ensures the Port Forwarding category shows current state
+            this.refresh();
+        });
     }
 
     /**
@@ -351,6 +367,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'persistentVolume' ||
                type === 'persistentVolumeClaim' ||
                type === 'networking' ||
+               type === 'portForwarding' ||
                type === 'services' ||
                type === 'helm' || 
                type === 'configuration' || 
@@ -511,6 +528,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             case 'networking':
                 items = await NetworkingCategory.getNetworkingSubcategories(
+                    categoryElement.resourceData
+                );
+                break;
+            
+            case 'portForwarding':
+                items = PortForwardingSubcategory.getPortForwardItems(
                     categoryElement.resourceData
                 );
                 break;
@@ -1676,6 +1699,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         if (this.customizationSubscription) {
             this.customizationSubscription.dispose();
             this.customizationSubscription = undefined;
+        }
+        
+        // Clean up port forward change subscription
+        if (this.portForwardSubscription) {
+            this.portForwardSubscription.dispose();
+            this.portForwardSubscription = undefined;
         }
         
         // Clean up error tracking
