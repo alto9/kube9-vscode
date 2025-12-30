@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-panel
 spec_id:
   - pod-logs-panel-spec
-status: pending
+status: completed
 ---
 
 # Implement Container Selection for Multi-Container Pods

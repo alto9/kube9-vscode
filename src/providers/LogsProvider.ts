@@ -115,6 +115,33 @@ export class LogsProvider {
     }
 
     /**
+     * Gets the list of container names for a pod.
+     * Includes both regular containers and init containers.
+     * 
+     * @param namespace - The namespace containing the pod
+     * @param podName - The name of the pod
+     * @returns Promise resolving to an array of container names
+     * @throws Error if the pod cannot be fetched or accessed
+     */
+    public async getPodContainers(namespace: string, podName: string): Promise<string[]> {
+        const coreApi = this.kubeConfig.makeApiClient(k8s.CoreV1Api);
+        const pod = await coreApi.readNamespacedPod({
+            name: podName,
+            namespace: namespace
+        });
+        const containers: string[] = [];
+        
+        if (pod.spec?.containers) {
+            containers.push(...pod.spec.containers.map((c: k8s.V1Container) => c.name || ''));
+        }
+        if (pod.spec?.initContainers) {
+            containers.push(...pod.spec.initContainers.map((c: k8s.V1Container) => c.name || ''));
+        }
+        
+        return containers;
+    }
+
+    /**
      * Stops the current log stream if one is active.
      * Aborts the request and cleans up the stream reference.
      */

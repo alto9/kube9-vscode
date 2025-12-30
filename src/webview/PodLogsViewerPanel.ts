@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { LogsProvider } from '../providers/LogsProvider';
 
 /**
  * Interface for storing pod information.
@@ -18,6 +19,7 @@ interface PodInfo {
  */
 interface PanelInfo {
     panel: vscode.WebviewPanel;
+    logsProvider: LogsProvider;
     currentPod: PodInfo;
 }
 
@@ -41,22 +43,22 @@ export class PodLogsViewerPanel {
     /**
      * Show a Pod Logs Viewer webview panel.
      * Creates a new panel or reveals an existing one for the given cluster.
+     * For multi-container pods, prompts user to select a container.
+     * Single-container pods automatically select the container.
      * 
      * @param context - The VS Code extension context
      * @param contextName - The kubectl context name
      * @param clusterName - The display name of the cluster
      * @param podName - The name of the pod
      * @param namespace - The namespace of the pod
-     * @param container - The container name (optional)
      */
-    public static show(
+    public static async show(
         context: vscode.ExtensionContext,
         contextName: string,
         clusterName: string,
         podName: string,
-        namespace: string,
-        container: string = ''
-    ): void {
+        namespace: string
+    ): Promise<void> {
         // Store the extension context for later use
         PodLogsViewerPanel.extensionContext = context;
 
@@ -70,15 +72,57 @@ export class PodLogsViewerPanel {
             return;
         }
 
-        // Create a new panel
-        PodLogsViewerPanel.createPanel(
-            context,
-            contextName,
-            clusterName,
-            podName,
-            namespace,
-            container
-        );
+        // Create LogsProvider instance to fetch container information
+        const logsProvider = new LogsProvider(contextName);
+
+        try {
+            // Fetch container list for the pod
+            const containers = await logsProvider.getPodContainers(namespace, podName);
+
+            if (containers.length === 0) {
+                vscode.window.showErrorMessage(`No containers found in pod ${podName}`);
+                logsProvider.dispose();
+                return;
+            }
+
+            // Determine selected container
+            let selectedContainer: string;
+            
+            if (containers.length === 1) {
+                // Single container: auto-select
+                selectedContainer = containers[0];
+            } else {
+                // Multiple containers: show QuickPick
+                const quickPickItems = [...containers, 'All Containers'];
+                const selection = await vscode.window.showQuickPick(quickPickItems, {
+                    placeHolder: 'Select container to view logs'
+                });
+
+                if (!selection) {
+                    // User cancelled
+                    logsProvider.dispose();
+                    return;
+                }
+
+                selectedContainer = selection === 'All Containers' ? 'all' : selection;
+            }
+
+            // Create a new panel with selected container
+            PodLogsViewerPanel.createPanel(
+                context,
+                contextName,
+                clusterName,
+                podName,
+                namespace,
+                selectedContainer,
+                logsProvider
+            );
+        } catch (error) {
+            // Handle errors fetching containers
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            vscode.window.showErrorMessage(`Failed to fetch containers for pod ${podName}: ${errorMessage}`);
+            logsProvider.dispose();
+        }
     }
 
     /**
@@ -89,7 +133,8 @@ export class PodLogsViewerPanel {
      * @param clusterName - The display name of the cluster
      * @param podName - The name of the pod
      * @param namespace - The namespace of the pod
-     * @param container - The container name
+     * @param container - The container name (or 'all' for all containers)
+     * @param logsProvider - The LogsProvider instance for this panel
      */
     private static createPanel(
         context: vscode.ExtensionContext,
@@ -97,7 +142,8 @@ export class PodLogsViewerPanel {
         clusterName: string,
         podName: string,
         namespace: string,
-        container: string
+        container: string,
+        logsProvider: LogsProvider
     ): void {
         // Create a new webview panel
         const panel = vscode.window.createWebviewPanel(
@@ -119,9 +165,10 @@ export class PodLogsViewerPanel {
             clusterName
         };
 
-        // Store the panel and its pod info in our map
+        // Store the panel, logs provider, and pod info in our map
         PodLogsViewerPanel.openPanels.set(contextName, {
             panel,
+            logsProvider,
             currentPod: podInfo
         });
 
@@ -131,6 +178,10 @@ export class PodLogsViewerPanel {
         // Handle panel disposal
         panel.onDidDispose(
             () => {
+                const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+                if (panelInfo?.logsProvider) {
+                    panelInfo.logsProvider.dispose();
+                }
                 PodLogsViewerPanel.openPanels.delete(contextName);
             },
             null,
