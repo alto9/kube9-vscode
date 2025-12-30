@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { NodeCommands } from '../kubectl/NodeCommands';
 import { PodCommands } from '../kubectl/PodCommands';
-import { transformNodeData } from './nodeDescribeTransformer';
+import { transformNodeData, NodeDescribeData } from './nodeDescribeTransformer';
+import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 
 /**
  * Message sent from webview to extension.
@@ -123,6 +124,18 @@ export class NodeDescribeWebview {
     }
 
     /**
+     * Clear cached node data for a specific node.
+     * 
+     * @param contextName The Kubernetes context name
+     * @param nodeName The node name
+     */
+    private static clearNodeCache(contextName: string, nodeName: string): void {
+        const cache = getResourceCache();
+        const cacheKey = `node-describe:${contextName}:${nodeName}`;
+        cache.invalidate(cacheKey);
+    }
+
+    /**
      * Refresh node data by fetching from Kubernetes API and updating the webview.
      */
     private static async refreshNodeData(): Promise<void> {
@@ -139,6 +152,18 @@ export class NodeDescribeWebview {
             panel.webview.postMessage({
                 command: 'error',
                 message: 'Missing required parameters for node data fetch'
+            });
+            return;
+        }
+
+        // Check cache first
+        const cache = getResourceCache();
+        const cacheKey = `node-describe:${contextName}:${nodeName}`;
+        const cached = cache.get<NodeDescribeData>(cacheKey);
+        if (cached) {
+            panel.webview.postMessage({
+                command: 'updateNodeData',
+                data: cached
             });
             return;
         }
@@ -176,6 +201,9 @@ export class NodeDescribeWebview {
             // Transform data for webview
             const transformedData = transformNodeData(nodeResult.node, podsResult.pods);
 
+            // Cache for 30 seconds
+            cache.set(cacheKey, transformedData, CACHE_TTL.NODES);
+
             // Post transformed data to webview
             panel.webview.postMessage({
                 command: 'updateNodeData',
@@ -205,6 +233,11 @@ export class NodeDescribeWebview {
             async (message: WebviewMessage) => {
                 switch (message.command) {
                     case 'refresh': {
+                        const contextName = NodeDescribeWebview.contextName;
+                        const nodeName = NodeDescribeWebview.currentNodeName;
+                        if (contextName && nodeName) {
+                            NodeDescribeWebview.clearNodeCache(contextName, nodeName);
+                        }
                         await NodeDescribeWebview.refreshNodeData();
                         break;
                     }
