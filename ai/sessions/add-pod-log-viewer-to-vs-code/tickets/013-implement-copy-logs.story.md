@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-actions
 spec_id:
   - pod-logs-panel-spec
-status: pending
+status: completed
 ---
 
 # Implement Copy Logs to Clipboard
@@ -56,12 +56,12 @@ See:
 
 ## Acceptance Criteria
 
-- [ ] Copy button copies all visible logs to clipboard
-- [ ] Line breaks are preserved
-- [ ] Timestamps included if timestamps toggle is on
-- [ ] Notification shows: "X lines copied to clipboard"
-- [ ] Copied text can be pasted into other applications
-- [ ] Works with large log volumes (thousands of lines)
+- [x] Copy button copies all visible logs to clipboard
+- [x] Line breaks are preserved
+- [x] Timestamps included if timestamps toggle is on
+- [x] Notification shows: "X lines copied to clipboard"
+- [x] Copied text can be pasted into other applications
+- [x] Works with large log volumes (thousands of lines)
 
 ## Estimated Time
 

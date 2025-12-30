@@ -54,5 +54,15 @@ export type WebviewToExtensionMessage =
      * Request to toggle follow mode on/off.
      * Sent when user toggles follow mode to enable/disable automatic scrolling to latest logs.
      */
-    | { type: 'toggleFollow'; enabled: boolean };
+    | { type: 'toggleFollow'; enabled: boolean }
+    /**
+     * Request to copy logs to clipboard.
+     * Sent when user clicks copy button to copy all visible logs to clipboard.
+     */
+    | { type: 'copy'; lines: string[]; includeTimestamps: boolean }
+    /**
+     * Request to export logs to a file.
+     * Sent when user clicks export button to save logs to a file with customizable filename.
+     */
+    | { type: 'export'; lines: string[]; podName: string; containerName: string; includeTimestamps: boolean };
 

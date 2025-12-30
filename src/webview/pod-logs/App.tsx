@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionToWebviewMessage, WebviewToExtensionMessage, InitialState } from '../../types/messages';
-import { Footer, Toolbar, LogDisplay } from './components';
+import { Footer, Toolbar, LogDisplay, SearchBar } from './components';
 import { PanelPreferences } from '../../utils/PreferencesManager';
 
 // Acquire VS Code API
@@ -17,6 +17,9 @@ export const App: React.FC = () => {
     const [streamStatus, setStreamStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
     const [preferences, setPreferences] = useState<PanelPreferences | null>(null);
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [searchVisible, setSearchVisible] = useState<boolean>(false);
+    const [searchMatches, setSearchMatches] = useState<number[]>([]);
+    const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(0);
 
     // Send message to extension
     const sendMessage = React.useCallback((message: WebviewToExtensionMessage) => {
@@ -65,6 +68,46 @@ export const App: React.FC = () => {
             window.removeEventListener('message', handleMessage);
         };
     }, [sendMessage]);
+
+    // Search logic: find matching log lines
+    useEffect(() => {
+        if (!searchQuery || searchQuery.trim() === '') {
+            setSearchMatches([]);
+            setCurrentMatchIndex(0);
+            return;
+        }
+
+        const lowerQuery = searchQuery.toLowerCase();
+        const matches: number[] = [];
+
+        logs.forEach((log, index) => {
+            const parsed = log.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\s+(.*)$/);
+            const content = parsed ? parsed[2] : log;
+            
+            if (content.toLowerCase().includes(lowerQuery)) {
+                matches.push(index);
+            }
+        });
+
+        setSearchMatches(matches);
+        // Reset to first match when query changes
+        setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
+    }, [searchQuery, logs]);
+
+    // Keyboard shortcuts: Ctrl+F / Cmd+F to open search
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                setSearchVisible(true);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
 
     // Toolbar handlers
     const handleContainerChange = React.useCallback((container: string) => {
@@ -127,20 +170,84 @@ export const App: React.FC = () => {
     }, [preferences, sendMessage]);
 
     const handleCopy = React.useCallback(() => {
-        // TODO: Implement copy action in future story
-        console.log('[PodLogsApp] Copy requested');
-    }, []);
+        if (!preferences || logs.length === 0) {
+            console.log('[PodLogsApp] Copy requested but no logs or preferences available');
+            return;
+        }
+
+        // Parse and format logs based on timestamp preference
+        const formattedLines = logs.map(line => {
+            // Parse timestamp if present in format: 2024-12-29T10:30:45.123Z <content>
+            const timestampRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\s+(.*)$/;
+            const match = line.match(timestampRegex);
+            
+            if (match) {
+                const [, timestamp, content] = match;
+                // Include timestamp if preference is enabled
+                return preferences.showTimestamps ? `${timestamp} ${content}` : content;
+            }
+            
+            // No timestamp in log line, return as-is
+            return line;
+        });
+
+        // Send copy message to extension
+        sendMessage({
+            type: 'copy',
+            lines: formattedLines,
+            includeTimestamps: preferences.showTimestamps
+        });
+    }, [logs, preferences, sendMessage]);
 
     const handleExport = React.useCallback(() => {
-        // TODO: Implement export action in future story
-        console.log('[PodLogsApp] Export requested');
+        if (!initialState || !preferences) {
+            console.log('[PodLogsApp] Cannot export: initialState or preferences not available');
+            return;
+        }
+        
+        sendMessage({
+            type: 'export',
+            lines: logs,
+            podName: initialState.pod.name,
+            containerName: initialState.pod.container,
+            includeTimestamps: preferences.showTimestamps
+        });
+    }, [logs, initialState, preferences, sendMessage]);
+
+    const handleSearchOpen = React.useCallback(() => {
+        setSearchVisible(true);
     }, []);
 
-    const handleSearch = React.useCallback(() => {
-        // TODO: Implement search UI in future story
-        // For now, search query can be set via state when search UI is implemented
-        console.log('[PodLogsApp] Search requested');
+    const handleSearchClose = React.useCallback(() => {
+        setSearchVisible(false);
+        setSearchQuery('');
+        setSearchMatches([]);
+        setCurrentMatchIndex(0);
     }, []);
+
+    const handleSearchQueryChange = React.useCallback((query: string) => {
+        setSearchQuery(query);
+    }, []);
+
+    const handleNextMatch = React.useCallback(() => {
+        if (searchMatches.length === 0) {
+            return;
+        }
+        const nextIndex = currentMatchIndex < searchMatches.length - 1 
+            ? currentMatchIndex + 1 
+            : 0; // Wrap around to first match
+        setCurrentMatchIndex(nextIndex);
+    }, [searchMatches, currentMatchIndex]);
+
+    const handlePreviousMatch = React.useCallback(() => {
+        if (searchMatches.length === 0) {
+            return;
+        }
+        const prevIndex = currentMatchIndex > 0 
+            ? currentMatchIndex - 1 
+            : searchMatches.length - 1; // Wrap around to last match
+        setCurrentMatchIndex(prevIndex);
+    }, [searchMatches, currentMatchIndex]);
 
     return (
         <div className="pod-logs-viewer">
@@ -158,12 +265,23 @@ export const App: React.FC = () => {
                     onClear={handleClear}
                     onCopy={handleCopy}
                     onExport={handleExport}
-                    onSearch={handleSearch}
+                    onSearch={handleSearchOpen}
                 />
             ) : (
                 <div className="loading-state">
                     <p>Loading...</p>
                 </div>
+            )}
+            {searchVisible && initialState && preferences && (
+                <SearchBar
+                    query={searchQuery}
+                    matches={searchMatches}
+                    currentMatchIndex={currentMatchIndex >= 0 ? currentMatchIndex : 0}
+                    onQueryChange={handleSearchQueryChange}
+                    onNextMatch={handleNextMatch}
+                    onPreviousMatch={handlePreviousMatch}
+                    onClose={handleSearchClose}
+                />
             )}
             {initialState && preferences && (
                 <LogDisplay
@@ -171,6 +289,8 @@ export const App: React.FC = () => {
                     showTimestamps={preferences.showTimestamps}
                     followMode={preferences.followMode}
                     searchQuery={searchQuery}
+                    searchMatches={searchMatches}
+                    currentMatchIndex={currentMatchIndex}
                     onScrollUp={handleScrollUp}
                 />
             )}

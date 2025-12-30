@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-actions
 spec_id:
   - pod-logs-panel-spec
-status: pending
+status: completed
 ---
 
 # Implement Export Logs to File
@@ -65,13 +65,13 @@ See:
 
 ## Acceptance Criteria
 
-- [ ] Export button opens save dialog
-- [ ] Default filename includes pod name, container, timestamp
-- [ ] User can customize filename before saving
-- [ ] Logs are written to selected file
-- [ ] Timestamps included if toggle is on
-- [ ] Notification shows success message with file path
-- [ ] Works with large log volumes
+- [x] Export button opens save dialog
+- [x] Default filename includes pod name, container, timestamp
+- [x] User can customize filename before saving
+- [x] Logs are written to selected file
+- [x] Timestamps included if toggle is on
+- [x] Notification shows success message with file path
+- [x] Works with large log volumes
 
 ## Estimated Time
 
