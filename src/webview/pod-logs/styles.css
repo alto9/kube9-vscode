@@ -1,0 +1,101 @@
+/* Pod Logs Viewer Webview Styles */
+/* Uses VS Code theme variables for consistent theming */
+
+/* ==========================================================================
+   CSS Variables (VS Code Theme Tokens)
+   ========================================================================== */
+
+:root {
+    /* Typography */
+    --font-family: var(--vscode-font-family);
+    --font-size: 13px;
+    --font-size-sm: 12px;
+    --font-size-xs: 11px;
+    --font-size-lg: 14px;
+    
+    /* Colors */
+    --foreground: var(--vscode-foreground);
+    --description-foreground: var(--vscode-descriptionForeground);
+    --background: var(--vscode-editor-background);
+    --border: var(--vscode-panel-border);
+    
+    /* Button Colors */
+    --button-primary-bg: var(--vscode-button-background);
+    --button-primary-fg: var(--vscode-button-foreground);
+    --button-primary-hover: var(--vscode-button-hoverBackground);
+    --button-secondary-bg: var(--vscode-button-secondaryBackground);
+    --button-secondary-fg: var(--vscode-button-secondaryForeground);
+    
+    /* Link Colors */
+    --link-color: var(--vscode-textLink-foreground);
+    
+    /* Error/Warning Colors */
+    --error-bg: var(--vscode-inputValidation-errorBackground);
+    --error-border: var(--vscode-inputValidation-errorBorder);
+    --error-fg: var(--vscode-errorForeground);
+    --warning-bg: var(--vscode-inputValidation-warningBackground);
+    --warning-border: var(--vscode-inputValidation-warningBorder);
+    
+    /* Focus */
+    --focus-border: var(--vscode-focusBorder);
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-2xl: 24px;
+    
+    /* Border Radius */
+    --radius-sm: 2px;
+    --radius-md: 3px;
+    --radius-lg: 4px;
+    --radius-xl: 6px;
+}
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    color: var(--foreground);
+    background-color: var(--background);
+    padding: 0;
+    margin: 0;
+    line-height: 1.5;
+}
+
+#root {
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   Pod Logs Viewer Styles
+   ========================================================================== */
+
+.pod-logs-viewer {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-family);
+    padding: var(--spacing-xl);
+}
+
+.pod-logs-viewer h1 {
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--foreground);
+}
+
+.pod-logs-viewer p {
+    font-size: var(--font-size);
+    color: var(--description-foreground);
+    margin: 0;
+}
+

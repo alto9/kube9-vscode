@@ -26,7 +26,7 @@ const extensionConfig = {
     rules: [
       {
         test: /\.ts$/,
-        exclude: [/node_modules/, /src\/webview\/argocd-application/, /src\/webview\/event-viewer/],
+        exclude: [/node_modules/, /src\/webview\/argocd-application/, /src\/webview\/event-viewer/, /src\/webview\/pod-logs/],
         use: [
           {
             loader: 'ts-loader'
