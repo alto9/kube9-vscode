@@ -45,6 +45,7 @@ import { portForwardPodCommand } from './commands/portForwardPod';
 import { copyPortForwardURLCommand } from './commands/copyPortForwardURL';
 import { viewPortForwardPodCommand } from './commands/viewPortForwardPod';
 import { restartPortForwardCommand } from './commands/restartPortForward';
+import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 
 /**
  * Global extension context accessible to all components.
@@ -950,6 +951,52 @@ function registerCommands(): void {
     );
     context.subscriptions.push(openTerminalCmd);
     disposables.push(openTerminalCmd);
+    
+    // Register view pod logs command
+    const viewPodLogsCmd = vscode.commands.registerCommand(
+        'kube9.viewPodLogs',
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                // Extract resource information from tree item
+                if (!treeItem || !treeItem.resourceData) {
+                    throw new Error('Invalid tree item: missing resource data');
+                }
+                
+                const resourceName = treeItem.resourceData.resourceName || (typeof treeItem.label === 'string' ? treeItem.label : treeItem.label?.toString());
+                const namespace = treeItem.resourceData.namespace;
+                const contextName = treeItem.resourceData.context.name;
+                const clusterName = treeItem.resourceData.cluster.name;
+                
+                // Validate required fields
+                if (!resourceName || !namespace || !contextName || !clusterName) {
+                    throw new Error('Missing required pod information');
+                }
+                
+                console.log('Opening pod logs viewer:', {
+                    podName: resourceName,
+                    namespace,
+                    contextName,
+                    clusterName
+                });
+                
+                // Open the pod logs viewer panel
+                PodLogsViewerPanel.show(
+                    context,
+                    contextName,
+                    clusterName,
+                    resourceName,
+                    namespace
+                );
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open pod logs viewer:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open pod logs: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(viewPodLogsCmd);
+    disposables.push(viewPodLogsCmd);
+    
     // Register ArgoCD sync command
     const syncApplicationCmd = vscode.commands.registerCommand(
         'kube9.argocd.sync',

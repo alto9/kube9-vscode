@@ -126,6 +126,11 @@
         "category": "Kube9"
       },
       {
+        "command": "kube9.viewPodLogs",
+        "title": "View Logs",
+        "category": "Kube9"
+      },
+      {
         "command": "kube9.applyYAML",
         "title": "Apply YAML",
         "category": "Kube9"
@@ -443,6 +448,11 @@
         },
         {
           "command": "kube9.openTerminal",
+          "when": "view == kube9ClusterView && viewItem == resource:Pod",
+          "group": "kube9@2"
+        },
+        {
+          "command": "kube9.viewPodLogs",
           "when": "view == kube9ClusterView && viewItem == resource:Pod",
           "group": "kube9@2"
         },
