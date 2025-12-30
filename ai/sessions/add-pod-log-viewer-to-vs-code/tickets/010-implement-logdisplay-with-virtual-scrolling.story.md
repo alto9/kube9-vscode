@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-ui
 spec_id:
   - pod-logs-ui-spec
-status: pending
+status: completed
 ---
 
 # Implement LogDisplay Component with Virtual Scrolling
@@ -61,14 +61,14 @@ See:
 
 ## Acceptance Criteria
 
-- [ ] LogDisplay renders using react-window FixedSizeList
-- [ ] Only visible lines are rendered in DOM
-- [ ] Scrolling is smooth and performant
-- [ ] Auto-scroll works when followMode is on
-- [ ] Scrolling up disables follow mode
-- [ ] Timestamps are parsed and displayed when enabled
-- [ ] Search matches are highlighted
-- [ ] Logs use monospace font
+- [x] LogDisplay renders using react-window FixedSizeList
+- [x] Only visible lines are rendered in DOM
+- [x] Scrolling is smooth and performant
+- [x] Auto-scroll works when followMode is on
+- [x] Scrolling up disables follow mode
+- [x] Timestamps are parsed and displayed when enabled
+- [x] Search matches are highlighted
+- [x] Logs use monospace font
 
 ## Estimated Time
 
