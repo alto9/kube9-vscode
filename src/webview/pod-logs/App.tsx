@@ -116,21 +116,21 @@ export const App: React.FC = () => {
         sendMessage({ type: 'refresh' });
     }, [sendMessage]);
 
-    const handleLineLimitChange = React.useCallback((limit: number | 'all') => {
-        // TODO: Implement line limit change in future story
+    const handleLineLimitChange = React.useCallback((limit: number | 'all' | 'custom') => {
         console.log('[PodLogsApp] Line limit change requested:', limit);
-        if (preferences) {
-            setPreferences({ ...preferences, lineLimit: limit });
-        }
-    }, [preferences]);
+        // Send message to extension to handle line limit change
+        // Extension will handle custom input prompt if needed
+        sendMessage({ type: 'setLineLimit', limit });
+    }, [sendMessage]);
 
     const handleToggleTimestamps = React.useCallback(() => {
         if (preferences) {
-            const newPrefs = { ...preferences, showTimestamps: !preferences.showTimestamps };
+            const newShowTimestamps = !preferences.showTimestamps;
+            const newPrefs = { ...preferences, showTimestamps: newShowTimestamps };
             setPreferences(newPrefs);
-            // TODO: Send preference update to extension in future story
+            sendMessage({ type: 'toggleTimestamps', enabled: newShowTimestamps });
         }
-    }, [preferences]);
+    }, [preferences, sendMessage]);
 
     const handleToggleFollow = React.useCallback(() => {
         if (preferences) {

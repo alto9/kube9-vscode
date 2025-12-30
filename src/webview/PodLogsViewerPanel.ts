@@ -58,6 +58,16 @@ export class PodLogsViewerPanel {
     private static batchIntervals: Map<string, NodeJS.Timeout> = new Map();
 
     /**
+     * Map of total line counts per contextName for tracking log volume.
+     */
+    private static totalLineCounts: Map<string, number> = new Map();
+
+    /**
+     * Map tracking whether warning has been shown for "All" option exceeding 10,000 lines per contextName.
+     */
+    private static allLimitWarningsShown: Map<string, boolean> = new Map();
+
+    /**
      * Show a Pod Logs Viewer webview panel.
      * Creates a new panel or reveals an existing one for the given cluster.
      * For multi-container pods, prompts user to select a container.
@@ -267,6 +277,10 @@ export class PodLogsViewerPanel {
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'toggleFollow' message, enabled=${message.enabled}`);
                 await PodLogsViewerPanel.handleToggleFollow(contextName, message.enabled);
                 break;
+            case 'toggleTimestamps':
+                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'toggleTimestamps' message, enabled=${message.enabled}`);
+                await PodLogsViewerPanel.handleToggleTimestamps(contextName, message.enabled);
+                break;
             case 'copy':
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'copy' message`);
                 await PodLogsViewerPanel.handleCopy(message.lines);
@@ -274,6 +288,10 @@ export class PodLogsViewerPanel {
             case 'export':
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'export' message`);
                 await PodLogsViewerPanel.handleExport(contextName, message.lines, message.podName, message.containerName, message.includeTimestamps);
+                break;
+            case 'setLineLimit':
+                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'setLineLimit' message, limit=${message.limit}`);
+                await PodLogsViewerPanel.handleSetLineLimit(contextName, message.limit);
                 break;
             default:
                 console.log(`[PodLogsViewerPanel ${timestamp}] ❌ Unknown message type:`, message);
@@ -328,6 +346,153 @@ export class PodLogsViewerPanel {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to toggle follow mode: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle timestamps toggle request from webview.
+     * Updates preferences and restarts stream with new timestamps setting.
+     * 
+     * @param contextName - The cluster context name
+     * @param enabled - Whether timestamps should be enabled
+     */
+    private static async handleToggleTimestamps(contextName: string, enabled: boolean): Promise<void> {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] handleToggleTimestamps: enabled=${enabled}`);
+        
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ No panel found for context: ${contextName}`);
+            return;
+        }
+
+        // Ensure PreferencesManager is initialized
+        if (!PodLogsViewerPanel.preferencesManager && PodLogsViewerPanel.extensionContext) {
+            PodLogsViewerPanel.preferencesManager = new PreferencesManager(PodLogsViewerPanel.extensionContext);
+        }
+
+        if (!PodLogsViewerPanel.preferencesManager) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Cannot initialize PreferencesManager - no extension context`);
+            return;
+        }
+
+        try {
+            // Get current preferences
+            const preferences = PodLogsViewerPanel.preferencesManager.getPreferences(contextName);
+            
+            // Update timestamps preference
+            const updatedPreferences = { ...preferences, showTimestamps: enabled };
+            
+            // Save preferences to persist per cluster
+            await PodLogsViewerPanel.preferencesManager.savePreferences(contextName, updatedPreferences);
+            
+            // Stop current stream
+            panelInfo.logsProvider.stopStream();
+            PodLogsViewerPanel.cleanupBatching(contextName);
+            
+            // Restart stream with new timestamps setting
+            PodLogsViewerPanel.startStreaming(contextName);
+            
+            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Timestamps ${enabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to toggle timestamps: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle set line limit request from webview.
+     * Updates preferences and restarts stream with new tailLines parameter.
+     * If limit is 'custom', prompts user for numeric input.
+     * 
+     * @param contextName - The cluster context name
+     * @param limit - The line limit value (number, 'all', or 'custom')
+     */
+    private static async handleSetLineLimit(
+        contextName: string,
+        limit: number | 'all' | 'custom'
+    ): Promise<void> {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] handleSetLineLimit: limit=${limit}`);
+        
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ No panel found for context: ${contextName}`);
+            return;
+        }
+
+        // Ensure PreferencesManager is initialized
+        if (!PodLogsViewerPanel.preferencesManager && PodLogsViewerPanel.extensionContext) {
+            PodLogsViewerPanel.preferencesManager = new PreferencesManager(PodLogsViewerPanel.extensionContext);
+        }
+
+        if (!PodLogsViewerPanel.preferencesManager) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Cannot initialize PreferencesManager - no extension context`);
+            return;
+        }
+
+        try {
+            // Get current preferences
+            const preferences = PodLogsViewerPanel.preferencesManager.getPreferences(contextName);
+            
+            let newLimit: number | 'all';
+            
+            // Handle 'custom' case - prompt for numeric input
+            if (limit === 'custom') {
+                const input = await vscode.window.showInputBox({
+                    prompt: 'Enter number of lines',
+                    placeHolder: 'e.g., 2500',
+                    validateInput: (value) => {
+                        const num = parseInt(value, 10);
+                        if (isNaN(num) || num < 1) {
+                            return 'Please enter a valid positive number';
+                        }
+                        return null;
+                    }
+                });
+                
+                // User cancelled input box
+                if (input === undefined) {
+                    console.log(`[PodLogsViewerPanel ${timestamp}] Custom line limit input cancelled`);
+                    return;
+                }
+                
+                newLimit = parseInt(input, 10);
+            } else {
+                // limit is already number | 'all'
+                newLimit = limit;
+            }
+            
+            // Update line limit preference
+            const updatedPreferences = { ...preferences, lineLimit: newLimit };
+            
+            // Save preferences to persist per cluster
+            await PodLogsViewerPanel.preferencesManager.savePreferences(contextName, updatedPreferences);
+            
+            // Stop current stream
+            panelInfo.logsProvider.stopStream();
+            PodLogsViewerPanel.cleanupBatching(contextName);
+            
+            // Clear logs in webview by sending empty logData
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'logData',
+                data: []
+            });
+            
+            // Send updated preferences to webview
+            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                type: 'preferencesUpdated',
+                preferences: updatedPreferences
+            });
+            
+            // Restart stream with new line limit
+            PodLogsViewerPanel.startStreaming(contextName);
+            
+            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Line limit set to: ${newLimit}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to set line limit: ${errorMessage}`);
+            vscode.window.showErrorMessage(`Failed to set line limit: ${errorMessage}`);
         }
     }
 
@@ -520,6 +685,12 @@ export class PodLogsViewerPanel {
 
             // Initialize pending lines array for this context
             PodLogsViewerPanel.pendingLogLines.set(contextName, []);
+            
+            // Reset line count tracking for new stream
+            PodLogsViewerPanel.totalLineCounts.set(contextName, 0);
+            
+            // Reset warning flag for new stream
+            PodLogsViewerPanel.allLimitWarningsShown.set(contextName, false);
 
             // Set up batching interval (100ms as per spec)
             const batchInterval = setInterval(() => {
@@ -598,6 +769,24 @@ export class PodLogsViewerPanel {
             return;
         }
 
+        // Update total line count
+        const currentCount = PodLogsViewerPanel.totalLineCounts.get(contextName) || 0;
+        const newCount = currentCount + pendingLines.length;
+        PodLogsViewerPanel.totalLineCounts.set(contextName, newCount);
+
+        // Check for warning if "All" option is selected and we haven't shown warning yet
+        if (PodLogsViewerPanel.preferencesManager) {
+            const preferences = PodLogsViewerPanel.preferencesManager.getPreferences(contextName);
+            const warningShown = PodLogsViewerPanel.allLimitWarningsShown.get(contextName) || false;
+            
+            if (preferences.lineLimit === 'all' && newCount > 10000 && !warningShown) {
+                vscode.window.showWarningMessage(
+                    'Large log volume (>10,000 lines) may affect performance'
+                );
+                PodLogsViewerPanel.allLimitWarningsShown.set(contextName, true);
+            }
+        }
+
         // Send batched lines
         PodLogsViewerPanel.sendMessage(panelInfo.panel, {
             type: 'logData',
@@ -669,6 +858,12 @@ export class PodLogsViewerPanel {
 
         // Clear pending lines
         PodLogsViewerPanel.pendingLogLines.delete(contextName);
+        
+        // Clear line count tracking
+        PodLogsViewerPanel.totalLineCounts.delete(contextName);
+        
+        // Clear warning flag
+        PodLogsViewerPanel.allLimitWarningsShown.delete(contextName);
     }
 
     /**
