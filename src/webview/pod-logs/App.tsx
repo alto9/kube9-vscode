@@ -22,6 +22,7 @@ export const App: React.FC = () => {
     const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(0);
     const [viewState, setViewState] = useState<'loading' | 'loaded' | 'empty' | 'error'>('loading');
     const [errorMessage, setErrorMessage] = useState<string>('');
+    const [announcement, setAnnouncement] = useState<string>('');
 
     // Send message to extension
     const sendMessage = React.useCallback((message: WebviewToExtensionMessage) => {
@@ -68,6 +69,17 @@ export const App: React.FC = () => {
                     // Update stream status
                     setStreamStatus(message.status);
                     console.log('[PodLogsApp] Stream status:', message.status);
+                    
+                    // Announce status changes for accessibility
+                    if (message.status === 'connected') {
+                        setAnnouncement('Logs streaming');
+                    } else if (message.status === 'disconnected') {
+                        setAnnouncement('Logs paused');
+                    } else if (message.status === 'reconnecting') {
+                        setAnnouncement('Connection lost. Reconnecting...');
+                    } else if (message.status === 'error') {
+                        setAnnouncement('Connection error');
+                    }
                     
                     // Handle state transitions based on stream status
                     if (message.status === 'error') {
@@ -156,12 +168,23 @@ export const App: React.FC = () => {
         setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
     }, [searchQuery, logs]);
 
-    // Keyboard shortcuts: Ctrl+F / Cmd+F to open search
+    // Keyboard shortcuts: Ctrl+F / Cmd+F to open search, Ctrl+R / Cmd+R to refresh, Ctrl+Shift+C / Cmd+Shift+C to copy
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            // Ctrl+F / Cmd+F: Open search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) {
                 e.preventDefault();
-                setSearchVisible(true);
+                handleSearchOpen();
+            }
+            // Ctrl+R / Cmd+R: Refresh
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r' && !e.shiftKey) {
+                e.preventDefault();
+                handleRefresh();
+            }
+            // Ctrl+Shift+C / Cmd+Shift+C: Copy
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'c') {
+                e.preventDefault();
+                handleCopy();
             }
         };
 
@@ -169,7 +192,7 @@ export const App: React.FC = () => {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, []);
+    }, [handleSearchOpen, handleRefresh, handleCopy]);
 
     // Toolbar handlers
     const handleContainerChange = React.useCallback((container: string) => {
@@ -234,6 +257,7 @@ export const App: React.FC = () => {
         setLineCount(0);
         setViewState('loading');
         setErrorMessage('');
+        setAnnouncement('Logs refreshed');
         sendMessage({ type: 'refresh' });
     }, [sendMessage]);
 
@@ -274,6 +298,9 @@ export const App: React.FC = () => {
             return line;
         });
 
+        // Announce copy action
+        setAnnouncement('Logs copied to clipboard');
+
         // Send copy message to extension
         sendMessage({
             type: 'copy',
@@ -299,6 +326,7 @@ export const App: React.FC = () => {
 
     const handleSearchOpen = React.useCallback(() => {
         setSearchVisible(true);
+        setAnnouncement('Search opened');
     }, []);
 
     const handleSearchClose = React.useCallback(() => {
@@ -386,6 +414,15 @@ export const App: React.FC = () => {
                 streamStatus={streamStatus}
                 reconnecting={streamStatus === 'reconnecting'}
             />
+            {/* ARIA live region for screen reader announcements */}
+            <div 
+                role="status" 
+                aria-live="polite" 
+                aria-atomic="true" 
+                className="sr-only"
+            >
+                {announcement}
+            </div>
         </div>
     );
 };

@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-actions
 spec_id:
   - pod-logs-ui-spec
-status: pending
+status: completed
 ---
 
 # Add Keyboard Shortcuts and Accessibility Features
