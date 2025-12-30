@@ -5,6 +5,7 @@ import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DescribeWebview } from './webview/DescribeWebview';
 import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
 import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
+import { NodeDescribeWebview } from './webview/NodeDescribeWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterCustomizationService } from './services/ClusterCustomizationService';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
@@ -1241,6 +1242,36 @@ function registerCommands(): void {
     );
     context.subscriptions.push(restartPortForwardCmd);
     disposables.push(restartPortForwardCmd);
+    
+    // Register describe node command
+    const describeNodeCmd = vscode.commands.registerCommand(
+        'kube9.describeNode',
+        async (nodeInfo, resourceData) => {
+            try {
+                const nodeName = nodeInfo.name;
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
+                if (!kubeconfigPath) {
+                    vscode.window.showErrorMessage('Kubeconfig path not available');
+                    return;
+                }
+                const contextName = resourceData.context.name;
+                
+                await NodeDescribeWebview.show(
+                    context,
+                    nodeName,
+                    kubeconfigPath,
+                    contextName
+                );
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Node Describe webview:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe node: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describeNodeCmd);
+    disposables.push(describeNodeCmd);
 }
 
 /**
