@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-ui
 spec_id:
   - pod-logs-ui-spec
-status: pending
+status: completed
 ---
 
 # Implement Toolbar Component
