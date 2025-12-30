@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-panel
 spec_id:
   - pod-logs-panel-spec
-status: pending
+status: completed
 ---
 
 # Implement Message Protocol Between Extension and Webview
@@ -66,12 +66,12 @@ See:
 
 ## Acceptance Criteria
 
-- [ ] Message types are defined and typed
-- [ ] Extension receives messages from webview
-- [ ] Webview receives messages from extension
-- [ ] 'ready' message sent from webview on mount
-- [ ] 'initialState' message sent from extension
-- [ ] Message protocol is bidirectional and working
+- [x] Message types are defined and typed
+- [x] Extension receives messages from webview
+- [x] Webview receives messages from extension
+- [x] 'ready' message sent from webview on mount
+- [x] 'initialState' message sent from extension
+- [x] Message protocol is bidirectional and working
 
 ## Estimated Time
 
