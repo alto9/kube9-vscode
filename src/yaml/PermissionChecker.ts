@@ -19,13 +19,13 @@ const execFileAsync = promisify(execFile);
  */
 export enum PermissionLevel {
     /** No access to the resource */
-    None = 'none',
+    none = 'none',
     /** Can only read the resource */
-    ReadOnly = 'readonly',
+    readOnly = 'readonly',
     /** Can read and write the resource */
-    ReadWrite = 'readwrite',
+    readWrite = 'readwrite',
     /** Permission status is unknown (e.g., due to errors) */
-    Unknown = 'unknown'
+    unknown = 'unknown'
 }
 
 /**
@@ -50,13 +50,13 @@ export class PermissionChecker {
             
             if (updateResult === true) {
                 console.log(`User has ReadWrite permissions for ${resource.kind}/${resource.name}`);
-                return PermissionLevel.ReadWrite;
+                return PermissionLevel.readWrite;
             }
             
             if (updateResult === null) {
                 // kubectl command failed, cannot determine permissions
                 console.warn(`Unable to check update permissions for ${resource.kind}/${resource.name}`);
-                return PermissionLevel.Unknown;
+                return PermissionLevel.unknown;
             }
             
             // User cannot update, check if they can at least read (get)
@@ -64,18 +64,18 @@ export class PermissionChecker {
             
             if (getResult === true) {
                 console.log(`User has ReadOnly permissions for ${resource.kind}/${resource.name}`);
-                return PermissionLevel.ReadOnly;
+                return PermissionLevel.readOnly;
             }
             
             if (getResult === null) {
                 // kubectl command failed, cannot determine permissions
                 console.warn(`Unable to check get permissions for ${resource.kind}/${resource.name}`);
-                return PermissionLevel.Unknown;
+                return PermissionLevel.unknown;
             }
             
             // User has neither update nor get permissions
             console.log(`User has no permissions for ${resource.kind}/${resource.name}`);
-            return PermissionLevel.None;
+            return PermissionLevel.none;
             
         } catch (error) {
             // If permission checking fails, default to Unknown for safety
@@ -88,7 +88,7 @@ export class PermissionChecker {
                 error instanceof Error ? error : String(error)
             );
             
-            return PermissionLevel.Unknown;
+            return PermissionLevel.unknown;
         }
     }
     

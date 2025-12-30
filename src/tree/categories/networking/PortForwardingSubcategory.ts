@@ -67,10 +67,14 @@ export class PortForwardingSubcategory {
         return forwards.sort((a, b) => {
             // Sort by: namespace → pod name → local port
             const nsCompare = a.namespace.localeCompare(b.namespace);
-            if (nsCompare !== 0) return nsCompare;
+            if (nsCompare !== 0) {
+                return nsCompare;
+            }
             
             const podCompare = a.podName.localeCompare(b.podName);
-            if (podCompare !== 0) return podCompare;
+            if (podCompare !== 0) {
+                return podCompare;
+            }
             
             return a.localPort - b.localPort;
         });

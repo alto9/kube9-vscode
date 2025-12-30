@@ -178,7 +178,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
         // Subscribe to port forward changes to refresh tree when forwards are started or stopped
         const portForwardManager = PortForwardManager.getInstance();
-        this.portForwardSubscription = portForwardManager.onForwardsChanged((event) => {
+        this.portForwardSubscription = portForwardManager.onForwardsChanged(() => {
             // Refresh tree when a forward is added, removed, or updated
             // This ensures the Port Forwarding category shows current state
             this.refresh();
