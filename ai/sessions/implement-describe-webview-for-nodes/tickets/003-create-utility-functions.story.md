@@ -5,7 +5,7 @@ feature_id:
   - node-describe-webview
 spec_id:
   - node-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Create Utility Functions for Quantity Parsing and Time Formatting
