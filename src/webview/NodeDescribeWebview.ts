@@ -750,12 +750,376 @@ export class NodeDescribeWebview {
             }
         });
 
+        let currentNodeName = '';
+
         function renderNodeData(data) {
-            // Placeholder - will be implemented in story 007
+            if (!data) return;
+
+            currentNodeName = data.name || 'Unknown';
+
+            // Update node name in header
+            const nodeNameEl = document.getElementById('node-name');
+            if (nodeNameEl) {
+                nodeNameEl.textContent = currentNodeName;
+            }
+
+            // Update status banner
+            const statusBanner = document.getElementById('status-banner');
+            const statusIcon = document.getElementById('status-icon');
+            const statusText = document.getElementById('status-text');
+            if (statusBanner && statusIcon && statusText) {
+                const status = data.overview?.status || 'Unknown';
+                statusBanner.className = 'status-banner status-' + status.toLowerCase();
+                
+                if (status === 'Ready') {
+                    statusIcon.textContent = '✓';
+                    statusText.textContent = 'Node is Ready';
+                } else if (status === 'NotReady') {
+                    statusIcon.textContent = '⚠';
+                    statusText.textContent = 'Node is Not Ready';
+                } else {
+                    statusIcon.textContent = '?';
+                    statusText.textContent = 'Node status is Unknown';
+                }
+            }
+
+            // Render all sections
+            if (data.overview) renderOverview(data.overview);
+            if (data.resources) renderResources(data.resources);
+            if (data.conditions) renderConditions(data.conditions);
+            if (data.pods) renderPods(data.pods);
+            if (data.addresses) renderAddresses(data.addresses);
+            if (data.labels) renderLabels(data.labels);
+            if (data.taints) renderTaints(data.taints);
+            if (data.allocation) renderAllocation(data.allocation);
+
+            // Setup interactive elements
+            setupCopyButtons();
+            setupPodNavigation();
+        }
+
+        function renderOverview(overview) {
+            const grid = document.getElementById('overview-grid');
+            if (!grid) return;
+
+            const items = [
+                { label: 'Name', value: overview.name || 'N/A' },
+                { label: 'Status', value: overview.status || 'Unknown' },
+                { label: 'Roles', value: overview.roles && overview.roles.length > 0 ? overview.roles.join(', ') : 'None' },
+                { label: 'Creation Timestamp', value: overview.creationTimestamp || 'N/A' },
+                { label: 'Kubernetes Version', value: overview.kubernetesVersion || 'N/A' },
+                { label: 'Container Runtime', value: overview.containerRuntime || 'N/A' },
+                { label: 'OS Image', value: overview.osImage || 'N/A' },
+                { label: 'Kernel Version', value: overview.kernelVersion || 'N/A' },
+                { label: 'Architecture', value: overview.architecture || 'N/A' }
+            ];
+
+            grid.innerHTML = items.map(item => 
+                '<div class="info-item">' +
+                    '<div class="info-label">' + escapeHtml(item.label) + '</div>' +
+                    '<div class="info-value">' + escapeHtml(item.value) + '</div>' +
+                '</div>'
+            ).join('');
+        }
+
+        function renderResources(resources) {
+            const tbody = document.getElementById('resources-tbody');
+            if (!tbody) return;
+
+            const resourceTypes = [
+                { key: 'cpu', label: 'CPU' },
+                { key: 'memory', label: 'Memory' },
+                { key: 'pods', label: 'Pods' },
+                { key: 'ephemeralStorage', label: 'Ephemeral Storage' }
+            ];
+
+            tbody.innerHTML = resourceTypes.map(type => {
+                const resource = resources[type.key];
+                if (!resource) return '';
+
+                const progressBar = createProgressBar(
+                    resource.usagePercentage,
+                    resource.used,
+                    resource.allocatable
+                );
+
+                return '<tr>' +
+                    '<td>' + escapeHtml(type.label) + '</td>' +
+                    '<td>' + escapeHtml(resource.capacity) + '</td>' +
+                    '<td>' + escapeHtml(resource.allocatable) + '</td>' +
+                    '<td>' + escapeHtml(resource.used) + '</td>' +
+                    '<td>' + escapeHtml(resource.available) + '</td>' +
+                    '<td>' + progressBar + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        function renderConditions(conditions) {
+            const tbody = document.getElementById('conditions-tbody');
+            if (!tbody) return;
+
+            if (!conditions || conditions.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No conditions available</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = conditions.map(condition => {
+                const statusIndicator = getStatusIndicator(condition.status, condition.type);
+                return '<tr>' +
+                    '<td>' + escapeHtml(condition.type) + '</td>' +
+                    '<td>' + statusIndicator + '</td>' +
+                    '<td>' + escapeHtml(condition.reason || 'N/A') + '</td>' +
+                    '<td>' + escapeHtml(condition.message || 'N/A') + '</td>' +
+                    '<td>' + escapeHtml(condition.relativeTime || 'N/A') + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        function renderPods(pods) {
+            const tbody = document.getElementById('pods-tbody');
+            if (!tbody) return;
+
+            if (!pods || pods.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No pods running on this node</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = pods.map(pod => {
+                const podLink = '<a href="#" class="pod-link" data-pod-name="' + escapeHtml(pod.name) + '" data-pod-namespace="' + escapeHtml(pod.namespace) + '">' + escapeHtml(pod.name) + '</a>';
+                return '<tr>' +
+                    '<td>' + podLink + '</td>' +
+                    '<td>' + escapeHtml(pod.namespace) + '</td>' +
+                    '<td>' + escapeHtml(pod.status) + '</td>' +
+                    '<td>' + escapeHtml(pod.cpuRequest || '0') + '</td>' +
+                    '<td>' + escapeHtml(pod.memoryRequest || '0') + '</td>' +
+                    '<td>' + escapeHtml(pod.cpuLimit || '0') + '</td>' +
+                    '<td>' + escapeHtml(pod.memoryLimit || '0') + '</td>' +
+                    '<td>' + escapeHtml(String(pod.restartCount || 0)) + '</td>' +
+                    '<td>' + escapeHtml(pod.age || 'N/A') + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        function renderAddresses(addresses) {
+            const list = document.getElementById('addresses-list');
+            if (!list) return;
+
+            if (!addresses || addresses.length === 0) {
+                list.innerHTML = '<li class="empty-state">No addresses available</li>';
+                return;
+            }
+
+            list.innerHTML = addresses.map(addr => 
+                '<li class="address-item">' +
+                    '<span class="address-type">' + escapeHtml(addr.type) + '</span>' +
+                    '<span class="address-value">' + escapeHtml(addr.address) + '</span>' +
+                    '<button class="copy-btn" data-copy-value="' + escapeHtml(addr.address) + '" title="Copy address">' +
+                        '<span class="copy-icon">📋</span>' +
+                    '</button>' +
+                '</li>'
+            ).join('');
+        }
+
+        function renderLabels(labels) {
+            const list = document.getElementById('labels-list');
+            if (!list) return;
+
+            const labelEntries = Object.entries(labels || {});
+            if (labelEntries.length === 0) {
+                list.innerHTML = '<li class="empty-state">No labels configured</li>';
+                return;
+            }
+
+            list.innerHTML = labelEntries.map(([key, value]) => {
+                const labelPair = key + '=' + value;
+                return '<li class="label-item">' +
+                    '<span class="label-key">' + escapeHtml(key) + '</span>' +
+                    '<span class="label-value">' + escapeHtml(value) + '</span>' +
+                    '<button class="copy-btn" data-copy-value="' + escapeHtml(labelPair) + '" title="Copy label">' +
+                        '<span class="copy-icon">📋</span>' +
+                    '</button>' +
+                '</li>';
+            }).join('');
+        }
+
+        function renderTaints(taints) {
+            const tbody = document.getElementById('taints-tbody');
+            if (!tbody) return;
+
+            if (!taints || taints.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No taints configured</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = taints.map(taint => 
+                '<tr>' +
+                    '<td>' + escapeHtml(taint.key) + '</td>' +
+                    '<td>' + escapeHtml(taint.value || '') + '</td>' +
+                    '<td>' + escapeHtml(taint.effect) + '</td>' +
+                '</tr>'
+            ).join('');
+        }
+
+        function renderAllocation(allocation) {
+            const container = document.getElementById('allocation-container');
+            if (!container) return;
+
+            const cpu = allocation.cpu;
+            const memory = allocation.memory;
+
+            container.innerHTML = 
+                '<div class="allocation-item">' +
+                    '<div class="allocation-label">' +
+                        '<span>CPU</span>' +
+                        '<span>Allocatable: ' + escapeHtml(cpu.allocatable) + '</span>' +
+                    '</div>' +
+                    '<div class="allocation-bars">' +
+                        '<div class="allocation-bar-item">' +
+                            '<span class="allocation-bar-label">Requests:</span>' +
+                            createProgressBar(cpu.requestsPercentage, cpu.requests, cpu.allocatable) +
+                        '</div>' +
+                        '<div class="allocation-bar-item">' +
+                            '<span class="allocation-bar-label">Limits:</span>' +
+                            createProgressBar(cpu.limitsPercentage, cpu.limits, cpu.allocatable) +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="allocation-item">' +
+                    '<div class="allocation-label">' +
+                        '<span>Memory</span>' +
+                        '<span>Allocatable: ' + escapeHtml(memory.allocatable) + '</span>' +
+                    '</div>' +
+                    '<div class="allocation-bars">' +
+                        '<div class="allocation-bar-item">' +
+                            '<span class="allocation-bar-label">Requests:</span>' +
+                            createProgressBar(memory.requestsPercentage, memory.requests, memory.allocatable) +
+                        '</div>' +
+                        '<div class="allocation-bar-item">' +
+                            '<span class="allocation-bar-label">Limits:</span>' +
+                            createProgressBar(memory.limitsPercentage, memory.limits, memory.allocatable) +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        function createProgressBar(percentage, used, total) {
+            const safePercentage = Math.min(100, Math.max(0, Math.round(percentage || 0)));
+            let colorClass = 'low';
+            if (safePercentage >= 80) {
+                colorClass = 'high';
+            } else if (safePercentage >= 50) {
+                colorClass = 'medium';
+            }
+
+            return '<div class="progress-bar-container">' +
+                '<div class="progress-bar">' +
+                    '<div class="progress-bar-fill ' + colorClass + '" style="width: ' + safePercentage + '%"></div>' +
+                '</div>' +
+                '<span class="progress-percentage">' + safePercentage + '%</span>' +
+                '<span class="progress-values">' + escapeHtml(String(used)) + ' / ' + escapeHtml(String(total)) + '</span>' +
+            '</div>';
+        }
+
+        function getStatusIndicator(status, type) {
+            let indicatorClass = 'unknown';
+            let icon = '?';
+            let text = 'Unknown';
+
+            if (status === 'True') {
+                if (type === 'Ready') {
+                    indicatorClass = 'true';
+                    icon = '✓';
+                    text = 'True';
+                } else {
+                    // For conditions like MemoryPressure, DiskPressure, etc., True is bad
+                    indicatorClass = 'false';
+                    icon = '⚠';
+                    text = 'True';
+                }
+            } else if (status === 'False') {
+                if (type === 'Ready') {
+                    indicatorClass = 'false';
+                    icon = '⚠';
+                    text = 'False';
+                } else {
+                    // For conditions like MemoryPressure, DiskPressure, etc., False is good
+                    indicatorClass = 'true';
+                    icon = '✓';
+                    text = 'False';
+                }
+            }
+
+            const iconClass = indicatorClass === 'true' ? 'check' : 'warning';
+            return '<span class="status-indicator ' + indicatorClass + '">' +
+                '<span class="status-icon-' + iconClass + '">' + icon + '</span>' +
+                '<span>' + text + '</span>' +
+            '</span>';
+        }
+
+        function setupCopyButtons() {
+            // Remove existing listeners by cloning nodes
+            const copyButtons = document.querySelectorAll('.copy-btn');
+            copyButtons.forEach(btn => {
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+            });
+
+            // Attach new listeners
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const value = btn.getAttribute('data-copy-value');
+                    if (value) {
+                        vscode.postMessage({ command: 'copyValue', value: value });
+                    }
+                });
+            });
+        }
+
+        function setupPodNavigation() {
+            // Remove existing listeners by cloning nodes
+            const podLinks = document.querySelectorAll('.pod-link');
+            podLinks.forEach(link => {
+                const newLink = link.cloneNode(true);
+                link.parentNode.replaceChild(newLink, link);
+            });
+
+            // Attach new listeners
+            document.querySelectorAll('.pod-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const podName = link.getAttribute('data-pod-name');
+                    const podNamespace = link.getAttribute('data-pod-namespace');
+                    if (podName) {
+                        vscode.postMessage({
+                            command: 'navigateToPod',
+                            name: podName,
+                            namespace: podNamespace || undefined
+                        });
+                    }
+                });
+            });
+        }
+
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return '';
+            const str = String(unsafe);
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
         function showError(message) {
             const container = document.querySelector('.container');
+            if (!container) return;
+            
+            // Remove existing error messages
+            const existingErrors = container.querySelectorAll('.error-message');
+            existingErrors.forEach(err => err.remove());
+
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
             errorDiv.textContent = message;
