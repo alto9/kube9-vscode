@@ -19,11 +19,28 @@ export interface LogOptions {
  * streaming connections. This class wraps the @kubernetes/client-node library
  * to stream pod logs from Kubernetes API.
  */
+/**
+ * Parameters for log streaming, stored for reconnection attempts.
+ */
+interface StreamParams {
+    namespace: string;
+    podName: string;
+    containerName: string;
+    options: LogOptions;
+    onData: (chunk: string) => void;
+    onError: (error: Error) => void;
+    onClose: () => void;
+}
+
 export class LogsProvider {
     private kubeConfig: k8s.KubeConfig;
     private logApi: k8s.Log;
     private currentAbortController: AbortController | null = null;
     private currentStream: Writable | null = null;
+    private reconnectAttempts = 0;
+    private maxReconnectAttempts = 5;
+    private lastStreamParams: StreamParams | null = null;
+    private isReconnecting = false;
 
     /**
      * Creates a new LogsProvider instance for the specified cluster context.
@@ -60,6 +77,21 @@ export class LogsProvider {
     ): Promise<void> {
         // Stop any existing stream
         this.stopStream();
+
+        // Store parameters for potential reconnection
+        this.lastStreamParams = {
+            namespace,
+            podName,
+            containerName,
+            options,
+            onData,
+            onError,
+            onClose
+        };
+
+        // Reset reconnect attempts on new stream
+        this.reconnectAttempts = 0;
+        this.isReconnecting = false;
 
         try {
             // Create a Writable stream to receive log data
@@ -112,6 +144,120 @@ export class LogsProvider {
             this.currentAbortController = null;
             onError(error as Error);
         }
+    }
+
+    /**
+     * Attempts to reconnect to the last stream with exponential backoff.
+     * Only attempts reconnection for recoverable connection errors.
+     * 
+     * @param error - The error that occurred
+     * @returns Promise that resolves when reconnection is attempted or max attempts reached
+     */
+    public async attemptReconnect(error: Error): Promise<void> {
+        // Check if this is a recoverable connection error
+        if (!this.isRecoverableError(error)) {
+            // Not a recoverable error, don't attempt reconnection
+            return;
+        }
+
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            const maxAttemptsError = new Error('Max reconnection attempts reached');
+            if (this.lastStreamParams) {
+                this.lastStreamParams.onError(maxAttemptsError);
+            }
+            this.isReconnecting = false;
+            return;
+        }
+
+        if (!this.lastStreamParams) {
+            // No previous stream parameters, can't reconnect
+            return;
+        }
+
+        this.isReconnecting = true;
+        this.reconnectAttempts++;
+        
+        // Calculate exponential backoff delay: 1s, 2s, 4s, 8s, 16s, max 30s
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+
+        try {
+            // Attempt to reconnect with stored parameters
+            await this.streamLogs(
+                this.lastStreamParams.namespace,
+                this.lastStreamParams.podName,
+                this.lastStreamParams.containerName,
+                this.lastStreamParams.options,
+                this.lastStreamParams.onData,
+                this.lastStreamParams.onError,
+                this.lastStreamParams.onClose
+            );
+            
+            // Reset attempts on successful reconnection
+            this.reconnectAttempts = 0;
+            this.isReconnecting = false;
+        } catch (reconnectError) {
+            // If reconnection fails, attempt again
+            await this.attemptReconnect(reconnectError as Error);
+        }
+    }
+
+    /**
+     * Checks if an error is recoverable and should trigger auto-reconnect.
+     * Connection errors (ECONNREFUSED, ETIMEDOUT) are recoverable.
+     * API errors (404, 403) are not recoverable.
+     * 
+     * @param error - The error to check
+     * @returns True if error is recoverable, false otherwise
+     */
+    private isRecoverableError(error: Error): boolean {
+        // Check for Node.js connection error codes
+        const nodeError = error as NodeJS.ErrnoException;
+        if (nodeError.code === 'ECONNREFUSED' || nodeError.code === 'ETIMEDOUT') {
+            return true;
+        }
+
+        // Check for Kubernetes API error status codes
+        const apiError = error as { response?: { statusCode?: number } };
+        if (apiError.response?.statusCode) {
+            const statusCode = apiError.response.statusCode;
+            // 404 and 403 are not recoverable (pod not found, permission denied)
+            if (statusCode === 404 || statusCode === 403) {
+                return false;
+            }
+            // Other 4xx/5xx errors might be recoverable (network issues, temporary server errors)
+            return statusCode >= 500 || statusCode === 408 || statusCode === 429;
+        }
+
+        // Check error message for connection-related keywords
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('econnrefused') || 
+            errorMessage.includes('etimedout') ||
+            errorMessage.includes('connection') ||
+            errorMessage.includes('network')) {
+            return true;
+        }
+
+        // Default to not recoverable for unknown errors
+        return false;
+    }
+
+    /**
+     * Gets whether a reconnection attempt is currently in progress.
+     * 
+     * @returns True if reconnecting, false otherwise
+     */
+    public getIsReconnecting(): boolean {
+        return this.isReconnecting;
+    }
+
+    /**
+     * Resets reconnection state (used when manually stopping reconnection).
+     */
+    public resetReconnection(): void {
+        this.reconnectAttempts = 0;
+        this.isReconnecting = false;
     }
 
     /**
@@ -200,5 +346,7 @@ export class LogsProvider {
      */
     public dispose(): void {
         this.stopStream();
+        this.resetReconnection();
+        this.lastStreamParams = null;
     }
 }

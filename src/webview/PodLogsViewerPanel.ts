@@ -1065,7 +1065,8 @@ export class PodLogsViewerPanel {
 
     /**
      * Handle stream error from Kubernetes API.
-     * Sends error status to webview and cleans up batching.
+     * Detects specific error types and handles them appropriately.
+     * Triggers auto-reconnect for recoverable connection errors.
      * 
      * @param contextName - The cluster context name
      * @param error - The error that occurred
@@ -1075,15 +1076,206 @@ export class PodLogsViewerPanel {
         console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Stream error for context ${contextName}:`, error.message);
 
         const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
-        if (panelInfo) {
-            PodLogsViewerPanel.sendMessage(panelInfo.panel, {
-                type: 'streamStatus',
-                status: 'error'
-            });
+        if (!panelInfo) {
+            return;
+        }
+
+        // Detect error type
+        const errorType = PodLogsViewerPanel.detectErrorType(error);
+        const podInfo = panelInfo.currentPod;
+
+        // Handle specific error types
+        switch (errorType) {
+            case 'podNotFound':
+                // Pod was deleted - keep logs visible but disable streaming
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'error',
+                    error: `Pod '${podInfo.name}' no longer exists in namespace '${podInfo.namespace}'`,
+                    errorType: 'podNotFound'
+                });
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'streamStatus',
+                    status: 'disconnected'
+                });
+                // Don't attempt reconnection for pod deletion
+                break;
+
+            case 'permissionDenied':
+                // Permission denied - show RBAC guidance
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'error',
+                    error: 'Access denied. Check your cluster permissions and RBAC settings.',
+                    errorType: 'permissionDenied'
+                });
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'streamStatus',
+                    status: 'error'
+                });
+                // Don't attempt reconnection for permission errors
+                break;
+
+            case 'connectionFailed':
+                // Connection error - attempt auto-reconnect
+                // Send reconnecting status
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'streamStatus',
+                    status: 'reconnecting'
+                });
+                // Trigger reconnection attempt
+                PodLogsViewerPanel.attemptReconnect(contextName, error);
+                break;
+
+            case 'maxReconnectAttempts':
+                // Max reconnection attempts reached
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'error',
+                    error: 'Connection failed after 5 attempts. Please check your network connection.',
+                    errorType: 'maxReconnectAttempts'
+                });
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'streamStatus',
+                    status: 'error'
+                });
+                break;
+
+            default:
+                // Generic error
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'error',
+                    error: error.message || 'An error occurred while streaming logs',
+                    errorType: undefined
+                });
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'streamStatus',
+                    status: 'error'
+                });
         }
 
         // Clean up batching
         PodLogsViewerPanel.cleanupBatching(contextName);
+    }
+
+    /**
+     * Detects the type of error from an Error object.
+     * Checks for Kubernetes API status codes and Node.js error codes.
+     * 
+     * @param error - The error to analyze
+     * @returns The detected error type, or undefined for unknown errors
+     */
+    private static detectErrorType(error: Error): 'podNotFound' | 'permissionDenied' | 'connectionFailed' | 'maxReconnectAttempts' | undefined {
+        // Check for Node.js error codes
+        const nodeError = error as NodeJS.ErrnoException;
+        if (nodeError.code === 'ECONNREFUSED' || nodeError.code === 'ETIMEDOUT') {
+            return 'connectionFailed';
+        }
+
+        // Check for Kubernetes API error status codes
+        const apiError = error as { response?: { statusCode?: number; body?: { message?: string } } };
+        if (apiError.response?.statusCode) {
+            const statusCode = apiError.response.statusCode;
+            if (statusCode === 404) {
+                return 'podNotFound';
+            }
+            if (statusCode === 403) {
+                return 'permissionDenied';
+            }
+            // Other connection-related status codes
+            if (statusCode >= 500 || statusCode === 408 || statusCode === 429) {
+                return 'connectionFailed';
+            }
+        }
+
+        // Check error message for specific patterns
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('max reconnection attempts') || errorMessage.includes('max reconnect')) {
+            return 'maxReconnectAttempts';
+        }
+        if (errorMessage.includes('not found') || errorMessage.includes('404')) {
+            return 'podNotFound';
+        }
+        if (errorMessage.includes('permission') || errorMessage.includes('forbidden') || errorMessage.includes('403')) {
+            return 'permissionDenied';
+        }
+        if (errorMessage.includes('connection') || errorMessage.includes('network') || 
+            errorMessage.includes('econnrefused') || errorMessage.includes('etimedout')) {
+            return 'connectionFailed';
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Attempts to reconnect to the log stream after a connection error.
+     * Implements exponential backoff reconnection with status updates.
+     * 
+     * @param contextName - The cluster context name
+     * @param _error - The error that triggered the reconnection attempt (unused, kept for API consistency)
+     */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    private static async attemptReconnect(contextName: string, _error: Error): Promise<void> {
+        const timestamp = new Date().toISOString();
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            return;
+        }
+
+        const maxReconnectAttempts = 5;
+        let reconnectAttempts = 0;
+
+        // Reconnecting status already sent by handleStreamError
+
+        const attemptReconnectInternal = async (): Promise<void> => {
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                // Max attempts reached
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'error',
+                    error: 'Connection failed after 5 attempts. Please check your network connection.',
+                    errorType: 'maxReconnectAttempts'
+                });
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'streamStatus',
+                    status: 'error'
+                });
+                return;
+            }
+
+            reconnectAttempts++;
+            console.log(`[PodLogsViewerPanel ${timestamp}] Attempting reconnection (${reconnectAttempts}/${maxReconnectAttempts})...`);
+
+            // Calculate exponential backoff delay: 1s, 2s, 4s, 8s, 16s, max 30s
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 30000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+
+            try {
+                // Restart streaming (this will attempt to reconnect)
+                await PodLogsViewerPanel.startStreaming(contextName);
+                
+                // Success - send connected status
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'streamStatus',
+                    status: 'connected'
+                });
+                
+                // Show success notification
+                vscode.window.showInformationMessage('Reconnected successfully');
+                console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Reconnected successfully`);
+            } catch (reconnectError) {
+                console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Reconnection attempt ${reconnectAttempts} failed:`, reconnectError);
+                // Check if this is still a recoverable error
+                const reconnectErrorObj = reconnectError as Error;
+                const errorType = PodLogsViewerPanel.detectErrorType(reconnectErrorObj);
+                
+                if (errorType === 'connectionFailed') {
+                    // Still a connection error, try again
+                    await attemptReconnectInternal();
+                } else {
+                    // Changed to non-recoverable error, handle it
+                    PodLogsViewerPanel.handleStreamError(contextName, reconnectErrorObj);
+                }
+            }
+        };
+
+        await attemptReconnectInternal();
     }
 
     /**
