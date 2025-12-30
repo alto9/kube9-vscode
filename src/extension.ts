@@ -980,7 +980,7 @@ function registerCommands(): void {
                 });
                 
                 // Open the pod logs viewer panel
-                PodLogsViewerPanel.show(
+                await PodLogsViewerPanel.show(
                     context,
                     contextName,
                     clusterName,
