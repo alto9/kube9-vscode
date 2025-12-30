@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionToWebviewMessage, WebviewToExtensionMessage, InitialState } from '../../types/messages';
-import { Footer, Toolbar, LogDisplay, SearchBar } from './components';
+import { Footer, Toolbar, LogDisplay, SearchBar, LoadingState, EmptyState, ErrorState } from './components';
 import { PanelPreferences } from '../../utils/PreferencesManager';
 
 // Acquire VS Code API
@@ -20,6 +20,8 @@ export const App: React.FC = () => {
     const [searchVisible, setSearchVisible] = useState<boolean>(false);
     const [searchMatches, setSearchMatches] = useState<number[]>([]);
     const [currentMatchIndex, setCurrentMatchIndex] = useState<number>(0);
+    const [viewState, setViewState] = useState<'loading' | 'loaded' | 'empty' | 'error'>('loading');
+    const [errorMessage, setErrorMessage] = useState<string>('');
 
     // Send message to extension
     const sendMessage = React.useCallback((message: WebviewToExtensionMessage) => {
@@ -42,10 +44,23 @@ export const App: React.FC = () => {
                 case 'initialState':
                     setInitialState(message.data);
                     setPreferences(message.data.preferences);
+                    // Keep viewState as 'loading' - waiting for logs
                     break;
                 case 'logData':
                     // Append new log data and update line count
-                    setLogs(prev => [...prev, ...message.data]);
+                    setLogs(prev => {
+                        const newLogs = [...prev, ...message.data];
+                        // Transition to 'loaded' if we were loading or empty and now have data
+                        if (message.data.length > 0) {
+                            setViewState(currentState => {
+                                if (currentState === 'loading' || currentState === 'empty') {
+                                    return 'loaded';
+                                }
+                                return currentState;
+                            });
+                        }
+                        return newLogs;
+                    });
                     setLineCount(prev => prev + message.data.length);
                     console.log('[PodLogsApp] Received logData:', message.data.length, 'lines');
                     break;
@@ -53,6 +68,21 @@ export const App: React.FC = () => {
                     // Update stream status
                     setStreamStatus(message.status);
                     console.log('[PodLogsApp] Stream status:', message.status);
+                    
+                    // Handle state transitions based on stream status
+                    if (message.status === 'error') {
+                        setViewState('error');
+                        setErrorMessage('Failed to fetch logs. Please check your connection and try again.');
+                    } else if (message.status === 'connected') {
+                        // Transition from error to loading when reconnecting
+                        setViewState(currentState => {
+                            if (currentState === 'error') {
+                                return 'loading';
+                            }
+                            return currentState;
+                        });
+                        setErrorMessage('');
+                    }
                     break;
                 default:
                     console.log('[PodLogsApp] Unknown message type:', message);
@@ -68,6 +98,13 @@ export const App: React.FC = () => {
             window.removeEventListener('message', handleMessage);
         };
     }, [sendMessage]);
+
+    // Check for empty state when stream disconnects with no logs
+    useEffect(() => {
+        if (streamStatus === 'disconnected' && logs.length === 0 && viewState === 'loading') {
+            setViewState('empty');
+        }
+    }, [streamStatus, logs.length, viewState]);
 
     // Search logic: find matching log lines
     useEffect(() => {
@@ -167,6 +204,11 @@ export const App: React.FC = () => {
     }, [preferences, sendMessage]);
 
     const handleRefresh = React.useCallback(() => {
+        // Clear logs and reset to loading state when retrying
+        setLogs([]);
+        setLineCount(0);
+        setViewState('loading');
+        setErrorMessage('');
         sendMessage({ type: 'refresh' });
     }, [sendMessage]);
 
@@ -283,11 +325,7 @@ export const App: React.FC = () => {
                     onExport={handleExport}
                     onSearch={handleSearchOpen}
                 />
-            ) : (
-                <div className="loading-state">
-                    <p>Loading...</p>
-                </div>
-            )}
+            ) : null}
             {searchVisible && initialState && preferences && (
                 <SearchBar
                     query={searchQuery}
@@ -304,7 +342,10 @@ export const App: React.FC = () => {
                     ⚠ Viewing previous container logs
                 </div>
             )}
-            {initialState && preferences && (
+            {viewState === 'loading' && <LoadingState />}
+            {viewState === 'empty' && <EmptyState />}
+            {viewState === 'error' && <ErrorState error={errorMessage} onRetry={handleRefresh} />}
+            {viewState === 'loaded' && initialState && preferences && (
                 <LogDisplay
                     logs={logs}
                     showTimestamps={preferences.showTimestamps}
