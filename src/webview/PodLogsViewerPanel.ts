@@ -172,8 +172,11 @@ export class PodLogsViewerPanel {
             currentPod: podInfo
         });
 
-        // Set placeholder HTML content
-        panel.webview.html = PodLogsViewerPanel.getPlaceholderHtml();
+        // Set webview HTML content
+        panel.webview.html = PodLogsViewerPanel.getWebviewContent(
+            panel.webview,
+            context.extensionUri
+        );
 
         // Handle panel disposal
         panel.onDidDispose(
@@ -190,49 +193,54 @@ export class PodLogsViewerPanel {
     }
 
     /**
-     * Get placeholder HTML content for the webview.
+     * Generate the HTML content for the Pod Logs Viewer webview.
+     * Includes Content Security Policy, React bundle loading, and proper structure.
      * 
-     * @returns HTML string for placeholder content
+     * @param webview - The VS Code webview instance
+     * @param extensionUri - The URI of the extension
+     * @returns HTML content string
      */
-    private static getPlaceholderHtml(): string {
+    private static getWebviewContent(
+        webview: vscode.Webview,
+        extensionUri: vscode.Uri
+    ): string {
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'pod-logs', 'main.js')
+        );
+        const stylesUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'pod-logs', 'styles.css')
+        );
+        const nonce = getNonce();
+        const cspSource = webview.cspSource;
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource};">
+    <link href="${stylesUri}" rel="stylesheet">
     <title>Pod Logs Viewer</title>
-    <style>
-        body {
-            font-family: var(--vscode-font-family);
-            padding: 20px;
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .placeholder {
-            text-align: center;
-        }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-        p {
-            font-size: 14px;
-            color: var(--vscode-descriptionForeground);
-        }
-    </style>
 </head>
 <body>
-    <div class="placeholder">
-        <h1>Pod Logs Viewer</h1>
-        <p>Under Construction</p>
-    </div>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
     }
+}
+
+/**
+ * Generate a random nonce for Content Security Policy.
+ * 
+ * @returns A 32-character random alphanumeric string
+ */
+function getNonce(): string {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
 }
 
