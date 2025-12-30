@@ -1,4 +1,4 @@
-<!-- forge-hash: c6a15a9e822b1263185c8d986beef9a51ca15d315fcfaef349bf3e30445f6bf5 -->
+<!-- forge-hash: 7d7b6419b04961fe69dcdb16267543b98f4f0a62e774e395198086795df3554f -->
 
 # Forge Design
 
@@ -6,13 +6,11 @@ This command guides AI agents when working within Forge design sessions to updat
 
 ## Prerequisites
 
-If you're not familiar with Forge, run `/forge` first to understand the documentation system.
-
 You must have an active design session before making changes to AI documentation.
 
 ## What This Command Does
 
-1. **Provides complete schema information**: All document schemas embedded below
+1. **Provides complete schema information**: All document schemas embedded below for self-contained design guidance
 2. **Checks for active session**: Ensures you're working within a structured design workflow
 3. **Reads AI documentation**: Understands existing design patterns and structure
 4. **Guides documentation updates**: Helps create or modify features, diagrams, specs, actors
@@ -431,157 +429,35 @@ When working in design sessions, use the correct file type for each purpose:
 - **Contains**: Responsibilities, characteristics, context
 - **Note**: Always editable (no session required)
 
-## The Linkage System
-
-### How Files Link Together
-
-Files connect through ID references in their frontmatter:
-
-```
-Features ←→ Specs ←→ Diagrams
-   ↓           ↓
-Tickets     Tickets
-```
-
-**Linkage Fields**:
-- `feature_id` - Links features to specs and tickets
-- `spec_id` - Links specs to features, diagrams, and tickets
-- `diagram_id` - Links diagrams to specs
-
-**Bidirectional Relationships**:
-- Features reference specs (`spec_id: []`)
-- Specs reference features (`feature_id: []`)
-- Both directions work for context gathering
-
-**Multiple Relationships**:
-- Multiple diagram objects can share the same spec if it makes sense
-- A diagram can link to multiple specs
-- A spec can link to multiple diagrams
-- Relationships are not mutually exclusive
-
-### Context Gathering Process
-
-When following linkages:
-
-1. **Start with a feature or spec**
-2. **Follow `spec_id` or `feature_id`** to discover related files
-3. **Follow `diagram_id`** to find visual architecture
-4. **Build complete context** by following all linkages
-5. **Ensure nothing is missed** through systematic traversal
-
-**Example**:
-```
-Feature: user-login.feature.md
-  spec_id: [authentication-api]
-  
-Spec: authentication-api.spec.md
-  feature_id: [user-login]
-  diagram_id: [auth-flow, api-architecture]
-  
-Diagram: auth-flow.diagram.md
-  spec_id: [authentication-api]
-  
-Diagram: api-architecture.diagram.md
-  spec_id: [authentication-api, user-management-api]
-```
-
-## Diagram-First Approach
-
-### Create Diagrams Before Specs
-
-**CRITICAL**: When designing new functionality, create diagrams first, then derive specs from diagram objects.
-
-**Workflow**:
-1. **Create diagrams** that visualize:
-   - Technical implementations (infrastructure, components)
-   - User workflows (flows, states)
-2. **Analyze diagram objects** (nodes, edges, components)
-3. **Create specs** based on what the diagrams show
-4. **Link specs to diagrams** via `diagram_id`
-
-### Diagram Types
-
-Diagrams should support both:
-- **Technical implementations**: Infrastructure, components, system architecture
-- **User workflows**: Flows, states, user journeys
-
-**Types**:
-- `infrastructure` - System infrastructure and deployment
-- `components` - Component architecture and relationships
-- `flows` - Process flows and user workflows
-- `states` - State machines and state transitions
-
-### Spec Creation from Diagrams
-
-When creating specs based on diagrams:
-- **Identify diagram objects** that need technical contracts
-- **Group related objects** into logical specs
-- **Multiple diagram objects can share a spec** if they represent the same technical concept
-- **Prefer specs that reflect diagram structure** rather than arbitrary groupings
-
-**Example**: If a diagram shows "API Gateway → Auth Service → Database", create specs for:
-- API Gateway contract (based on API Gateway node)
-- Auth Service contract (based on Auth Service node)
-- Database schema (based on Database node)
-
-These specs link back to the diagram via `diagram_id`.
-
-## Timeless Documentation
-
-**CRITICAL**: All Forge documents (except sessions) must describe the **ideal state**, not changes or decisions.
-
-**Do NOT**:
-- ❌ Describe what changed or why
-- ❌ Reference specific decisions or alternatives considered
-- ❌ Use language like "we decided to..." or "changed from X to Y"
-- ❌ Include timestamps or version history
-- ❌ Describe implementation status
-
-**DO**:
-- ✅ Describe what the system IS
-- ✅ Describe how it SHOULD work
-- ✅ Use present tense ("The system authenticates users...")
-- ✅ Focus on the ideal, complete state
-- ✅ Write as if the system already exists perfectly
-
-**Example**:
-
-❌ **Bad**: "We decided to use JWT tokens for authentication. This replaced the previous session-based approach."
-
-✅ **Good**: "The system authenticates users using JWT tokens. Tokens are issued upon successful login and included in subsequent requests."
-
-Sessions are the only exception - they track changes over time. All other documentation is timeless.
-
 ## Intelligent Linkage and Grouping
 
-When working with Forge documentation:
+When working with Forge documentation, it's essential to understand and respect the existing organizational structure:
 
-- **Analyze folder structure**: Examine existing `ai/` subfolder structure to understand grouping patterns
-- **Follow existing patterns**: Contribute to existing patterns rather than creating arbitrary structures
-- **Respect nesting**: Folder nesting reflects logical relationships
-- **Utilize linkages effectively**: Use all element linkages to build complete context
-- **Group logically**: Place related files together in nested folders
-- **Maintain consistency**: Follow established organizational patterns
+- **Analyze folder structure**: Before creating new files, examine the existing `ai/` subfolder structure to understand how elements are logically grouped
+- **Follow existing patterns**: Contribute to existing grouping patterns rather than creating new arbitrary structures
+- **Respect nesting**: Folder nesting reflects logical relationships - preserve and extend these relationships when adding new files
+- **Utilize linkages effectively**: Use all element linkages (feature_id, spec_id) to build complete context, but avoid over-verbosity
+- **Group logically**: Place related files together in nested folders that reflect their relationships and dependencies
+- **Maintain consistency**: When adding new documentation, follow the same organizational patterns already established in the project
+
+Understanding the existing structure helps maintain coherence and makes the documentation easier to navigate and understand.
 
 ## Important Constraints
 
 - **This is a Forge design session**: You are working within a structured design workflow
 - **Only modify AI documentation files**: Work exclusively within the `ai/` folder
 - **Do NOT modify implementation code**: This command is for updating features, diagrams, specs, actors only
-- **Track all changes**: Ensure changed files are tracked in the active session's `changed_files` array (features only)
+- **Track all changes**: Ensure changed files are tracked in the active session's `changed_files` array
 - **Use proper formats**: Features use Gherkin in code blocks, Diagrams use react-flow JSON format, Specs use markdown only
-- **Timeless documentation**: Write about ideal state, not changes or decisions
-- **Diagram-first**: Create diagrams before specs, derive specs from diagram objects
-- **Follow linkages**: Use the linkage system to discover related documentation
+- **No MCP tools needed**: All schemas and guidance are embedded in this command - completely self-contained
 
 ## Usage
 
-1. Run `/forge` if you need to understand the Forge system
-2. Ensure you have an active design session
-3. Run this command
-4. Use embedded schemas to understand file formats
-5. Analyze existing AI documentation
-6. Update documentation following diagram-first approach and timeless principles
-7. Track all feature changes in the active session
+1. Ensure you have an active design session
+2. Run this command
+3. The AI will use embedded schemas to understand file formats
+4. The AI will analyze existing AI documentation
+5. The AI will update documentation in the ai/ folder
+6. All changes will be tracked in the active design session
 
 The documentation updates will be consistent with your existing design patterns and the Forge workflow.
