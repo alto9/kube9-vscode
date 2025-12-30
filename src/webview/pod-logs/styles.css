@@ -302,3 +302,91 @@ body {
     color: var(--vscode-errorForeground);
 }
 
+/* ==========================================================================
+   Log Display Styles
+   ========================================================================== */
+
+.log-display {
+    flex: 1;
+    overflow: auto;
+    font-family: 'Courier New', monospace;
+    font-size: var(--font-size);
+    line-height: 20px;
+    background-color: var(--background);
+}
+
+.log-lines {
+    display: flex;
+    flex-direction: column;
+}
+
+.log-line {
+    padding: 0 var(--spacing-sm);
+    white-space: pre-wrap;
+    overflow-x: auto;
+    border-bottom: 1px solid transparent;
+}
+
+.log-line:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.log-line.highlight {
+    background-color: var(--vscode-editor-findMatchHighlightBackground);
+}
+
+.log-line .timestamp {
+    color: var(--vscode-editorLineNumber-foreground);
+    margin-right: var(--spacing-sm);
+    user-select: none;
+}
+
+.log-line .log-content {
+    color: var(--foreground);
+    word-break: break-all;
+}
+
+.log-line .search-match {
+    background-color: var(--vscode-editor-findMatchHighlightBackground);
+    color: var(--vscode-editor-findMatchHighlightForeground);
+    font-weight: 600;
+}
+
+.empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--description-foreground);
+    font-size: var(--font-size);
+}
+
+/* ==========================================================================
+   JSON Syntax Highlighting
+   ========================================================================== */
+
+.json {
+    color: var(--vscode-editor-foreground);
+    white-space: pre-wrap;
+}
+
+.json-key {
+    color: var(--vscode-symbolIcon-keywordForeground);
+}
+
+.json-string {
+    color: var(--vscode-symbolIcon-stringForeground);
+}
+
+.json-number {
+    color: var(--vscode-symbolIcon-numberForeground);
+}
+
+.json-boolean {
+    color: var(--vscode-symbolIcon-booleanForeground);
+}
+
+.json-null {
+    color: var(--vscode-editorLineNumber-foreground);
+}
+
