@@ -5,7 +5,7 @@ feature_id:
   - pod-logs-actions
 spec_id:
   - pod-logs-panel-spec
-status: pending
+status: completed
 ---
 
 # Create PreferencesManager for Per-Cluster Settings
