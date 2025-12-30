@@ -265,10 +265,61 @@ export class PodLogsViewerPanel {
                 break;
             case 'toggleFollow':
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'toggleFollow' message, enabled=${message.enabled}`);
-                // TODO: Implement toggleFollow in future story
+                await PodLogsViewerPanel.handleToggleFollow(contextName, message.enabled);
                 break;
             default:
                 console.log(`[PodLogsViewerPanel ${timestamp}] ❌ Unknown message type:`, message);
+        }
+    }
+
+    /**
+     * Handle follow mode toggle request from webview.
+     * Updates preferences and restarts stream with new follow setting.
+     * 
+     * @param contextName - The cluster context name
+     * @param enabled - Whether follow mode should be enabled
+     */
+    private static async handleToggleFollow(contextName: string, enabled: boolean): Promise<void> {
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] handleToggleFollow: enabled=${enabled}`);
+        
+        const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+        if (!panelInfo) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ No panel found for context: ${contextName}`);
+            return;
+        }
+
+        // Ensure PreferencesManager is initialized
+        if (!PodLogsViewerPanel.preferencesManager && PodLogsViewerPanel.extensionContext) {
+            PodLogsViewerPanel.preferencesManager = new PreferencesManager(PodLogsViewerPanel.extensionContext);
+        }
+
+        if (!PodLogsViewerPanel.preferencesManager) {
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Cannot initialize PreferencesManager - no extension context`);
+            return;
+        }
+
+        try {
+            // Get current preferences
+            const preferences = PodLogsViewerPanel.preferencesManager.getPreferences(contextName);
+            
+            // Update follow mode preference
+            const updatedPreferences = { ...preferences, followMode: enabled };
+            
+            // Save preferences to persist per cluster
+            await PodLogsViewerPanel.preferencesManager.savePreferences(contextName, updatedPreferences);
+            
+            // Stop current stream
+            panelInfo.logsProvider.stopStream();
+            PodLogsViewerPanel.cleanupBatching(contextName);
+            
+            // Restart stream with new follow setting
+            PodLogsViewerPanel.startStreaming(contextName);
+            
+            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Follow mode ${enabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to toggle follow mode: ${errorMessage}`);
         }
     }
 
