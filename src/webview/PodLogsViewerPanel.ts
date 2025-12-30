@@ -222,8 +222,9 @@ export class PodLogsViewerPanel {
         // Set up message handling
         PodLogsViewerPanel.setupMessageHandling(panel, contextName, context);
 
-        // Start streaming logs
-        await PodLogsViewerPanel.startStreaming(contextName);
+        // NOTE: Do NOT start streaming here - wait for webview 'ready' message
+        // to avoid race conditions. Streaming will be started via sendInitialState()
+        // when the webview is ready to receive messages.
 
         // Handle panel disposal
         panel.onDidDispose(
@@ -832,6 +833,21 @@ export class PodLogsViewerPanel {
             });
 
             console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Sent initialState for pod: ${panelInfo.currentPod.name}, hasCrashed: ${hasCrashed}`);
+            
+            // Start streaming logs now that webview is ready
+            try {
+                await PodLogsViewerPanel.startStreaming(contextName);
+                console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Streaming started successfully after initialState`);
+            } catch (streamError) {
+                const streamErrorMessage = streamError instanceof Error ? streamError.message : 'Unknown error';
+                console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to start streaming after initialState: ${streamErrorMessage}`);
+                // Send error to webview
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'error',
+                    error: `Failed to start log stream: ${streamErrorMessage}`,
+                    errorType: undefined
+                });
+            }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to send initialState: ${errorMessage}`);
@@ -922,7 +938,7 @@ export class PodLogsViewerPanel {
                         activeStreams.add(containerName);
 
                         // Start streaming with container-specific callback that prefixes lines
-                        containerProvider.streamLogs(
+                        await containerProvider.streamLogs(
                             panelInfo.currentPod.namespace,
                             panelInfo.currentPod.name,
                             containerName,
@@ -948,6 +964,7 @@ export class PodLogsViewerPanel {
                                 }
                             }
                         );
+                        console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Stream setup completed for container: ${containerName}`);
                     } catch (error) {
                         console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to start stream for container ${containerName}:`, error);
                         activeStreams.delete(containerName);
@@ -957,7 +974,7 @@ export class PodLogsViewerPanel {
                 console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Started streaming for all containers (${containers.length} containers)`);
             } else {
                 // Single container mode - use existing logic
-                panelInfo.logsProvider.streamLogs(
+                await panelInfo.logsProvider.streamLogs(
                     panelInfo.currentPod.namespace,
                     panelInfo.currentPod.name,
                     panelInfo.currentPod.container,
@@ -972,7 +989,7 @@ export class PodLogsViewerPanel {
                     () => PodLogsViewerPanel.handleStreamClose(contextName)
                 );
 
-                console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Started streaming for container: ${panelInfo.currentPod.container}`);
+                console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Stream setup completed for container: ${panelInfo.currentPod.container}`);
             }
 
             // Send connected status
@@ -997,15 +1014,20 @@ export class PodLogsViewerPanel {
      * @param containerName - Optional container name to prefix lines with (for "all" containers mode)
      */
     private static handleLogData(contextName: string, chunk: string, containerName?: string): void {
-        const pendingLines = PodLogsViewerPanel.pendingLogLines.get(contextName);
+        let pendingLines = PodLogsViewerPanel.pendingLogLines.get(contextName);
         if (!pendingLines) {
             // Initialize if not exists (shouldn't happen, but be safe)
-            PodLogsViewerPanel.pendingLogLines.set(contextName, []);
-            return;
+            pendingLines = [];
+            PodLogsViewerPanel.pendingLogLines.set(contextName, pendingLines);
         }
 
         // Split chunk by newlines and filter empty strings
         const lines = chunk.split('\n').filter(line => line.length > 0);
+        
+        if (lines.length === 0) {
+            // No lines to add
+            return;
+        }
         
         // Prefix lines with container name if provided (for "all" containers mode)
         const prefixedLines = containerName 
@@ -1014,6 +1036,9 @@ export class PodLogsViewerPanel {
         
         // Add lines to pending batch
         pendingLines.push(...prefixedLines);
+        
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] 📥 Received ${lines.length} log line(s) for context ${contextName}, total pending: ${pendingLines.length}`);
     }
 
     /**
@@ -1054,9 +1079,13 @@ export class PodLogsViewerPanel {
         }
 
         // Send batched lines
+        const linesToSend = [...pendingLines]; // Create copy before clearing
+        const timestamp = new Date().toISOString();
+        console.log(`[PodLogsViewerPanel ${timestamp}] 📤 Sending ${linesToSend.length} batched log line(s) to webview`);
+        
         PodLogsViewerPanel.sendMessage(panelInfo.panel, {
             type: 'logData',
-            data: [...pendingLines] // Send copy of array
+            data: linesToSend
         });
 
         // Clear pending lines
