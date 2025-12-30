@@ -165,10 +165,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Initialize and register tree view provider with customization service
         clusterTreeProvider = new ClusterTreeProvider(clusterCustomizationService);
-        const treeViewDisposable = vscode.window.registerTreeDataProvider(
-            'kube9ClusterView',
-            clusterTreeProvider
-        );
+        
+        // Create TreeView instance and store it in the provider
+        const treeView = vscode.window.createTreeView('kube9ClusterView', {
+            treeDataProvider: clusterTreeProvider
+        });
+        clusterTreeProvider.setTreeView(treeView);
+        
+        const treeViewDisposable = treeView;
         context.subscriptions.push(treeViewDisposable);
         disposables.push(treeViewDisposable);
         console.log('Cluster tree view registered successfully.');
@@ -1351,6 +1355,32 @@ function registerCommands(): void {
     );
     context.subscriptions.push(describeNodeRawCmd);
     disposables.push(describeNodeRawCmd);
+    
+    // Register reveal pod command
+    const revealPodCmd = vscode.commands.registerCommand(
+        'kube9.revealPod',
+        async (podName: string, namespace?: string) => {
+            try {
+                if (!podName) {
+                    vscode.window.showErrorMessage('Pod name is required');
+                    return;
+                }
+                
+                if (!clusterTreeProvider) {
+                    vscode.window.showErrorMessage('Cluster tree provider not initialized');
+                    return;
+                }
+                
+                await clusterTreeProvider.revealPod(podName, namespace || 'default');
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to reveal pod:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to reveal pod: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(revealPodCmd);
+    disposables.push(revealPodCmd);
 }
 
 /**

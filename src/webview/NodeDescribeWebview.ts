@@ -210,10 +210,11 @@ export class NodeDescribeWebview {
                     }
                     
                     case 'navigateToPod': {
-                        // Stub implementation - will be implemented in story 010
                         const podName = message.podName || message.name;
                         const namespace = message.namespace;
-                        console.log('Navigate to pod:', podName, namespace);
+                        if (podName) {
+                            await vscode.commands.executeCommand('kube9.revealPod', podName, namespace);
+                        }
                         break;
                     }
                     
