@@ -5,7 +5,7 @@ feature_id:
   - pod-describe-webview
 spec_id:
   - pod-describe-webview-spec
-status: pending
+status: completed
 estimated_minutes: 30
 ---
 

@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PodDescribeData, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI } from './types';
+import { OverviewTab } from './components/OverviewTab';
+import { EventsTab } from './components/EventsTab';
+import { ContainersTab } from './components/ContainersTab';
+import { ConditionsTab } from './components/ConditionsTab';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -163,25 +167,18 @@ export const PodDescribeApp: React.FC = () => {
 
             <main className="tab-content">
                 {activeTab === 'overview' && (
-                    <div>
-                        <p>Overview tab content will be implemented in a later story.</p>
-                    </div>
+                    <OverviewTab data={podData.overview} />
                 )}
                 {activeTab === 'containers' && (
-                    <div>
-                        <p>Containers tab content will be implemented in a later story.</p>
-                    </div>
+                    <ContainersTab 
+                        containers={podData.containers} 
+                        initContainers={podData.initContainers} 
+                    />
                 )}
                 {activeTab === 'conditions' && (
-                    <div>
-                        <p>Conditions tab content will be implemented in a later story.</p>
-                    </div>
+                    <ConditionsTab conditions={podData.conditions} />
                 )}
-                {activeTab === 'events' && (
-                    <div>
-                        <p>Events tab content will be implemented in a later story.</p>
-                    </div>
-                )}
+                {activeTab === 'events' && <EventsTab events={podData.events} />}
             </main>
         </div>
     );

@@ -5,7 +5,7 @@ feature_id:
   - pod-describe-webview
 spec_id:
   - pod-describe-webview-spec
-status: pending
+status: completed
 estimated_minutes: 15
 ---
 
@@ -17,23 +17,24 @@ Create the Conditions tab component that displays Pod conditions in a table form
 
 ## Acceptance Criteria
 
-- [ ] Create `src/webview/pod-describe/components/ConditionsTab.tsx`
-- [ ] Implement ConditionsTab accepting `conditions: PodCondition[]` prop
-- [ ] Display conditions in a table with columns: Type, Status, Last Transition, Reason, Message
-- [ ] Status column shows True/False/Unknown with color indicators:
+- [x] Create `src/webview/pod-describe/components/ConditionsTab.tsx`
+- [x] Implement ConditionsTab accepting `conditions: PodCondition[]` prop
+- [x] Display conditions in a table with columns: Type, Status, Last Transition, Reason, Message
+- [x] Status column shows True/False/Unknown with color indicators:
   - True: green indicator
   - False: red indicator
   - Unknown: gray indicator
-- [ ] Display last transition time in human-readable format
-- [ ] Show reason and message if available
-- [ ] Highlight rows where Status is False for visibility
-- [ ] Sort conditions by last transition time (most recent first)
-- [ ] Handle empty conditions gracefully
+- [x] Display last transition time in human-readable format
+- [x] Show reason and message if available
+- [x] Highlight rows where Status is False for visibility
+- [x] Sort conditions by last transition time (most recent first)
+- [x] Handle empty conditions gracefully
 
 ## Files Involved
 
 **New Files:**
 - `src/webview/pod-describe/components/ConditionsTab.tsx`
+- `src/webview/pod-describe/utils/dateUtils.ts`
 
 ## Implementation Notes
 
@@ -90,9 +91,9 @@ const ConditionsTab: React.FC<ConditionsTabProps> = ({ conditions }) => {
 
 ## Testing
 
-- [ ] TypeScript compilation succeeds
-- [ ] Component renders with valid data
-- [ ] Status indicators display correctly
-- [ ] Sorting works properly
-- [ ] Failed conditions are highlighted
+- [x] TypeScript compilation succeeds
+- [x] Component renders with valid data
+- [x] Status indicators display correctly
+- [x] Sorting works properly
+- [x] Failed conditions are highlighted
 
