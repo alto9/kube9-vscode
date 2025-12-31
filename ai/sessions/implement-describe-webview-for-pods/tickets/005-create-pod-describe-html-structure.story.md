@@ -5,7 +5,7 @@ feature_id:
   - pod-describe-webview
 spec_id:
   - pod-describe-webview-spec
-status: pending
+status: completed
 estimated_minutes: 20
 ---
 
@@ -17,19 +17,19 @@ Create the HTML template and CSS styles for the Pod Describe webview. This inclu
 
 ## Acceptance Criteria
 
-- [ ] Create `media/describe/` directory
-- [ ] Create `media/describe/index.html` with basic structure
-- [ ] Create `media/describe/podDescribe.css` with styles
-- [ ] HTML includes header with title and action buttons (Refresh, View YAML)
-- [ ] HTML includes tab navigation (Overview, Containers, Conditions, Events)
-- [ ] HTML includes main content area for tab content
-- [ ] HTML includes loading and error state containers
-- [ ] CSS uses VSCode CSS variables (`--vscode-*`)
-- [ ] CSS includes styles for status badges (healthy/degraded/unhealthy)
-- [ ] CSS includes styles for tab navigation (active/inactive states)
-- [ ] CSS includes styles for container cards and event timeline
-- [ ] CSS includes responsive design considerations
-- [ ] Update DescribeWebview.getWebviewContent() to load this HTML template
+- [x] Create `media/describe/` directory
+- [x] Create `media/describe/index.html` with basic structure
+- [x] Create `media/describe/podDescribe.css` with styles
+- [x] HTML includes header with title and action buttons (Refresh, View YAML)
+- [x] HTML includes tab navigation (Overview, Containers, Conditions, Events)
+- [x] HTML includes main content area for tab content
+- [x] HTML includes loading and error state containers
+- [x] CSS uses VSCode CSS variables (`--vscode-*`)
+- [x] CSS includes styles for status badges (healthy/degraded/unhealthy)
+- [x] CSS includes styles for tab navigation (active/inactive states)
+- [x] CSS includes styles for container cards and event timeline
+- [x] CSS includes responsive design considerations
+- [x] Update DescribeWebview.getWebviewContent() to load this HTML template
 
 ## Files Involved
 
@@ -78,8 +78,8 @@ None - this is independent work.
 
 ## Testing
 
-- [ ] HTML validates correctly
-- [ ] CSS compiles without errors
-- [ ] Webview displays HTML structure when opened
-- [ ] VSCode theme variables apply correctly
+- [x] HTML validates correctly
+- [x] CSS compiles without errors
+- [x] Webview displays HTML structure when opened
+- [x] VSCode theme variables apply correctly
 

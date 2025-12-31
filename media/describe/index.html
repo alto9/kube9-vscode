@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' {{CSP_SOURCE}}; script-src 'unsafe-inline' {{CSP_SOURCE}};">
+    <title>Pod / {{POD_NAME}}</title>
+</head>
+<body>
+    <div class="pod-describe-container">
+        <header class="pod-header">
+            <div style="display: flex; align-items: center;">
+                <h1 id="pod-name">{{POD_NAME}}</h1>
+                <div class="status-badge" id="status-badge"></div>
+            </div>
+            <div class="header-actions">
+                <button id="refresh-btn" class="header-btn">Refresh</button>
+                <button id="view-yaml-btn" class="header-btn">View YAML</button>
+            </div>
+        </header>
+        
+        <nav class="tab-navigation">
+            <button class="tab-btn active" data-tab="overview">Overview</button>
+            <button class="tab-btn" data-tab="containers">Containers</button>
+            <button class="tab-btn" data-tab="conditions">Conditions</button>
+            <button class="tab-btn" data-tab="events">Events</button>
+        </nav>
+        
+        <main class="tab-content" id="tab-content">
+            <!-- Tab content will be populated here via JavaScript -->
+        </main>
+        
+        <div class="loading-state" id="loading-state" style="display: none;">
+            <div class="loading-spinner"></div>
+            <div class="loading-message">Loading Pod details...</div>
+        </div>
+        
+        <div class="error-state" id="error-state" style="display: none;">
+            <div class="error-icon">⚠️</div>
+            <div class="error-message" id="error-message"></div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        let podData = null;
+        let errorMessage = null;
+
+        // Handle messages from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            switch (message.command) {
+                case 'updatePodData':
+                    podData = message.data;
+                    errorMessage = null;
+                    displayPodData();
+                    break;
+                    
+                case 'showError':
+                    errorMessage = message.data.message;
+                    displayError();
+                    break;
+            }
+        });
+
+        function displayPodData() {
+            const loadingEl = document.getElementById('loading-state');
+            const errorEl = document.getElementById('error-state');
+            const contentEl = document.getElementById('tab-content');
+            
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) errorEl.style.display = 'none';
+            
+            if (contentEl && podData) {
+                contentEl.style.display = 'block';
+                // Basic display - full UI will be implemented in later stories
+                contentEl.innerHTML = '<p>Pod data loaded successfully. Full UI coming soon.</p>';
+            }
+        }
+
+        function displayError() {
+            const loadingEl = document.getElementById('loading-state');
+            const errorEl = document.getElementById('error-state');
+            const contentEl = document.getElementById('tab-content');
+            
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (contentEl) contentEl.style.display = 'none';
+            
+            if (errorEl && errorMessage) {
+                errorEl.style.display = 'flex';
+                const errorMsgEl = document.getElementById('error-message');
+                if (errorMsgEl) errorMsgEl.textContent = errorMessage;
+            }
+        }
+
+        // Tab navigation
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const tab = btn.getAttribute('data-tab');
+                // Tab switching will be implemented in later stories
+            });
+        });
+
+        // Header button handlers
+        document.getElementById('refresh-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'refresh' });
+        });
+
+        document.getElementById('view-yaml-btn')?.addEventListener('click', () => {
+            vscode.postMessage({ command: 'viewYaml' });
+        });
+
+        // Send ready message to extension
+        vscode.postMessage({ command: 'ready' });
+    </script>
+</body>
+</html>
+

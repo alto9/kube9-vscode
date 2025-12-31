@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { extractKindFromContextValue } from '../extension';
 import { PodDescribeProvider } from '../providers/PodDescribeProvider';
@@ -278,7 +280,7 @@ export class DescribeWebview {
         DescribeWebview.currentPanel = panel;
 
         // Set the webview's HTML content
-        panel.webview.html = DescribeWebview.getPodWebviewContent(podConfig);
+        panel.webview.html = DescribeWebview.getPodWebviewContent(panel.webview, podConfig);
 
         // Set up message handling
         DescribeWebview.setupMessageHandling(panel, context);
@@ -313,7 +315,7 @@ export class DescribeWebview {
         DescribeWebview.currentPodConfig = podConfig;
 
         // Update panel content
-        DescribeWebview.currentPanel.webview.html = DescribeWebview.getPodWebviewContent(podConfig);
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getPodWebviewContent(DescribeWebview.currentPanel.webview, podConfig);
 
         // Reload Pod data
         await DescribeWebview.loadPodData(podConfig, DescribeWebview.currentPanel);
@@ -406,19 +408,78 @@ export class DescribeWebview {
 
     /**
      * Generate the HTML content for the Pod Describe webview.
-     * Includes message handling setup and proper structure for displaying Pod data.
+     * Loads HTML template and CSS from external files and embeds them.
      * 
+     * @param webview The webview instance
      * @param podConfig Pod configuration
      * @returns HTML content string
      */
-    private static getPodWebviewContent(podConfig: PodTreeItemConfig): string {
+    private static getPodWebviewContent(webview: vscode.Webview, podConfig: PodTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            // Fallback if extension context is not available
+            return this.getFallbackHtml(podConfig);
+        }
+
+        const cspSource = webview.cspSource;
+        const escapedPodName = DescribeWebview.escapeHtml(podConfig.name);
+
+        // Read HTML template
+        let htmlContent = '';
+        try {
+            const htmlPath = path.join(DescribeWebview.extensionContext.extensionPath, 'media', 'describe', 'index.html');
+            htmlContent = fs.readFileSync(htmlPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load HTML template:', error);
+            return this.getFallbackHtml(podConfig);
+        }
+
+        // Read CSS file
+        let cssContent = '';
+        try {
+            const cssPath = path.join(DescribeWebview.extensionContext.extensionPath, 'media', 'describe', 'podDescribe.css');
+            cssContent = fs.readFileSync(cssPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load CSS file:', error);
+            // Continue with minimal CSS fallback
+            cssContent = `
+                body {
+                    font-family: var(--vscode-font-family);
+                    color: var(--vscode-foreground);
+                    background-color: var(--vscode-editor-background);
+                    margin: 0;
+                    padding: 0;
+                }
+            `;
+        }
+
+        // Replace placeholders in HTML
+        htmlContent = htmlContent.replace(/\{\{CSP_SOURCE\}\}/g, cspSource);
+        htmlContent = htmlContent.replace(/\{\{POD_NAME\}\}/g, escapedPodName);
+
+        // Inject CSS into HTML (before </head>)
+        htmlContent = htmlContent.replace(
+            '</head>',
+            `<style>${cssContent}</style></head>`
+        );
+
+        return htmlContent;
+    }
+
+    /**
+     * Fallback HTML content if template files cannot be loaded.
+     * 
+     * @param podConfig Pod configuration
+     * @returns Fallback HTML content string
+     */
+    private static getFallbackHtml(podConfig: PodTreeItemConfig): string {
+        const escapedPodName = DescribeWebview.escapeHtml(podConfig.name);
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
-    <title>Pod / ${DescribeWebview.escapeHtml(podConfig.name)}</title>
+    <title>Pod / ${escapedPodName}</title>
     <style>
         body {
             font-family: var(--vscode-font-family);
@@ -426,20 +487,6 @@ export class DescribeWebview {
             background-color: var(--vscode-editor-background);
             padding: 20px;
             margin: 0;
-        }
-        h1 {
-            margin-top: 0;
-            font-size: 1.5em;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-            border-bottom: 2px solid var(--vscode-panel-border);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .loading {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--vscode-descriptionForeground);
         }
         .error {
             padding: 20px;
@@ -449,77 +496,13 @@ export class DescribeWebview {
             color: var(--vscode-errorForeground);
             margin: 20px 0;
         }
-        .pod-content {
-            display: none;
-        }
-        .pod-content.visible {
-            display: block;
-        }
     </style>
 </head>
 <body>
-    <h1>Pod / ${DescribeWebview.escapeHtml(podConfig.name)}</h1>
-    <div id="loading" class="loading">Loading Pod details...</div>
-    <div id="error" class="error" style="display: none;"></div>
-    <div id="pod-content" class="pod-content">
-        <!-- Pod data will be populated here via JavaScript -->
+    <h1>Pod / ${escapedPodName}</h1>
+    <div class="error">
+        Failed to load webview template. Please check that media/describe/index.html and media/describe/podDescribe.css exist.
     </div>
-
-    <script>
-        const vscode = acquireVsCodeApi();
-        let podData = null;
-        let errorMessage = null;
-
-        // Handle messages from extension
-        window.addEventListener('message', event => {
-            const message = event.data;
-            
-            switch (message.command) {
-                case 'updatePodData':
-                    podData = message.data;
-                    errorMessage = null;
-                    displayPodData();
-                    break;
-                    
-                case 'showError':
-                    errorMessage = message.data.message;
-                    displayError();
-                    break;
-            }
-        });
-
-        function displayPodData() {
-            const loadingEl = document.getElementById('loading');
-            const errorEl = document.getElementById('error');
-            const contentEl = document.getElementById('pod-content');
-            
-            if (loadingEl) loadingEl.style.display = 'none';
-            if (errorEl) errorEl.style.display = 'none';
-            
-            if (contentEl && podData) {
-                contentEl.classList.add('visible');
-                // Basic display - full UI will be implemented in later stories
-                contentEl.innerHTML = '<p>Pod data loaded successfully. Full UI coming soon.</p>';
-            }
-        }
-
-        function displayError() {
-            const loadingEl = document.getElementById('loading');
-            const errorEl = document.getElementById('error');
-            const contentEl = document.getElementById('pod-content');
-            
-            if (loadingEl) loadingEl.style.display = 'none';
-            if (contentEl) contentEl.style.display = 'none';
-            
-            if (errorEl && errorMessage) {
-                errorEl.style.display = 'block';
-                errorEl.textContent = errorMessage;
-            }
-        }
-
-        // Send ready message to extension
-        vscode.postMessage({ command: 'ready' });
-    </script>
 </body>
 </html>`;
     }
