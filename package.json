@@ -126,6 +126,11 @@
         "category": "Kube9"
       },
       {
+        "command": "kube9.viewPodLogs",
+        "title": "View Logs",
+        "category": "Kube9"
+      },
+      {
         "command": "kube9.applyYAML",
         "title": "Apply YAML",
         "category": "Kube9"
@@ -447,6 +452,11 @@
           "group": "kube9@2"
         },
         {
+          "command": "kube9.viewPodLogs",
+          "when": "view == kube9ClusterView && viewItem == resource:Pod",
+          "group": "kube9@2"
+        },
+        {
           "command": "kube9.scaleWorkload",
           "when": "view == kube9ClusterView && (viewItem == resource:Deployment || viewItem == resource:StatefulSet || viewItem == resource:ReplicaSet)",
           "group": "kube9@3"
@@ -555,7 +565,7 @@
     "build": "webpack --mode production && npm run build:webview",
     "watch": "webpack --mode development --watch",
     "compile": "tsc && npm run build:webview",
-    "build:webview": "esbuild src/webview/argocd-application/index.tsx --bundle --outfile=media/argocd-application/main.js --format=iife --platform=browser --minify && esbuild src/webview/event-viewer/index.tsx --bundle --outfile=media/event-viewer/index.js --format=iife --platform=browser --minify",
+    "build:webview": "esbuild src/webview/argocd-application/index.tsx --bundle --outfile=media/argocd-application/main.js --format=iife --platform=browser --minify && esbuild src/webview/event-viewer/index.tsx --bundle --outfile=media/event-viewer/index.js --format=iife --platform=browser --minify && esbuild src/webview/pod-logs/index.tsx --bundle --outfile=media/pod-logs/main.js --format=iife --platform=browser --minify && cp src/webview/pod-logs/styles.css media/pod-logs/styles.css",
     "pretest": "npm run compile && npm run lint",
     "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js'",
     "pretest:unit": "npm run compile && npm run lint",
