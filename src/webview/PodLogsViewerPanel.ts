@@ -1366,10 +1366,10 @@ export class PodLogsViewerPanel {
         extensionUri: vscode.Uri
     ): string {
         const scriptUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'pod-logs', 'main.js')
+            vscode.Uri.joinPath(extensionUri, 'media', 'pod-logs', 'main.js')
         );
         const stylesUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'pod-logs', 'styles.css')
+            vscode.Uri.joinPath(extensionUri, 'media', 'pod-logs', 'styles.css')
         );
         const nonce = getNonce();
         const cspSource = webview.cspSource;

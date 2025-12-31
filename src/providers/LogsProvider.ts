@@ -75,6 +75,14 @@ export class LogsProvider {
         onError: (error: Error) => void,
         onClose: () => void
     ): Promise<void> {
+        const timestamp = new Date().toISOString();
+        console.log(`[LogsProvider ${timestamp}] streamLogs called:`, {
+            namespace,
+            podName,
+            containerName,
+            options
+        });
+
         // Stop any existing stream
         this.stopStream();
 
@@ -98,9 +106,12 @@ export class LogsProvider {
             const writableStream = new Writable({
                 write(chunk: Buffer, encoding: string, callback: (error?: Error | null) => void) {
                     try {
-                        onData(chunk.toString('utf8'));
+                        const data = chunk.toString('utf8');
+                        console.log(`[LogsProvider ${timestamp}] Received log chunk:`, data.substring(0, 100));
+                        onData(data);
                         callback();
                     } catch (error) {
+                        console.error(`[LogsProvider ${timestamp}] Error in write callback:`, error);
                         callback(error as Error);
                     }
                 }
@@ -108,6 +119,7 @@ export class LogsProvider {
 
             // Handle stream errors
             writableStream.on('error', (error: Error) => {
+                console.error(`[LogsProvider ${timestamp}] Stream error:`, error);
                 this.currentStream = null;
                 this.currentAbortController = null;
                 onError(error);
@@ -115,6 +127,7 @@ export class LogsProvider {
 
             // Handle stream close
             writableStream.on('close', () => {
+                console.log(`[LogsProvider ${timestamp}] Stream closed`);
                 this.currentStream = null;
                 this.currentAbortController = null;
                 onClose();
@@ -138,8 +151,10 @@ export class LogsProvider {
 
             this.currentStream = writableStream;
             this.currentAbortController = abortController;
+            console.log(`[LogsProvider ${timestamp}] Stream setup complete`);
 
         } catch (error) {
+            console.error(`[LogsProvider ${timestamp}] Error setting up stream:`, error);
             this.currentStream = null;
             this.currentAbortController = null;
             onError(error as Error);
