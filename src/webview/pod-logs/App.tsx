@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionToWebviewMessage, WebviewToExtensionMessage, InitialState } from '../../types/messages';
-import { Footer, Toolbar, LogDisplay, SearchBar, LoadingState, EmptyState, ErrorState } from './components';
+import { Footer } from './components/Footer';
+import { Toolbar } from './components/Toolbar';
+import { LogDisplay } from './components/LogDisplay';
+import { SearchBar } from './components/SearchBar';
+import { LoadingState, EmptyState, ErrorState } from './components/StateDisplay';
 import { PanelPreferences } from '../../utils/PreferencesManager';
 
 // Acquire VS Code API
@@ -34,12 +38,15 @@ export const App: React.FC = () => {
     // Handle messages from extension
     useEffect(() => {
         if (!vscode) {
+            console.error('[PodLogsApp] vscode API not available!');
             return;
         }
 
+        console.log('[PodLogsApp] Setting up message listener');
+
         const handleMessage = (event: MessageEvent) => {
             const message = event.data as ExtensionToWebviewMessage;
-            console.log('[PodLogsApp] Received message:', message.type);
+            console.log('[PodLogsApp] Received message:', message.type, message);
 
             switch (message.type) {
                 case 'initialState':
@@ -129,6 +136,7 @@ export const App: React.FC = () => {
         window.addEventListener('message', handleMessage);
 
         // Send ready message on mount
+        console.log('[PodLogsApp] Sending ready message to extension');
         sendMessage({ type: 'ready' });
 
         return () => {
@@ -167,32 +175,6 @@ export const App: React.FC = () => {
         // Reset to first match when query changes
         setCurrentMatchIndex(matches.length > 0 ? 0 : -1);
     }, [searchQuery, logs]);
-
-    // Keyboard shortcuts: Ctrl+F / Cmd+F to open search, Ctrl+R / Cmd+R to refresh, Ctrl+Shift+C / Cmd+Shift+C to copy
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl+F / Cmd+F: Open search
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) {
-                e.preventDefault();
-                handleSearchOpen();
-            }
-            // Ctrl+R / Cmd+R: Refresh
-            if ((e.ctrlKey || e.metaKey) && e.key === 'r' && !e.shiftKey) {
-                e.preventDefault();
-                handleRefresh();
-            }
-            // Ctrl+Shift+C / Cmd+Shift+C: Copy
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'c') {
-                e.preventDefault();
-                handleCopy();
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [handleSearchOpen, handleRefresh, handleCopy]);
 
     // Toolbar handlers
     const handleContainerChange = React.useCallback((container: string) => {
@@ -359,6 +341,32 @@ export const App: React.FC = () => {
             : searchMatches.length - 1; // Wrap around to last match
         setCurrentMatchIndex(prevIndex);
     }, [searchMatches, currentMatchIndex]);
+
+    // Keyboard shortcuts: Ctrl+F / Cmd+F to open search, Ctrl+R / Cmd+R to refresh, Ctrl+Shift+C / Cmd+Shift+C to copy
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ctrl+F / Cmd+F: Open search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) {
+                e.preventDefault();
+                handleSearchOpen();
+            }
+            // Ctrl+R / Cmd+R: Refresh
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r' && !e.shiftKey) {
+                e.preventDefault();
+                handleRefresh();
+            }
+            // Ctrl+Shift+C / Cmd+Shift+C: Copy
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'c') {
+                e.preventDefault();
+                handleCopy();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handleSearchOpen, handleRefresh, handleCopy]);
 
     return (
         <div className="pod-logs-viewer">
