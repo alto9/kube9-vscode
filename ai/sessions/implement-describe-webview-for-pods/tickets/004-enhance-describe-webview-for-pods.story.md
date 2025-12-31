@@ -7,7 +7,7 @@ spec_id:
   - pod-describe-webview-spec
 diagram_id:
   - pod-describe-architecture
-status: pending
+status: completed
 estimated_minutes: 30
 ---
 
@@ -19,17 +19,17 @@ Replace the "Coming soon" stub in DescribeWebview with Pod-specific handling. Ad
 
 ## Acceptance Criteria
 
-- [ ] Open `src/webview/DescribeWebview.ts`
-- [ ] Add `PodDescribeProvider` as a private property
-- [ ] Initialize PodDescribeProvider in constructor or show() method
-- [ ] Add `showPodDescribe(podConfig)` public method
-- [ ] Method creates or reveals webview panel
-- [ ] Set webview title to `Pod / {podName}`
-- [ ] Call `podProvider.getPodDetails()` to fetch Pod data
-- [ ] Send Pod data to webview via `postMessage({ command: 'updatePodData', data })`
-- [ ] Handle errors and send error message to webview via `postMessage({ command: 'showError', data })`
-- [ ] Update `getWebviewContent()` to return proper HTML structure (not stub)
-- [ ] Set up message handling for webview-to-extension messages (refresh, viewYaml)
+- [x] Open `src/webview/DescribeWebview.ts`
+- [x] Add `PodDescribeProvider` as a private property
+- [x] Initialize PodDescribeProvider in constructor or show() method
+- [x] Add `showPodDescribe(podConfig)` public method
+- [x] Method creates or reveals webview panel
+- [x] Set webview title to `Pod / {podName}`
+- [x] Call `podProvider.getPodDetails()` to fetch Pod data
+- [x] Send Pod data to webview via `postMessage({ command: 'updatePodData', data })`
+- [x] Handle errors and send error message to webview via `postMessage({ command: 'showError', data })`
+- [x] Update `getWebviewContent()` to return proper HTML structure (not stub)
+- [x] Set up message handling for webview-to-extension messages (refresh, viewYaml)
 
 ## Files Involved
 
@@ -68,9 +68,9 @@ Message protocol:
 
 ## Testing
 
-- [ ] TypeScript compilation succeeds
-- [ ] No linter errors
-- [ ] showPodDescribe() method exists and accepts pod configuration
-- [ ] Method attempts to fetch Pod data
-- [ ] Errors are handled without crashing
+- [x] TypeScript compilation succeeds
+- [x] No linter errors
+- [x] showPodDescribe() method exists and accepts pod configuration
+- [x] Method attempts to fetch Pod data
+- [x] Errors are handled without crashing
 

@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { extractKindFromContextValue } from '../extension';
+import { PodDescribeProvider } from '../providers/PodDescribeProvider';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 
 /**
  * Resource information for the Describe webview.
@@ -10,6 +12,17 @@ interface DescribeResourceInfo {
     name: string;
     namespace?: string;
     contextName: string;
+}
+
+/**
+ * Pod configuration passed from tree item to describe webview.
+ */
+interface PodTreeItemConfig {
+    name: string;
+    namespace: string;
+    status?: string;
+    metadata?: Record<string, unknown>;
+    context: string;
 }
 
 /**
@@ -24,6 +37,18 @@ export class DescribeWebview {
     private static currentPanel: vscode.WebviewPanel | undefined;
     
     private static extensionContext: vscode.ExtensionContext | undefined;
+
+    /**
+     * Pod describe provider instance for fetching Pod data.
+     * Initialized lazily when first needed.
+     */
+    private static podProvider: PodDescribeProvider | undefined;
+
+    /**
+     * Current Pod configuration being displayed.
+     * Used for refresh operations.
+     */
+    private static currentPodConfig: PodTreeItemConfig | undefined;
 
     /**
      * Show the Describe webview for a resource.
@@ -206,6 +231,297 @@ export class DescribeWebview {
             namespace,
             contextName
         });
+    }
+
+    /**
+     * Show the Describe webview for a Pod resource.
+     * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * 
+     * @param context The VS Code extension context
+     * @param podConfig Pod configuration with name, namespace, and context
+     */
+    public static async showPodDescribe(
+        context: vscode.ExtensionContext,
+        podConfig: PodTreeItemConfig
+    ): Promise<void> {
+        // Store the extension context for later use
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.currentPodConfig = podConfig;
+
+        // Initialize Pod provider if not already initialized
+        if (!DescribeWebview.podProvider) {
+            const k8sClient = getKubernetesApiClient();
+            DescribeWebview.podProvider = new PodDescribeProvider(k8sClient);
+        }
+
+        // If we already have a panel, reuse it and update the content
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updatePodPanel(podConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create title with Pod name
+        const title = `Pod / ${podConfig.name}`;
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+
+        // Set the webview's HTML content
+        panel.webview.html = DescribeWebview.getPodWebviewContent(podConfig);
+
+        // Set up message handling
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        // Fetch and send Pod data
+        await DescribeWebview.loadPodData(podConfig, panel);
+
+        // Handle panel disposal
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentPodConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Update an existing panel with new Pod information.
+     * 
+     * @param podConfig Pod configuration
+     */
+    private static async updatePodPanel(podConfig: PodTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+
+        // Update panel title
+        const title = `Pod / ${podConfig.name}`;
+        DescribeWebview.currentPanel.title = title;
+        DescribeWebview.currentPodConfig = podConfig;
+
+        // Update panel content
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getPodWebviewContent(podConfig);
+
+        // Reload Pod data
+        await DescribeWebview.loadPodData(podConfig, DescribeWebview.currentPanel);
+    }
+
+    /**
+     * Load Pod data and send it to the webview.
+     * 
+     * @param podConfig Pod configuration
+     * @param panel Webview panel to send data to
+     */
+    private static async loadPodData(
+        podConfig: PodTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.podProvider) {
+            return;
+        }
+
+        try {
+            const podData = await DescribeWebview.podProvider.getPodDetails(
+                podConfig.name,
+                podConfig.namespace,
+                podConfig.context
+            );
+
+            panel.webview.postMessage({
+                command: 'updatePodData',
+                data: podData
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: `Failed to load Pod details: ${errorMessage}`
+                }
+            });
+        }
+    }
+
+    /**
+     * Set up bidirectional message handling between extension and webview.
+     * 
+     * @param panel The webview panel
+     * @param context The extension context
+     */
+    private static setupMessageHandling(
+        panel: vscode.WebviewPanel,
+        context: vscode.ExtensionContext
+    ): void {
+        panel.webview.onDidReceiveMessage(
+            async (message) => {
+                if (!DescribeWebview.currentPodConfig) {
+                    return;
+                }
+
+                switch (message.command) {
+                    case 'refresh':
+                        // Re-fetch Pod data and send update
+                        await DescribeWebview.loadPodData(
+                            DescribeWebview.currentPodConfig,
+                            panel
+                        );
+                        break;
+
+                    case 'viewYaml':
+                        // TODO: Implement YAML view functionality
+                        vscode.window.showInformationMessage('View YAML functionality coming soon');
+                        break;
+
+                    case 'openTerminal':
+                        // TODO: Implement terminal opening functionality
+                        vscode.window.showInformationMessage('Open terminal functionality coming soon');
+                        break;
+
+                    case 'startPortForward':
+                        // TODO: Implement port forwarding functionality
+                        vscode.window.showInformationMessage('Port forwarding functionality coming soon');
+                        break;
+
+                    default:
+                        console.warn('Unknown message command:', message.command);
+                }
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Generate the HTML content for the Pod Describe webview.
+     * Includes message handling setup and proper structure for displaying Pod data.
+     * 
+     * @param podConfig Pod configuration
+     * @returns HTML content string
+     */
+    private static getPodWebviewContent(podConfig: PodTreeItemConfig): string {
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>Pod / ${DescribeWebview.escapeHtml(podConfig.name)}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            margin: 0;
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 1.5em;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            border-bottom: 2px solid var(--vscode-panel-border);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--vscode-descriptionForeground);
+        }
+        .error {
+            padding: 20px;
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 4px;
+            color: var(--vscode-errorForeground);
+            margin: 20px 0;
+        }
+        .pod-content {
+            display: none;
+        }
+        .pod-content.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pod / ${DescribeWebview.escapeHtml(podConfig.name)}</h1>
+    <div id="loading" class="loading">Loading Pod details...</div>
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="pod-content" class="pod-content">
+        <!-- Pod data will be populated here via JavaScript -->
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        let podData = null;
+        let errorMessage = null;
+
+        // Handle messages from extension
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            switch (message.command) {
+                case 'updatePodData':
+                    podData = message.data;
+                    errorMessage = null;
+                    displayPodData();
+                    break;
+                    
+                case 'showError':
+                    errorMessage = message.data.message;
+                    displayError();
+                    break;
+            }
+        });
+
+        function displayPodData() {
+            const loadingEl = document.getElementById('loading');
+            const errorEl = document.getElementById('error');
+            const contentEl = document.getElementById('pod-content');
+            
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (errorEl) errorEl.style.display = 'none';
+            
+            if (contentEl && podData) {
+                contentEl.classList.add('visible');
+                // Basic display - full UI will be implemented in later stories
+                contentEl.innerHTML = '<p>Pod data loaded successfully. Full UI coming soon.</p>';
+            }
+        }
+
+        function displayError() {
+            const loadingEl = document.getElementById('loading');
+            const errorEl = document.getElementById('error');
+            const contentEl = document.getElementById('pod-content');
+            
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (contentEl) contentEl.style.display = 'none';
+            
+            if (errorEl && errorMessage) {
+                errorEl.style.display = 'block';
+                errorEl.textContent = errorMessage;
+            }
+        }
+
+        // Send ready message to extension
+        vscode.postMessage({ command: 'ready' });
+    </script>
+</body>
+</html>`;
     }
 }
 
