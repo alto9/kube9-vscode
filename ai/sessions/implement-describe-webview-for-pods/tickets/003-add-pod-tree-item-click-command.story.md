@@ -5,7 +5,7 @@ feature_id:
   - pod-describe-webview
 spec_id:
   - pod-describe-webview-spec
-status: pending
+status: completed
 estimated_minutes: 15
 ---
 
@@ -17,12 +17,12 @@ Enhance PodTreeItem to trigger the Describe webview when a user left-clicks on a
 
 ## Acceptance Criteria
 
-- [ ] Open `src/tree/items/PodTreeItem.ts`
-- [ ] Add `command` property to PodTreeItem constructor
-- [ ] Set command to `kube9.describePod`
-- [ ] Pass Pod configuration (name, namespace, status, metadata, context) as command arguments
-- [ ] Command should only trigger on left-click, not right-click
-- [ ] Ensure no breaking changes to existing Pod tree item functionality
+- [x] Open `src/tree/items/PodTreeItem.ts`
+- [x] Add `command` property to PodTreeItem constructor
+- [x] Set command to `kube9.describePod`
+- [x] Pass Pod configuration (name, namespace, status, metadata, context) as command arguments
+- [x] Command should only trigger on left-click, not right-click
+- [x] Ensure no breaking changes to existing Pod tree item functionality
 
 ## Files Involved
 
@@ -56,8 +56,8 @@ None - this is independent work.
 
 ## Testing
 
-- [ ] TypeScript compilation succeeds
-- [ ] No linter errors
-- [ ] Left-clicking a Pod in tree view attempts to execute `kube9.describePod` command
-- [ ] Pod information is passed correctly in command arguments
+- [x] TypeScript compilation succeeds
+- [x] No linter errors
+- [x] Left-clicking a Pod in tree view attempts to execute `kube9.describePod` command
+- [x] Pod information is passed correctly in command arguments
 

@@ -63,7 +63,18 @@ export class PodTreeItem extends ClusterTreeItem {
         // Set tooltip with detailed information
         this.tooltip = `Pod: ${podInfo.name}\nNamespace: ${podInfo.namespace}\nStatus: ${podInfo.status}`;
         
-        // No command - clicking a pod is a no-op at this stage (placeholder for future)
+        // Set command to open Describe webview on left-click
+        this.command = {
+            command: 'kube9.describePod',
+            title: 'Describe Pod',
+            arguments: [{
+                name: podInfo.name,
+                namespace: podInfo.namespace,
+                status: podInfo.status,
+                metadata: {}, // Metadata not available in PodInfo, will be fetched by provider
+                context: resourceData.context.name
+            }]
+        };
     }
 
     /**
