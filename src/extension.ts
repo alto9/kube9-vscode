@@ -253,6 +253,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 /**
+ * Pod configuration passed from tree item to describe webview.
+ */
+interface PodTreeItemConfig {
+    name: string;
+    namespace: string;
+    status?: string;
+    metadata?: Record<string, unknown>;
+    context: string;
+}
+
+/**
  * Extract the Kubernetes kind from a context value string.
  * Handles the 'resource:Kind' pattern used in tree items.
  * 
@@ -478,6 +489,26 @@ function registerCommands(): void {
     );
     context.subscriptions.push(describeResourceCmd);
     disposables.push(describeResourceCmd);
+    
+    // Register describe Pod command
+    const describePodCmd = vscode.commands.registerCommand(
+        'kube9.describePod',
+        async (podConfig: PodTreeItemConfig) => {
+            try {
+                if (!podConfig || !podConfig.name || !podConfig.namespace) {
+                    throw new Error('Invalid Pod configuration');
+                }
+                
+                await DescribeWebview.showPodDescribe(context, podConfig);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to describe Pod:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe Pod: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describePodCmd);
+    disposables.push(describePodCmd);
     
     // Register describe resource (raw) command
     const describeRawCmd = vscode.commands.registerCommand(

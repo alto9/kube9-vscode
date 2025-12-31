@@ -5,7 +5,7 @@ feature_id:
   - pod-describe-webview
 spec_id:
   - pod-describe-webview-spec
-status: pending
+status: completed
 estimated_minutes: 10
 ---
 
@@ -17,12 +17,12 @@ Register the `kube9.describePod` command in the extension that will be triggered
 
 ## Acceptance Criteria
 
-- [ ] Open `src/extension.ts`
-- [ ] Register `kube9.describePod` command in the activate() function
-- [ ] Command handler accepts Pod configuration as parameter
-- [ ] Handler calls `DescribeWebview.showPodDescribe(context, podConfig)`
-- [ ] Add error handling for invalid Pod configuration
-- [ ] Show error notification if Pod data is missing or invalid
+- [x] Open `src/extension.ts`
+- [x] Register `kube9.describePod` command in the activate() function
+- [x] Command handler accepts Pod configuration as parameter
+- [x] Handler calls `DescribeWebview.showPodDescribe(context, podConfig)`
+- [x] Add error handling for invalid Pod configuration
+- [x] Show error notification if Pod data is missing or invalid
 
 ## Files Involved
 
@@ -57,8 +57,8 @@ context.subscriptions.push(
 
 ## Testing
 
-- [ ] TypeScript compilation succeeds
-- [ ] Command appears in extension activation
-- [ ] Command executes without errors when called with valid Pod configuration
-- [ ] Error notification displays for invalid configuration
+- [x] TypeScript compilation succeeds
+- [x] Command appears in extension activation
+- [x] Command executes without errors when called with valid Pod configuration
+- [x] Error notification displays for invalid configuration
 
