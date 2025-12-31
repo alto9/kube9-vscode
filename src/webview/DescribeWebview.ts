@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { extractKindFromContextValue } from '../extension';
 import { PodDescribeProvider } from '../providers/PodDescribeProvider';
@@ -408,7 +406,7 @@ export class DescribeWebview {
 
     /**
      * Generate the HTML content for the Pod Describe webview.
-     * Loads HTML template and CSS from external files and embeds them.
+     * Loads React bundle from webpack build output.
      * 
      * @param webview The webview instance
      * @param podConfig Pod configuration
@@ -422,47 +420,27 @@ export class DescribeWebview {
 
         const cspSource = webview.cspSource;
         const escapedPodName = DescribeWebview.escapeHtml(podConfig.name);
-
-        // Read HTML template
-        let htmlContent = '';
-        try {
-            const htmlPath = path.join(DescribeWebview.extensionContext.extensionPath, 'media', 'describe', 'index.html');
-            htmlContent = fs.readFileSync(htmlPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load HTML template:', error);
-            return this.getFallbackHtml(podConfig);
-        }
-
-        // Read CSS file
-        let cssContent = '';
-        try {
-            const cssPath = path.join(DescribeWebview.extensionContext.extensionPath, 'media', 'describe', 'podDescribe.css');
-            cssContent = fs.readFileSync(cssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load CSS file:', error);
-            // Continue with minimal CSS fallback
-            cssContent = `
-                body {
-                    font-family: var(--vscode-font-family);
-                    color: var(--vscode-foreground);
-                    background-color: var(--vscode-editor-background);
-                    margin: 0;
-                    padding: 0;
-                }
-            `;
-        }
-
-        // Replace placeholders in HTML
-        htmlContent = htmlContent.replace(/\{\{CSP_SOURCE\}\}/g, cspSource);
-        htmlContent = htmlContent.replace(/\{\{POD_NAME\}\}/g, escapedPodName);
-
-        // Inject CSS into HTML (before </head>)
-        htmlContent = htmlContent.replace(
-            '</head>',
-            `<style>${cssContent}</style></head>`
+        
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pod-describe', 'index.js')
         );
 
-        return htmlContent;
+        const nonce = getNonce();
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>Pod / ${escapedPodName}</title>
+</head>
+<body>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
     }
 
     /**
@@ -501,10 +479,22 @@ export class DescribeWebview {
 <body>
     <h1>Pod / ${escapedPodName}</h1>
     <div class="error">
-        Failed to load webview template. Please check that media/describe/index.html and media/describe/podDescribe.css exist.
+        Failed to load webview template. Please check that dist/media/pod-describe/index.js exists.
     </div>
 </body>
 </html>`;
     }
+}
+
+/**
+ * Generate a random nonce for Content Security Policy.
+ */
+function getNonce(): string {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
 }
 
