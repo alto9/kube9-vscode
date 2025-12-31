@@ -17,7 +17,9 @@ const extensionConfig = {
   },
   devtool: 'source-map',
   externals: {
-    vscode: 'commonjs vscode' // The vscode-module is created on-the-fly and must be excluded
+    vscode: 'commonjs vscode', // The vscode-module is created on-the-fly and must be excluded
+    bufferutil: 'commonjs bufferutil', // Optional ws dependency
+    'utf-8-validate': 'commonjs utf-8-validate' // Optional ws dependency
   },
   resolve: {
     extensions: ['.ts', '.js']
