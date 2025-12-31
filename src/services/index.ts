@@ -5,3 +5,10 @@ export {
     ClusterConfig
 } from './ClusterCustomizationService';
 
+export {
+    PortForwardManager,
+    PortForwardConfig,
+    PortForwardInfo,
+    PortForwardStatus
+} from './PortForwardManager';
+

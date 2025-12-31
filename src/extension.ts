@@ -38,6 +38,14 @@ import { showCacheStatsCommand } from './commands/cacheStats';
 import { EventsCommands } from './commands/EventsCommands';
 import { EventViewerPanel } from './webview/EventViewerPanel';
 import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
+import { stopPortForwardCommand } from './commands/stopPortForward';
+import { stopAllPortForwardsCommand } from './commands/stopAllPortForwards';
+import { showPortForwardsCommand } from './commands/showPortForwards';
+import { PortForwardManager } from './services/PortForwardManager';
+import { portForwardPodCommand } from './commands/portForwardPod';
+import { copyPortForwardURLCommand } from './commands/copyPortForwardURL';
+import { viewPortForwardPodCommand } from './commands/viewPortForwardPod';
+import { restartPortForwardCommand } from './commands/restartPortForward';
 
 /**
  * Global extension context accessible to all components.
@@ -128,6 +136,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // This is non-blocking and will gracefully handle missing/invalid configs
         const kubeconfig = await KubeconfigParser.parseKubeconfig();
         console.log(`Kubeconfig parsing completed. Found ${kubeconfig.clusters.length} cluster(s).`);
+        
+        // Initialize PortForwardManager singleton
+        const portForwardManager = PortForwardManager.getInstance();
+        
+        // Register for cleanup on deactivate
+        context.subscriptions.push({
+            dispose: () => portForwardManager.dispose()
+        });
         
         // Register commands first before populating the tree
         // This ensures commands are available when tree items are clicked
@@ -1169,6 +1185,62 @@ function registerCommands(): void {
     );
     context.subscriptions.push(openEventsViewerFromPaletteCmd);
     disposables.push(openEventsViewerFromPaletteCmd);
+    
+    // Register port forward pod command
+    const portForwardPodCmd = vscode.commands.registerCommand(
+        'kube9.portForwardPod',
+        portForwardPodCommand
+    );
+    context.subscriptions.push(portForwardPodCmd);
+    disposables.push(portForwardPodCmd);
+    
+    // Register stop port forward command
+    const stopPortForwardCmd = vscode.commands.registerCommand(
+        'kube9.stopPortForward',
+        stopPortForwardCommand
+    );
+    context.subscriptions.push(stopPortForwardCmd);
+    disposables.push(stopPortForwardCmd);
+    
+    // Register stop all port forwards command
+    const stopAllPortForwardsCmd = vscode.commands.registerCommand(
+        'kube9.stopAllPortForwards',
+        stopAllPortForwardsCommand
+    );
+    context.subscriptions.push(stopAllPortForwardsCmd);
+    disposables.push(stopAllPortForwardsCmd);
+    
+    // Register show port forwards command
+    const showPortForwardsCmd = vscode.commands.registerCommand(
+        'kube9.showPortForwards',
+        showPortForwardsCommand
+    );
+    context.subscriptions.push(showPortForwardsCmd);
+    disposables.push(showPortForwardsCmd);
+    
+    // Register copy port forward URL command
+    const copyPortForwardURLCmd = vscode.commands.registerCommand(
+        'kube9.copyPortForwardURL',
+        copyPortForwardURLCommand
+    );
+    context.subscriptions.push(copyPortForwardURLCmd);
+    disposables.push(copyPortForwardURLCmd);
+    
+    // Register view port forward pod command
+    const viewPortForwardPodCmd = vscode.commands.registerCommand(
+        'kube9.viewPortForwardPod',
+        viewPortForwardPodCommand
+    );
+    context.subscriptions.push(viewPortForwardPodCmd);
+    disposables.push(viewPortForwardPodCmd);
+    
+    // Register restart port forward command
+    const restartPortForwardCmd = vscode.commands.registerCommand(
+        'kube9.restartPortForward',
+        restartPortForwardCommand
+    );
+    context.subscriptions.push(restartPortForwardCmd);
+    disposables.push(restartPortForwardCmd);
 }
 
 /**

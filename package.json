@@ -1,7 +1,7 @@
 {
   "name": "kube9-vscode",
   "displayName": "Kube9 - Kubernetes Cluster Manager",
-  "version": "1.9.5",
+  "version": "1.10.0",
   "license": "MIT",
   "author": "Alto9",
   "publisher": "Alto9",
@@ -232,6 +232,41 @@
         "command": "kube9.openEventsViewer",
         "title": "Open Events Viewer",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.portForwardPod",
+        "title": "Port Forward",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.stopPortForward",
+        "title": "Stop Port Forward",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.stopAllPortForwards",
+        "title": "Stop All Port Forwards",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.showPortForwards",
+        "title": "Show Port Forwards",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.copyPortForwardURL",
+        "title": "Copy Local URL",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.viewPortForwardPod",
+        "title": "View Pod",
+        "category": "kube9"
+      },
+      {
+        "command": "kube9.restartPortForward",
+        "title": "Restart Forward",
+        "category": "kube9"
       }
     ],
     "menus": {
@@ -360,6 +395,22 @@
         {
           "command": "kube9.events.showDetails",
           "when": "false"
+        },
+        {
+          "command": "kube9.portForwardPod",
+          "when": "false"
+        },
+        {
+          "command": "kube9.stopPortForward",
+          "when": "false"
+        },
+        {
+          "command": "kube9.showPortForwards",
+          "when": "true"
+        },
+        {
+          "command": "kube9.stopAllPortForwards",
+          "when": "true"
         }
       ],
       "view/title": [
@@ -449,6 +500,31 @@
           "command": "kube9.argocd.copyNamespace",
           "when": "view == kube9ClusterView && viewItem == argocd-application",
           "group": "argocd@3"
+        },
+        {
+          "command": "kube9.portForwardPod",
+          "when": "view == kube9ClusterView && viewItem == resource:Pod",
+          "group": "kube9-networking@1"
+        },
+        {
+          "command": "kube9.stopPortForward",
+          "when": "view == kube9ClusterView && viewItem == portForward",
+          "group": "kube9@1"
+        },
+        {
+          "command": "kube9.copyPortForwardURL",
+          "when": "view == kube9ClusterView && viewItem == portForward",
+          "group": "kube9@2"
+        },
+        {
+          "command": "kube9.viewPortForwardPod",
+          "when": "view == kube9ClusterView && viewItem == portForward",
+          "group": "kube9@3"
+        },
+        {
+          "command": "kube9.restartPortForward",
+          "when": "view == kube9ClusterView && viewItem == portForward",
+          "group": "kube9@4"
         }
       ],
       "editor/context": [
@@ -543,6 +619,7 @@
     "@kubernetes/client-node": "^1.4.0",
     "js-yaml": "^4.1.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "uuid": "^9.0.0"
   }
 }

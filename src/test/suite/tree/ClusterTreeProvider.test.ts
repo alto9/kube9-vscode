@@ -69,8 +69,10 @@ suite('ClusterTreeProvider Test Suite', () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (kubectlContextModule as any).getNamespaceForContext = originalGetNamespaceForContext;
         
-        // Dispose provider
-        provider.dispose();
+        // Dispose provider if it was created
+        if (provider) {
+            provider.dispose();
+        }
     });
 
     suite('getTreeItem', () => {
