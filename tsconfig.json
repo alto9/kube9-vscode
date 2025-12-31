@@ -26,7 +26,8 @@
     ".vscode-test",
     "src/webview/argocd-application",
     "src/webview/event-viewer",
-    "src/webview/pod-logs"
+    "src/webview/pod-logs",
+    "src/webview/pod-describe"
   ]
 }
 
