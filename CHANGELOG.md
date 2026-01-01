@@ -1,3 +1,48 @@
+# [1.12.0](https://github.com/alto9/kube9-vscode/compare/v1.11.0...v1.12.0) (2026-01-01)
+
+
+### Bug Fixes
+
+* add error handling and auto-reconnect for pod logs streaming ([a2934f9](https://github.com/alto9/kube9-vscode/commit/a2934f909ca86c0330e67d3fb9eb923d8fe48d03))
+* pod log viewer logs not loading after container selection ([6906ef7](https://github.com/alto9/kube9-vscode/commit/6906ef73179b1f21760f773a1c4d1dcf6a5be5fe))
+* remove unused PodLogsViewerPanel re-export causing duplicate identifier ([6e409fd](https://github.com/alto9/kube9-vscode/commit/6e409fd8a1f843eedfd1879a4f2990b8d20cbd11))
+* remove unused PodLogsViewerPanel re-export causing duplicate identifier error ([13cbc28](https://github.com/alto9/kube9-vscode/commit/13cbc288b5285d765cf4e314dac06154f9d2dc5a))
+* resolve circular dependency causing duplicate identifier error ([626202d](https://github.com/alto9/kube9-vscode/commit/626202df7c6999e14c63485e6e54533982710c80))
+* webpack dependency build issue ([e91be39](https://github.com/alto9/kube9-vscode/commit/e91be39dfd8b5aab85f596590c06866dbd88db3f))
+
+
+### Features
+
+* add 30-second data caching for node describe ([cacdab6](https://github.com/alto9/kube9-vscode/commit/cacdab6867c9264ffaa4f7e37649b0634be5d87f))
+* add container switching and previous logs support to pod logs viewer ([dfb60a4](https://github.com/alto9/kube9-vscode/commit/dfb60a4faba28982d4b3d9fdec30b1a7feca51db))
+* add Describe (Raw) command for nodes ([0d8d6de](https://github.com/alto9/kube9-vscode/commit/0d8d6de640d16229f3dd60dac47f983df627e6d5))
+* add getNodeDetails method to NodeCommands ([6605e1f](https://github.com/alto9/kube9-vscode/commit/6605e1f089d767d2ec2dc3921b349470064b69fd))
+* add HTML structure and styles for node describe webview ([84c8461](https://github.com/alto9/kube9-vscode/commit/84c8461ea6a24fca9b90f4ad6ad1333b46291735))
+* add keyboard shortcuts and accessibility features to pod logs viewer ([553561b](https://github.com/alto9/kube9-vscode/commit/553561b075ef1d137d03bfa988a805050377b153))
+* add line limit selector and timestamps toggle to pod logs viewer ([4906e0a](https://github.com/alto9/kube9-vscode/commit/4906e0a2c878e60fcae0aa481c492e29c69c69a5))
+* add loading, empty, and error states to pod logs viewer ([5f86550](https://github.com/alto9/kube9-vscode/commit/5f86550644fc0837b36c522522d952f1b17e7255))
+* add LogsProvider class for Kubernetes pod log streaming ([a56fade](https://github.com/alto9/kube9-vscode/commit/a56fadee715210c0fbac676628eb0821115f2f97))
+* add node describe data transformer ([cde14d9](https://github.com/alto9/kube9-vscode/commit/cde14d9bd40163f53ebcedce532fb22c772878a4))
+* add NodeDescribeWebview class for node details webview ([f2d9cb8](https://github.com/alto9/kube9-vscode/commit/f2d9cb8e7a158e86e71847b98ec5c8316892c147))
+* add pod navigation from node describe webview ([2e9fa1e](https://github.com/alto9/kube9-vscode/commit/2e9fa1e6ee47290c6402d858c4c16cd82ea88fbf))
+* add PodCommands.getPodsOnNode() method ([1e4d429](https://github.com/alto9/kube9-vscode/commit/1e4d429883ed4a1d4e2b592e5860d9bfe051cfbd))
+* add PreferencesManager for per-cluster pod logs preferences ([3e30984](https://github.com/alto9/kube9-vscode/commit/3e30984e7892a6411240f58738b6cebff859b428))
+* add React webview scaffolding for pod logs viewer ([e11afe4](https://github.com/alto9/kube9-vscode/commit/e11afe47e196b94ede7d84022c8dcd4de000f289))
+* add webview HTML template with CSP for pod logs viewer ([a99da03](https://github.com/alto9/kube9-vscode/commit/a99da03bd21e40b91bbf6824b39d9cdeadd07d77))
+* create PodLogsViewerPanel class with cluster-specific registry ([843e807](https://github.com/alto9/kube9-vscode/commit/843e8074316d7bb3c510eed3930a63cea7feba4c))
+* fix pod log viewing bugs ([e62ddb5](https://github.com/alto9/kube9-vscode/commit/e62ddb5a8aa7d381cb560dd89ad32959417f7f42))
+* implement container selection for multi-container pods ([2df699e](https://github.com/alto9/kube9-vscode/commit/2df699e0e7cbd828c00948e5b5427c670e2a1ed2))
+* implement follow mode toggle for pod logs viewer ([7001746](https://github.com/alto9/kube9-vscode/commit/70017460a00ab19a461b720948b27694b249458d))
+* implement log streaming from Kubernetes API to webview ([48458da](https://github.com/alto9/kube9-vscode/commit/48458da49aa136902eaea8bcb42ae3761e39fcde)), closes [#011-implement-log-streaming](https://github.com/alto9/kube9-vscode/issues/011-implement-log-streaming)
+* implement message protocol for pod logs viewer ([5b212b5](https://github.com/alto9/kube9-vscode/commit/5b212b5d4d1561da9a12112f72f492e6a25513fc))
+* implement toolbar and footer components for pod logs viewer ([e630cbc](https://github.com/alto9/kube9-vscode/commit/e630cbc42ddd6c6f20795c341bc630557c8e1b38))
+* implement webview JavaScript rendering logic for node describe ([3c38c90](https://github.com/alto9/kube9-vscode/commit/3c38c90662db5bdea73278407ac1cc9218277828))
+* **pod-logs:** add copy, export, and search actions ([5ca5aff](https://github.com/alto9/kube9-vscode/commit/5ca5affa10eda6ee08d9853e447e8b5dbd85299e))
+* **pod-logs:** implement LogDisplay with virtual scrolling and JSON syntax highlighting ([373f5ad](https://github.com/alto9/kube9-vscode/commit/373f5ad982315f13d9f93a158c0f6a631225a973)), closes [#010-implement-logdisplay-with-virtual-scrolling](https://github.com/alto9/kube9-vscode/issues/010-implement-logdisplay-with-virtual-scrolling) [#010-add-json-syntax-highlighting](https://github.com/alto9/kube9-vscode/issues/010-add-json-syntax-highlighting)
+* register view pod logs command ([d18cef6](https://github.com/alto9/kube9-vscode/commit/d18cef6840c1da0417b8abc5255a70339f4066ec))
+* **utils:** add Kubernetes quantity parsing and time formatting utilities ([d29b71c](https://github.com/alto9/kube9-vscode/commit/d29b71c90cf60373ec2e5b30e6ab9560938d0cc5))
+* wire up tree view node click to open describe webview ([0dbb730](https://github.com/alto9/kube9-vscode/commit/0dbb730ac71d4c5f39e8346fc41b216d907a4337))
+
 # [1.11.0](https://github.com/alto9/kube9-vscode/compare/v1.10.0...v1.11.0) (2025-12-31)
 
 
