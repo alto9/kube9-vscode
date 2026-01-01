@@ -162,6 +162,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }> = new Map();
 
     /**
+     * The VS Code TreeView instance for this provider.
+     * Used to reveal and select items in the tree view.
+     */
+    private treeView?: vscode.TreeView<ClusterTreeItem>;
+
+    /**
      * Creates a new ClusterTreeProvider instance.
      * 
      * @param customizationService - Optional cluster customization service for managing aliases
@@ -1125,6 +1131,16 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Set the TreeView instance for this provider.
+     * This allows the provider to reveal and select items in the tree view.
+     * 
+     * @param treeView The VS Code TreeView instance
+     */
+    setTreeView(treeView: vscode.TreeView<ClusterTreeItem>): void {
+        this.treeView = treeView;
+    }
+
+    /**
      * Get or create the ArgoCDService instance.
      * Creates the service lazily when needed, using the current kubeconfig path.
      * 
@@ -1676,6 +1692,131 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 // to avoid confusing users with unclear error messages
                 console.error(`Unknown error for cluster ${clusterName}: ${error.getDetails()}`);
                 break;
+        }
+    }
+
+    /**
+     * Reveal and select a pod in the tree view by name and namespace.
+     * Traverses the tree structure to find the pod and reveals it.
+     * 
+     * @param podName The name of the pod to reveal
+     * @param namespace The namespace of the pod
+     */
+    public async revealPod(podName: string, namespace: string): Promise<void> {
+        if (!this.treeView) {
+            vscode.window.showErrorMessage('Tree view not initialized');
+            return;
+        }
+
+        if (!this.kubeconfig) {
+            vscode.window.showErrorMessage('Kubeconfig not loaded');
+            return;
+        }
+
+        try {
+            // Get current context to find the cluster
+            const currentContext = this.kubeconfig.currentContext;
+            if (!currentContext) {
+                vscode.window.showErrorMessage('No current context available');
+                return;
+            }
+
+            // Find the cluster item
+            const clusterItem = this.clusterItemsCache.get(currentContext);
+            if (!clusterItem) {
+                // Try to get it from root clusters
+                const rootItems = await this.getClusters();
+                const foundCluster = rootItems.find(item => 
+                    item.type === 'cluster' && 
+                    item.resourceData?.context?.name === currentContext
+                );
+                
+                if (!foundCluster) {
+                    vscode.window.showInformationMessage(`Pod '${podName}' not found in tree view (cluster not found)`);
+                    return;
+                }
+                
+                // Use found cluster
+                await this.findAndRevealPod(foundCluster, podName, namespace);
+                return;
+            }
+
+            await this.findAndRevealPod(clusterItem, podName, namespace);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to reveal pod:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to reveal pod: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Helper method to find and reveal a pod within a cluster.
+     * 
+     * @param clusterItem The cluster tree item
+     * @param podName The name of the pod to find
+     * @param namespace The namespace of the pod
+     */
+    private async findAndRevealPod(
+        clusterItem: ClusterTreeItem,
+        podName: string,
+        namespace: string
+    ): Promise<void> {
+        if (!this.treeView || !clusterItem.resourceData) {
+            return;
+        }
+
+        try {
+            // Get Workloads category (getCategories is synchronous)
+            const categories = this.getCategories(clusterItem);
+            const workloadsCategory = categories.find(cat => cat.type === 'workloads');
+            
+            if (!workloadsCategory) {
+                vscode.window.showInformationMessage(`Pod '${podName}' not found in tree view (Workloads category not found)`);
+                return;
+            }
+
+            // Get workload subcategories (Deployments, StatefulSets, DaemonSets, CronJobs)
+            const workloadSubcategories = await this.getCategoryChildren(workloadsCategory);
+            
+            // Search through each workload subcategory
+            for (const subcategory of workloadSubcategories) {
+                // Get workload resources (deployments, statefulsets, etc.)
+                const workloadResources = await this.getCategoryChildren(subcategory);
+                
+                // Search through each workload resource
+                for (const workloadResource of workloadResources) {
+                    // Get pods for this workload resource
+                    const pods = await this.getCategoryChildren(workloadResource);
+                    
+                    // Find the matching pod
+                    const matchingPod = pods.find(pod => {
+                        const podResourceName = pod.resourceData?.resourceName || 
+                            (typeof pod.label === 'string' ? pod.label : pod.label?.toString() || '');
+                        const podNamespace = pod.resourceData?.namespace || '';
+                        return podResourceName === podName && podNamespace === namespace;
+                    });
+                    
+                    if (matchingPod) {
+                        // Found the pod! Reveal it
+                        await this.treeView.reveal(matchingPod, { 
+                            select: true, 
+                            focus: true, 
+                            expand: true 
+                        });
+                        
+                        // Focus the tree view
+                        await vscode.commands.executeCommand('kube9ClusterView.focus');
+                        return;
+                    }
+                }
+            }
+
+            // Pod not found
+            vscode.window.showInformationMessage(`Pod '${podName}' not found in tree view`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error finding pod:', errorMessage);
+            vscode.window.showInformationMessage(`Pod '${podName}' not found in tree view`);
         }
     }
 

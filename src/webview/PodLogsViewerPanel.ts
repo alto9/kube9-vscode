@@ -1,21 +1,7 @@
 import * as vscode from 'vscode';
 import { LogsProvider } from '../providers/LogsProvider';
 import { PreferencesManager } from '../utils/PreferencesManager';
-import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InitialState } from '../types/messages';
-
-/**
- * Interface for storing pod information.
- * Represents the current pod being viewed in the panel.
- */
-export interface PodInfo {
-    name: string;
-    namespace: string;
-    container: string;
-    contextName: string;
-    clusterName: string;
-    /** Whether the container has crashed/restarted (has previous logs available) */
-    hasCrashed?: boolean;
-}
+import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InitialState, PodInfo } from '../types/messages';
 
 /**
  * Interface for storing panel information.

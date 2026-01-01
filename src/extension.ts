@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { GlobalState } from './state/GlobalState';
 import { WelcomeWebview } from './webview/WelcomeWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DescribeWebview } from './webview/DescribeWebview';
 import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
 import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
+import { NodeDescribeWebview } from './webview/NodeDescribeWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterCustomizationService } from './services/ClusterCustomizationService';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
@@ -37,7 +40,6 @@ import {
 import { showCacheStatsCommand } from './commands/cacheStats';
 import { EventsCommands } from './commands/EventsCommands';
 import { EventViewerPanel } from './webview/EventViewerPanel';
-import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { stopPortForwardCommand } from './commands/stopPortForward';
 import { stopAllPortForwardsCommand } from './commands/stopAllPortForwards';
 import { showPortForwardsCommand } from './commands/showPortForwards';
@@ -46,6 +48,12 @@ import { portForwardPodCommand } from './commands/portForwardPod';
 import { copyPortForwardURLCommand } from './commands/copyPortForwardURL';
 import { viewPortForwardPodCommand } from './commands/viewPortForwardPod';
 import { restartPortForwardCommand } from './commands/restartPortForward';
+import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
+
+/**
+ * Promisified version of execFile for async/await usage.
+ */
+const execFileAsync = promisify(execFile);
 
 /**
  * Global extension context accessible to all components.
@@ -157,10 +165,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Initialize and register tree view provider with customization service
         clusterTreeProvider = new ClusterTreeProvider(clusterCustomizationService);
-        const treeViewDisposable = vscode.window.registerTreeDataProvider(
-            'kube9ClusterView',
-            clusterTreeProvider
-        );
+        
+        // Create TreeView instance and store it in the provider
+        const treeView = vscode.window.createTreeView('kube9ClusterView', {
+            treeDataProvider: clusterTreeProvider
+        });
+        clusterTreeProvider.setTreeView(treeView);
+        
+        const treeViewDisposable = treeView;
         context.subscriptions.push(treeViewDisposable);
         disposables.push(treeViewDisposable);
         console.log('Cluster tree view registered successfully.');
@@ -1241,6 +1253,134 @@ function registerCommands(): void {
     );
     context.subscriptions.push(restartPortForwardCmd);
     disposables.push(restartPortForwardCmd);
+    
+    // Register describe node command
+    const describeNodeCmd = vscode.commands.registerCommand(
+        'kube9.describeNode',
+        async (nodeInfo, resourceData) => {
+            try {
+                const nodeName = nodeInfo.name;
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
+                if (!kubeconfigPath) {
+                    vscode.window.showErrorMessage('Kubeconfig path not available');
+                    return;
+                }
+                const contextName = resourceData.context.name;
+                
+                await NodeDescribeWebview.show(
+                    context,
+                    nodeName,
+                    kubeconfigPath,
+                    contextName
+                );
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Node Describe webview:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe node: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describeNodeCmd);
+    disposables.push(describeNodeCmd);
+    
+    // Register describe node (raw) command
+    const describeNodeRawCmd = vscode.commands.registerCommand(
+        'kube9.describeNodeRaw',
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                // Extract node information from tree item
+                if (!treeItem || !treeItem.resourceData) {
+                    throw new Error('Invalid tree item: missing resource data');
+                }
+                
+                const nodeName = treeItem.resourceData.resourceName || (treeItem.label as string);
+                const contextName = treeItem.resourceData.context.name;
+                
+                // Get kubeconfig path
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
+                if (!kubeconfigPath) {
+                    vscode.window.showErrorMessage('Kubeconfig path not available');
+                    return;
+                }
+                
+                // Execute kubectl describe node
+                let describeOutput: string;
+                try {
+                    const { stdout } = await execFileAsync(
+                        'kubectl',
+                        ['describe', 'node', nodeName, `--kubeconfig=${kubeconfigPath}`, `--context=${contextName}`],
+                        {
+                            timeout: 30000,
+                            maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large describe output
+                            env: { ...process.env }
+                        }
+                    );
+                    describeOutput = stdout;
+                } catch (error: unknown) {
+                    // kubectl failed - create structured error for detailed handling
+                    const kubectlError = KubectlError.fromExecError(error, contextName);
+                    
+                    // Log error details for debugging
+                    console.error(`Failed to describe node ${nodeName}: ${kubectlError.getDetails()}`);
+                    
+                    // Show error message to user
+                    vscode.window.showErrorMessage(
+                        `Failed to describe node '${nodeName}': ${kubectlError.getUserMessage()}`
+                    );
+                    
+                    // Don't open an empty tab on failure
+                    return;
+                }
+                
+                // Open in text editor
+                const doc = await vscode.workspace.openTextDocument({
+                    content: describeOutput,
+                    language: 'plaintext'
+                });
+                
+                await vscode.window.showTextDocument(doc, {
+                    preview: false,
+                    viewColumn: vscode.ViewColumn.Active
+                });
+                
+                console.log(`Opened Describe (Raw) for node '${nodeName}'`);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to execute Describe (Raw) command for node:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe node: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describeNodeRawCmd);
+    disposables.push(describeNodeRawCmd);
+    
+    // Register reveal pod command
+    const revealPodCmd = vscode.commands.registerCommand(
+        'kube9.revealPod',
+        async (podName: string, namespace?: string) => {
+            try {
+                if (!podName) {
+                    vscode.window.showErrorMessage('Pod name is required');
+                    return;
+                }
+                
+                if (!clusterTreeProvider) {
+                    vscode.window.showErrorMessage('Cluster tree provider not initialized');
+                    return;
+                }
+                
+                await clusterTreeProvider.revealPod(podName, namespace || 'default');
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to reveal pod:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to reveal pod: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(revealPodCmd);
+    disposables.push(revealPodCmd);
 }
 
 /**

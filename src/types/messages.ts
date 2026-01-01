@@ -1,5 +1,18 @@
-import { PodInfo } from '../webview/PodLogsViewerPanel';
 import { PanelPreferences } from '../utils/PreferencesManager';
+
+/**
+ * Interface for storing pod information.
+ * Represents the current pod being viewed in the panel.
+ */
+export interface PodInfo {
+    name: string;
+    namespace: string;
+    container: string;
+    contextName: string;
+    clusterName: string;
+    /** Whether the container has crashed/restarted (has previous logs available) */
+    hasCrashed?: boolean;
+}
 
 /**
  * Initial state sent from extension to webview when webview is ready.

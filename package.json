@@ -96,6 +96,11 @@
         "category": "Kube9"
       },
       {
+        "command": "kube9.describeNodeRaw",
+        "title": "Describe (Raw)",
+        "category": "Kube9"
+      },
+      {
         "command": "kube9.viewResourceYAML",
         "title": "View YAML",
         "category": "Kube9"
@@ -444,6 +449,11 @@
         {
           "command": "kube9.viewResourceYAML",
           "when": "view == kube9ClusterView && viewItem =~ /^resource/",
+          "group": "kube9@2"
+        },
+        {
+          "command": "kube9.describeNodeRaw",
+          "when": "view == kube9ClusterView && viewItem == resource:Node",
           "group": "kube9@2"
         },
         {

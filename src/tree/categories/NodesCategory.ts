@@ -91,7 +91,12 @@ export class NodesCategory {
             // Set tooltip with detailed information
             item.tooltip = `Node: ${nodeInfo.name}\nStatus: ${nodeInfo.status}\nRoles: ${nodeInfo.roles.join(', ')}`;
 
-            // No command - clicking a node is a no-op at this stage (placeholder for future)
+            // Set command to open describe webview on click
+            item.command = {
+                command: 'kube9.describeNode',
+                title: 'Describe Node',
+                arguments: [nodeInfo, resourceData]
+            };
             
             return item;
         });
@@ -212,7 +217,12 @@ export class NodesCategory {
             // Set tooltip with detailed information
             item.tooltip = `Node: ${nodeInfo.name}\nStatus: ${nodeInfo.status}\nRoles: ${nodeInfo.roles.join(', ')}`;
 
-            // No command - clicking a node is a no-op at this stage (placeholder for future)
+            // Set command to open describe webview on click
+            item.command = {
+                command: 'kube9.describeNode',
+                title: 'Describe Node',
+                arguments: [nodeInfo, resourceData]
+            };
             
             return item;
         });
