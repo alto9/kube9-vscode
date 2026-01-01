@@ -7,6 +7,9 @@ context_id: [vscode-extension-development]
 
 # Welcome Screen Feature
 
+Note: AI Features section has been removed from the welcome screen per product direction decision.
+The VS Code extension will not have AI features.
+
 ```gherkin
 Feature: Welcome Screen UI/UX
 
@@ -50,14 +53,13 @@ Scenario: User re-enables welcome screen via settings
   And reload the VS Code window
   Then the welcome screen should appear again
 
-Scenario: Ecosystem panel displays four core components
+Scenario: Ecosystem panel displays three core components
   Given the welcome screen is open
   When the user views the "Kube9 Ecosystem" panel
-  Then the panel should display exactly 4 items
+  Then the panel should display exactly 3 items
   And the first item should be "Kube9 Operator"
-  And the second item should be "Kube9 Server"
-  And the third item should be "Kube9 UI"
-  And the fourth item should be "Kube9 VS Code"
+  And the second item should be "Kube9 VS Code"
+  And the third item should be "Kube9 Desktop"
   And each item should have a brief description
   And each item should have a clickable link to its repository or documentation
 
@@ -69,19 +71,11 @@ Scenario: Kube9 Operator ecosystem item
   When the user clicks the link
   Then it should open in their default browser
 
-Scenario: Kube9 Server ecosystem item
+Scenario: Kube9 Desktop ecosystem item
   Given the welcome screen is open
-  When the user views the "Kube9 Server" item in the ecosystem panel
-  Then it should display a description starting with "Backend server"
-  And it should include a link to the server documentation or repository
-  When the user clicks the link
-  Then it should open in their default browser
-
-Scenario: Kube9 UI ecosystem item
-  Given the welcome screen is open
-  When the user views the "Kube9 UI" item in the ecosystem panel
-  Then it should display a description starting with "Web-based dashboard"
-  And it should include a link to the UI documentation or repository
+  When the user views the "Kube9 Desktop" item in the ecosystem panel
+  Then it should display a description starting with "Desktop application"
+  And it should include a link to the desktop application documentation or repository
   When the user clicks the link
   Then it should open in their default browser
 
@@ -131,6 +125,16 @@ Scenario: Visit Kube9 Portal link is removed
   Then there should be no "Visit Kube9 Portal" link
   And there should be no "Visit Portal" button
   And there should be no portal-related links anywhere on the welcome screen
+
+Scenario: Cluster Organizer instructions are displayed
+  Given the welcome screen is open
+  When the user views the content after the Quick Start guide
+  Then a "Organize Your Clusters" section should be visible
+  And the section should explain what the Cluster Organizer does
+  And the section should list features: folders, aliases, and hiding clusters
+  And the section should explain how to access it via Command Palette
+  And it should show the command "Kube9: Cluster Organizer"
+  And it should display keyboard shortcuts for Command Palette (Cmd+Shift+P / Ctrl+Shift+P)
 
 Scenario: Welcome screen manual access via command palette
   Given the welcome screen has been dismissed

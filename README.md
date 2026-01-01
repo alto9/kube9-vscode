@@ -1,4 +1,4 @@
-# Kube9
+# Kube9 VS Code
 
 **Visual Kubernetes Cluster Management - Right in Your IDE**
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Kube9 is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. It provides a modern, intuitive interface for managing your Kubernetes resources without leaving your IDE.
+Kube9 VS Code is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. It provides a modern, intuitive interface for managing your Kubernetes resources without leaving your IDE.
 
 ### Key Features
 
@@ -20,7 +20,7 @@ Kube9 is a VS Code extension that brings visual Kubernetes cluster management di
 
 ## Architecture
 
-Kube9 provides a clean separation between local development tooling and cluster-side monitoring:
+Kube9 VS Code provides a clean separation between local development tooling and cluster-side monitoring:
 
 ```
 ┌─────────────────────────────────────┐
@@ -68,7 +68,7 @@ Kube9 provides a clean separation between local development tooling and cluster-
 #### For Developers
 ```bash
 git clone <repository-url>
-cd kube9
+cd kube9-vscode
 npm install
 npm run compile
 # Press F5 to launch Extension Development Host
@@ -111,7 +111,7 @@ Once installed, the extension automatically detects the operator and provides en
 
 ### ArgoCD Integration
 
-Kube9 provides seamless ArgoCD integration for GitOps workflows. View and manage your ArgoCD Applications directly from VS Code.
+Kube9 VS Code provides seamless ArgoCD integration for GitOps workflows. View and manage your ArgoCD Applications directly from VS Code.
 
 **Prerequisites:**
 - ArgoCD 2.5+ installed in your cluster
@@ -251,7 +251,8 @@ Enhanced monitoring features are automatically enabled when the kube9-operator i
 
 ## Related Projects
 
-- **[kube9-operator](../kube9-operator)** - Kubernetes operator for enhanced cluster monitoring and metrics collection. Install this in your cluster to unlock enhanced monitoring features in the VSCode extension.
+- **[kube9-operator](../kube9-operator)** - Kubernetes operator for enhanced cluster monitoring and metrics collection. Install this in your cluster to unlock enhanced monitoring features in the VS Code extension.
+- **[kube9-desktop](../kube9-desktop)** - Desktop application for Kubernetes management with integrated development tools.
 
 ## Contributing
 

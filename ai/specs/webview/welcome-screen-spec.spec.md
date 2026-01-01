@@ -17,10 +17,14 @@ This specification defines the technical requirements for implementing the impro
 | Requirement | Priority | Issue Ref |
 |-------------|----------|-----------|
 | Move "Don't Show Again" checkbox to top | High | #33.1 |
-| Update ecosystem panel with 4 core components | High | #33.2 |
+| Update ecosystem panel with 3 core components | High | #33.2 |
 | Remove "What is" panel and move Quick Start up | Medium | #33.3 |
 | Display actual icons in Quick Start guide | High | #33.4 |
 | Remove "Visit Kube9 Portal" link | Low | #33.5 |
+| Remove AI Features section | High | N/A |
+| Add Cluster Organizer instructions | Medium | N/A |
+
+Note: AI Features section has been removed per product direction decision. The VS Code extension will not have AI features.
 
 ## Component Architecture
 
@@ -182,19 +186,14 @@ const ecosystemComponents: EcosystemComponent[] = [
     link: 'https://github.com/alto9/kube9-operator'
   },
   {
-    name: 'Kube9 Server',
-    description: 'Backend server providing API services and cluster management functionality',
-    link: 'https://github.com/alto9/kube9-server'
-  },
-  {
-    name: 'Kube9 UI',
-    description: 'Web-based dashboard for visualizing and managing Kubernetes resources',
-    link: 'https://github.com/alto9/kube9-ui'
-  },
-  {
     name: 'Kube9 VS Code',
     description: 'VS Code extension for Kubernetes cluster management (this extension)',
     link: 'https://github.com/alto9/kube9-vscode'
+  },
+  {
+    name: 'Kube9 Desktop',
+    description: 'Desktop application for Kubernetes management with integrated development tools',
+    link: 'https://github.com/alto9/kube9-desktop'
   }
 ];
 ```
@@ -675,13 +674,16 @@ function validateEcosystemLinks(components: EcosystemComponent[]): void {
 - [ ] Welcome screen appears on first activation
 - [ ] "Don't Show Again" checkbox is visible at top without scrolling
 - [ ] Checking checkbox prevents welcome screen on next activation
-- [ ] Ecosystem panel shows exactly 4 components with correct descriptions
+- [ ] Ecosystem panel shows exactly 3 components with correct descriptions
 - [ ] All ecosystem links open in browser
 - [ ] "What is" panel is not present
 - [ ] Quick Start guide appears immediately after ecosystem panel
 - [ ] Kube9 activity bar icon displays inline in step 1
 - [ ] Icon is sized appropriately (16-20px)
 - [ ] "Visit Kube9 Portal" link is not present anywhere
+- [ ] Cluster Organizer section appears after Quick Start guide
+- [ ] Cluster Organizer section explains features (folders, aliases, hiding)
+- [ ] Cluster Organizer section shows how to access via Command Palette
 - [ ] Command palette "Kube9: Show Welcome Screen" works
 - [ ] Welcome screen adapts to light/dark themes
 - [ ] Tab navigation works through all interactive elements
