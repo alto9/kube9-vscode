@@ -1,5 +1,5 @@
 import React from 'react';
-import { PodInfo } from '../../../webview/PodLogsViewerPanel';
+import { PodInfo } from '../../../types/messages';
 import { PanelPreferences } from '../../../utils/PreferencesManager';
 
 /**
