@@ -1,3 +1,15 @@
+# [1.13.0](https://github.com/alto9/kube9-vscode/compare/v1.12.0...v1.13.0) (2026-01-01)
+
+
+### Bug Fixes
+
+* prevent duplicate registration for events category ([b54867c](https://github.com/alto9/kube9-vscode/commit/b54867c67c6102d41ad01561205398d4eb118ce4))
+
+
+### Features
+
+* update welcome screen and branding ([e074aa8](https://github.com/alto9/kube9-vscode/commit/e074aa828ea72c1880a69f61d70622105475d575))
+
 # [1.12.0](https://github.com/alto9/kube9-vscode/compare/v1.11.0...v1.12.0) (2026-01-01)
 
 
