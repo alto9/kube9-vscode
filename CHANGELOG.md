@@ -1,3 +1,23 @@
+# [1.15.0](https://github.com/alto9/kube9-vscode/compare/v1.14.0...v1.15.0) (2026-01-02)
+
+
+### Bug Fixes
+
+* add error handling to ClusterTreeProvider with graceful degradation ([2652e7d](https://github.com/alto9/kube9-vscode/commit/2652e7dd71671db7ed136962327a27461445ab04))
+
+
+### Features
+
+* add error commands for tree item context menu ([c8cf1ec](https://github.com/alto9/kube9-vscode/commit/c8cf1ec0df446a4ed4ae81ffa2307f267ab052b0))
+* add error handling configuration and commands to package.json ([0357ea5](https://github.com/alto9/kube9-vscode/commit/0357ea5f0b66fc61c12930254c95c63b8ff026e3))
+* add error types and interfaces for error handling system ([1675fca](https://github.com/alto9/kube9-vscode/commit/1675fcac031241b6f184c19862ed98e7e471103a))
+* add ErrorTreeItem class for tree view error display ([30d2588](https://github.com/alto9/kube9-vscode/commit/30d25882e520343cb8d375a21e0622e87927e379))
+* add OutputPanelLogger singleton for structured error logging ([0f32f55](https://github.com/alto9/kube9-vscode/commit/0f32f55ee995f9b2e34e89c65fd4e7550967ea76))
+* add specific error handlers for connection, RBAC, not found, timeout, and API errors ([8170b82](https://github.com/alto9/kube9-vscode/commit/8170b82e08de07675ca8aa54084fac2e13c37102))
+* create error metrics tracker ([766dcf8](https://github.com/alto9/kube9-vscode/commit/766dcf82eaee73f04b8807a39206c65684743a36))
+* create main error handler singleton class ([382c8e3](https://github.com/alto9/kube9-vscode/commit/382c8e3e5ca91b212b2e32757a71e2ea3b5372bc))
+* initialize OutputPanelLogger in extension activation ([cc17ce5](https://github.com/alto9/kube9-vscode/commit/cc17ce527f39e07c5b990254c97a73bda51a2e0f))
+
 # [1.14.0](https://github.com/alto9/kube9-vscode/compare/v1.13.0...v1.14.0) (2026-01-02)
 
 
