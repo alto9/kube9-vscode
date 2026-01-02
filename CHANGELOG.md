@@ -1,3 +1,23 @@
+# [1.14.0](https://github.com/alto9/kube9-vscode/compare/v1.13.0...v1.14.0) (2026-01-02)
+
+
+### Bug Fixes
+
+* **pod-describe:** Fix webview layout and match node webview design ([b56e58f](https://github.com/alto9/kube9-vscode/commit/b56e58f87484c298212a9e2601c1cfb10929cb4d))
+* singular describe webview ([5c15324](https://github.com/alto9/kube9-vscode/commit/5c153247a00bf26be932756de6bbaed74046c3f1))
+
+
+### Features
+
+* add click command to PodTreeItem for Describe webview ([efb17ed](https://github.com/alto9/kube9-vscode/commit/efb17eddc6fd227633ec5609bd04f9abdb1c0672))
+* add Pod describe functionality to DescribeWebview ([b3da741](https://github.com/alto9/kube9-vscode/commit/b3da741fa546e3d39ccbf16c6c7a3b9538642b8d))
+* add PodDescribeProvider interfaces ([cfc68c5](https://github.com/alto9/kube9-vscode/commit/cfc68c58881e1c2ecd0af81f5ef2d90e6f62598f))
+* create pod describe webview HTML/CSS structure ([33b2b1b](https://github.com/alto9/kube9-vscode/commit/33b2b1ba0ee29c6562bbb2d815d996ebca85e583))
+* create React PodDescribeApp component for pod describe webview ([0f1f17f](https://github.com/alto9/kube9-vscode/commit/0f1f17f989ee517174e22e1ba4027839bca392b4))
+* implement PodDescribeProvider data fetching logic ([fb0dfc0](https://github.com/alto9/kube9-vscode/commit/fb0dfc01f3be9fbda0f0da353e98cb26afdc66eb))
+* **pod-describe:** add Overview, Conditions, Containers, and Events tabs ([a8c33b1](https://github.com/alto9/kube9-vscode/commit/a8c33b1d50c0a2afd862b79e59ffe6598e46cf95))
+* register kube9.describePod command ([ad2b231](https://github.com/alto9/kube9-vscode/commit/ad2b231ba778ba6b5b28859d3e31b93d1af1ffb2))
+
 # [1.13.0](https://github.com/alto9/kube9-vscode/compare/v1.12.0...v1.13.0) (2026-01-01)
 
 
