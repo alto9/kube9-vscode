@@ -5,7 +5,7 @@ feature_id:
   - deployment-describe-webview
 spec_id:
   - deployment-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Add ReplicaSet Commands Get Related
@@ -20,13 +20,13 @@ Deployments manage ReplicaSets through owner references. This command fetches al
 
 ## Acceptance Criteria
 
-- [ ] `WorkloadCommands.getRelatedReplicaSets()` method exists
-- [ ] Method accepts: `deploymentName`, `deploymentUid`, `namespace`, `kubeconfigPath`, `contextName`
-- [ ] Uses Kubernetes API client to fetch ReplicaSets
-- [ ] Filters ReplicaSets by owner reference (matches deployment UID)
-- [ ] Returns array of V1ReplicaSet objects
-- [ ] Returns empty array if no ReplicaSets found (not an error)
-- [ ] Handles errors gracefully with typed error result
+- [x] `WorkloadCommands.getRelatedReplicaSets()` method exists
+- [x] Method accepts: `deploymentName`, `deploymentUid`, `namespace`, `kubeconfigPath`, `contextName`
+- [x] Uses Kubernetes API client to fetch ReplicaSets
+- [x] Filters ReplicaSets by owner reference (matches deployment UID)
+- [x] Returns array of V1ReplicaSet objects
+- [x] Returns empty array if no ReplicaSets found (not an error)
+- [x] Handles errors gracefully with typed error result
 
 ## Implementation Steps
 
