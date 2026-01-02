@@ -5,7 +5,7 @@ feature_id:
   - reports-menu
 spec_id:
   - tree-view-spec
-status: pending
+status: completed
 ---
 
 # Update Tree View Spec Documentation

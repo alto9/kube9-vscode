@@ -56,9 +56,9 @@ graph TD
 2. **Reports Category** (conditional): Appears only when cluster operator status is NOT 'basic'
    - Position: Second item (after Dashboard, before Nodes)
    - Visibility: Only when `operatorStatus !== OperatorStatusMode.Basic`
-   - Structure: Reports → Compliance → Data Collection
-   - Reports subcategory: Compliance
-     - Compliance report item: Data Collection (placeholder, non-functional)
+   - Structure: Reports → Kube9 Operator → Health
+   - Reports subcategory: Kube9 Operator
+     - Kube9 Operator report item: Health
 
 3. **Resource Categories**: Always visible when cluster is expanded
    - Nodes
@@ -120,7 +120,7 @@ sequenceDiagram
 ### Tree Item Structure
 ```typescript
 interface TreeItemData {
-  type: 'cluster' | 'dashboard' | 'namespace' | 'allNamespaces' | 'reports' | 'compliance' | 'dataCollection' | 'resource';
+  type: 'cluster' | 'dashboard' | 'namespace' | 'allNamespaces' | 'reports' | 'operatorSubcategory' | 'operatorHealth' | 'resource';
   name: string;
   status?: 'connected' | 'disconnected';
   isActiveNamespace?: boolean; // True if this namespace is set in kubectl context
@@ -149,16 +149,16 @@ interface TreeItemData {
 #### Reports Menu Structure
 ```
 Reports (category)
-  └── Compliance (subcategory)
-      └── Data Collection (report item - placeholder)
+  └── Kube9 Operator (subcategory)
+      └── Health (report item)
 ```
 
 #### Implementation Details
 - Reports category is prepended to the category list when operator status is not Basic
 - Reports category follows the same expandable pattern as other categories
-- Compliance subcategory follows the same pattern as other subcategories (e.g., Workloads → Deployments)
-- Data Collection report item is a placeholder with no functionality
-- Clicking Data Collection should display a placeholder message indicating future functionality
+- Kube9 Operator subcategory follows the same pattern as other subcategories (e.g., Workloads → Deployments)
+- Health report item displays operator health and status information
+- Clicking Health opens the operator health report webview
 
 ### Networking Category Structure
 
@@ -239,9 +239,9 @@ Networking (category)
 ### Interactions
 - **Click cluster**: Expand to show Dashboard, Reports (if operator installed), and other resource categories
 - **Click Dashboard**: Open dashboard webview (Free Non-Operated or Free Operated based on operator status)
-- **Click Reports category**: Expand to show Compliance subcategory
-- **Click Compliance subcategory**: Expand to show Data Collection report
-- **Click Data Collection**: Display placeholder message (non-functional)
+- **Click Reports category**: Expand to show Kube9 Operator subcategory
+- **Click Kube9 Operator subcategory**: Expand to show Health report
+- **Click Health**: Open operator health report webview
 - **Click namespace**: Open webview panel for namespace navigation
 - **Click "All Namespaces"**: Open webview showing cluster-wide resource view
 - **Click resource**: Context-dependent action (may expand or open details)
@@ -386,7 +386,7 @@ Networking (category)
 - Status bar namespace display updates
 - Reports category visibility based on operator status
 - Reports menu expansion and navigation
-- Data Collection placeholder display
+- Health report display
 - Reports category updates when operator status changes
 - Delete resource confirmation dialog display
 - Delete resource with confirmation
