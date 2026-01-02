@@ -1,35 +1,35 @@
 import * as vscode from 'vscode';
 
 /**
- * DataCollectionReportPanel displays a placeholder webview for the Data Collection report.
- * Shows a "coming soon" message indicating that this feature is not yet implemented.
+ * HealthReportPanel displays a placeholder webview for the Kube9 Operator Health report.
+ * Shows a loading message indicating that operator status is being loaded.
  */
-export class DataCollectionReportPanel {
+export class HealthReportPanel {
     private static currentPanel: vscode.WebviewPanel | undefined;
     private static extensionContext: vscode.ExtensionContext | undefined;
 
     /**
-     * Show the Data Collection report webview panel.
+     * Show the Health Report webview panel.
      * Creates a new panel or reveals the existing one.
      * 
      * @param context - The VS Code extension context
      */
     public static show(context: vscode.ExtensionContext): void {
         // Store the extension context for later use
-        DataCollectionReportPanel.extensionContext = context;
+        HealthReportPanel.extensionContext = context;
 
         const column = vscode.ViewColumn.One;
 
         // If we already have a panel, show it
-        if (DataCollectionReportPanel.currentPanel) {
-            DataCollectionReportPanel.currentPanel.reveal(column);
+        if (HealthReportPanel.currentPanel) {
+            HealthReportPanel.currentPanel.reveal(column);
             return;
         }
 
         // Otherwise, create a new panel
         const panel = vscode.window.createWebviewPanel(
-            'kube9DataCollectionReport',
-            'Data Collection Report',
+            'kube9.operatorHealthReport',
+            'Kube9 Operator Health',
             column,
             {
                 enableScripts: false,
@@ -40,15 +40,15 @@ export class DataCollectionReportPanel {
             }
         );
 
-        DataCollectionReportPanel.currentPanel = panel;
+        HealthReportPanel.currentPanel = panel;
 
         // Set the webview's HTML content
-        panel.webview.html = DataCollectionReportPanel.getWebviewContent(panel.webview);
+        panel.webview.html = HealthReportPanel.getWebviewContent(panel.webview);
 
         // Handle panel disposal
         panel.onDidDispose(
             () => {
-                DataCollectionReportPanel.currentPanel = undefined;
+                HealthReportPanel.currentPanel = undefined;
             },
             null,
             context.subscriptions
@@ -56,8 +56,8 @@ export class DataCollectionReportPanel {
     }
 
     /**
-     * Generate the HTML content for the Data Collection report webview.
-     * Returns inline HTML with a styled "coming soon" message.
+     * Generate the HTML content for the Health Report webview.
+     * Returns inline HTML with a styled loading message.
      * 
      * @param webview - The webview instance
      * @returns HTML content string
@@ -69,7 +69,7 @@ export class DataCollectionReportPanel {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline';">
-    <title>Data Collection Report</title>
+    <title>Kube9 Operator Health</title>
     <style>
         body {
             font-family: var(--vscode-font-family);
@@ -105,23 +105,31 @@ export class DataCollectionReportPanel {
             margin: 0 0 24px 0;
             color: var(--vscode-descriptionForeground);
         }
-        .message {
-            background-color: var(--vscode-textBlockQuote-background);
-            border-left: 4px solid var(--vscode-textBlockQuote-border);
-            padding: 16px 20px;
-            margin-top: 24px;
-            border-radius: 4px;
+        .refresh-button {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 2px;
+            cursor: pointer;
+            margin-top: 16px;
+        }
+        .refresh-button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+        .refresh-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="icon">📊</div>
-        <h1>Data Collection Report</h1>
-        <p>Data Collection report is coming soon. This feature will be available in a future release.</p>
-        <div class="message">
-            <p style="margin: 0;">We're working on bringing you comprehensive data collection reporting capabilities to help you monitor and analyze your Kubernetes cluster data.</p>
-        </div>
+        <div class="icon">🩺</div>
+        <h1>Kube9 Operator Health</h1>
+        <p>Loading operator status...</p>
+        <button class="refresh-button" disabled>Refresh</button>
     </div>
 </body>
 </html>`;

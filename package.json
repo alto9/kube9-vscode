@@ -66,8 +66,8 @@
         "category": "Kube9"
       },
       {
-        "command": "kube9.openDataCollectionReport",
-        "title": "Open Data Collection Report",
+        "command": "kube9.openOperatorHealthReport",
+        "title": "Open Operator Health Report",
         "category": "Kube9"
       },
       {
@@ -296,7 +296,7 @@
           "command": "kube9.openClusterManager"
         },
         {
-          "command": "kube9.openDataCollectionReport"
+          "command": "kube9.openOperatorHealthReport"
         },
         {
           "command": "kube9.applyYAML"
