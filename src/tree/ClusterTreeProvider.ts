@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as k8s from '@kubernetes/client-node';
 import { ClusterTreeItem, ClusterStatus } from './ClusterTreeItem';
+import { ErrorTreeItem, ErrorCategory } from './ErrorTreeItem';
 import { TreeItemType } from './TreeItemTypes';
 import { TreeItemFactory } from './TreeItemFactory';
 import { ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
@@ -192,6 +193,99 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Categorize error for appropriate icon and handling.
+     * 
+     * @param error The error to categorize
+     * @returns The error category
+     */
+    private categorizeError(error: unknown): ErrorCategory {
+        if (error && typeof error === 'object') {
+            const err = error as Record<string, unknown>;
+            
+            // Check error code for connection errors
+            if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
+                return ErrorCategory.CONNECTION;
+            }
+            
+            // Check status code for permission errors
+            const statusCode = (err.response && typeof err.response === 'object' && 'statusCode' in err.response)
+                ? (err.response as { statusCode: unknown }).statusCode
+                : err.statusCode;
+            if (statusCode === 403) {
+                return ErrorCategory.PERMISSION;
+            }
+            
+            // Check status code for not found errors
+            if (statusCode === 404) {
+                return ErrorCategory.NOT_FOUND;
+            }
+            
+            // Check for timeout errors
+            if (err.name === 'TimeoutError' || err.code === 'ETIMEDOUT') {
+                return ErrorCategory.TIMEOUT;
+            }
+        }
+        
+        return ErrorCategory.UNKNOWN;
+    }
+
+    /**
+     * Extract user-friendly error message.
+     * 
+     * @param error The error to extract message from
+     * @returns User-friendly error message
+     */
+    private extractErrorMessage(error: unknown): string {
+        if (error && typeof error === 'object') {
+            const err = error as Record<string, unknown>;
+            
+            // Try to get message from response body
+            if (err.response && typeof err.response === 'object') {
+                const response = err.response as Record<string, unknown>;
+                if (response.body && typeof response.body === 'object') {
+                    const body = response.body as Record<string, unknown>;
+                    if (typeof body.message === 'string') {
+                        return body.message;
+                    }
+                }
+            }
+            
+            // Try to get message from error object
+            if (typeof err.message === 'string') {
+                return err.message;
+            }
+        }
+        
+        return String(error);
+    }
+
+    /**
+     * Create an error item for the tree.
+     * 
+     * @param error The error that occurred
+     * @param context Context string describing what failed to load
+     * @param retryCallback Optional callback function to retry the failed operation
+     * @returns ErrorTreeItem instance
+     */
+    private createErrorItem(
+        error: unknown,
+        context: string,
+        retryCallback?: () => Promise<void>
+    ): ErrorTreeItem {
+        const errorCategory = this.categorizeError(error);
+        const errorDetails = (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string')
+            ? error.message
+            : String(error);
+
+        return new ErrorTreeItem(
+            `Failed to load ${context}`,
+            errorCategory,
+            errorDetails,
+            retryCallback
+        );
+    }
+
+    /**
      * Get the UI representation of a tree element.
      * This method is called by VS Code to render each tree item.
      * 
@@ -210,44 +304,61 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * @returns A promise resolving to an array of child tree items
      */
     async getChildren(element?: ClusterTreeItem): Promise<ClusterTreeItem[]> {
-        // If no element is provided, we're getting the root level items (folders + clusters)
-        if (!element) {
-            return this.getClusters();
-        }
+        try {
+            // If no element is provided, we're getting the root level items (folders + clusters)
+            if (!element) {
+                return this.getClusters();
+            }
 
-        // If element is a folder, return child folders + clusters in folder
-        if (element.type === 'folder' && element.folderId) {
-            const childFolders = await this.buildFolderItems(element.folderId);
-            const clustersInFolder = this.buildClustersInFolder(element.folderId);
-            return [...childFolders, ...clustersInFolder];
-        }
+            // If element is a folder, return child folders + clusters in folder
+            if (element.type === 'folder' && element.folderId) {
+                const childFolders = await this.buildFolderItems(element.folderId);
+                const clustersInFolder = this.buildClustersInFolder(element.folderId);
+                return [...childFolders, ...clustersInFolder];
+            }
 
-        // If element is a cluster, return the categories
-        if (element.type === 'cluster' && element.resourceData) {
-            return await this.getCategories(element);
-        }
+            // If element is a cluster, return the categories
+            if (element.type === 'cluster' && element.resourceData) {
+                return await this.getCategories(element);
+            }
 
-        // If element is a category, return its children (placeholder for now)
-        if (this.isCategoryType(element.type)) {
-            return this.getCategoryChildren(element);
-        }
+            // If element is a category, return its children (placeholder for now)
+            if (this.isCategoryType(element.type)) {
+                return this.getCategoryChildren(element);
+            }
 
-        // If element is an individual resource type that can have children (like deployment with pods)
-        // Handle these in getCategoryChildren as well since they follow the same pattern
-        if (element.type === 'deployment' || 
-            element.type === 'statefulset' || 
-            element.type === 'daemonset' || 
-            element.type === 'cronjob') {
-            return this.getCategoryChildren(element);
-        }
+            // If element is an individual resource type that can have children (like deployment with pods)
+            // Handle these in getCategoryChildren as well since they follow the same pattern
+            if (element.type === 'deployment' || 
+                element.type === 'statefulset' || 
+                element.type === 'daemonset' || 
+                element.type === 'cronjob') {
+                return this.getCategoryChildren(element);
+            }
 
-        // If element has children, return them
-        if (element.children) {
-            return addDescribeCommandToItems(element.children);
-        }
+            // If element has children, return them
+            if (element.children) {
+                return addDescribeCommandToItems(element.children);
+            }
 
-        // No children for this element
-        return [];
+            // No children for this element
+            return [];
+        } catch (error: unknown) {
+            console.error('Error loading tree children:', error);
+            
+            // Create error item with retry callback
+            const errorItem = this.createErrorItem(
+                error,
+                element ? (element.label as string) : 'resources',
+                async () => {
+                    // Refresh this specific element
+                    this.refreshItem(element);
+                }
+            );
+            
+            // Cast ErrorTreeItem as ClusterTreeItem for type compatibility
+            return [errorItem as unknown as ClusterTreeItem];
+        }
     }
 
     /**
@@ -274,6 +385,49 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             // Log error but don't block - individual fetches will still work
             console.warn(`Failed to pre-fetch cluster resources for ${contextName}:`, error);
         }
+    }
+
+    /**
+     * Graceful degradation - load what we can.
+     * Tries each loader function and catches errors individually, creating error items
+     * for failed loaders while returning successful items.
+     * 
+     * @param loaders Array of loader functions that return promises of ClusterTreeItem arrays
+     * @returns Promise resolving to array of ClusterTreeItem instances (including error items)
+     */
+    private async loadChildrenWithGracefulDegradation(
+        loaders: Array<() => Promise<ClusterTreeItem[]>>
+    ): Promise<ClusterTreeItem[]> {
+        const results: ClusterTreeItem[] = [];
+        
+        for (const loader of loaders) {
+            try {
+                const items = await loader();
+                results.push(...items);
+            } catch (error: unknown) {
+                // Create error item for this specific loader
+                const errorItem = this.createErrorItem(
+                    error,
+                    'resource category',
+                    async () => {
+                        // Retry callback: call the loader again and refresh the tree
+                        try {
+                            await loader();
+                            // Refresh the tree to show updated items
+                            this.refresh();
+                        } catch (retryError: unknown) {
+                            // If retry fails, refresh anyway to show the error state
+                            console.error('Retry failed:', retryError);
+                            this.refresh();
+                        }
+                    }
+                );
+                // Cast ErrorTreeItem as ClusterTreeItem for type compatibility
+                results.push(errorItem as unknown as ClusterTreeItem);
+            }
+        }
+        
+        return results;
     }
 
     /**

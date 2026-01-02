@@ -5,6 +5,7 @@ feature_id:
 spec_id:
   - tree-view-error-display
 story_id: 007-update-tree-provider-error-handling
+status: completed
 ---
 
 # Update ClusterTreeProvider with Error Handling
@@ -56,15 +57,17 @@ Use the implementation from spec `tree-view-error-display.spec.md` lines 96-213.
 
 ## Acceptance Criteria
 
-- [ ] createErrorItem() method added
-- [ ] categorizeError() method categorizes by error codes and status codes
-- [ ] extractErrorMessage() method extracts user-friendly messages
-- [ ] getChildren() wrapped in try-catch with error item creation
-- [ ] Retry callback in getChildren() refreshes specific element
-- [ ] loadChildrenWithGracefulDegradation() method added
-- [ ] Graceful degradation catches errors per loader
-- [ ] Error items mixed with successful items in results
-- [ ] File compiles without errors
+- [x] createErrorItem() method added
+- [x] categorizeError() method categorizes by error codes and status codes
+- [x] extractErrorMessage() method extracts user-friendly messages
+- [x] getChildren() wrapped in try-catch with error item creation
+- [x] Retry callback in getChildren() refreshes specific element
+- [x] loadChildrenWithGracefulDegradation() method added
+- [x] Graceful degradation catches errors per loader
+- [x] Error items mixed with successful items in results
+- [x] File compiles without errors
+- [x] Tests pass (`npm run test`)
+- [x] Build succeeds (`npm run build`)
 
 ## Estimated Time
 
