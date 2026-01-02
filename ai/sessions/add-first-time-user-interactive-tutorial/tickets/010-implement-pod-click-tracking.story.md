@@ -5,7 +5,7 @@ feature_id:
   - interactive-tutorial
 spec_id:
   - vscode-walkthroughs
-status: pending
+status: completed
 estimated_time: 25 minutes
 ---
 
@@ -65,14 +65,14 @@ async function handlePodSelection(pod: PodTreeItem) {
 
 ## Acceptance Criteria
 
-- [ ] Tree view selection event listener added
-- [ ] Listener checks for pod context value
-- [ ] Completion event `kube9.onPodClicked` fires when pod clicked
-- [ ] Step 4 automatically completes when user clicks pod naturally
-- [ ] Event only fires for pod items (not other resources)
-- [ ] No errors when clicking non-pod items
-- [ ] Works with pods across different namespaces
-- [ ] Event fires even if describe view doesn't open (permissions, etc.)
+- [x] Tree view selection event listener added
+- [x] Listener checks for pod type (using element.type === 'pod')
+- [x] Completion event `kube9.onPodClicked` fires when pod clicked
+- [x] Step 4 automatically completes when user clicks pod naturally
+- [x] Event only fires for pod items (not other resources)
+- [x] No errors when clicking non-pod items (silent error handling)
+- [x] Works with pods across different namespaces
+- [x] Event fires even if describe view doesn't open (permissions, etc.)
 
 ## Testing
 

@@ -230,6 +230,30 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
         });
         
+        // Add selection event listener for tutorial Step 4 tracking
+        treeView.onDidChangeSelection((event) => {
+            // Check if user selected anything
+            if (event.selection.length > 0) {
+                const selectedItem = event.selection[0] as ClusterTreeItem;
+                
+                // Check if selected item is a pod
+                // Use type check as primary identifier since contextValue may vary
+                if (selectedItem.type === 'pod') {
+                    // Fire completion event for walkthrough Step 4
+                    // Wrap in Promise.resolve to handle Thenable and catch errors silently
+                    Promise.resolve(
+                        vscode.commands.executeCommand(
+                            'workbench.action.fireWalkthroughCompletionEvent',
+                            'kube9.onPodClicked'
+                        )
+                    ).catch((err: unknown) => {
+                        // Silently handle errors (event may not be needed if walkthrough not active)
+                        console.debug('Failed to fire walkthrough completion event:', err);
+                    });
+                }
+            }
+        });
+        
         const treeViewDisposable = treeView;
         context.subscriptions.push(treeViewDisposable);
         disposables.push(treeViewDisposable);
