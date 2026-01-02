@@ -5,7 +5,7 @@ feature_id:
   - operator-health-report
 spec_id:
   - operator-health-report-spec
-status: pending
+status: completed
 ---
 
 # Implement Copy Cluster ID to Clipboard Handler
@@ -61,12 +61,12 @@ Manual test steps:
 
 ## Acceptance Criteria
 
-- [ ] Message handler responds to 'copyClusterId' command
-- [ ] Cluster ID written to system clipboard
-- [ ] Information message displayed after copy
-- [ ] Handler checks that clusterId exists before copying
-- [ ] No errors when clusterId is undefined
-- [ ] TypeScript compiles without errors
+- [x] Message handler responds to 'copyClusterId' command
+- [x] Cluster ID written to system clipboard
+- [x] Information message displayed after copy
+- [x] Handler checks that clusterId exists before copying
+- [x] No errors when clusterId is undefined
+- [x] TypeScript compiles without errors
 
 ## Estimated Time
 

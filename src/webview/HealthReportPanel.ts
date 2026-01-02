@@ -111,8 +111,22 @@ export class HealthReportPanel {
         // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(
             async (message) => {
-                if (message.command === 'refresh') {
-                    await this._update(true); // Force refresh
+                switch (message.command) {
+                    case 'refresh':
+                        await this._update(true); // Force refresh
+                        break;
+                    case 'copyClusterId':
+                        if (message.clusterId) {
+                            try {
+                                await vscode.env.clipboard.writeText(message.clusterId);
+                                vscode.window.showInformationMessage('Cluster ID copied to clipboard');
+                            } catch (error) {
+                                const errorMessage = error instanceof Error ? error.message : String(error);
+                                console.error('Failed to copy cluster ID to clipboard:', errorMessage);
+                                vscode.window.showErrorMessage(`Failed to copy cluster ID: ${errorMessage}`);
+                            }
+                        }
+                        break;
                 }
             },
             null,
