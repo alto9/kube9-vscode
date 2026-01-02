@@ -310,6 +310,11 @@
             background-color: var(--vscode-button-secondaryHoverBackground);
         }
 
+        .link-button .icon {
+            font-size: 16px;
+            margin-right: 8px;
+        }
+
         /* Actions Container */
         .actions {
             display: flex;
@@ -575,6 +580,15 @@
                 <input type="checkbox" id="doNotShowAgain" aria-label="Don't show this welcome screen again" onchange="dismiss()" />
                 <span>Don't show this welcome screen again</span>
             </label>
+            <div class="actions">
+                <button id="startTutorial" class="link-button" aria-label="Start Interactive Tutorial">
+                    <span class="icon">📚</span>
+                    Start Interactive Tutorial
+                </button>
+                <button id="getStarted" class="link-button secondary" aria-label="Explore on My Own">
+                    Explore on My Own
+                </button>
+            </div>
         </div>
 
         <div class="section">
@@ -652,6 +666,41 @@
                 doNotShowAgain: doNotShowAgain
             });
         }
+
+        function startTutorial() {
+            vscode.postMessage({ command: 'startTutorial' });
+        }
+
+        // Add event listeners when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const startTutorialBtn = document.getElementById('startTutorial');
+            if (startTutorialBtn) {
+                startTutorialBtn.addEventListener('click', startTutorial);
+                // Keyboard accessibility
+                startTutorialBtn.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        startTutorial();
+                    }
+                });
+            }
+
+            const getStartedBtn = document.getElementById('getStarted');
+            if (getStartedBtn) {
+                // Secondary button can just dismiss or do nothing for now
+                getStartedBtn.addEventListener('click', () => {
+                    // Optionally dismiss welcome screen or do nothing
+                    // For now, just allow user to explore naturally
+                });
+                // Keyboard accessibility
+                getStartedBtn.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        getStartedBtn.click();
+                    }
+                });
+            }
+        });
     </script>
 </body>
 </html>
