@@ -1,3 +1,12 @@
+# [1.17.0](https://github.com/alto9/kube9-vscode/compare/v1.16.0...v1.17.0) (2026-01-02)
+
+
+### Features
+
+* add copy cluster ID handler to health report panel ([1888633](https://github.com/alto9/kube9-vscode/commit/188863379ffbee2dce27b45b119e541489bd4586))
+* create React component for operator health report webview ([494a8c7](https://github.com/alto9/kube9-vscode/commit/494a8c730414c5b1651a974b18a5f720e2eee95c))
+* integrate OperatorStatusClient in HealthReportPanel ([a8d1d52](https://github.com/alto9/kube9-vscode/commit/a8d1d52c77fa7832b678094f080eaa3d722ea4da))
+
 # [1.16.0](https://github.com/alto9/kube9-vscode/compare/v1.15.0...v1.16.0) (2026-01-02)
 
 
