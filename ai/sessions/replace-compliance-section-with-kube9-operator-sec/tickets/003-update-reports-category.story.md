@@ -5,7 +5,7 @@ feature_id:
   - reports-menu
 spec_id:
   - tree-view-spec
-status: pending
+status: completed
 ---
 
 # Update ReportsCategory to Use Kube9 Operator Subcategory
