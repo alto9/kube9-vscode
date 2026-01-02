@@ -285,6 +285,11 @@
       {
         "command": "kube9.copyErrorDetails",
         "title": "Copy Error Details"
+      },
+      {
+        "command": "kube9.showTutorial",
+        "title": "Show Getting Started Tutorial",
+        "category": "Kube9"
       }
     ],
     "menus": {
@@ -309,6 +314,9 @@
         },
         {
           "command": "kube9.viewResourceYAMLFromPalette"
+        },
+        {
+          "command": "kube9.showTutorial"
         },
         {
           "command": "kube9.openNamespace",

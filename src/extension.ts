@@ -1484,6 +1484,21 @@ function registerCommands(): void {
     );
     context.subscriptions.push(revealReplicaSetCmd);
     disposables.push(revealReplicaSetCmd);
+    
+    // Register show tutorial command
+    const showTutorialCommand = vscode.commands.registerCommand(
+        'kube9.showTutorial',
+        async () => {
+            // Open the walkthrough using VSCode API
+            await vscode.commands.executeCommand(
+                'workbench.action.openWalkthrough',
+                'alto9.kube9#kube9.gettingStarted',
+                false // Don't open in a new window
+            );
+        }
+    );
+    context.subscriptions.push(showTutorialCommand);
+    disposables.push(showTutorialCommand);
 }
 
 /**
