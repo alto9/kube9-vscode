@@ -125,6 +125,26 @@ export class ThemeIcon {
 }
 
 /**
+ * Mock MarkdownString class for formatted tooltips
+ */
+export class MarkdownString {
+    public isTrusted: boolean = false;
+    private _value: string = '';
+
+    appendMarkdown(value: string): void {
+        this._value += value;
+    }
+
+    appendText(value: string): void {
+        this._value += value;
+    }
+
+    get value(): string {
+        return this._value;
+    }
+}
+
+/**
  * Mock Command interface for tree item actions
  */
 export interface Command {
@@ -433,7 +453,7 @@ export const window = {
         };
         return await task(progress);
     },
-    showTextDocument: async (_document: TextDocument, _column?: ViewColumn): Promise<unknown> => {
+    showTextDocument: async (): Promise<unknown> => {
         // Mock - no-op, just return a resolved promise
         return Promise.resolve({});
     },
@@ -758,6 +778,7 @@ const vscodeModule = {
     StatusBarAlignment,
     ThemeColor,
     ThemeIcon,
+    MarkdownString,
     TreeItem,
     Position,
     Range,
@@ -789,6 +810,7 @@ if (typeof module !== 'undefined' && module.exports) {
         StatusBarAlignment,
         ThemeColor,
         ThemeIcon,
+        MarkdownString,
         TreeItem,
         Position,
         Range,

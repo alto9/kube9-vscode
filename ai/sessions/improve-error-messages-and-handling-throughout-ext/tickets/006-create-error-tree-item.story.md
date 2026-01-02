@@ -5,6 +5,7 @@ feature_id:
 spec_id:
   - tree-view-error-display
 story_id: 006-create-error-tree-item
+status: completed
 ---
 
 # Create Error Tree Item Class
@@ -50,16 +51,19 @@ Use the implementation from spec `tree-view-error-display.spec.md` lines 24-92.
 
 ## Acceptance Criteria
 
-- [ ] File `src/tree/ErrorTreeItem.ts` created
-- [ ] ErrorCategory enum with 5 values
-- [ ] ErrorTreeItem extends BaseTreeItem
-- [ ] Constructor accepts all 4 parameters
-- [ ] Error icon is red with errorForeground theme color
-- [ ] Tooltip is MarkdownString with error details
-- [ ] contextValue set to 'error' for context menus
-- [ ] getErrorDescription() returns appropriate text per category
-- [ ] retryCallback stored for later use
-- [ ] File compiles without errors
+- [x] File `src/tree/ErrorTreeItem.ts` created
+- [x] ErrorCategory enum with 5 values
+- [x] ErrorTreeItem extends vscode.TreeItem (not BaseTreeItem which doesn't exist)
+- [x] Constructor accepts all 4 parameters
+- [x] Error icon is red with errorForeground theme color
+- [x] Tooltip is MarkdownString with error details
+- [x] contextValue set to 'error' for context menus
+- [x] getErrorDescription() returns appropriate text per category
+- [x] retryCallback stored for later use
+- [x] Unit tests created and passing
+- [x] File compiles without errors
+- [x] Build succeeds (`npm run build`)
+- [x] Tests pass (`npm run test`)
 
 ## Estimated Time
 
