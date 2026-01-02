@@ -680,6 +680,25 @@
               "altText": "Pod logs viewer interface"
             },
             "completionEvents": ["onCommand:kube9.viewPodLogs"]
+          },
+          {
+            "id": "kube9.step6.manageResources",
+            "title": "Manage Resources",
+            "description": "Scale deployments and manage other workload resources. Right-click any workload to see management options like scale and delete.\n\n[Scale Workload](command:kube9.scaleWorkload)",
+            "media": {
+              "image": "media/walkthrough/06-management.png",
+              "altText": "Resource management operations including scale and delete"
+            },
+            "completionEvents": ["onCommand:kube9.scaleWorkload"]
+          },
+          {
+            "id": "kube9.step7.documentation",
+            "title": "Documentation",
+            "description": "You've learned the essentials! Find more help and resources:\n\n- Use **Cmd/Ctrl+Shift+P** to access all kube9 commands\n- Right-click resources for context menus\n- Check out [our documentation](https://alto9.github.io/kube9/) for detailed guides\n- Join our [community](https://github.com/alto9/kube9-vscode) for support\n\nHappy Kubernetes management! 🚀",
+            "media": {
+              "image": "media/walkthrough/07-documentation.png",
+              "altText": "Documentation and help resources"
+            }
           }
         ]
       }
