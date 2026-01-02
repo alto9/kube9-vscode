@@ -210,6 +210,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         });
         clusterTreeProvider.setTreeView(treeView);
         
+        // Add expansion event listener for tutorial Step 3 tracking
+        treeView.onDidExpandElement((event) => {
+            // Check if expanded element is a namespace
+            // Use type check as primary identifier since contextValue may vary
+            const element = event.element as ClusterTreeItem;
+            if (element.type === 'namespace') {
+                // Fire completion event for walkthrough Step 3
+                // Wrap in Promise.resolve to handle Thenable and catch errors silently
+                Promise.resolve(
+                    vscode.commands.executeCommand(
+                        'workbench.action.fireWalkthroughCompletionEvent',
+                        'kube9.onNamespaceExpanded'
+                    )
+                ).catch((err: unknown) => {
+                    // Silently handle errors (event may not be needed if walkthrough not active)
+                    console.debug('Failed to fire walkthrough completion event:', err);
+                });
+            }
+        });
+        
         const treeViewDisposable = treeView;
         context.subscriptions.push(treeViewDisposable);
         disposables.push(treeViewDisposable);
