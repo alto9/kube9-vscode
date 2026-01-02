@@ -538,8 +538,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'customResources' ||
                type === 'reports' ||
                type === 'events' ||
-               type === 'compliance' ||
-               type === 'dataCollection';
+               type === 'operatorSubcategory' ||
+               type === 'operatorHealth';
     }
 
     /**
@@ -794,13 +794,13 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 items = [];
                 break;
             
-            case 'compliance':
+            case 'operatorSubcategory':
                 items = await ComplianceSubcategory.getComplianceReportItems(
                     categoryElement.resourceData
                 );
                 break;
             
-            case 'dataCollection':
+            case 'operatorHealth':
                 items = [];
                 break;
             

@@ -30,7 +30,7 @@ export class ReportsCategory {
     private static createComplianceSubcategory(resourceData: TreeItemData): ClusterTreeItem {
         const item = new ClusterTreeItem(
             'Compliance',
-            'compliance',
+            'operatorSubcategory',
             vscode.TreeItemCollapsibleState.Collapsed,
             resourceData
         );

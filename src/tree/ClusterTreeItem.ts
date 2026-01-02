@@ -139,7 +139,7 @@ export class ClusterTreeItem extends vscode.TreeItem {
         // For subcategory items (under categories), use context/type
         const subcategoryTypes = ['deployments', 'statefulsets', 'daemonsets', 'cronjobs',
                                  'persistentVolumes', 'persistentVolumeClaims', 'storageClasses',
-                                 'services', 'configmaps', 'secrets', 'compliance', 'dataCollection'];
+                                 'services', 'configmaps', 'secrets', 'operatorSubcategory', 'operatorHealth'];
         if (subcategoryTypes.includes(type)) {
             return `${contextName}/${type}`;
         }

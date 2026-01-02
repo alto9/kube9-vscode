@@ -30,7 +30,7 @@ export class ComplianceSubcategory {
     private static createDataCollectionReport(resourceData: TreeItemData): ClusterTreeItem {
         const item = new ClusterTreeItem(
             'Data Collection',
-            'dataCollection',
+            'operatorHealth',
             vscode.TreeItemCollapsibleState.None,
             resourceData
         );
