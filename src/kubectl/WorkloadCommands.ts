@@ -1,3 +1,4 @@
+import * as k8s from '@kubernetes/client-node';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
@@ -107,6 +108,51 @@ export interface DeploymentsResult {
     
     /**
      * Error information if the deployment query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a deployment details query operation.
+ */
+export interface DeploymentDetailsResult {
+    /**
+     * Complete V1Deployment object with full deployment details, undefined if query failed.
+     */
+    deployment?: k8s.V1Deployment;
+    
+    /**
+     * Error information if the deployment query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a deployment events query operation.
+ */
+export interface DeploymentEventsResult {
+    /**
+     * Array of CoreV1Event objects related to the deployment, empty if query failed or no events found.
+     */
+    events: k8s.CoreV1Event[];
+    
+    /**
+     * Error information if the events query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a ReplicaSets query operation.
+ */
+export interface ReplicaSetsResult {
+    /**
+     * Array of V1ReplicaSet objects owned by the deployment, empty if query failed.
+     */
+    replicaSets: k8s.V1ReplicaSet[];
+    
+    /**
+     * Error information if the ReplicaSet query failed.
      */
     error?: KubectlError;
 }
@@ -518,6 +564,177 @@ export class WorkloadCommands {
             
             return {
                 deployments: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves detailed information for a specific deployment from a cluster using the Kubernetes API client.
+     * Uses direct API calls to fetch complete V1Deployment details.
+     * 
+     * @param deploymentName Name of the deployment to retrieve details for
+     * @param namespace Namespace where the deployment is located
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param contextName Name of the context to query
+     * @returns DeploymentDetailsResult with V1Deployment object and optional error information
+     */
+    public static async getDeploymentDetails(
+        deploymentName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<DeploymentDetailsResult> {
+        try {
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch single deployment from API
+            const v1Deployment = await apiClient.apps.readNamespacedDeployment({
+                name: deploymentName,
+                namespace: namespace
+            });
+            
+            return {
+                deployment: v1Deployment,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            // API call failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Deployment details query failed for deployment ${deploymentName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                deployment: undefined,
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves Kubernetes events related to a specific deployment using the Kubernetes API client.
+     * Filters events by involvedObject.kind='Deployment' and involvedObject.name matching the deployment name.
+     * 
+     * @param deploymentName Name of the deployment to retrieve events for
+     * @param namespace Namespace where the deployment is located
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param contextName Name of the context to query
+     * @returns DeploymentEventsResult with events array and optional error information
+     */
+    public static async getDeploymentEvents(
+        deploymentName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<DeploymentEventsResult> {
+        try {
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch all events in the namespace from API
+            const response = await apiClient.core.listNamespacedEvent({
+                namespace: namespace,
+                timeoutSeconds: 10
+            });
+            
+            const allEvents = response.items || [];
+            
+            // Filter events by involvedObject.kind='Deployment' and involvedObject.name matching deployment name
+            const filteredEvents = allEvents.filter(event =>
+                event.involvedObject?.kind === 'Deployment' &&
+                event.involvedObject?.name === deploymentName
+            );
+            
+            // Sort events by lastTimestamp (most recent first), fall back to firstTimestamp if lastTimestamp is missing
+            const sortedEvents = filteredEvents.sort((a, b) => {
+                const aTimestamp = a.lastTimestamp || a.firstTimestamp || '';
+                const bTimestamp = b.lastTimestamp || b.firstTimestamp || '';
+                
+                // Compare timestamps (most recent first)
+                if (aTimestamp > bTimestamp) {
+                    return -1;
+                }
+                if (aTimestamp < bTimestamp) {
+                    return 1;
+                }
+                return 0;
+            });
+            
+            return {
+                events: sortedEvents,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            // API call failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Deployment events query failed for deployment ${deploymentName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                events: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of ReplicaSets owned by a specific deployment using the Kubernetes API client.
+     * Uses direct API calls to fetch ReplicaSets and filters by owner reference.
+     * 
+     * @param deploymentName Name of the deployment to retrieve related ReplicaSets for
+     * @param deploymentUid UID of the deployment to match owner references
+     * @param namespace Namespace where the deployment and ReplicaSets are located
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param contextName Name of the context to query
+     * @returns ReplicaSetsResult with ReplicaSets array and optional error information
+     */
+    public static async getRelatedReplicaSets(
+        deploymentName: string,
+        deploymentUid: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<ReplicaSetsResult> {
+        try {
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch all ReplicaSets in the namespace from API
+            const response = await apiClient.apps.listNamespacedReplicaSet({
+                namespace: namespace,
+                timeoutSeconds: 10
+            });
+            
+            const allReplicaSets = response.items || [];
+            
+            // Filter ReplicaSets by owner reference matching deployment UID
+            const filtered = allReplicaSets.filter(rs =>
+                rs.metadata?.ownerReferences?.some(ref =>
+                    ref.kind === 'Deployment' &&
+                    ref.name === deploymentName &&
+                    ref.uid === deploymentUid
+                )
+            );
+            
+            return {
+                replicaSets: filtered,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            // API call failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`ReplicaSet query failed for deployment ${deploymentName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                replicaSets: [],
                 error: kubectlError
             };
         }
