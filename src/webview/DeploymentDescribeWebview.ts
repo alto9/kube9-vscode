@@ -295,11 +295,29 @@ export class DeploymentDescribeWebview {
                     case 'navigateToReplicaSet': {
                         const replicaSetName = message.replicaSetName || message.name;
                         const namespace = message.namespace || DeploymentDescribeWebview.currentNamespace;
-                        if (replicaSetName) {
-                            // For now, show info message (full implementation in story 011)
-                            vscode.window.showInformationMessage(
-                                `Navigate to ReplicaSet ${replicaSetName} in namespace ${namespace || 'default'}`
+                        const deploymentName = DeploymentDescribeWebview.currentDeploymentName;
+                        
+                        if (!replicaSetName) {
+                            vscode.window.showErrorMessage('ReplicaSet name is required');
+                            break;
+                        }
+                        
+                        if (!deploymentName) {
+                            vscode.window.showErrorMessage('Deployment name not available');
+                            break;
+                        }
+                        
+                        try {
+                            await vscode.commands.executeCommand(
+                                'kube9.revealReplicaSet',
+                                replicaSetName,
+                                deploymentName,
+                                namespace || 'default'
                             );
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            console.error('Failed to navigate to ReplicaSet:', errorMessage);
+                            vscode.window.showErrorMessage(`Failed to navigate to ReplicaSet: ${errorMessage}`);
                         }
                         break;
                     }

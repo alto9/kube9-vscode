@@ -1975,6 +1975,153 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Reveal and select a ReplicaSet's parent Deployment in the tree view.
+     * Since ReplicaSets are not directly shown in the tree view, we reveal the parent Deployment.
+     * 
+     * @param replicaSetName The name of the ReplicaSet (used for informational messages)
+     * @param deploymentName The name of the parent Deployment to reveal
+     * @param namespace The namespace of the ReplicaSet/Deployment
+     */
+    public async revealReplicaSet(
+        replicaSetName: string,
+        deploymentName: string,
+        namespace: string
+    ): Promise<void> {
+        if (!this.treeView) {
+            vscode.window.showErrorMessage('Tree view not initialized');
+            return;
+        }
+
+        if (!this.kubeconfig) {
+            vscode.window.showErrorMessage('Kubeconfig not loaded');
+            return;
+        }
+
+        try {
+            // Get current context to find the cluster
+            const currentContext = this.kubeconfig.currentContext;
+            if (!currentContext) {
+                vscode.window.showErrorMessage('No current context available');
+                return;
+            }
+
+            // Find the cluster item
+            const clusterItem = this.clusterItemsCache.get(currentContext);
+            if (!clusterItem) {
+                // Try to get it from root clusters
+                const rootItems = await this.getClusters();
+                const foundCluster = rootItems.find(item => 
+                    item.type === 'cluster' && 
+                    item.resourceData?.context?.name === currentContext
+                );
+                
+                if (!foundCluster) {
+                    vscode.window.showInformationMessage(
+                        `ReplicaSet '${replicaSetName}' not found in tree view (cluster not found)`
+                    );
+                    return;
+                }
+                
+                // Use found cluster
+                await this.findAndRevealReplicaSet(foundCluster, replicaSetName, deploymentName, namespace);
+                return;
+            }
+
+            await this.findAndRevealReplicaSet(clusterItem, replicaSetName, deploymentName, namespace);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to reveal ReplicaSet:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to reveal ReplicaSet: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Helper method to find and reveal a ReplicaSet's parent Deployment within a cluster.
+     * Since ReplicaSets are not directly shown in the tree view, we reveal the parent Deployment.
+     * 
+     * @param clusterItem The cluster tree item
+     * @param replicaSetName The name of the ReplicaSet (for informational messages)
+     * @param deploymentName The name of the parent Deployment to reveal
+     * @param namespace The namespace of the ReplicaSet/Deployment
+     */
+    private async findAndRevealReplicaSet(
+        clusterItem: ClusterTreeItem,
+        replicaSetName: string,
+        deploymentName: string,
+        namespace: string
+    ): Promise<void> {
+        if (!this.treeView || !clusterItem.resourceData) {
+            return;
+        }
+
+        try {
+            // Get Workloads category (getCategories is synchronous)
+            const categories = this.getCategories(clusterItem);
+            const workloadsCategory = categories.find(cat => cat.type === 'workloads');
+            
+            if (!workloadsCategory) {
+                vscode.window.showInformationMessage(
+                    `ReplicaSet '${replicaSetName}' not found in tree view (Workloads category not found)`
+                );
+                return;
+            }
+
+            // Get workload subcategories (Deployments, StatefulSets, DaemonSets, CronJobs)
+            const workloadSubcategories = await this.getCategoryChildren(workloadsCategory);
+            
+            // Find the Deployments subcategory
+            const deploymentsSubcategory = workloadSubcategories.find(sub => sub.type === 'deployments');
+            
+            if (!deploymentsSubcategory) {
+                vscode.window.showInformationMessage(
+                    `ReplicaSet '${replicaSetName}' not found in tree view (Deployments subcategory not found)`
+                );
+                return;
+            }
+
+            // Get all deployments
+            const deployments = await this.getCategoryChildren(deploymentsSubcategory);
+            
+            // Find the matching deployment
+            const matchingDeployment = deployments.find(deployment => {
+                const deploymentResourceName = deployment.resourceData?.resourceName || 
+                    (typeof deployment.label === 'string' ? deployment.label : deployment.label?.toString() || '');
+                const deploymentNamespace = deployment.resourceData?.namespace || '';
+                return deploymentResourceName === deploymentName && deploymentNamespace === namespace;
+            });
+            
+            if (matchingDeployment) {
+                // Found the deployment! Reveal it
+                await this.treeView.reveal(matchingDeployment, { 
+                    select: true, 
+                    focus: true, 
+                    expand: true 
+                });
+                
+                // Focus the tree view
+                await vscode.commands.executeCommand('kube9ClusterView.focus');
+                
+                // Show informational message
+                vscode.window.showInformationMessage(
+                    `ReplicaSets are managed by Deployments. Navigated to parent Deployment '${deploymentName}'.`
+                );
+                return;
+            }
+
+            // Deployment not found
+            vscode.window.showInformationMessage(
+                `Deployment '${deploymentName}' (parent of ReplicaSet '${replicaSetName}') not found in tree view`
+            );
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error finding ReplicaSet parent Deployment:', errorMessage);
+            vscode.window.showInformationMessage(
+                `ReplicaSet '${replicaSetName}' not found in tree view`
+            );
+        }
+    }
+
+    /**
      * Dispose of the tree provider and clean up resources.
      */
     dispose(): void {

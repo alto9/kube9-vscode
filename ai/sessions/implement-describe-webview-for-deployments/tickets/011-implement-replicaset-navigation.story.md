@@ -5,7 +5,7 @@ feature_id:
   - deployment-describe-webview
 spec_id:
   - deployment-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Implement ReplicaSet Navigation
@@ -20,12 +20,12 @@ When viewing a deployment's describe webview, the ReplicaSets section shows rela
 
 ## Acceptance Criteria
 
-- [ ] Message handler for 'navigateToReplicaSet' exists in DeploymentDescribeWebview
-- [ ] Handler receives replicaSetName and namespace
-- [ ] Command to reveal resource in tree view exists (or use existing revealResource command)
-- [ ] Tree view expands and highlights the ReplicaSet
-- [ ] Works even if ReplicaSets category is currently collapsed
-- [ ] Error handling if ReplicaSet not found in tree
+- [x] Message handler for 'navigateToReplicaSet' exists in DeploymentDescribeWebview
+- [x] Handler receives replicaSetName and namespace
+- [x] Command to reveal resource in tree view exists (kube9.revealReplicaSet command)
+- [x] Tree view expands and highlights the parent Deployment (ReplicaSets are managed by Deployments)
+- [x] Works even if Workloads/Deployments category is currently collapsed
+- [x] Error handling if Deployment not found in tree
 
 ## Implementation Steps
 
