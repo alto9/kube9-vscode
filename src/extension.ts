@@ -51,6 +51,7 @@ import { restartPortForwardCommand } from './commands/restartPortForward';
 import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
+import { getContextInfo } from './utils/kubectlContext';
 
 /**
  * Promisified version of execFile for async/await usage.
@@ -421,8 +422,34 @@ function registerCommands(): void {
             try {
                 console.log('Opening Operator Health report webview...');
                 
+                // Get kubeconfig path
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
+                
+                if (!kubeconfigPath) {
+                    vscode.window.showWarningMessage('No cluster selected');
+                    return;
+                }
+                
+                // Get current context name
+                const contextInfo = await getContextInfo();
+                const contextName = contextInfo.contextName;
+                
+                if (!contextName) {
+                    vscode.window.showWarningMessage('No cluster context available');
+                    return;
+                }
+                
+                // Create OperatorStatusClient instance (singleton pattern - create new instance)
+                const operatorStatusClient = new OperatorStatusClient();
+                
                 // Show the Operator Health report webview
-                HealthReportPanel.show(context);
+                await HealthReportPanel.createOrShow(
+                    context,
+                    operatorStatusClient,
+                    kubeconfigPath,
+                    contextName
+                );
                 
                 console.log('Opened Operator Health report webview');
             } catch (error) {

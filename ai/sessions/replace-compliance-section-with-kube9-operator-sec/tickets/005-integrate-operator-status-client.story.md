@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - operator-health-report-spec
   - operator-status-api-spec
-status: pending
+status: completed
 ---
 
 # Integrate OperatorStatusClient in HealthReportPanel
@@ -131,14 +131,14 @@ interface HealthReportData {
 
 ## Acceptance Criteria
 
-- [ ] HealthReportPanel uses instance-based pattern
-- [ ] Panel queries OperatorStatusClient on creation
-- [ ] Data sent to webview via postMessage with 'update' command
-- [ ] Refresh message from webview triggers status re-query
-- [ ] Error handling for failed status queries
-- [ ] Command in extension.ts passes cluster context and statusClient
-- [ ] TypeScript compiles without errors
-- [ ] Webview receives operator status data (can verify in console)
+- [x] HealthReportPanel uses instance-based pattern
+- [x] Panel queries OperatorStatusClient on creation
+- [x] Data sent to webview via postMessage with 'update' command
+- [x] Refresh message from webview triggers status re-query
+- [x] Error handling for failed status queries
+- [x] Command in extension.ts passes cluster context and statusClient
+- [x] TypeScript compiles without errors
+- [x] Webview receives operator status data (can verify in console)
 
 ## Estimated Time
 
