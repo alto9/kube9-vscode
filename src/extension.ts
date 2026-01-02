@@ -1549,6 +1549,25 @@ function registerCommands(): void {
     );
     context.subscriptions.push(completeStep3);
     disposables.push(completeStep3);
+    
+    // Step 4 fallback - View Resources
+    const completeStep4 = vscode.commands.registerCommand(
+        'kube9.internal.completeStep4',
+        async () => {
+            // Fire the completion event that Step 4 expects
+            await vscode.commands.executeCommand(
+                'workbench.action.fireWalkthroughCompletionEvent',
+                'kube9.onPodClicked'
+            );
+            
+            // Helpful message for users without resources
+            vscode.window.showInformationMessage(
+                'Connect a cluster to view resource details. Click any pod to see its current status, conditions, and events.'
+            );
+        }
+    );
+    context.subscriptions.push(completeStep4);
+    disposables.push(completeStep4);
 }
 
 /**
