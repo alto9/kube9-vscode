@@ -49,6 +49,8 @@ import { copyPortForwardURLCommand } from './commands/copyPortForwardURL';
 import { viewPortForwardPodCommand } from './commands/viewPortForwardPod';
 import { restartPortForwardCommand } from './commands/restartPortForward';
 import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
+import { ErrorCommands } from './commands/errorCommands';
+import { OutputPanelLogger } from './errors/OutputPanelLogger';
 
 /**
  * Promisified version of execFile for async/await usage.
@@ -139,6 +141,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Initialize global state management
         GlobalState.initialize(context);
+        
+        // Initialize Output Panel Logger for error logging
+        OutputPanelLogger.getInstance();
+        // Logger is now ready for use
         
         // Parse kubeconfig to discover available clusters
         // This is non-blocking and will gracefully handle missing/invalid configs
@@ -1412,6 +1418,10 @@ function registerCommands(): void {
     );
     context.subscriptions.push(revealPodCmd);
     disposables.push(revealPodCmd);
+    
+    // Register error commands
+    const errorCommands = new ErrorCommands();
+    errorCommands.register(context);
 }
 
 /**

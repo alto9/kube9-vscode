@@ -125,6 +125,26 @@ export class ThemeIcon {
 }
 
 /**
+ * Mock MarkdownString class for formatted tooltips
+ */
+export class MarkdownString {
+    public isTrusted: boolean = false;
+    private _value: string = '';
+
+    appendMarkdown(value: string): void {
+        this._value += value;
+    }
+
+    appendText(value: string): void {
+        this._value += value;
+    }
+
+    get value(): string {
+        return this._value;
+    }
+}
+
+/**
  * Mock Command interface for tree item actions
  */
 export interface Command {
@@ -433,6 +453,10 @@ export const window = {
         };
         return await task(progress);
     },
+    showTextDocument: async (): Promise<unknown> => {
+        // Mock - no-op, just return a resolved promise
+        return Promise.resolve({});
+    },
     _getErrorMessages: () => [...errorMessages],
     _getWarningMessages: () => [...warningMessages],
     _getInfoMessages: () => [...infoMessages],
@@ -583,6 +607,46 @@ export class Selection extends Range {
  * Mock workspace API
  */
 const workspaceEventEmitter = new EventEmitter<TextDocument>();
+const textDocuments: Map<string, TextDocument> = new Map();
+
+/**
+ * Mock TextDocument implementation
+ */
+class MockTextDocument implements TextDocument {
+    constructor(
+        public readonly uri: Uri,
+        public readonly fileName: string,
+        public readonly isUntitled: boolean = false,
+        public readonly languageId: string = 'plaintext',
+        public readonly version: number = 1,
+        public readonly isDirty: boolean = false,
+        public readonly isClosed: boolean = false,
+        private content: string = ''
+    ) {}
+
+    save(): Thenable<boolean> {
+        return Promise.resolve(true);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    getText(_range?: unknown): string {
+        return this.content;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    lineAt(_line: number): { lineNumber: number; text: string; range: unknown; rangeIncludingLineBreak: unknown; firstNonWhitespaceCharacterIndex: number; isEmptyOrWhitespace: boolean } {
+        return {
+            lineNumber: 0,
+            text: '',
+            range: {},
+            rangeIncludingLineBreak: {},
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: true
+        };
+    }
+
+    lineCount: number = 1;
+}
 
 export const workspace = {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -590,9 +654,22 @@ export const workspace = {
         return mockConfiguration;
     },
     onDidCloseTextDocument: workspaceEventEmitter.event,
+    openTextDocument: (uriOrFileName: Uri | string): Thenable<TextDocument> => {
+        const path = typeof uriOrFileName === 'string' ? uriOrFileName : uriOrFileName.fsPath;
+        let doc = textDocuments.get(path);
+        if (!doc) {
+            const uri = typeof uriOrFileName === 'string' ? Uri.file(uriOrFileName) : uriOrFileName;
+            doc = new MockTextDocument(uri, path);
+            textDocuments.set(path, doc);
+        }
+        return Promise.resolve(doc);
+    },
     _getConfiguration: () => mockConfiguration,
     _fireDidCloseTextDocument: (document: TextDocument) => {
         workspaceEventEmitter.fire(document);
+    },
+    _clearDocuments: (): void => {
+        textDocuments.clear();
     }
 };
 
@@ -629,6 +706,63 @@ export const commands = {
 };
 
 /**
+ * Mock clipboard API
+ */
+let clipboardText = '';
+
+export const clipboard = {
+    writeText: (text: string): Thenable<void> => {
+        clipboardText = text;
+        return Promise.resolve();
+    },
+    readText: (): Thenable<string> => {
+        return Promise.resolve(clipboardText);
+    },
+    _getText: (): string => {
+        return clipboardText;
+    },
+    _clear: (): void => {
+        clipboardText = '';
+    }
+};
+
+/**
+ * Mock env API
+ */
+let openedUris: Uri[] = [];
+
+export const env = {
+    openExternal: (uri: Uri): Thenable<boolean> => {
+        openedUris.push(uri);
+        return Promise.resolve(true);
+    },
+    _getOpenedUris: (): Uri[] => {
+        return [...openedUris];
+    },
+    _clearOpenedUris: (): void => {
+        openedUris = [];
+    },
+    clipboard
+};
+
+/**
+ * Mock extensions API
+ */
+const mockExtensions: Map<string, { packageJSON: { version: string } }> = new Map();
+
+export const extensions = {
+    getExtension: (extensionId: string): { packageJSON: { version: string } } | undefined => {
+        return mockExtensions.get(extensionId);
+    },
+    _setExtension: (extensionId: string, version: string): void => {
+        mockExtensions.set(extensionId, { packageJSON: { version } });
+    },
+    _clearExtensions: (): void => {
+        mockExtensions.clear();
+    }
+};
+
+/**
  * Module exports object that provides all vscode API components
  * This allows code to access vscode.ProgressLocation.Notification etc.
  * When using require('vscode'), this object structure is returned.
@@ -644,6 +778,7 @@ const vscodeModule = {
     StatusBarAlignment,
     ThemeColor,
     ThemeIcon,
+    MarkdownString,
     TreeItem,
     Position,
     Range,
@@ -651,7 +786,10 @@ const vscodeModule = {
     EventEmitter,
     window,
     workspace,
-    commands
+    commands,
+    env,
+    extensions,
+    version: '1.80.0'
 };
 /* eslint-enable @typescript-eslint/naming-convention */
 
@@ -672,6 +810,7 @@ if (typeof module !== 'undefined' && module.exports) {
         StatusBarAlignment,
         ThemeColor,
         ThemeIcon,
+        MarkdownString,
         TreeItem,
         Position,
         Range,
@@ -679,7 +818,10 @@ if (typeof module !== 'undefined' && module.exports) {
         EventEmitter,
         window,
         workspace,
-        commands
+        commands,
+        env,
+        extensions,
+        version: '1.80.0'
     });
     /* eslint-enable @typescript-eslint/naming-convention */
 }
