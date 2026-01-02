@@ -331,7 +331,7 @@ export class DeploymentDescribeWebview {
 
     /**
      * Generate the HTML content for the Deployment Describe webview.
-     * Placeholder implementation - full HTML will be implemented in story 007.
+     * Includes complete HTML structure with all sections, CSS styling, and JavaScript placeholder.
      * 
      * @param webview The webview instance
      * @returns HTML content string
@@ -354,32 +354,534 @@ export class DeploymentDescribeWebview {
             font-size: var(--vscode-font-size);
             color: var(--vscode-foreground);
             background-color: var(--vscode-editor-background);
-            padding: 20px;
+            padding: 0;
             margin: 0;
         }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
+            padding: 20px;
         }
-        .loading {
-            text-align: center;
-            padding: 40px;
+
+        .deployment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .deployment-title {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+
+        .deployment-name {
+            color: var(--vscode-textLink-foreground);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: var(--vscode-font-size);
+            font-family: var(--vscode-font-family);
+        }
+
+        .action-btn:hover {
+            background-color: var(--vscode-button-hoverBackground);
+        }
+
+        .btn-icon {
+            font-size: 14px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            padding-bottom: 8px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: var(--vscode-font-size);
+            color: var(--vscode-foreground);
+            word-break: break-word;
+        }
+
+        .replica-status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .replica-status-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .replica-status-label {
+            font-size: 12px;
+            color: var(--vscode-descriptionForeground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .replica-status-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+
+        .replica-status-value.warning {
+            color: var(--vscode-errorForeground);
+        }
+
+        .progress-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 20px;
+            background-color: var(--vscode-progressBar-background);
+            border-radius: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background-color: var(--vscode-progressBar-background);
+            transition: width 0.3s ease;
+        }
+
+        .progress-bar-fill.low {
+            background-color: #00c800;
+        }
+
+        .progress-bar-fill.medium {
+            background-color: #ffaa00;
+        }
+
+        .progress-bar-fill.high {
+            background-color: var(--vscode-errorForeground);
+        }
+
+        .progress-percentage {
+            min-width: 45px;
+            text-align: right;
+            font-size: 12px;
             color: var(--vscode-descriptionForeground);
         }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        table thead {
+            background-color: var(--vscode-editor-background);
+            border-bottom: 2px solid var(--vscode-panel-border);
+        }
+
+        table th {
+            text-align: left;
+            padding: 10px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        table td {
+            padding: 10px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            color: var(--vscode-foreground);
+        }
+
+        table tbody tr:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        table tbody tr.current {
+            background-color: rgba(0, 200, 0, 0.1);
+        }
+
+        table tbody tr.warning {
+            background-color: rgba(255, 170, 0, 0.1);
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-indicator.true, .status-indicator.success {
+            background-color: rgba(0, 200, 0, 0.1);
+            color: #00c800;
+        }
+
+        .status-indicator.false, .status-indicator.error {
+            background-color: rgba(255, 0, 0, 0.1);
+            color: var(--vscode-errorForeground);
+        }
+
+        .status-indicator.unknown, .status-indicator.warning {
+            background-color: rgba(255, 170, 0, 0.1);
+            color: #ffaa00;
+        }
+
+        .status-indicator.info {
+            background-color: rgba(128, 128, 128, 0.1);
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .status-icon-check {
+            color: #00c800;
+        }
+
+        .status-icon-warning {
+            color: var(--vscode-errorForeground);
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+            padding: 4px;
+            display: inline-flex;
+            align-items: center;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+        }
+
+        .copy-icon {
+            font-size: 14px;
+        }
+
+        .label-list, .selector-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .label-item, .selector-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .label-item:last-child, .selector-item:last-child {
+            border-bottom: none;
+        }
+
+        .label-key, .selector-key {
+            font-weight: 600;
+            min-width: 120px;
+            color: var(--vscode-foreground);
+        }
+
+        .label-value, .selector-value {
+            flex: 1;
+            color: var(--vscode-foreground);
+            font-family: var(--vscode-editor-font-family);
+            word-break: break-all;
+        }
+
+        .replicaset-link {
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .replicaset-link:hover {
+            text-decoration: underline;
+        }
+
+        .container-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .container-item {
+            padding: 12px;
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            background-color: var(--vscode-editor-background);
+        }
+
+        .container-header {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--vscode-foreground);
+        }
+
+        .container-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .annotation-item {
+            padding: 8px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .annotation-item:last-child {
+            border-bottom: none;
+        }
+
+        .annotation-key {
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--vscode-foreground);
+        }
+
+        .annotation-value {
+            color: var(--vscode-foreground);
+            font-family: var(--vscode-editor-font-family);
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .annotation-value.truncated {
+            max-height: 100px;
+            overflow: hidden;
+        }
+
+        .expand-btn {
+            background: none;
+            border: none;
+            color: var(--vscode-textLink-foreground);
+            cursor: pointer;
+            padding: 4px 0;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .expand-btn:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            padding: 20px;
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+        }
+
         .error-message {
             padding: 20px;
             background-color: rgba(255, 0, 0, 0.1);
             border: 1px solid var(--vscode-errorForeground);
             border-radius: 4px;
             color: var(--vscode-errorForeground);
-            margin: 20px 0;
+            margin: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="loading">Loading deployment details...</div>
+        <!-- Header -->
+        <div class="deployment-header">
+            <h1 class="deployment-title">Deployment / <span class="deployment-name" id="deployment-name">Loading...</span></h1>
+            <div class="header-actions">
+                <button id="refresh-btn" class="action-btn">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-text">Refresh</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="loading">Loading deployment details...</div>
+
+        <!-- Error Message -->
+        <div id="error-message" class="error-message hidden"></div>
+
+        <!-- Overview Section -->
+        <div class="section" id="overview-section" style="display: none;">
+            <h2>Overview</h2>
+            <div class="info-grid" id="overview-grid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Replica Status Section -->
+        <div class="section" id="replica-status-section" style="display: none;">
+            <h2>Replica Status</h2>
+            <div class="replica-status-grid" id="replica-status-grid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Rollout Strategy Section -->
+        <div class="section" id="strategy-section" style="display: none;">
+            <h2>Rollout Strategy</h2>
+            <div class="info-grid" id="strategy-content">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Pod Template Section -->
+        <div class="section" id="pod-template-section" style="display: none;">
+            <h2>Pod Template</h2>
+            <div id="pod-template-content">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Conditions Section -->
+        <div class="section" id="conditions-section" style="display: none;">
+            <h2>Conditions</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                        <th>Message</th>
+                        <th>Last Transition</th>
+                    </tr>
+                </thead>
+                <tbody id="conditions-tbody">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ReplicaSets Section -->
+        <div class="section" id="replicasets-section" style="display: none;">
+            <h2>ReplicaSets</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Revision</th>
+                        <th>Desired</th>
+                        <th>Current</th>
+                        <th>Ready</th>
+                        <th>Available</th>
+                        <th>Age</th>
+                        <th>Images</th>
+                    </tr>
+                </thead>
+                <tbody id="replicasets-tbody">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Selectors & Labels Section -->
+        <div class="section" id="selectors-labels-section" style="display: none;">
+            <h2>Selectors & Labels</h2>
+            <div id="selectors-labels-content">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Events Section -->
+        <div class="section" id="events-section" style="display: none;">
+            <h2>Events</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Reason</th>
+                        <th>Message</th>
+                        <th>Age</th>
+                        <th>From</th>
+                        <th>Count</th>
+                    </tr>
+                </thead>
+                <tbody id="events-tbody">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Annotations Section -->
+        <div class="section" id="annotations-section" style="display: none;">
+            <h2>Annotations</h2>
+            <div id="annotations-content">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
     </div>
+
     <script>
         const vscode = acquireVsCodeApi();
         
@@ -387,12 +889,28 @@ export class DeploymentDescribeWebview {
             const message = event.data;
             if (message.command === 'updateDeploymentData') {
                 // Full rendering logic will be implemented in story 008
-                document.querySelector('.loading').textContent = 'Deployment data loaded (rendering will be implemented in story 008)';
+                const loadingEl = document.getElementById('loading');
+                if (loadingEl) {
+                    loadingEl.textContent = 'Deployment data loaded (rendering will be implemented in story 008)';
+                }
             } else if (message.command === 'error') {
-                const container = document.querySelector('.container');
-                container.innerHTML = '<div class="error-message">' + escapeHtml(message.message) + '</div>';
+                const loadingEl = document.getElementById('loading');
+                const errorEl = document.getElementById('error-message');
+                if (loadingEl) loadingEl.classList.add('hidden');
+                if (errorEl) {
+                    errorEl.textContent = escapeHtml(message.message);
+                    errorEl.classList.remove('hidden');
+                }
             }
         });
+        
+        // Setup refresh button
+        const refreshBtn = document.getElementById('refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                vscode.postMessage({ command: 'refresh' });
+            });
+        }
         
         function escapeHtml(unsafe) {
             if (unsafe === null || unsafe === undefined) return '';
