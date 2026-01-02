@@ -10,6 +10,7 @@ feature_id:
 spec_id:
   - error-handler-utility
 story_id: 001-create-error-types-and-interfaces
+status: completed
 ---
 
 # Create Error Types and Interfaces
@@ -73,14 +74,14 @@ export interface ErrorDetails {
 
 ## Acceptance Criteria
 
-- [ ] File `src/errors/types.ts` created
-- [ ] All enums and interfaces exported
-- [ ] ErrorType enum includes all 7 types
-- [ ] ErrorSeverity enum includes 3 levels
-- [ ] ErrorContext interface has optional cluster, namespace, resource fields
-- [ ] ErrorAction interface includes label and action callback
-- [ ] ErrorDetails interface includes all required fields
-- [ ] File compiles without errors
+- [x] File `src/errors/types.ts` created
+- [x] All enums and interfaces exported
+- [x] ErrorType enum includes all 7 types
+- [x] ErrorSeverity enum includes 3 levels
+- [x] ErrorContext interface has optional cluster, namespace, resource fields
+- [x] ErrorAction interface includes label and action callback
+- [x] ErrorDetails interface includes all required fields
+- [x] File compiles without errors
 
 ## Estimated Time
 
