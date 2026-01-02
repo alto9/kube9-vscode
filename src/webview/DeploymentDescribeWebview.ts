@@ -883,45 +883,648 @@ export class DeploymentDescribeWebview {
     </div>
 
     <script>
-        const vscode = acquireVsCodeApi();
-        
-        window.addEventListener('message', event => {
-            const message = event.data;
-            if (message.command === 'updateDeploymentData') {
-                // Full rendering logic will be implemented in story 008
+        (function() {
+            const vscode = acquireVsCodeApi();
+            
+            window.addEventListener('message', event => {
+                const message = event.data;
+                
+                switch (message.command) {
+                    case 'updateDeploymentData':
+                        renderDeploymentData(message.data);
+                        hideLoading();
+                        break;
+                    case 'error':
+                        showError(message.message);
+                        hideLoading();
+                        break;
+                }
+            });
+            
+            function renderDeploymentData(data) {
+                if (!data) return;
+                
+                // Update deployment name in header
+                const nameEl = document.getElementById('deployment-name');
+                if (nameEl && data.name) {
+                    nameEl.textContent = data.name;
+                }
+                
+                // Hide error message
+                hideError();
+                
+                // Render all sections
+                if (data.overview) renderOverview(data.overview);
+                if (data.replicaStatus) renderReplicaStatus(data.replicaStatus);
+                if (data.strategy) renderStrategy(data.strategy);
+                if (data.podTemplate) renderPodTemplate(data.podTemplate);
+                if (data.conditions) renderConditions(data.conditions);
+                if (data.replicaSets) renderReplicaSets(data.replicaSets);
+                if (data.labels || data.selectors) renderLabels(data.labels, data.selectors);
+                if (data.events) renderEvents(data.events);
+                if (data.annotations) renderAnnotations(data.annotations);
+                
+                // Setup interactive elements
+                setupCopyButtons();
+                setupReplicaSetNavigation();
+            }
+            
+            function renderOverview(overview) {
+                const grid = document.getElementById('overview-grid');
+                const section = document.getElementById('overview-section');
+                if (!grid || !section) return;
+                
+                const statusBadge = overview.status === 'Available' 
+                    ? '<span class="status-indicator success">✓ Available</span>'
+                    : overview.status === 'Progressing'
+                    ? '<span class="status-indicator warning">⚠ Progressing</span>'
+                    : overview.status === 'Failed'
+                    ? '<span class="status-indicator error">✗ Failed</span>'
+                    : '<span class="status-indicator info">? Unknown</span>';
+                
+                const items = [
+                    { label: 'Name', value: overview.name || 'N/A' },
+                    { label: 'Namespace', value: overview.namespace || 'N/A' },
+                    { label: 'Status', value: statusBadge },
+                    { label: 'Status Message', value: overview.statusMessage || 'N/A' },
+                    { label: 'Creation Timestamp', value: overview.creationTimestamp || 'N/A' },
+                    { label: 'Age', value: overview.age || 'N/A' },
+                    { label: 'Generation', value: String(overview.generation || 0) },
+                    { label: 'Observed Generation', value: String(overview.observedGeneration || 0) },
+                    { label: 'Paused', value: overview.paused ? 'Yes' : 'No' }
+                ];
+                
+                grid.innerHTML = items.map(item => 
+                    '<div class="info-item">' +
+                        '<div class="info-label">' + escapeHtml(item.label) + '</div>' +
+                        '<div class="info-value">' + item.value + '</div>' +
+                    '</div>'
+                ).join('');
+                
+                section.style.display = 'block';
+            }
+            
+            function renderReplicaStatus(replicaStatus) {
+                const grid = document.getElementById('replica-status-grid');
+                const section = document.getElementById('replica-status-section');
+                if (!grid || !section) return;
+                
+                const items = [
+                    {
+                        label: 'Desired',
+                        value: String(replicaStatus.desired || 0),
+                        showProgress: false
+                    },
+                    {
+                        label: 'Current',
+                        value: String(replicaStatus.current || 0),
+                        showProgress: false
+                    },
+                    {
+                        label: 'Ready',
+                        value: String(replicaStatus.ready || 0),
+                        total: replicaStatus.desired || 0,
+                        showProgress: true,
+                        percentage: replicaStatus.readyPercentage || 0
+                    },
+                    {
+                        label: 'Available',
+                        value: String(replicaStatus.available || 0),
+                        total: replicaStatus.desired || 0,
+                        showProgress: true,
+                        percentage: replicaStatus.availablePercentage || 0
+                    },
+                    {
+                        label: 'Unavailable',
+                        value: String(replicaStatus.unavailable || 0),
+                        showProgress: false
+                    },
+                    {
+                        label: 'Up-to-date',
+                        value: String(replicaStatus.upToDate || 0),
+                        showProgress: false
+                    }
+                ];
+                
+                grid.innerHTML = items.map(item => {
+                    let valueClass = '';
+                    if (item.label === 'Ready' || item.label === 'Available') {
+                        valueClass = !replicaStatus.isHealthy ? ' warning' : '';
+                    }
+                    
+                    let progressHtml = '';
+                    if (item.showProgress && item.total !== undefined) {
+                        progressHtml = createProgressBar(item.value, item.total, item.label);
+                    }
+                    
+                    return '<div class="replica-status-item">' +
+                        '<div class="replica-status-label">' + escapeHtml(item.label) + '</div>' +
+                        '<div class="replica-status-value' + valueClass + '">' + escapeHtml(item.value) + '</div>' +
+                        progressHtml +
+                    '</div>';
+                }).join('');
+                
+                section.style.display = 'block';
+            }
+            
+            function renderStrategy(strategy) {
+                const content = document.getElementById('strategy-content');
+                const section = document.getElementById('strategy-section');
+                if (!content || !section) return;
+                
+                const items = [
+                    { label: 'Type', value: strategy.type || 'N/A' },
+                    { label: 'Max Surge', value: strategy.maxSurge || 'N/A' },
+                    { label: 'Max Unavailable', value: strategy.maxUnavailable || 'N/A' },
+                    { label: 'Revision History Limit', value: String(strategy.revisionHistoryLimit || 10) },
+                    { label: 'Progress Deadline Seconds', value: String(strategy.progressDeadlineSeconds || 600) },
+                    { label: 'Min Ready Seconds', value: String(strategy.minReadySeconds || 0) }
+                ];
+                
+                content.innerHTML = items.map(item => 
+                    '<div class="info-item">' +
+                        '<div class="info-label">' + escapeHtml(item.label) + '</div>' +
+                        '<div class="info-value">' + escapeHtml(item.value) + '</div>' +
+                    '</div>'
+                ).join('');
+                
+                section.style.display = 'block';
+            }
+            
+            function renderPodTemplate(podTemplate) {
+                const content = document.getElementById('pod-template-content');
+                const section = document.getElementById('pod-template-section');
+                if (!content || !section) return;
+                
+                let html = '';
+                
+                // Containers
+                if (podTemplate.containers && podTemplate.containers.length > 0) {
+                    html += '<div class="container-list">';
+                    podTemplate.containers.forEach(container => {
+                        html += renderContainer(container, 'Container');
+                    });
+                    html += '</div>';
+                }
+                
+                // Init Containers
+                if (podTemplate.initContainers && podTemplate.initContainers.length > 0) {
+                    html += '<h3 style="margin-top: 20px; margin-bottom: 10px;">Init Containers</h3>';
+                    html += '<div class="container-list">';
+                    podTemplate.initContainers.forEach(container => {
+                        html += renderContainer(container, 'Init Container');
+                    });
+                    html += '</div>';
+                }
+                
+                // Volumes
+                if (podTemplate.volumes && podTemplate.volumes.length > 0) {
+                    html += '<h3 style="margin-top: 20px; margin-bottom: 10px;">Volumes</h3>';
+                    html += '<div class="info-grid">';
+                    podTemplate.volumes.forEach(volume => {
+                        html += '<div class="info-item">' +
+                            '<div class="info-label">' + escapeHtml(volume.name) + '</div>' +
+                            '<div class="info-value">' + escapeHtml(volume.type) + 
+                            (volume.source ? ' (' + escapeHtml(volume.source) + ')' : '') + '</div>' +
+                        '</div>';
+                    });
+                    html += '</div>';
+                }
+                
+                // Pod-level settings
+                html += '<div class="info-grid" style="margin-top: 20px;">';
+                html += '<div class="info-item">' +
+                    '<div class="info-label">Restart Policy</div>' +
+                    '<div class="info-value">' + escapeHtml(podTemplate.restartPolicy || 'Always') + '</div>' +
+                '</div>';
+                html += '<div class="info-item">' +
+                    '<div class="info-label">Service Account</div>' +
+                    '<div class="info-value">' + escapeHtml(podTemplate.serviceAccount || 'default') + '</div>' +
+                '</div>';
+                
+                // Security Context
+                if (podTemplate.securityContext) {
+                    const sc = podTemplate.securityContext;
+                    const scItems = [];
+                    if (sc.runAsUser !== null) scItems.push('RunAsUser: ' + sc.runAsUser);
+                    if (sc.runAsGroup !== null) scItems.push('RunAsGroup: ' + sc.runAsGroup);
+                    if (sc.fsGroup !== null) scItems.push('FSGroup: ' + sc.fsGroup);
+                    if (sc.runAsNonRoot !== null) scItems.push('RunAsNonRoot: ' + sc.runAsNonRoot);
+                    
+                    if (scItems.length > 0) {
+                        html += '<div class="info-item">' +
+                            '<div class="info-label">Security Context</div>' +
+                            '<div class="info-value">' + escapeHtml(scItems.join(', ')) + '</div>' +
+                        '</div>';
+                    }
+                }
+                
+                html += '</div>';
+                
+                content.innerHTML = html;
+                section.style.display = 'block';
+            }
+            
+            function renderContainer(container, type) {
+                let html = '<div class="container-item">';
+                html += '<div class="container-header">' + escapeHtml(type) + ': ' + escapeHtml(container.name) + '</div>';
+                
+                html += '<div class="container-details">';
+                html += '<div><strong>Image:</strong> ' + escapeHtml(container.image || 'N/A') + '</div>';
+                html += '<div><strong>Image Pull Policy:</strong> ' + escapeHtml(container.imagePullPolicy || 'IfNotPresent') + '</div>';
+                
+                // Ports
+                if (container.ports && container.ports.length > 0) {
+                    const portsStr = container.ports.map(p => 
+                        escapeHtml(p.name || '') + ':' + p.containerPort + '/' + escapeHtml(p.protocol || 'TCP')
+                    ).join(', ');
+                    html += '<div><strong>Ports:</strong> ' + portsStr + '</div>';
+                }
+                
+                // Resources
+                if (container.resources) {
+                    if (container.resources.hasRequests) {
+                        html += '<div><strong>Requests:</strong> CPU: ' + escapeHtml(container.resources.requests.cpu) + 
+                            ', Memory: ' + escapeHtml(container.resources.requests.memory) + '</div>';
+                    }
+                    if (container.resources.hasLimits) {
+                        html += '<div><strong>Limits:</strong> CPU: ' + escapeHtml(container.resources.limits.cpu) + 
+                            ', Memory: ' + escapeHtml(container.resources.limits.memory) + '</div>';
+                    }
+                }
+                
+                // Environment Variables
+                if (container.env && container.env.count > 0) {
+                    let envInfo = container.env.count + ' env var(s)';
+                    if (container.env.hasSecrets) envInfo += ', includes Secrets';
+                    if (container.env.hasConfigMaps) envInfo += ', includes ConfigMaps';
+                    html += '<div><strong>Environment:</strong> ' + escapeHtml(envInfo) + '</div>';
+                }
+                
+                // Volume Mounts
+                if (container.volumeMounts && container.volumeMounts.count > 0) {
+                    html += '<div><strong>Volume Mounts:</strong> ' + escapeHtml(String(container.volumeMounts.count)) + 
+                        ' mount(s): ' + escapeHtml(container.volumeMounts.paths.join(', ')) + '</div>';
+                }
+                
+                html += '</div>';
+                
+                // Probes
+                if (container.livenessProbe || container.readinessProbe || container.startupProbe) {
+                    html += '<div style="margin-top: 10px;">';
+                    if (container.livenessProbe) {
+                        html += '<div><strong>Liveness Probe:</strong> ' + escapeHtml(container.livenessProbe.details) + 
+                            ' (initialDelay: ' + container.livenessProbe.initialDelaySeconds + 
+                            's, period: ' + container.livenessProbe.periodSeconds + 's)</div>';
+                    }
+                    if (container.readinessProbe) {
+                        html += '<div><strong>Readiness Probe:</strong> ' + escapeHtml(container.readinessProbe.details) + 
+                            ' (initialDelay: ' + container.readinessProbe.initialDelaySeconds + 
+                            's, period: ' + container.readinessProbe.periodSeconds + 's)</div>';
+                    }
+                    if (container.startupProbe) {
+                        html += '<div><strong>Startup Probe:</strong> ' + escapeHtml(container.startupProbe.details) + 
+                            ' (initialDelay: ' + container.startupProbe.initialDelaySeconds + 
+                            's, period: ' + container.startupProbe.periodSeconds + 's)</div>';
+                    }
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+                return html;
+            }
+            
+            function renderConditions(conditions) {
+                const tbody = document.getElementById('conditions-tbody');
+                const section = document.getElementById('conditions-section');
+                if (!tbody || !section) return;
+                
+                if (!conditions || conditions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No conditions available</td></tr>';
+                    section.style.display = 'block';
+                    return;
+                }
+                
+                tbody.innerHTML = conditions.map(condition => {
+                    const statusIndicator = getStatusIndicator(condition.status, condition.severity);
+                    return '<tr>' +
+                        '<td>' + escapeHtml(condition.type) + '</td>' +
+                        '<td>' + statusIndicator + '</td>' +
+                        '<td>' + escapeHtml(condition.reason || 'N/A') + '</td>' +
+                        '<td>' + escapeHtml(condition.message || 'N/A') + '</td>' +
+                        '<td>' + escapeHtml(condition.relativeTime || 'N/A') + '</td>' +
+                    '</tr>';
+                }).join('');
+                
+                section.style.display = 'block';
+            }
+            
+            function renderReplicaSets(replicaSets) {
+                const tbody = document.getElementById('replicasets-tbody');
+                const section = document.getElementById('replicasets-section');
+                if (!tbody || !section) return;
+                
+                if (!replicaSets || replicaSets.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No ReplicaSets found</td></tr>';
+                    section.style.display = 'block';
+                    return;
+                }
+                
+                tbody.innerHTML = replicaSets.map(rs => {
+                    const rowClass = rs.isCurrent ? 'current' : '';
+                    const rsLink = '<a href="#" class="replicaset-link" data-replicaset-name="' + escapeHtml(rs.name) + 
+                        '" data-replicaset-namespace="' + escapeHtml(rs.namespace) + '">' + escapeHtml(rs.name) + '</a>';
+                    return '<tr class="' + rowClass + '">' +
+                        '<td>' + rsLink + '</td>' +
+                        '<td>' + escapeHtml(String(rs.revision)) + '</td>' +
+                        '<td>' + escapeHtml(String(rs.desired)) + '</td>' +
+                        '<td>' + escapeHtml(String(rs.current)) + '</td>' +
+                        '<td>' + escapeHtml(String(rs.ready)) + '</td>' +
+                        '<td>' + escapeHtml(String(rs.available)) + '</td>' +
+                        '<td>' + escapeHtml(rs.age || 'N/A') + '</td>' +
+                        '<td>' + escapeHtml(rs.images.join(', ') || 'N/A') + '</td>' +
+                    '</tr>';
+                }).join('');
+                
+                section.style.display = 'block';
+            }
+            
+            function renderLabels(labels, selectors) {
+                const content = document.getElementById('selectors-labels-content');
+                const section = document.getElementById('selectors-labels-section');
+                if (!content || !section) return;
+                
+                let html = '';
+                
+                // Selectors
+                if (selectors && Object.keys(selectors).length > 0) {
+                    html += '<h3 style="margin-bottom: 10px;">Selectors</h3>';
+                    html += '<ul class="selector-list">';
+                    Object.entries(selectors).forEach(([key, value]) => {
+                        const pair = key + '=' + value;
+                        html += '<li class="selector-item">' +
+                            '<span class="selector-key">' + escapeHtml(key) + '</span>' +
+                            '<span class="selector-value">' + escapeHtml(value) + '</span>' +
+                            '<button class="copy-btn" data-copy-value="' + escapeHtml(pair) + '" title="Copy selector">' +
+                                '<span class="copy-icon">📋</span>' +
+                            '</button>' +
+                        '</li>';
+                    });
+                    html += '</ul>';
+                }
+                
+                // Labels
+                if (labels && Object.keys(labels).length > 0) {
+                    html += '<h3 style="margin-top: 20px; margin-bottom: 10px;">Labels</h3>';
+                    html += '<ul class="label-list">';
+                    Object.entries(labels).forEach(([key, value]) => {
+                        const pair = key + '=' + value;
+                        html += '<li class="label-item">' +
+                            '<span class="label-key">' + escapeHtml(key) + '</span>' +
+                            '<span class="label-value">' + escapeHtml(value) + '</span>' +
+                            '<button class="copy-btn" data-copy-value="' + escapeHtml(pair) + '" title="Copy label">' +
+                                '<span class="copy-icon">📋</span>' +
+                            '</button>' +
+                        '</li>';
+                    });
+                    html += '</ul>';
+                }
+                
+                if (!html) {
+                    html = '<div class="empty-state">No selectors or labels configured</div>';
+                }
+                
+                content.innerHTML = html;
+                section.style.display = 'block';
+            }
+            
+            function renderEvents(events) {
+                const tbody = document.getElementById('events-tbody');
+                const section = document.getElementById('events-section');
+                if (!tbody || !section) return;
+                
+                if (!events || events.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No recent events</td></tr>';
+                    section.style.display = 'block';
+                    return;
+                }
+                
+                tbody.innerHTML = events.map(event => {
+                    const rowClass = event.type === 'Warning' ? 'warning' : '';
+                    return '<tr class="' + rowClass + '">' +
+                        '<td>' + escapeHtml(event.type || 'Normal') + '</td>' +
+                        '<td>' + escapeHtml(event.reason || 'N/A') + '</td>' +
+                        '<td>' + escapeHtml(event.message || 'N/A') + '</td>' +
+                        '<td>' + escapeHtml(event.relativeTime || 'N/A') + '</td>' +
+                        '<td>' + escapeHtml(event.source || 'N/A') + '</td>' +
+                        '<td>' + escapeHtml(String(event.count || 1)) + '</td>' +
+                    '</tr>';
+                }).join('');
+                
+                section.style.display = 'block';
+            }
+            
+            function renderAnnotations(annotations) {
+                const content = document.getElementById('annotations-content');
+                const section = document.getElementById('annotations-section');
+                if (!content || !section) return;
+                
+                if (!annotations || Object.keys(annotations).length === 0) {
+                    content.innerHTML = '<div class="empty-state">No annotations configured</div>';
+                    section.style.display = 'block';
+                    return;
+                }
+                
+                const annotationEntries = Object.entries(annotations);
+                const maxLength = 200;
+                
+                content.innerHTML = annotationEntries.map(([key, value], index) => {
+                    const valueStr = String(value || '');
+                    const isLong = valueStr.length > maxLength;
+                    const displayValue = isLong ? valueStr.substring(0, maxLength) + '...' : valueStr;
+                    const annotationId = 'annotation-' + index;
+                    
+                    return '<div class="annotation-item">' +
+                        '<div class="annotation-key">' + escapeHtml(key) + '</div>' +
+                        '<div class="annotation-value' + (isLong ? ' truncated' : '') + '" id="' + annotationId + '-value">' + 
+                            escapeHtml(displayValue) + 
+                        '</div>' +
+                        (isLong ? '<button class="expand-btn" id="' + annotationId + '-btn" onclick="toggleAnnotation(&quot;' + annotationId + '&quot;, ' + 
+                            JSON.stringify(escapeHtml(valueStr)).replace(/"/g, '&quot;') + ')">Show more</button>' : '') +
+                        '<button class="copy-btn" data-copy-value="' + escapeHtml(valueStr) + '" title="Copy annotation" style="margin-left: 10px;">' +
+                            '<span class="copy-icon">📋</span>' +
+                        '</button>' +
+                    '</div>';
+                }).join('');
+                
+                section.style.display = 'block';
+            }
+            
+            function createProgressBar(current, total, label) {
+                const currentNum = parseInt(current) || 0;
+                const totalNum = parseInt(total) || 0;
+                const percentage = totalNum > 0 ? Math.min(100, Math.max(0, Math.round((currentNum / totalNum) * 100))) : 0;
+                
+                let colorClass = 'low';
+                if (percentage >= 80) {
+                    colorClass = 'high';
+                } else if (percentage >= 50) {
+                    colorClass = 'medium';
+                }
+                
+                return '<div class="progress-bar-container">' +
+                    '<div class="progress-bar">' +
+                        '<div class="progress-bar-fill ' + colorClass + '" style="width: ' + percentage + '%"></div>' +
+                    '</div>' +
+                    '<span class="progress-percentage">' + percentage + '%</span>' +
+                '</div>';
+            }
+            
+            function getStatusIndicator(status, severity) {
+                let indicatorClass = 'unknown';
+                let icon = '?';
+                let text = 'Unknown';
+                
+                if (severity === 'success') {
+                    indicatorClass = 'success';
+                    icon = '✓';
+                    text = status || 'True';
+                } else if (severity === 'error') {
+                    indicatorClass = 'error';
+                    icon = '⚠';
+                    text = status || 'False';
+                } else if (severity === 'warning') {
+                    indicatorClass = 'warning';
+                    icon = '⚠';
+                    text = status || 'True';
+                } else {
+                    indicatorClass = 'info';
+                    icon = '?';
+                    text = status || 'Unknown';
+                }
+                
+                return '<span class="status-indicator ' + indicatorClass + '">' +
+                    '<span class="status-icon-' + (indicatorClass === 'success' || indicatorClass === 'true' ? 'check' : 'warning') + '">' + icon + '</span>' +
+                    '<span>' + text + '</span>' +
+                '</span>';
+            }
+            
+            function setupCopyButtons() {
+                // Remove existing listeners by cloning nodes
+                const copyButtons = document.querySelectorAll('.copy-btn');
+                copyButtons.forEach(btn => {
+                    const newBtn = btn.cloneNode(true);
+                    btn.parentNode.replaceChild(newBtn, btn);
+                });
+                
+                // Attach new listeners
+                document.querySelectorAll('.copy-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const value = btn.getAttribute('data-copy-value');
+                        if (value) {
+                            vscode.postMessage({ command: 'copyValue', value: value });
+                        }
+                    });
+                });
+            }
+            
+            function setupReplicaSetNavigation() {
+                // Remove existing listeners by cloning nodes
+                const rsLinks = document.querySelectorAll('.replicaset-link');
+                rsLinks.forEach(link => {
+                    const newLink = link.cloneNode(true);
+                    link.parentNode.replaceChild(newLink, link);
+                });
+                
+                // Attach new listeners
+                document.querySelectorAll('.replicaset-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const rsName = link.getAttribute('data-replicaset-name');
+                        const rsNamespace = link.getAttribute('data-replicaset-namespace');
+                        if (rsName) {
+                            vscode.postMessage({
+                                command: 'navigateToReplicaSet',
+                                replicaSetName: rsName,
+                                name: rsName,
+                                namespace: rsNamespace || undefined
+                            });
+                        }
+                    });
+                });
+            }
+            
+            function showLoading() {
                 const loadingEl = document.getElementById('loading');
                 if (loadingEl) {
-                    loadingEl.textContent = 'Deployment data loaded (rendering will be implemented in story 008)';
+                    loadingEl.classList.remove('hidden');
                 }
-            } else if (message.command === 'error') {
+                hideError();
+            }
+            
+            function hideLoading() {
                 const loadingEl = document.getElementById('loading');
+                if (loadingEl) {
+                    loadingEl.classList.add('hidden');
+                }
+            }
+            
+            function showError(message) {
                 const errorEl = document.getElementById('error-message');
-                if (loadingEl) loadingEl.classList.add('hidden');
                 if (errorEl) {
-                    errorEl.textContent = escapeHtml(message.message);
+                    errorEl.textContent = escapeHtml(message);
                     errorEl.classList.remove('hidden');
                 }
             }
-        });
-        
-        // Setup refresh button
-        const refreshBtn = document.getElementById('refresh-btn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                vscode.postMessage({ command: 'refresh' });
-            });
-        }
-        
-        function escapeHtml(unsafe) {
-            if (unsafe === null || unsafe === undefined) return '';
-            const str = String(unsafe);
-            return str
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
+            
+            function hideError() {
+                const errorEl = document.getElementById('error-message');
+                if (errorEl) {
+                    errorEl.classList.add('hidden');
+                }
+            }
+            
+            function escapeHtml(unsafe) {
+                if (unsafe === null || unsafe === undefined) return '';
+                const str = String(unsafe);
+                return str
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+            
+            function toggleAnnotation(annotationId, fullValue) {
+                const valueEl = document.getElementById(annotationId + '-value');
+                const btnEl = document.getElementById(annotationId + '-btn');
+                if (valueEl && btnEl) {
+                    if (valueEl.classList.contains('truncated')) {
+                        valueEl.textContent = fullValue;
+                        valueEl.classList.remove('truncated');
+                        btnEl.textContent = 'Show less';
+                    } else {
+                        const truncated = fullValue.substring(0, 200) + '...';
+                        valueEl.textContent = truncated;
+                        valueEl.classList.add('truncated');
+                        btnEl.textContent = 'Show more';
+                    }
+                }
+            }
+            
+            // Make toggleAnnotation available globally for onclick handlers
+            window.toggleAnnotation = toggleAnnotation;
+            
+            // Setup refresh button
+            const refreshBtn = document.getElementById('refresh-btn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', () => {
+                    vscode.postMessage({ command: 'refresh' });
+                    showLoading();
+                });
+            }
+        })();
     </script>
 </body>
 </html>`;
