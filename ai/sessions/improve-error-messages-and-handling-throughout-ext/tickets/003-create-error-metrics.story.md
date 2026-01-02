@@ -5,6 +5,7 @@ feature_id:
 spec_id:
   - error-handler-utility
 story_id: 003-create-error-metrics
+status: completed
 ---
 
 # Create Error Metrics Tracker
@@ -37,14 +38,17 @@ Use the implementation from spec `error-handler-utility.spec.md` lines 494-528.
 
 ## Acceptance Criteria
 
-- [ ] File `src/errors/ErrorMetrics.ts` created
-- [ ] Singleton pattern implemented correctly
-- [ ] Map<ErrorType, number> used to store counts
-- [ ] recordError() increments count correctly
-- [ ] getErrorCount() returns 0 for unrecorded types
-- [ ] getTotalErrors() sums all counts
-- [ ] getSummary() returns proper Record format
-- [ ] File compiles without errors
+- [x] File `src/errors/ErrorMetrics.ts` created
+- [x] Singleton pattern implemented correctly
+- [x] Map<ErrorType, number> used to store counts
+- [x] recordError() increments count correctly
+- [x] getErrorCount() returns 0 for unrecorded types
+- [x] getTotalErrors() sums all counts
+- [x] getSummary() returns proper Record format
+- [x] File compiles without errors
+- [x] Unit tests created and passing (`src/test/suite/errors/ErrorMetrics.test.ts`)
+- [x] All tests pass (`npm run test`)
+- [x] Build succeeds (`npm run build`)
 
 ## Estimated Time
 
