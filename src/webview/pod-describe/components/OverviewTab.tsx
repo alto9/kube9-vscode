@@ -42,81 +42,82 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ data }) => {
 
     return (
         <div className="overview-tab">
-            <div className="info-grid">
-                {/* Status and Phase */}
-                <div className="info-item">
-                    <label>Status</label>
-                    <value className={`status-${phaseDisplay.toLowerCase()}`}>
-                        {phaseDisplay}
-                    </value>
-                </div>
+            <div className="section">
+                <h2>Overview</h2>
+                <div className="info-grid">
+                    {/* Status and Phase */}
+                    <div className="info-item">
+                        <div className="info-label">Status</div>
+                        <div className="info-value">{phaseDisplay}</div>
+                    </div>
 
-                {/* Health Status */}
-                <div className="info-item">
-                    <label>Health</label>
-                    <value className={getHealthClass(healthDisplay)}>
-                        <span className={getStatusBadgeClass(healthDisplay)}>
-                            {healthDisplay}
-                        </span>
-                    </value>
-                </div>
+                    {/* Health Status */}
+                    <div className="info-item">
+                        <div className="info-label">Health</div>
+                        <div className="info-value">
+                            <span className={getStatusBadgeClass(healthDisplay)}>
+                                {healthDisplay}
+                            </span>
+                        </div>
+                    </div>
 
-                {/* Namespace */}
-                <div className="info-item">
-                    <label>Namespace</label>
-                    <value>{formatValue(data.namespace)}</value>
-                </div>
+                    {/* Namespace */}
+                    <div className="info-item">
+                        <div className="info-label">Namespace</div>
+                        <div className="info-value">{formatValue(data.namespace)}</div>
+                    </div>
 
-                {/* Node Name */}
-                <div className="info-item">
-                    <label>Node</label>
-                    <value>{formatValue(data.nodeName, 'Unscheduled')}</value>
-                </div>
+                    {/* Node Name */}
+                    <div className="info-item">
+                        <div className="info-label">Node</div>
+                        <div className="info-value">{formatValue(data.nodeName, 'Unscheduled')}</div>
+                    </div>
 
-                {/* Pod IP */}
-                <div className="info-item">
-                    <label>Pod IP</label>
-                    <value>{formatValue(data.podIP)}</value>
-                </div>
+                    {/* Pod IP */}
+                    <div className="info-item">
+                        <div className="info-label">Pod IP</div>
+                        <div className="info-value">{formatValue(data.podIP)}</div>
+                    </div>
 
-                {/* Host IP */}
-                <div className="info-item">
-                    <label>Host IP</label>
-                    <value>{formatValue(data.hostIP)}</value>
-                </div>
+                    {/* Host IP */}
+                    <div className="info-item">
+                        <div className="info-label">Host IP</div>
+                        <div className="info-value">{formatValue(data.hostIP)}</div>
+                    </div>
 
-                {/* QoS Class */}
-                <div className="info-item">
-                    <label>QoS Class</label>
-                    <value>{formatValue(data.qosClass)}</value>
-                </div>
+                    {/* QoS Class */}
+                    <div className="info-item">
+                        <div className="info-label">QoS Class</div>
+                        <div className="info-value">{formatValue(data.qosClass)}</div>
+                    </div>
 
-                {/* Restart Policy */}
-                <div className="info-item">
-                    <label>Restart Policy</label>
-                    <value>{formatValue(data.restartPolicy)}</value>
-                </div>
+                    {/* Restart Policy */}
+                    <div className="info-item">
+                        <div className="info-label">Restart Policy</div>
+                        <div className="info-value">{formatValue(data.restartPolicy)}</div>
+                    </div>
 
-                {/* Service Account */}
-                <div className="info-item">
-                    <label>Service Account</label>
-                    <value>{formatValue(data.serviceAccount, 'default')}</value>
-                </div>
+                    {/* Service Account */}
+                    <div className="info-item">
+                        <div className="info-label">Service Account</div>
+                        <div className="info-value">{formatValue(data.serviceAccount, 'default')}</div>
+                    </div>
 
-                {/* Age */}
-                <div className="info-item">
-                    <label>Age</label>
-                    <value>{formatValue(data.age, 'Unknown')}</value>
-                </div>
+                    {/* Age */}
+                    <div className="info-item">
+                        <div className="info-label">Age</div>
+                        <div className="info-value">{formatValue(data.age, 'Unknown')}</div>
+                    </div>
 
-                {/* Start Time */}
-                <div className="info-item">
-                    <label>Start Time</label>
-                    <value>
-                        {data.startTime && data.startTime !== 'N/A' && data.startTime !== 'Unknown'
-                            ? formatDate(data.startTime)
-                            : formatValue(data.startTime, 'N/A')}
-                    </value>
+                    {/* Start Time */}
+                    <div className="info-item">
+                        <div className="info-label">Start Time</div>
+                        <div className="info-value">
+                            {data.startTime && data.startTime !== 'N/A' && data.startTime !== 'Unknown'
+                                ? formatDate(data.startTime)
+                                : formatValue(data.startTime, 'N/A')}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

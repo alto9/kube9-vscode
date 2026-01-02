@@ -119,67 +119,99 @@ export const PodDescribeApp: React.FC = () => {
         return null;
     }
 
+    // Get status banner class and content
+    const getStatusBannerClass = (health: string): string => {
+        const healthLower = health.toLowerCase();
+        return `status-banner status-${healthLower}`;
+    };
+
+    const getStatusIcon = (health: string): string => {
+        const healthLower = health.toLowerCase();
+        if (healthLower === 'healthy') return '✓';
+        if (healthLower === 'degraded') return '⚠';
+        if (healthLower === 'unhealthy') return '⚠';
+        return '?';
+    };
+
+    const getStatusText = (health: string): string => {
+        const healthLower = health.toLowerCase();
+        if (healthLower === 'healthy') return 'Pod is Healthy';
+        if (healthLower === 'degraded') return 'Pod is Degraded';
+        if (healthLower === 'unhealthy') return 'Pod is Unhealthy';
+        return 'Pod status is Unknown';
+    };
+
+    const healthStatus = podData.overview.status.health || 'Unknown';
+
     return (
         <div className="pod-describe-container">
-            <header className="pod-header">
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <h1>{podData.overview.name}</h1>
-                    <div className={getStatusBadgeClass(podData.overview.status.health)}>
-                        {podData.overview.status.health}
+            <div className="container">
+                {/* Header */}
+                <div className="node-header">
+                    <h1 className="node-title">Pod / <span className="node-name">{podData.overview.name}</span></h1>
+                    <div className="header-actions">
+                        <button className="action-btn" onClick={handleRefresh}>
+                            <span className="btn-icon">🔄</span>
+                            <span className="btn-text">Refresh</span>
+                        </button>
+                        <button className="action-btn" onClick={handleViewYaml}>
+                            <span className="btn-icon">📄</span>
+                            <span className="btn-text">View YAML</span>
+                        </button>
                     </div>
                 </div>
-                <div className="header-actions">
-                    <button className="header-btn" onClick={handleRefresh}>
-                        Refresh
-                    </button>
-                    <button className="header-btn" onClick={handleViewYaml}>
-                        View YAML
-                    </button>
+
+                {/* Status Banner */}
+                <div className={getStatusBannerClass(healthStatus)}>
+                    <span className="status-icon">{getStatusIcon(healthStatus)}</span>
+                    <span className="status-text">{getStatusText(healthStatus)}</span>
                 </div>
-            </header>
 
-            <nav className="tab-navigation">
-                <button
-                    className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('overview')}
-                >
-                    Overview
-                </button>
-                <button
-                    className={`tab-btn ${activeTab === 'containers' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('containers')}
-                >
-                    Containers ({podData.containers.length})
-                </button>
-                <button
-                    className={`tab-btn ${activeTab === 'conditions' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('conditions')}
-                >
-                    Conditions
-                </button>
-                <button
-                    className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
-                    onClick={() => handleTabChange('events')}
-                >
-                    Events ({podData.events.length})
-                </button>
-            </nav>
+                {/* Tab Navigation */}
+                <nav className="tab-navigation">
+                    <button
+                        className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('overview')}
+                    >
+                        Overview
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'containers' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('containers')}
+                    >
+                        Containers ({podData.containers.length})
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'conditions' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('conditions')}
+                    >
+                        Conditions
+                    </button>
+                    <button
+                        className={`tab-btn ${activeTab === 'events' ? 'active' : ''}`}
+                        onClick={() => handleTabChange('events')}
+                    >
+                        Events ({podData.events.length})
+                    </button>
+                </nav>
 
-            <main className="tab-content">
-                {activeTab === 'overview' && (
-                    <OverviewTab data={podData.overview} />
-                )}
-                {activeTab === 'containers' && (
-                    <ContainersTab 
-                        containers={podData.containers} 
-                        initContainers={podData.initContainers} 
-                    />
-                )}
-                {activeTab === 'conditions' && (
-                    <ConditionsTab conditions={podData.conditions} />
-                )}
-                {activeTab === 'events' && <EventsTab events={podData.events} />}
-            </main>
+                {/* Tab Content */}
+                <main className="tab-content">
+                    {activeTab === 'overview' && (
+                        <OverviewTab data={podData.overview} />
+                    )}
+                    {activeTab === 'containers' && (
+                        <ContainersTab 
+                            containers={podData.containers} 
+                            initContainers={podData.initContainers} 
+                        />
+                    )}
+                    {activeTab === 'conditions' && (
+                        <ConditionsTab conditions={podData.conditions} />
+                    )}
+                    {activeTab === 'events' && <EventsTab events={podData.events} />}
+                </main>
+            </div>
         </div>
     );
 };
