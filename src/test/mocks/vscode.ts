@@ -433,6 +433,10 @@ export const window = {
         };
         return await task(progress);
     },
+    showTextDocument: async (_document: TextDocument, _column?: ViewColumn): Promise<unknown> => {
+        // Mock - no-op, just return a resolved promise
+        return Promise.resolve({});
+    },
     _getErrorMessages: () => [...errorMessages],
     _getWarningMessages: () => [...warningMessages],
     _getInfoMessages: () => [...infoMessages],
@@ -583,6 +587,46 @@ export class Selection extends Range {
  * Mock workspace API
  */
 const workspaceEventEmitter = new EventEmitter<TextDocument>();
+const textDocuments: Map<string, TextDocument> = new Map();
+
+/**
+ * Mock TextDocument implementation
+ */
+class MockTextDocument implements TextDocument {
+    constructor(
+        public readonly uri: Uri,
+        public readonly fileName: string,
+        public readonly isUntitled: boolean = false,
+        public readonly languageId: string = 'plaintext',
+        public readonly version: number = 1,
+        public readonly isDirty: boolean = false,
+        public readonly isClosed: boolean = false,
+        private content: string = ''
+    ) {}
+
+    save(): Thenable<boolean> {
+        return Promise.resolve(true);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    getText(_range?: unknown): string {
+        return this.content;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    lineAt(_line: number): { lineNumber: number; text: string; range: unknown; rangeIncludingLineBreak: unknown; firstNonWhitespaceCharacterIndex: number; isEmptyOrWhitespace: boolean } {
+        return {
+            lineNumber: 0,
+            text: '',
+            range: {},
+            rangeIncludingLineBreak: {},
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: true
+        };
+    }
+
+    lineCount: number = 1;
+}
 
 export const workspace = {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -590,9 +634,22 @@ export const workspace = {
         return mockConfiguration;
     },
     onDidCloseTextDocument: workspaceEventEmitter.event,
+    openTextDocument: (uriOrFileName: Uri | string): Thenable<TextDocument> => {
+        const path = typeof uriOrFileName === 'string' ? uriOrFileName : uriOrFileName.fsPath;
+        let doc = textDocuments.get(path);
+        if (!doc) {
+            const uri = typeof uriOrFileName === 'string' ? Uri.file(uriOrFileName) : uriOrFileName;
+            doc = new MockTextDocument(uri, path);
+            textDocuments.set(path, doc);
+        }
+        return Promise.resolve(doc);
+    },
     _getConfiguration: () => mockConfiguration,
     _fireDidCloseTextDocument: (document: TextDocument) => {
         workspaceEventEmitter.fire(document);
+    },
+    _clearDocuments: (): void => {
+        textDocuments.clear();
     }
 };
 

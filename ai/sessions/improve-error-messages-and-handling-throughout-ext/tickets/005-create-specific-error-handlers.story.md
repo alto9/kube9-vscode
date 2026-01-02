@@ -9,6 +9,7 @@ feature_id:
 spec_id:
   - error-handler-utility
 story_id: 005-create-specific-error-handlers
+status: completed
 ---
 
 # Create Specific Error Handlers
@@ -77,17 +78,19 @@ Use the complete implementation from spec `error-handler-utility.spec.md` lines 
 
 ## Acceptance Criteria
 
-- [ ] File `src/errors/SpecificErrorHandlers.ts` created
-- [ ] All 5 handler classes implemented
-- [ ] ConnectionErrorHandler has 2 methods
-- [ ] RBACErrorHandler has handlePermissionDenied method
-- [ ] ResourceNotFoundErrorHandler has handleResourceNotFound method
-- [ ] TimeoutErrorHandler has handleTimeout and formatDuration methods
-- [ ] APIErrorHandler routes by status code to specific handlers
-- [ ] All handlers build proper ErrorDetails objects
-- [ ] All handlers call ErrorHandler.getInstance().handleError()
-- [ ] Actions include appropriate callback functions
-- [ ] File compiles without errors
+- [x] File `src/errors/SpecificErrorHandlers.ts` created
+- [x] All 5 handler classes implemented
+- [x] ConnectionErrorHandler has 2 methods
+- [x] RBACErrorHandler has handlePermissionDenied method
+- [x] ResourceNotFoundErrorHandler has handleResourceNotFound method
+- [x] TimeoutErrorHandler has handleTimeout and formatDuration methods
+- [x] APIErrorHandler routes by status code to specific handlers
+- [x] All handlers build proper ErrorDetails objects
+- [x] All handlers call ErrorHandler.getInstance().handleError()
+- [x] Actions include appropriate callback functions
+- [x] File compiles without errors
+- [x] Unit tests created and passing (`npm run test`)
+- [x] Build succeeds (`npm run build`)
 
 ## Estimated Time
 
