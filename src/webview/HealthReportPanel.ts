@@ -69,7 +69,7 @@ export class HealthReportPanel {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: [
-                    vscode.Uri.joinPath(context.extensionUri, 'out', 'webview')
+                    vscode.Uri.joinPath(context.extensionUri, 'media')
                 ]
             }
         );
@@ -106,7 +106,7 @@ export class HealthReportPanel {
         this._contextName = contextName;
 
         // Set the webview's initial HTML content
-        this._panel.webview.html = this.getWebviewContent();
+        this._panel.webview.html = this.getWebviewContent(extensionContext.extensionUri);
 
         // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(
@@ -190,102 +190,50 @@ export class HealthReportPanel {
 
     /**
      * Generate the HTML content for the Health Report webview.
-     * Returns inline HTML with a styled loading message and root div for React.
+     * Loads the React bundle and styles from the media directory.
      * 
+     * @param extensionUri - The URI of the extension
      * @returns HTML content string
      */
-    private getWebviewContent(): string {
+    private getWebviewContent(extensionUri: vscode.Uri): string {
         const webview = this._panel.webview;
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'media', 'operator-health-report', 'main.js')
+        );
+        const stylesUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'media', 'operator-health-report', 'styles.css')
+        );
+        const nonce = this._getNonce();
+        const cspSource = webview.cspSource;
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource};">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource};">
+    <link href="${stylesUri}" rel="stylesheet">
     <title>Kube9 Operator Health</title>
-    <style>
-        body {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 40px;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            box-sizing: border-box;
-        }
-        .container {
-            text-align: center;
-            max-width: 600px;
-        }
-        .icon {
-            font-size: 64px;
-            margin-bottom: 24px;
-            opacity: 0.6;
-        }
-        h1 {
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0 0 16px 0;
-            color: var(--vscode-foreground);
-        }
-        p {
-            font-size: 16px;
-            line-height: 1.6;
-            margin: 0 0 24px 0;
-            color: var(--vscode-descriptionForeground);
-        }
-        .refresh-button {
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            padding: 8px 16px;
-            font-size: 14px;
-            border-radius: 2px;
-            cursor: pointer;
-            margin-top: 16px;
-        }
-        .refresh-button:hover {
-            background-color: var(--vscode-button-hoverBackground);
-        }
-        .refresh-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        #root {
-            width: 100%;
-            height: 100%;
-        }
-    </style>
 </head>
 <body>
-    <div id="root">
-        <div class="container">
-            <div class="icon">🩺</div>
-            <h1>Kube9 Operator Health</h1>
-            <p>Loading operator status...</p>
-            <button class="refresh-button" disabled>Refresh</button>
-        </div>
-    </div>
-    <!-- React component script will be added in future story -->
-    <script>
-        const vscode = acquireVsCodeApi();
-        window.addEventListener('message', event => {
-            const message = event.data;
-            if (message.command === 'update') {
-                console.log('Received operator status:', message.data);
-                // React component will handle this in future story
-            } else if (message.command === 'error') {
-                console.error('Error:', message.message);
-                // React component will handle this in future story
-            }
-        });
-    </script>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
+    }
+
+    /**
+     * Generate a random nonce for Content Security Policy.
+     * 
+     * @returns A 32-character random alphanumeric string
+     */
+    private _getNonce(): string {
+        let text = '';
+        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        for (let i = 0; i < 32; i++) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
     }
 
     /**

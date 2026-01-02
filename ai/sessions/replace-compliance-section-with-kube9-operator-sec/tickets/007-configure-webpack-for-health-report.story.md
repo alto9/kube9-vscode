@@ -5,7 +5,7 @@ feature_id:
   - operator-health-report
 spec_id:
   - operator-health-report-spec
-status: pending
+status: completed
 ---
 
 # Configure Webpack Build for Operator Health Report Webview
