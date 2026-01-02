@@ -7,6 +7,7 @@ spec_id:
   - error-handler-utility
   - timeout-configuration
 story_id: 009-add-package-json-contributions
+status: completed
 ---
 
 # Add package.json Configuration and Commands
@@ -97,13 +98,14 @@ Use the specifications from `error-handler-utility.spec.md` and `tree-view-error
 
 ## Acceptance Criteria
 
-- [ ] 4 timeout/error configuration settings added
-- [ ] 3 error commands defined with titles and icons
-- [ ] 3 context menu items added for error tree items
-- [ ] Context menus use correct view and viewItem conditions
-- [ ] Retry command has inline group and refresh icon
-- [ ] View/Copy commands in 'error' group
-- [ ] package.json validates successfully
+- [x] 4 timeout/error configuration settings added
+- [x] 3 error commands defined with titles and icons
+- [x] 3 context menu items added for error tree items
+- [x] Context menus use correct view and viewItem conditions (kube9ClusterView)
+- [x] Retry command has inline group and refresh icon
+- [x] View/Copy commands in 'error' group
+- [x] package.json validates successfully
+- [x] Tests pass successfully
 
 ## Estimated Time
 
