@@ -31,7 +31,7 @@ import { HelmCategory } from './categories/HelmCategory';
 import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
 import { ArgoCDCategory } from './categories/ArgoCDCategory';
 import { ReportsCategory } from './categories/ReportsCategory';
-import { ComplianceSubcategory } from './categories/reports/ComplianceSubcategory';
+import { OperatorSubcategory } from './categories/reports/OperatorSubcategory';
 import { EventsCategory } from './categories/EventsCategory';
 import { EventsProvider } from '../services/EventsProvider';
 import { ArgoCDService } from '../services/ArgoCDService';
@@ -795,7 +795,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 break;
             
             case 'operatorSubcategory':
-                items = await ComplianceSubcategory.getComplianceReportItems(
+                items = await OperatorSubcategory.getOperatorReportItems(
                     categoryElement.resourceData
                 );
                 break;

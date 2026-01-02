@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - tree-view-spec
   - operator-health-report-spec
-status: pending
+status: completed
 ---
 
 # Rename ComplianceSubcategory to OperatorSubcategory
