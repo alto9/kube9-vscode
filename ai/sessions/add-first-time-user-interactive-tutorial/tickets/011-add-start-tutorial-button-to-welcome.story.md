@@ -6,7 +6,7 @@ feature_id:
   - initial-configuration
 spec_id:
   - vscode-walkthroughs
-status: pending
+status: completed
 estimated_time: 25 minutes
 ---
 
@@ -82,15 +82,15 @@ Ensure the button is visually prominent:
 
 ## Acceptance Criteria
 
-- [ ] "Start Tutorial" button added to welcome screen
-- [ ] Button is visually prominent (primary style)
-- [ ] Button includes icon (📚 or similar)
-- [ ] Button has click event listener
-- [ ] Clicking button sends 'startTutorial' message to extension
-- [ ] Button is keyboard accessible (tab navigation)
-- [ ] Button respects VSCode theme (light/dark mode)
-- [ ] Button has appropriate hover/focus states
-- [ ] "Explore on My Own" button remains as secondary option
+- [x] "Start Tutorial" button added to welcome screen
+- [x] Button is visually prominent (primary style)
+- [x] Button includes icon (📚 or similar)
+- [x] Button has click event listener
+- [x] Clicking button sends 'startTutorial' message to extension
+- [x] Button is keyboard accessible (tab navigation)
+- [x] Button respects VSCode theme (light/dark mode)
+- [x] Button has appropriate hover/focus states
+- [x] "Explore on My Own" button remains as secondary option
 
 ## Testing
 
