@@ -1,0 +1,486 @@
+/* Operator Health Report Webview Styles */
+/* Uses VS Code theme variables for consistent theming */
+
+/* ==========================================================================
+   CSS Variables (VS Code Theme Tokens)
+   ========================================================================== */
+
+:root {
+    /* Typography */
+    --font-family: var(--vscode-font-family);
+    --font-size: 13px;
+    --font-size-sm: 12px;
+    --font-size-xs: 11px;
+    --font-size-lg: 14px;
+    
+    /* Colors */
+    --foreground: var(--vscode-foreground);
+    --description-foreground: var(--vscode-descriptionForeground);
+    --background: var(--vscode-editor-background);
+    --border: var(--vscode-panel-border);
+    
+    /* Status Colors */
+    --status-healthy: var(--vscode-testing-iconPassed);
+    --status-degraded: var(--vscode-testing-iconQueued);
+    --status-unhealthy: var(--vscode-testing-iconFailed);
+    --status-enabled: #2196f3;
+    --status-operated: #9c27b0;
+    
+    /* Button Colors */
+    --button-primary-bg: var(--vscode-button-background);
+    --button-primary-fg: var(--vscode-button-foreground);
+    --button-primary-hover: var(--vscode-button-hoverBackground);
+    --button-secondary-bg: var(--vscode-button-secondaryBackground);
+    --button-secondary-fg: var(--vscode-button-secondaryForeground);
+    
+    /* Link Colors */
+    --link-color: var(--vscode-textLink-foreground);
+    
+    /* Error/Warning Colors */
+    --error-bg: var(--vscode-inputValidation-errorBackground);
+    --error-border: var(--vscode-inputValidation-errorBorder);
+    --error-fg: var(--vscode-errorForeground);
+    --warning-bg: var(--vscode-inputValidation-warningBackground);
+    --warning-border: var(--vscode-inputValidation-warningBorder);
+    --warning-fg: var(--vscode-inputValidation-warningForeground);
+    
+    /* Focus */
+    --focus-border: var(--vscode-focusBorder);
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 12px;
+    --spacing-lg: 16px;
+    --spacing-xl: 20px;
+    --spacing-2xl: 24px;
+    
+    /* Border Radius */
+    --radius-sm: 2px;
+    --radius-md: 3px;
+    --radius-lg: 4px;
+    --radius-xl: 6px;
+}
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    color: var(--foreground);
+    background-color: var(--background);
+    padding: 0;
+    margin: 0;
+    line-height: 1.5;
+}
+
+#root {
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   Health Report Container
+   ========================================================================== */
+
+.health-report {
+    padding: var(--spacing-xl);
+    font-family: var(--font-family);
+    color: var(--foreground);
+    background-color: var(--background);
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Header Styles
+   ========================================================================== */
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--border);
+}
+
+.report-header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.refresh-button {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background-color: var(--button-primary-bg);
+    color: var(--button-primary-fg);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+}
+
+.refresh-button:hover {
+    background-color: var(--button-primary-hover);
+}
+
+.refresh-button:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 2px;
+}
+
+.refresh-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Warning Banner
+   ========================================================================== */
+
+.warning-banner {
+    background-color: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    color: var(--warning-fg);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size);
+}
+
+/* ==========================================================================
+   Cluster Info
+   ========================================================================== */
+
+.cluster-info {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-md);
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size);
+}
+
+.cluster-info strong {
+    color: var(--foreground);
+    margin-right: var(--spacing-sm);
+}
+
+/* ==========================================================================
+   Loading and Error States
+   ========================================================================== */
+
+.loading-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    text-align: center;
+}
+
+.loading-container p {
+    color: var(--description-foreground);
+    font-size: var(--font-size-lg);
+}
+
+.error-container {
+    padding: var(--spacing-xl);
+    text-align: center;
+}
+
+.error-message {
+    color: var(--error-fg);
+    margin-bottom: var(--spacing-lg);
+    font-size: var(--font-size-lg);
+}
+
+/* ==========================================================================
+   Timestamp
+   ========================================================================== */
+
+.timestamp {
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--border);
+    font-size: var(--font-size-sm);
+    color: var(--description-foreground);
+    text-align: center;
+}
+
+/* ==========================================================================
+   Status Grid
+   ========================================================================== */
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+/* ==========================================================================
+   Status Card
+   ========================================================================== */
+
+.status-card {
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    transition: border-color 0.2s ease;
+}
+
+.status-card .label {
+    font-size: var(--font-size-sm);
+    color: var(--description-foreground);
+    margin-bottom: var(--spacing-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-card .value {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+/* Status-specific colors */
+.status-healthy .value {
+    color: var(--status-healthy);
+}
+
+.status-degraded .value {
+    color: var(--status-degraded);
+}
+
+.status-unhealthy .value {
+    color: var(--status-unhealthy);
+}
+
+.status-enabled .value {
+    color: var(--status-enabled);
+}
+
+.status-operated .value {
+    color: var(--status-operated);
+}
+
+/* ==========================================================================
+   Cluster ID Section
+   ========================================================================== */
+
+.cluster-id-section {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-xl);
+    flex-wrap: wrap;
+}
+
+.cluster-id-section strong {
+    color: var(--foreground);
+    font-size: var(--font-size);
+}
+
+.cluster-id-section code {
+    flex: 1;
+    min-width: 200px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--vscode-textCodeBlock-background);
+    border-radius: var(--radius-sm);
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--font-size-sm);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+}
+
+.copy-button {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--button-secondary-bg);
+    color: var(--button-secondary-fg);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+}
+
+.copy-button:hover {
+    background-color: var(--button-primary-bg);
+    color: var(--button-primary-fg);
+}
+
+.copy-button:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Error Section
+   ========================================================================== */
+
+.error-section {
+    background-color: var(--error-bg);
+    border: 1px solid var(--error-border);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.error-section h3 {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--error-fg);
+    font-size: var(--font-size-lg);
+}
+
+.error-section .error-message {
+    color: var(--error-fg);
+    font-size: var(--font-size);
+    margin: 0;
+}
+
+/* ==========================================================================
+   Future Metrics Placeholder
+   ========================================================================== */
+
+.future-metrics {
+    background-color: var(--background);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--border);
+    margin-bottom: var(--spacing-xl);
+}
+
+.future-metrics h3 {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--foreground);
+    font-size: var(--font-size-lg);
+}
+
+.placeholder-text {
+    color: var(--description-foreground);
+    font-style: italic;
+    margin: 0;
+    font-size: var(--font-size);
+}
+
+/* ==========================================================================
+   Basic Mode View
+   ========================================================================== */
+
+.basic-mode {
+    text-align: center;
+    padding: var(--spacing-2xl);
+}
+
+.basic-mode .status-card {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.basic-mode h2 {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--foreground);
+    font-size: 20px;
+    text-align: center;
+}
+
+.basic-mode p {
+    margin: 0 0 var(--spacing-lg) 0;
+    color: var(--description-foreground);
+    text-align: center;
+}
+
+.benefits {
+    text-align: left;
+    margin: var(--spacing-xl) auto;
+    max-width: 500px;
+}
+
+.benefits h3 {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--foreground);
+    font-size: var(--font-size-lg);
+}
+
+.benefits ul {
+    margin: 0;
+    padding-left: var(--spacing-xl);
+    color: var(--description-foreground);
+}
+
+.benefits li {
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.6;
+}
+
+.install-button {
+    padding: var(--spacing-md) var(--spacing-xl);
+    background-color: var(--button-primary-bg);
+    color: var(--button-primary-fg);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--font-size-lg);
+    font-family: var(--font-family);
+    margin-top: var(--spacing-xl);
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.install-button:hover {
+    background-color: var(--button-primary-hover);
+}
+
+.install-button:focus {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Operator Status View
+   ========================================================================== */
+
+.operator-status {
+    width: 100%;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .health-report {
+        padding: var(--spacing-lg);
+    }
+
+    .report-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-md);
+    }
+
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cluster-id-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cluster-id-section code {
+        min-width: auto;
+    }
+}
+

@@ -4,7 +4,7 @@ import { TreeItemData } from '../TreeItemTypes';
 
 /**
  * Reports category handler.
- * Provides the structure for reports subcategories (Compliance).
+ * Provides the structure for reports subcategories (Kube9 Operator).
  * This category doesn't fetch data itself but returns subcategory tree items.
  */
 export class ReportsCategory {
@@ -17,25 +17,25 @@ export class ReportsCategory {
      */
     public static getReportsSubcategories(resourceData: TreeItemData): ClusterTreeItem[] {
         return [
-            this.createComplianceSubcategory(resourceData)
+            this.createOperatorSubcategory(resourceData)
         ];
     }
 
     /**
-     * Creates the Compliance subcategory tree item.
+     * Creates the Kube9 Operator subcategory tree item.
      * 
      * @param resourceData Cluster context and cluster information
-     * @returns Configured Compliance subcategory tree item
+     * @returns Configured Kube9 Operator subcategory tree item
      */
-    private static createComplianceSubcategory(resourceData: TreeItemData): ClusterTreeItem {
+    private static createOperatorSubcategory(resourceData: TreeItemData): ClusterTreeItem {
         const item = new ClusterTreeItem(
-            'Compliance',
-            'compliance',
+            'Kube9 Operator',
+            'operatorSubcategory',
             vscode.TreeItemCollapsibleState.Collapsed,
             resourceData
         );
         item.iconPath = new vscode.ThemeIcon('shield');
-        item.tooltip = 'View compliance reports';
+        item.tooltip = 'View Kube9 Operator reports';
         return item;
     }
 }

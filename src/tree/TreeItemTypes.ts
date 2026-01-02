@@ -34,7 +34,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - customResources: Custom Resources category
  * - reports: Reports category
  * - events: Events category (appears when operator is installed)
- * - compliance: Compliance subcategory (under Reports)
+ * - operatorSubcategory: Kube9 Operator subcategory (under Reports)
  * 
  * Individual resource types (items within categories):
  * - deployment: Individual deployment item
@@ -51,7 +51,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - portForward: Individual port forward item (under Port Forwarding)
  * - argocdApplication: Individual ArgoCD Application item (under ArgoCD)
  * - crd: Individual Custom Resource Definition item
- * - dataCollection: Individual data collection report item (under Compliance)
+ * - operatorHealth: Individual operator health report item (under Kube9 Operator)
  */
 export type TreeItemType = 
     | 'cluster' 
@@ -95,9 +95,9 @@ export type TreeItemType =
     | 'customResources'
     | 'reports'
     | 'events'
-    | 'compliance'
+    | 'operatorSubcategory'
     | 'crd'
-    | 'dataCollection';
+    | 'operatorHealth';
 
 /**
  * Re-export ClusterStatus for convenience.

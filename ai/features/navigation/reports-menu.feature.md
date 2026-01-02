@@ -52,25 +52,25 @@ Scenario: Reports menu does not appear when operator is not installed (basic mod
   And "Nodes" should be the first category displayed
   And the tree should show 7 resource categories: Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources
 
-Scenario: Expanding Reports category shows Compliance subcategory
+Scenario: Expanding Reports category shows Kube9 Operator subcategory
   Given a user has expanded a cluster showing the Reports category
   And the cluster has operator status other than "basic"
   When they expand the "Reports" category
-  Then they should see "Compliance" as a subcategory
-  And the Compliance subcategory should be expandable
+  Then they should see "Kube9 Operator" as a subcategory
+  And the Kube9 Operator subcategory should be expandable
 
-Scenario: Expanding Compliance subcategory shows Data Collection report
+Scenario: Expanding Kube9 Operator subcategory shows Health report
   Given a user has expanded the "Reports" category
-  When they expand the "Compliance" subcategory
-  Then they should see "Data Collection" as a report item
-  And the Data Collection item should be non-functional (placeholder)
+  When they expand the "Kube9 Operator" subcategory
+  Then they should see "Health" as a report item
+  And the Health report item should be clickable
 
-Scenario: Clicking Data Collection report shows placeholder
-  Given a user has expanded the "Compliance" subcategory
-  When they click on "Data Collection"
-  Then a placeholder webview or message should be displayed
-  And the placeholder should indicate that this feature is coming soon
-  And no actual report data should be displayed
+Scenario: Clicking Health report opens Health webview
+  Given a user has expanded the "Kube9 Operator" subcategory
+  When they click on "Health"
+  Then a Health report webview should open
+  And the webview should display operator status information
+  And the webview should show operator health metrics
 
 Scenario: Reports menu updates when operator status changes
   Given a user has a cluster with operator status "basic"
@@ -106,18 +106,18 @@ Scenario: Reports category has appropriate icon
   And the icon should use VS Code ThemeIcon for theme compatibility
   And the icon should be visually distinct from other categories
 
-Scenario: Compliance subcategory has appropriate icon
+Scenario: Kube9 Operator subcategory has appropriate icon
   Given a user has expanded the Reports category
-  When they view the Compliance subcategory in the tree
+  When they view the Kube9 Operator subcategory in the tree
   Then it should display an appropriate icon
   And the icon should use VS Code ThemeIcon for theme compatibility
-  And the icon should indicate it is a subcategory
+  And the icon should indicate it is related to the operator
 
-Scenario: Data Collection report item has appropriate icon
-  Given a user has expanded the Compliance subcategory
-  When they view the Data Collection item in the tree
+Scenario: Health report item has appropriate icon
+  Given a user has expanded the Kube9 Operator subcategory
+  When they view the Health item in the tree
   Then it should display an appropriate icon
-  And the icon should indicate it is a report item
+  And the icon should indicate it is a health/status report
   And the icon should use VS Code ThemeIcon for theme compatibility
 ```
 

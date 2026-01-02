@@ -5,7 +5,7 @@ import { GlobalState } from './state/GlobalState';
 import { WelcomeWebview } from './webview/WelcomeWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DescribeWebview } from './webview/DescribeWebview';
-import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
+import { HealthReportPanel } from './webview/HealthReportPanel';
 import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
 import { NodeDescribeWebview } from './webview/NodeDescribeWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
@@ -51,6 +51,7 @@ import { restartPortForwardCommand } from './commands/restartPortForward';
 import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
+import { getContextInfo } from './utils/kubectlContext';
 
 /**
  * Promisified version of execFile for async/await usage.
@@ -414,27 +415,53 @@ function registerCommands(): void {
     context.subscriptions.push(openNamespaceCommand);
     disposables.push(openNamespaceCommand);
     
-    // Register open Data Collection report command
-    const openDataCollectionReportCommand = vscode.commands.registerCommand(
-        'kube9.openDataCollectionReport',
+    // Register open Operator Health report command
+    const openOperatorHealthReportCommand = vscode.commands.registerCommand(
+        'kube9.openOperatorHealthReport',
         async () => {
             try {
-                console.log('Opening Data Collection report webview...');
+                console.log('Opening Operator Health report webview...');
                 
-                // Show the Data Collection report webview
-                DataCollectionReportPanel.show(context);
+                // Get kubeconfig path
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
                 
-                console.log('Opened Data Collection report webview');
+                if (!kubeconfigPath) {
+                    vscode.window.showWarningMessage('No cluster selected');
+                    return;
+                }
+                
+                // Get current context name
+                const contextInfo = await getContextInfo();
+                const contextName = contextInfo.contextName;
+                
+                if (!contextName) {
+                    vscode.window.showWarningMessage('No cluster context available');
+                    return;
+                }
+                
+                // Create OperatorStatusClient instance (singleton pattern - create new instance)
+                const operatorStatusClient = new OperatorStatusClient();
+                
+                // Show the Operator Health report webview
+                await HealthReportPanel.createOrShow(
+                    context,
+                    operatorStatusClient,
+                    kubeconfigPath,
+                    contextName
+                );
+                
+                console.log('Opened Operator Health report webview');
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                console.error('Failed to open Data Collection report webview:', errorMessage);
-                vscode.window.showErrorMessage(`Failed to open Data Collection report: ${errorMessage}`);
+                console.error('Failed to open Operator Health report webview:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open Health Report: ${errorMessage}`);
             }
         }
     );
     
-    context.subscriptions.push(openDataCollectionReportCommand);
-    disposables.push(openDataCollectionReportCommand);
+    context.subscriptions.push(openOperatorHealthReportCommand);
+    disposables.push(openOperatorHealthReportCommand);
     
     // Register open Cluster Organizer command
     const openClusterManagerCmd = vscode.commands.registerCommand(
