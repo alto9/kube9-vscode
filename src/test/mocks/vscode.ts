@@ -629,6 +629,63 @@ export const commands = {
 };
 
 /**
+ * Mock clipboard API
+ */
+let clipboardText = '';
+
+export const clipboard = {
+    writeText: (text: string): Thenable<void> => {
+        clipboardText = text;
+        return Promise.resolve();
+    },
+    readText: (): Thenable<string> => {
+        return Promise.resolve(clipboardText);
+    },
+    _getText: (): string => {
+        return clipboardText;
+    },
+    _clear: (): void => {
+        clipboardText = '';
+    }
+};
+
+/**
+ * Mock env API
+ */
+let openedUris: Uri[] = [];
+
+export const env = {
+    openExternal: (uri: Uri): Thenable<boolean> => {
+        openedUris.push(uri);
+        return Promise.resolve(true);
+    },
+    _getOpenedUris: (): Uri[] => {
+        return [...openedUris];
+    },
+    _clearOpenedUris: (): void => {
+        openedUris = [];
+    },
+    clipboard
+};
+
+/**
+ * Mock extensions API
+ */
+const mockExtensions: Map<string, { packageJSON: { version: string } }> = new Map();
+
+export const extensions = {
+    getExtension: (extensionId: string): { packageJSON: { version: string } } | undefined => {
+        return mockExtensions.get(extensionId);
+    },
+    _setExtension: (extensionId: string, version: string): void => {
+        mockExtensions.set(extensionId, { packageJSON: { version } });
+    },
+    _clearExtensions: (): void => {
+        mockExtensions.clear();
+    }
+};
+
+/**
  * Module exports object that provides all vscode API components
  * This allows code to access vscode.ProgressLocation.Notification etc.
  * When using require('vscode'), this object structure is returned.
@@ -651,7 +708,10 @@ const vscodeModule = {
     EventEmitter,
     window,
     workspace,
-    commands
+    commands,
+    env,
+    extensions,
+    version: '1.80.0'
 };
 /* eslint-enable @typescript-eslint/naming-convention */
 
@@ -679,7 +739,10 @@ if (typeof module !== 'undefined' && module.exports) {
         EventEmitter,
         window,
         workspace,
-        commands
+        commands,
+        env,
+        extensions,
+        version: '1.80.0'
     });
     /* eslint-enable @typescript-eslint/naming-convention */
 }
