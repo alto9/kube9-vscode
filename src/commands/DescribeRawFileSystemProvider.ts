@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
  * Provides read-only access to kubectl describe output.
  * 
  * URI Format: kube9-describe://<resource-name>.describe
+ * or: kube9-describe://<namespace>/<resource-name>.describe
  */
 export class DescribeRawFileSystemProvider implements vscode.FileSystemProvider {
     /**
@@ -141,15 +142,18 @@ export class DescribeRawFileSystemProvider implements vscode.FileSystemProvider 
     /**
      * Extract resource name from URI path.
      * URI format: kube9-describe://<resource-name>.describe
+     * or: kube9-describe://<namespace>/<resource-name>.describe
      * 
      * @param uri The URI
-     * @returns The resource name (without .describe suffix)
+     * @returns The resource name (with namespace prefix if present, without .describe suffix)
      */
     private getResourceNameFromUri(uri: vscode.Uri): string {
-        // Path format: /<resource-name>.describe
+        // Path format: /<resource-name>.describe or /<namespace>/<resource-name>.describe
         const path = uri.path;
         if (path.startsWith('/')) {
-            return path.slice(1); // Remove leading slash
+            const parts = path.slice(1).split('/');
+            // Handle both formats: "name.describe" and "namespace/name.describe"
+            return parts.length > 1 ? parts.join('/') : parts[0];
         }
         return path;
     }
@@ -159,12 +163,16 @@ export class DescribeRawFileSystemProvider implements vscode.FileSystemProvider 
  * Create a kube9-describe:// URI for a resource.
  * 
  * @param resourceName The resource name
+ * @param namespace Optional namespace to include in the path
  * @returns The created URI
  */
-export function createDescribeUri(resourceName: string): vscode.Uri {
+export function createDescribeUri(resourceName: string, namespace?: string): vscode.Uri {
+    const path = namespace 
+        ? `/${namespace}/${resourceName}.describe`
+        : `/${resourceName}.describe`;
     return vscode.Uri.from({
         scheme: 'kube9-describe',
-        path: `/${resourceName}.describe`
+        path: path
     });
 }
 

@@ -91,8 +91,8 @@ export async function describeRawCommand(treeItem: ClusterTreeItem): Promise<voi
         // Actually, we should pass it as a parameter or use a singleton pattern
         // Let me use a simpler approach: get it from the workspace
         
-        // Create URI with resource name and .describe suffix
-        const uri = createDescribeUri(name);
+        // Create URI with resource name and namespace (if present) and .describe suffix
+        const uri = createDescribeUri(name, namespace);
         
         // Get the file system provider from workspace
         // We need to store it globally or access it differently
@@ -100,7 +100,9 @@ export async function describeRawCommand(treeItem: ClusterTreeItem): Promise<voi
         const fsProvider = DescribeRawFileSystemProvider.getInstance();
         
         // Store the content in the file system provider
-        fsProvider.setContent(`${name}.describe`, describeOutput);
+        // Use namespace-prefixed key for uniqueness when namespace is present
+        const contentKey = namespace ? `${namespace}/${name}.describe` : `${name}.describe`;
+        fsProvider.setContent(contentKey, describeOutput);
 
         // Open the document using the custom URI
         const document = await vscode.workspace.openTextDocument(uri);

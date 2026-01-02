@@ -12,19 +12,19 @@ export class Uri {
         return new Uri(value);
     }
 
+    static from(options: { scheme: string; path: string }): Uri {
+        return new Uri(options.path, options.scheme);
+    }
+
     static joinPath(base: Uri, ...pathSegments: string[]): Uri {
         const pathParts = [base.path, ...pathSegments].filter(p => p);
         return new Uri(pathParts.join('/'));
     }
 
-    constructor(public readonly path: string) {}
+    constructor(public readonly path: string, public readonly scheme: string = 'file') {}
     
     get fsPath(): string {
         return this.path;
-    }
-    
-    get scheme(): string {
-        return 'file';
     }
 }
 
