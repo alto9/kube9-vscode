@@ -12,19 +12,45 @@ export class Uri {
         return new Uri(value);
     }
 
-    static from(options: { scheme: string; path: string }): Uri {
-        return new Uri(options.path, options.scheme);
-    }
-
     static joinPath(base: Uri, ...pathSegments: string[]): Uri {
         const pathParts = [base.path, ...pathSegments].filter(p => p);
         return new Uri(pathParts.join('/'));
     }
 
-    constructor(public readonly path: string, public readonly scheme: string = 'file') {}
+    static from(components: { scheme: string; path?: string; authority?: string; query?: string; fragment?: string }): Uri {
+        const uri = new Uri(components.path || '');
+        uri._scheme = components.scheme;
+        uri._authority = components.authority;
+        uri._query = components.query;
+        uri._fragment = components.fragment;
+        return uri;
+    }
+
+    public _scheme?: string;
+    public _authority?: string;
+    public _query?: string;
+    public _fragment?: string;
+
+    constructor(public readonly path: string) {}
     
     get fsPath(): string {
         return this.path;
+    }
+    
+    get scheme(): string {
+        return this._scheme || 'file';
+    }
+
+    get authority(): string {
+        return this._authority || '';
+    }
+
+    get query(): string {
+        return this._query || '';
+    }
+
+    get fragment(): string {
+        return this._fragment || '';
     }
 }
 
