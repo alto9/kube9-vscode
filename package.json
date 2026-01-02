@@ -617,7 +617,27 @@
           "description": "Error throttle window in milliseconds"
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "kube9.gettingStarted",
+        "title": "Get Started with Kube9",
+        "description": "Learn how to manage your Kubernetes clusters with Kube9",
+        "when": "!kube9.tutorialCompleted",
+        "steps": [
+          {
+            "id": "kube9.step1.exploreClusterView",
+            "title": "Explore the Cluster View",
+            "description": "Discover the Kube9 activity bar icon and learn about the tree structure that organizes clusters, namespaces, and resources.\n\n[Open Kube9 View](command:kube9.focus)",
+            "media": {
+              "image": "media/walkthrough/01-cluster-view.png",
+              "altText": "Kube9 activity bar icon and cluster tree view"
+            },
+            "completionEvents": ["onView:kube9ClusterView"]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "build": "webpack --mode production && npm run build:webview",
