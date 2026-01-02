@@ -17,6 +17,20 @@ export class Uri {
         return new Uri(pathParts.join('/'));
     }
 
+    static from(components: { scheme: string; path?: string; authority?: string; query?: string; fragment?: string }): Uri {
+        const uri = new Uri(components.path || '');
+        uri._scheme = components.scheme;
+        uri._authority = components.authority;
+        uri._query = components.query;
+        uri._fragment = components.fragment;
+        return uri;
+    }
+
+    public _scheme?: string;
+    public _authority?: string;
+    public _query?: string;
+    public _fragment?: string;
+
     constructor(public readonly path: string) {}
     
     get fsPath(): string {
@@ -24,7 +38,19 @@ export class Uri {
     }
     
     get scheme(): string {
-        return 'file';
+        return this._scheme || 'file';
+    }
+
+    get authority(): string {
+        return this._authority || '';
+    }
+
+    get query(): string {
+        return this._query || '';
+    }
+
+    get fragment(): string {
+        return this._fragment || '';
     }
 }
 
