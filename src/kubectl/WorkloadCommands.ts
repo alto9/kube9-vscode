@@ -1,3 +1,4 @@
+import * as k8s from '@kubernetes/client-node';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
@@ -104,6 +105,21 @@ export interface DeploymentsResult {
      * Array of deployment information, empty if query failed.
      */
     deployments: DeploymentInfo[];
+    
+    /**
+     * Error information if the deployment query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a deployment details query operation.
+ */
+export interface DeploymentDetailsResult {
+    /**
+     * Complete V1Deployment object with full deployment details, undefined if query failed.
+     */
+    deployment?: k8s.V1Deployment;
     
     /**
      * Error information if the deployment query failed.
@@ -518,6 +534,51 @@ export class WorkloadCommands {
             
             return {
                 deployments: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves detailed information for a specific deployment from a cluster using the Kubernetes API client.
+     * Uses direct API calls to fetch complete V1Deployment details.
+     * 
+     * @param deploymentName Name of the deployment to retrieve details for
+     * @param namespace Namespace where the deployment is located
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param contextName Name of the context to query
+     * @returns DeploymentDetailsResult with V1Deployment object and optional error information
+     */
+    public static async getDeploymentDetails(
+        deploymentName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<DeploymentDetailsResult> {
+        try {
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch single deployment from API
+            const v1Deployment = await apiClient.apps.readNamespacedDeployment({
+                name: deploymentName,
+                namespace: namespace
+            });
+            
+            return {
+                deployment: v1Deployment,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            // API call failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Deployment details query failed for deployment ${deploymentName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                deployment: undefined,
                 error: kubectlError
             };
         }
