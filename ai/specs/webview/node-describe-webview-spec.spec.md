@@ -448,48 +448,63 @@ Use VS Code CSS variables for consistent theming:
 
 #### NodeDescribeWebview.ts
 
-Main webview controller:
+Main webview controller that integrates with the shared DescribeWebview panel:
 
 ```typescript
 export class NodeDescribeWebview {
-  private panel: vscode.WebviewPanel | undefined;
-  private currentNodeName: string | undefined;
+  private static currentPanel: vscode.WebviewPanel | undefined;
+  private static currentNodeName: string | undefined;
   
   /**
-   * Opens or reveals the describe webview for a node.
+   * Opens or reveals the shared describe webview for a node.
+   * Integrates with DescribeWebview to ensure all resource describes use one shared panel.
    */
-  public async showNode(
+  public static async show(
+    context: vscode.ExtensionContext,
     nodeName: string,
     kubeconfigPath: string,
     contextName: string
   ): Promise<void> {
-    // Reuse existing panel or create new one
-    if (!this.panel) {
-      this.panel = vscode.window.createWebviewPanel(
-        'kube9.nodeDescribe',
-        `Node / ${nodeName}`,
-        vscode.ViewColumn.One,
-        {
-          enableScripts: true,
-          retainContextWhenHidden: true
-        }
+    // Check for existing shared panel from DescribeWebview
+    const sharedPanel = DescribeWebview.getSharedPanel();
+    
+    if (sharedPanel) {
+      // Reuse the shared panel (from Pod, PVC, or previous Node)
+      NodeDescribeWebview.currentPanel = sharedPanel;
+      NodeDescribeWebview.currentPanel.title = `Node / ${nodeName}`;
+      NodeDescribeWebview.currentPanel.webview.html = NodeDescribeWebview.getWebviewContent(
+        NodeDescribeWebview.currentPanel.webview
       );
-      
-      this.panel.onDidDispose(() => {
-        this.panel = undefined;
-        this.currentNodeName = undefined;
-      });
-      
-      this.setupMessageHandlers();
+      await NodeDescribeWebview.refreshNodeData();
+      NodeDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+      return;
     }
     
-    // Update title and content
-    this.panel.title = `Node / ${nodeName}`;
-    this.currentNodeName = nodeName;
+    // Create new panel with shared panel ID
+    const panel = vscode.window.createWebviewPanel(
+      'kube9Describe',  // Shared panel ID used by all describe views
+      `Node / ${nodeName}`,
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true
+      }
+    );
     
-    // Fetch and display node data
-    await this.refreshNodeData(nodeName, kubeconfigPath, contextName);
-    this.panel.reveal();
+    NodeDescribeWebview.currentPanel = panel;
+    // Register as the shared panel for all describe views
+    DescribeWebview.setSharedPanel(panel);
+    
+    // Set up HTML, message handlers, and fetch data
+    panel.webview.html = NodeDescribeWebview.getWebviewContent(panel.webview);
+    NodeDescribeWebview.setupMessageHandlers(panel, context);
+    await NodeDescribeWebview.refreshNodeData();
+    
+    // Clear shared panel on disposal
+    panel.onDidDispose(() => {
+      NodeDescribeWebview.currentPanel = undefined;
+      DescribeWebview.setSharedPanel(undefined);
+    });
   }
   
   /**
@@ -550,8 +565,16 @@ export class NodeDescribeWebview {
           break;
           
         case 'navigateToPod':
-          // Navigate to pod in tree view
-          await this.navigateToPod(message.data.podName, message.data.namespace);
+          // Open Pod Describe view in the shared panel
+          const podName = message.podName || message.name;
+          const namespace = message.namespace;
+          if (podName && namespace) {
+            await vscode.commands.executeCommand('kube9.describePod', {
+              name: podName,
+              namespace: namespace,
+              context: this.contextName
+            });
+          }
           break;
           
         case 'copyValue':

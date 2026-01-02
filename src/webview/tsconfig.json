@@ -11,7 +11,8 @@
   },
   "include": [
     "./argocd-application/**/*",
-    "./event-viewer/**/*"
+    "./event-viewer/**/*",
+    "./pod-describe/**/*"
   ]
 }
 

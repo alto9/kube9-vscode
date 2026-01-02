@@ -1,7 +1,7 @@
 ---
 session_id: implement-describe-webview-for-nodes
 start_time: '2025-12-30T14:36:05.787Z'
-status: development
+status: completed
 problem_statement: Implement Describe Webview for Nodes
 changed_files:
   - path: ai/features/webview/node-describe-webview.feature.md
@@ -76,7 +76,9 @@ Create a comprehensive describe webview specifically for Kubernetes Node resourc
 - Impact: Each copyable element has a copy icon; clicking copies value to clipboard with confirmation
 
 ### Pod Navigation
-- Decision: Clicking a pod name in the pod list navigates to that pod in the tree view
+- Decision: Clicking a pod name in the pod list opens the Pod Describe view in the same shared panel
+- Rationale: Provides seamless navigation between related resources without opening multiple tabs; maintains single-panel-per-cluster approach
+- Impact: Node → Pod navigation reuses the shared describe panel, switching content from Node to Pod details
 - Rationale: Provides seamless navigation between node details and pod details
 - Impact: Requires message passing from webview to extension; extension expands tree and reveals pod
 

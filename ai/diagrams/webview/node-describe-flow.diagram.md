@@ -240,7 +240,7 @@ This diagram shows the complete flow of data from user interaction to webview di
 
 #### Phase 5: User Interactions (Ongoing)
 - User clicks refresh → webview posts 'refresh' message → cycle repeats from Phase 2
-- User clicks pod name → webview posts 'navigateToPod' message → tree view highlights pod
+- User clicks pod name → webview posts 'navigateToPod' message → shared panel switches to Pod Describe view
 - User copies value → webview posts 'copyValue' message → value copied to clipboard
 
 ### Message Protocol
@@ -252,7 +252,7 @@ This diagram shows the complete flow of data from user interaction to webview di
 
 **Webview → Extension**:
 - `refresh`: User requested data refresh
-- `navigateToPod`: User clicked pod name, navigate to pod in tree
+- `navigateToPod`: User clicked pod name, open Pod Describe view in shared panel
 - `copyValue`: User clicked copy, copy value to clipboard
 
 ### Performance Notes
