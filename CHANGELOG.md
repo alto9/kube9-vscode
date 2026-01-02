@@ -1,3 +1,26 @@
+# [1.16.0](https://github.com/alto9/kube9-vscode/compare/v1.15.0...v1.16.0) (2026-01-02)
+
+
+### Bug Fixes
+
+* enhance describe raw tab title to include namespace for deployments ([dcd2b1d](https://github.com/alto9/kube9-vscode/commit/dcd2b1dfada1e11e530a7e6fe75004bfd2c52f27))
+* prevent duplicate tabs when switching between node and deployment webviews ([f5a7071](https://github.com/alto9/kube9-vscode/commit/f5a7071efab3f8edc05c32751f42571f0ecdbfdd))
+* **test:** fix vscode mock extensions API for test compatibility ([ea6254f](https://github.com/alto9/kube9-vscode/commit/ea6254fac2b6d8ebb31daef7e99918400729dab4))
+
+
+### Features
+
+* add deployment describe data transformer ([0fe6e6d](https://github.com/alto9/kube9-vscode/commit/0fe6e6daeb9ace7f76ca77f6c0275dda97b51485))
+* add deployment utility functions for resource parsing and time formatting ([95b4562](https://github.com/alto9/kube9-vscode/commit/95b4562ac65bf793154e7001e3cd833688c62800))
+* add getDeploymentDetails method to WorkloadCommands ([1d226f2](https://github.com/alto9/kube9-vscode/commit/1d226f2a5d1098096d534c2311520c510d9c7a10))
+* add getDeploymentEvents method to WorkloadCommands ([1ff117c](https://github.com/alto9/kube9-vscode/commit/1ff117cd746a8c060c31a6b156920d49872acfa6))
+* add getRelatedReplicaSets method to WorkloadCommands ([9f947ab](https://github.com/alto9/kube9-vscode/commit/9f947ab1b4a342c09193e1ae00525a8c510039fc))
+* add HTML structure and styles for deployment describe webview ([441a1e3](https://github.com/alto9/kube9-vscode/commit/441a1e39253aafc82ce07c4e19a3b5d4b2af8ce1))
+* add ReplicaSet navigation from deployment describe webview ([45cdfa5](https://github.com/alto9/kube9-vscode/commit/45cdfa57132d4ffa5c60a334e172c6bd4eb53cba))
+* create DeploymentDescribeWebview class ([39971a6](https://github.com/alto9/kube9-vscode/commit/39971a6b54c029cbbf01979cb7fcb4f8d79d9a29))
+* implement deployment webview rendering logic ([1e293d2](https://github.com/alto9/kube9-vscode/commit/1e293d2876f70708321a888b9833943d75733d24))
+* route deployments to DeploymentDescribeWebview in DescribeWebview ([66a5312](https://github.com/alto9/kube9-vscode/commit/66a531299722ccf5f7c8f419d999a79000c1fc32))
+
 # [1.15.0](https://github.com/alto9/kube9-vscode/compare/v1.14.0...v1.15.0) (2026-01-02)
 
 
