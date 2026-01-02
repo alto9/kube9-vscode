@@ -657,6 +657,29 @@
               "kube9.onNamespaceExpanded",
               "onCommand:kube9.internal.completeStep3"
             ]
+          },
+          {
+            "id": "kube9.step4.viewResources",
+            "title": "View Resources",
+            "description": "View detailed information about any resource by clicking on it. See current status, conditions, events, and more in the describe webview.\n\n**With resources:** Click any pod in the tree view to see its details.\n\n**Without resources yet?** The image shows what you'll see. [Mark Complete](command:kube9.internal.completeStep4)",
+            "media": {
+              "image": "media/walkthrough/04-view-resource.png",
+              "altText": "Resource describe webview showing pod status and details"
+            },
+            "completionEvents": [
+              "kube9.onPodClicked",
+              "onCommand:kube9.internal.completeStep4"
+            ]
+          },
+          {
+            "id": "kube9.step5.viewLogs",
+            "title": "View Pod Logs",
+            "description": "Access pod logs directly from the tree view for debugging and monitoring. Logs open in a dedicated viewer with filtering and search.\n\n[View Pod Logs](command:kube9.viewPodLogs)",
+            "media": {
+              "image": "media/walkthrough/05-logs.png",
+              "altText": "Pod logs viewer interface"
+            },
+            "completionEvents": ["onCommand:kube9.viewPodLogs"]
           }
         ]
       }
