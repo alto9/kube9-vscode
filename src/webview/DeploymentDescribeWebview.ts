@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { transformDeploymentData, DeploymentDescribeData } from './deploymentDataTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
+import { DescribeWebview } from './DescribeWebview';
 
 /**
  * Message sent from webview to extension.
@@ -75,8 +76,12 @@ export class DeploymentDescribeWebview {
         DeploymentDescribeWebview.kubeconfigPath = kubeconfigPath;
         DeploymentDescribeWebview.contextName = contextName;
 
-        // If we already have a panel, reuse it and update the content
-        if (DeploymentDescribeWebview.currentPanel) {
+        // Check if there's a shared panel from DescribeWebview
+        const sharedPanel = DescribeWebview.getSharedPanel();
+
+        // If there's a shared panel (from any describe view), reuse it
+        if (sharedPanel) {
+            DeploymentDescribeWebview.currentPanel = sharedPanel;
             DeploymentDescribeWebview.currentPanel.title = `Deployment / ${deploymentName}`;
             DeploymentDescribeWebview.currentDeploymentName = deploymentName;
             DeploymentDescribeWebview.currentNamespace = namespace;
@@ -91,12 +96,30 @@ export class DeploymentDescribeWebview {
             return;
         }
 
+        // If we have our own panel but shared panel is gone, reuse our panel
+        if (DeploymentDescribeWebview.currentPanel) {
+            DeploymentDescribeWebview.currentPanel.title = `Deployment / ${deploymentName}`;
+            DeploymentDescribeWebview.currentDeploymentName = deploymentName;
+            DeploymentDescribeWebview.currentNamespace = namespace;
+            DeploymentDescribeWebview.kubeconfigPath = kubeconfigPath;
+            DeploymentDescribeWebview.contextName = contextName;
+            // Update HTML content to ensure proper structure
+            DeploymentDescribeWebview.currentPanel.webview.html = DeploymentDescribeWebview.getWebviewContent(
+                DeploymentDescribeWebview.currentPanel.webview
+            );
+            await DeploymentDescribeWebview.refreshDeploymentData();
+            DeploymentDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            // Register our panel as the shared panel
+            DescribeWebview.setSharedPanel(DeploymentDescribeWebview.currentPanel);
+            return;
+        }
+
         // Create title with deployment name
         const title = `Deployment / ${deploymentName}`;
 
-        // Create a new webview panel
+        // Create a new webview panel with the SHARED panel ID
         const panel = vscode.window.createWebviewPanel(
-            'kube9DeploymentDescribe',
+            'kube9Describe',  // Use the shared panel ID
             title,
             vscode.ViewColumn.One,
             {
@@ -106,6 +129,8 @@ export class DeploymentDescribeWebview {
         );
 
         DeploymentDescribeWebview.currentPanel = panel;
+        // Register this panel as the shared panel for all describe views
+        DescribeWebview.setSharedPanel(panel);
 
         // Set HTML content with complete structure
         panel.webview.html = DeploymentDescribeWebview.getWebviewContent(
@@ -126,6 +151,8 @@ export class DeploymentDescribeWebview {
                 DeploymentDescribeWebview.currentNamespace = undefined;
                 DeploymentDescribeWebview.kubeconfigPath = undefined;
                 DeploymentDescribeWebview.contextName = undefined;
+                // Clear the shared panel reference
+                DescribeWebview.setSharedPanel(undefined);
             },
             null,
             context.subscriptions
