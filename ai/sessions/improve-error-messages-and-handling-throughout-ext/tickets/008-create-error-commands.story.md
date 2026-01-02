@@ -5,6 +5,7 @@ feature_id:
 spec_id:
   - tree-view-error-display
 story_id: 008-create-error-commands
+status: completed
 ---
 
 # Create Error Commands for Context Menu

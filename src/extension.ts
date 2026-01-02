@@ -49,6 +49,7 @@ import { copyPortForwardURLCommand } from './commands/copyPortForwardURL';
 import { viewPortForwardPodCommand } from './commands/viewPortForwardPod';
 import { restartPortForwardCommand } from './commands/restartPortForward';
 import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
+import { ErrorCommands } from './commands/errorCommands';
 
 /**
  * Promisified version of execFile for async/await usage.
@@ -1412,6 +1413,10 @@ function registerCommands(): void {
     );
     context.subscriptions.push(revealPodCmd);
     disposables.push(revealPodCmd);
+    
+    // Register error commands
+    const errorCommands = new ErrorCommands();
+    errorCommands.register(context);
 }
 
 /**
