@@ -5,6 +5,7 @@ feature_id:
 spec_id:
   - error-handler-utility
 story_id: 010-register-error-commands-in-extension
+status: completed
 ---
 
 # Register Error Commands in Extension Activation
