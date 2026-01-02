@@ -641,7 +641,9 @@
               "image": "media/walkthrough/01-cluster-view.png",
               "altText": "Kube9 activity bar icon and cluster tree view"
             },
-            "completionEvents": ["onView:kube9ClusterView"]
+            "completionEvents": [
+              "onView:kube9ClusterView"
+            ]
           },
           {
             "id": "kube9.step2.exploreClusterManager",
@@ -651,7 +653,9 @@
               "image": "media/walkthrough/02-cluster-manager.png",
               "altText": "Cluster Manager UI showing customization options"
             },
-            "completionEvents": ["onCommand:kube9.openClusterManager"]
+            "completionEvents": [
+              "onCommand:kube9.openClusterManager"
+            ]
           },
           {
             "id": "kube9.step3.navigateResources",
@@ -687,7 +691,9 @@
               "image": "media/walkthrough/05-logs.png",
               "altText": "Pod logs viewer interface"
             },
-            "completionEvents": ["onCommand:kube9.viewPodLogs"]
+            "completionEvents": [
+              "onCommand:kube9.viewPodLogs"
+            ]
           },
           {
             "id": "kube9.step6.manageResources",
@@ -697,7 +703,9 @@
               "image": "media/walkthrough/06-management.png",
               "altText": "Resource management operations including scale and delete"
             },
-            "completionEvents": ["onCommand:kube9.scaleWorkload"]
+            "completionEvents": [
+              "onCommand:kube9.scaleWorkload"
+            ]
           },
           {
             "id": "kube9.step7.documentation",
@@ -759,6 +767,7 @@
     "react-dom": "^18.2.0",
     "react-window": "^1.8.10",
     "semantic-release": "^25.0.2",
+    "sharp": "^0.34.5",
     "source-map-support": "^0.5.21",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.5.4",
