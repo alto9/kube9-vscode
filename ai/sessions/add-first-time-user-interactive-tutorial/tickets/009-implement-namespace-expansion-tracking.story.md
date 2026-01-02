@@ -5,7 +5,7 @@ feature_id:
   - interactive-tutorial
 spec_id:
   - vscode-walkthroughs
-status: pending
+status: completed
 estimated_time: 25 minutes
 ---
 
@@ -67,13 +67,13 @@ existingTreeView.onDidExpandElement((event) => {
 
 ## Acceptance Criteria
 
-- [ ] Tree view expansion event listener added
-- [ ] Listener checks for namespace context value
-- [ ] Completion event `kube9.onNamespaceExpanded` fires when namespace expanded
-- [ ] Step 3 automatically completes when user expands namespace naturally
-- [ ] Event only fires for namespace items (not clusters or other resources)
-- [ ] No errors when expanding non-namespace items
-- [ ] Works with multiple namespaces in different clusters
+- [x] Tree view expansion event listener added
+- [x] Listener checks for namespace context value
+- [x] Completion event `kube9.onNamespaceExpanded` fires when namespace expanded
+- [x] Step 3 automatically completes when user expands namespace naturally
+- [x] Event only fires for namespace items (not clusters or other resources)
+- [x] No errors when expanding non-namespace items
+- [x] Works with multiple namespaces in different clusters
 
 ## Testing
 
