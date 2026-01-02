@@ -12,86 +12,50 @@ status: completed
 
 ## Objective
 
-Enable clicking pod names in the Node Describe webview's pod list to navigate to and reveal that pod in the tree view.
+Enable clicking pod names in the Node Describe webview's pod list to open the Pod Describe view in the same shared webview panel.
 
 ## Context
 
-When users click a pod name in the webview, it should navigate to that pod in the tree view. This requires revealing the pod's category, expanding it, and selecting the pod item.
+When users click a pod name in the webview, it should switch the shared describe panel to show that pod's details. This provides seamless navigation between related resources (Node → Pod) without opening multiple tabs.
 
 ## Files to Modify
 
 - `src/webview/NodeDescribeWebview.ts` (update message handler)
-- `src/tree/ClusterTreeProvider.ts` (add method to reveal pod)
 
 ## Implementation Steps
 
-1. In NodeDescribeWebview.ts, enhance the 'navigateToPod' message handler:
+1. In NodeDescribeWebview.ts, implement the 'navigateToPod' message handler:
 ```typescript
-case 'navigateToPod':
-  const { podName, namespace } = message.data;
-  await this.navigateToPodInTree(podName, namespace);
-  break;
-```
-
-2. Add new private method to NodeDescribeWebview:
-```typescript
-private static async navigateToPodInTree(
-  podName: string,
-  namespace: string
-): Promise<void> {
-  // Get tree view
-  const treeView = ... // Access to tree view instance
-  
-  // Find pod in tree
-  // This requires accessing ClusterTreeProvider's reveal method
-  
-  // Reveal and select the pod
-  await vscode.commands.executeCommand('kube9.revealPod', podName, namespace);
-}
-```
-
-3. In ClusterTreeProvider.ts, add public method:
-```typescript
-public async revealPod(podName: string, namespace: string): Promise<void> {
-  // Find the pod tree item in the tree structure
-  // This involves:
-  // 1. Finding the current cluster
-  // 2. Expanding the Workloads category
-  // 3. Expanding the Pods subcategory
-  // 4. Finding the specific pod
-  // 5. Using tree view's reveal() method
-  
-  const podItem = await this.findPodTreeItem(podName, namespace);
-  if (podItem && this.treeView) {
-    await this.treeView.reveal(podItem, { select: true, focus: true, expand: true });
+case 'navigateToPod': {
+  const podName = message.podName || message.name;
+  const namespace = message.namespace;
+  if (podName && namespace && NodeDescribeWebview.contextName) {
+    // Open Pod Describe view in the same shared panel
+    await vscode.commands.executeCommand('kube9.describePod', {
+      name: podName,
+      namespace: namespace,
+      context: NodeDescribeWebview.contextName
+    });
   }
+  break;
 }
 ```
 
-4. Register command in extension.ts:
-```typescript
-context.subscriptions.push(
-  vscode.commands.registerCommand(
-    'kube9.revealPod',
-    async (podName, namespace) => {
-      await treeProvider.revealPod(podName, namespace);
-    }
-  )
-);
-```
+2. The `kube9.describePod` command calls `DescribeWebview.showPodDescribe()` which:
+   - Reuses the existing shared panel (the current Node describe panel)
+   - Updates the panel title to `Pod / {podName}`
+   - Switches the webview content to show Pod details
+   - Maintains the single-panel-per-cluster approach
 
 ## Acceptance Criteria
 
-- [ ] navigateToPod message handler implemented in NodeDescribeWebview
-- [ ] revealPod method added to ClusterTreeProvider
-- [ ] Method finds pod tree item by name and namespace
-- [ ] Tree view reveals and selects the pod
-- [ ] Workloads and Pods categories expand automatically
-- [ ] Command registered in extension.ts
-- [ ] Clicking pod name in webview navigates to pod in tree
-- [ ] Focus switches to tree view after navigation
-- [ ] Error handling if pod not found in tree
-- [ ] Shows info message if pod cannot be found
+- [x] navigateToPod message handler implemented in NodeDescribeWebview
+- [x] Handler calls kube9.describePod command with pod name, namespace, and context
+- [x] Clicking pod name in Node webview switches to Pod Describe view
+- [x] Same webview panel is reused (no new tabs opened)
+- [x] Pod Describe view shows complete pod details
+- [x] Navigation works seamlessly without losing the shared panel
+- [x] Error handling if pod details cannot be loaded
 
 ## Estimated Time
 

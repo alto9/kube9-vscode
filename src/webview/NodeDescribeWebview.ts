@@ -3,6 +3,7 @@ import { NodeCommands } from '../kubectl/NodeCommands';
 import { PodCommands } from '../kubectl/PodCommands';
 import { transformNodeData, NodeDescribeData } from './nodeDescribeTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
+import { DescribeWebview } from './DescribeWebview';
 
 /**
  * Message sent from webview to extension.
@@ -50,6 +51,7 @@ export class NodeDescribeWebview {
     /**
      * Show the Node Describe webview for a node.
      * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * Uses the shared DescribeWebview panel to ensure all describe views share one tab.
      * 
      * @param context The VS Code extension context
      * @param nodeName Name of the node to describe
@@ -68,7 +70,23 @@ export class NodeDescribeWebview {
         NodeDescribeWebview.kubeconfigPath = kubeconfigPath;
         NodeDescribeWebview.contextName = contextName;
 
-        // If we already have a panel, reuse it and update the content
+        // Check if there's a shared panel from DescribeWebview
+        const sharedPanel = DescribeWebview.getSharedPanel();
+
+        // If there's a shared panel (from any describe view), reuse it
+        if (sharedPanel) {
+            NodeDescribeWebview.currentPanel = sharedPanel;
+            NodeDescribeWebview.currentPanel.title = `Node / ${nodeName}`;
+            // Update HTML content to ensure proper structure
+            NodeDescribeWebview.currentPanel.webview.html = NodeDescribeWebview.getWebviewContent(
+                NodeDescribeWebview.currentPanel.webview
+            );
+            await NodeDescribeWebview.refreshNodeData();
+            NodeDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // If we have our own panel but shared panel is gone, reuse our panel
         if (NodeDescribeWebview.currentPanel) {
             NodeDescribeWebview.currentPanel.title = `Node / ${nodeName}`;
             NodeDescribeWebview.currentNodeName = nodeName;
@@ -80,15 +98,17 @@ export class NodeDescribeWebview {
             );
             await NodeDescribeWebview.refreshNodeData();
             NodeDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            // Register our panel as the shared panel
+            DescribeWebview.setSharedPanel(NodeDescribeWebview.currentPanel);
             return;
         }
 
         // Create title with node name
         const title = `Node / ${nodeName}`;
 
-        // Create a new webview panel
+        // Create a new webview panel with the SHARED panel ID
         const panel = vscode.window.createWebviewPanel(
-            'kube9NodeDescribe',
+            'kube9Describe',  // Use the shared panel ID
             title,
             vscode.ViewColumn.One,
             {
@@ -98,6 +118,8 @@ export class NodeDescribeWebview {
         );
 
         NodeDescribeWebview.currentPanel = panel;
+        // Register this panel as the shared panel for all describe views
+        DescribeWebview.setSharedPanel(panel);
 
         // Set HTML content with complete structure
         panel.webview.html = NodeDescribeWebview.getWebviewContent(
@@ -117,6 +139,8 @@ export class NodeDescribeWebview {
                 NodeDescribeWebview.currentNodeName = undefined;
                 NodeDescribeWebview.kubeconfigPath = undefined;
                 NodeDescribeWebview.contextName = undefined;
+                // Clear the shared panel reference
+                DescribeWebview.setSharedPanel(undefined);
             },
             null,
             context.subscriptions
@@ -245,8 +269,13 @@ export class NodeDescribeWebview {
                     case 'navigateToPod': {
                         const podName = message.podName || message.name;
                         const namespace = message.namespace;
-                        if (podName) {
-                            await vscode.commands.executeCommand('kube9.revealPod', podName, namespace);
+                        if (podName && namespace && NodeDescribeWebview.contextName) {
+                            // Open Pod Describe view directly instead of navigating to tree
+                            await vscode.commands.executeCommand('kube9.describePod', {
+                                name: podName,
+                                namespace: namespace,
+                                context: NodeDescribeWebview.contextName
+                            });
                         }
                         break;
                     }

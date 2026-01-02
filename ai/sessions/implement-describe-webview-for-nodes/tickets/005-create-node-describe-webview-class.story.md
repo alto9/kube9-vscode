@@ -61,7 +61,7 @@ public static async show(
 
 5. Implement message handler setupMessageHandlers():
    - Handle 'refresh' message → call refreshNodeData()
-   - Handle 'navigateToPod' message → reveal pod in tree view (stub for now)
+   - Handle 'navigateToPod' message → open Pod Describe view in shared panel
    - Handle 'copyValue' message → copy to clipboard and show notification
 
 6. Set webview HTML to placeholder (will be implemented in next story):

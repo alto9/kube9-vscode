@@ -66,7 +66,7 @@ Scenario: Node describe webview lists running pods
     | nginx-deployment-abc123 | production | Running | 100m | 128Mi | 0 |
     | api-server-xyz789 | default | Running | 500m | 512Mi | 2 |
   And the table should be sortable by each column
-  And clicking a pod name should navigate to the pod in the tree view
+  And clicking a pod name should open the Pod Describe view in the same shared panel
   And the section should show total resource requests used by all pods on this node
   And if no pods are running, display message: "No pods currently running on this node"
 

@@ -90,7 +90,7 @@ export class DescribeWebview {
         // Set the webview's HTML content
         panel.webview.html = DescribeWebview.getWebviewContent(resourceInfo);
 
-        // Handle panel disposal
+        // Handle panel disposal - clear shared state
         panel.onDidDispose(
             () => {
                 DescribeWebview.currentPanel = undefined;
@@ -116,6 +116,26 @@ export class DescribeWebview {
 
         // Update panel content
         DescribeWebview.currentPanel.webview.html = DescribeWebview.getWebviewContent(resourceInfo);
+    }
+
+    /**
+     * Get the shared webview panel instance (if it exists).
+     * Used by other webview managers to check for and reuse the shared panel.
+     * 
+     * @returns The current panel or undefined
+     */
+    public static getSharedPanel(): vscode.WebviewPanel | undefined {
+        return DescribeWebview.currentPanel;
+    }
+
+    /**
+     * Set the shared webview panel instance.
+     * Used by other webview managers to register their panel as the shared instance.
+     * 
+     * @param panel The panel to set as shared
+     */
+    public static setSharedPanel(panel: vscode.WebviewPanel | undefined): void {
+        DescribeWebview.currentPanel = panel;
     }
 
     /**
@@ -286,7 +306,7 @@ export class DescribeWebview {
         // Fetch and send Pod data
         await DescribeWebview.loadPodData(podConfig, panel);
 
-        // Handle panel disposal
+        // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
                 DescribeWebview.currentPanel = undefined;
