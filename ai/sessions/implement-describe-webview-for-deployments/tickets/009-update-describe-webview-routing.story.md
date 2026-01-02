@@ -5,7 +5,7 @@ feature_id:
   - deployment-describe-webview
 spec_id:
   - deployment-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Update Describe Webview Routing
@@ -20,13 +20,13 @@ Currently, `DescribeWebview.showFromTreeItem()` shows a generic "Coming soon" me
 
 ## Acceptance Criteria
 
-- [ ] `DescribeWebview.showFromTreeItem()` checks resource kind
-- [ ] If kind === 'Deployment', route to DeploymentDescribeWebview.show()
-- [ ] If kind === 'Node', continue routing to NodeDescribeWebview (if applicable)
-- [ ] Other resource types continue to show stub or route as appropriate
-- [ ] DeploymentDescribeWebview imported in DescribeWebview.ts
-- [ ] Deployment namespace extracted and passed correctly
-- [ ] Kubeconfig path obtained and passed correctly
+- [x] `DescribeWebview.showFromTreeItem()` checks resource kind
+- [x] If kind === 'Deployment', route to DeploymentDescribeWebview.show()
+- [x] If kind === 'Node', continue routing to NodeDescribeWebview (if applicable)
+- [x] Other resource types continue to show stub or route as appropriate
+- [x] DeploymentDescribeWebview imported in DescribeWebview.ts
+- [x] Deployment namespace extracted and passed correctly
+- [x] Kubeconfig path obtained and passed correctly
 
 ## Implementation Steps
 

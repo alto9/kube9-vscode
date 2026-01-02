@@ -485,7 +485,7 @@ function registerCommands(): void {
                 }
 
                 // Show the Describe webview
-                DescribeWebview.showFromTreeItem(context, treeItem);
+                await DescribeWebview.showFromTreeItem(context, treeItem);
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error('Failed to open Describe webview:', errorMessage);

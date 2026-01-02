@@ -3,6 +3,8 @@ import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { extractKindFromContextValue } from '../extension';
 import { PodDescribeProvider } from '../providers/PodDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
+import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 
 /**
  * Resource information for the Describe webview.
@@ -222,10 +224,10 @@ export class DescribeWebview {
      * @param context The VS Code extension context
      * @param treeItem The tree item to describe
      */
-    public static showFromTreeItem(
+    public static async showFromTreeItem(
         context: vscode.ExtensionContext,
         treeItem: ClusterTreeItem
-    ): void {
+    ): Promise<void> {
         // Extract resource information from tree item
         if (!treeItem || !treeItem.resourceData) {
             vscode.window.showErrorMessage('Unable to describe: missing resource data');
@@ -244,7 +246,29 @@ export class DescribeWebview {
         // Extract context name
         const contextName = treeItem.resourceData.context.name;
 
-        // Show the Describe webview
+        // Route to specialized webviews
+        if (kind === 'Deployment') {
+            // Validate namespace (deployments are always namespaced)
+            if (!namespace) {
+                vscode.window.showErrorMessage('Unable to describe deployment: namespace is required');
+                return;
+            }
+            
+            // Get kubeconfig path
+            const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+            
+            // Call DeploymentDescribeWebview (async)
+            await DeploymentDescribeWebview.show(
+                context,
+                name,
+                namespace,
+                kubeconfigPath,
+                contextName
+            );
+            return;
+        }
+
+        // Show the Describe webview for other resource types
         DescribeWebview.show(context, {
             kind,
             name,
