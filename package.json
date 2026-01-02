@@ -623,7 +623,7 @@
     "build": "webpack --mode production && npm run build:webview",
     "watch": "webpack --mode development --watch",
     "compile": "tsc && npm run build:webview",
-    "build:webview": "esbuild src/webview/argocd-application/index.tsx --bundle --outfile=media/argocd-application/main.js --format=iife --platform=browser --minify && esbuild src/webview/event-viewer/index.tsx --bundle --outfile=media/event-viewer/index.js --format=iife --platform=browser --minify && esbuild src/webview/pod-logs/index.tsx --bundle --outfile=media/pod-logs/main.js --format=iife --platform=browser --minify && cp src/webview/pod-logs/styles.css media/pod-logs/styles.css",
+    "build:webview": "esbuild src/webview/argocd-application/index.tsx --bundle --outfile=media/argocd-application/main.js --format=iife --platform=browser --minify && esbuild src/webview/event-viewer/index.tsx --bundle --outfile=media/event-viewer/index.js --format=iife --platform=browser --minify && esbuild src/webview/pod-logs/index.tsx --bundle --outfile=media/pod-logs/main.js --format=iife --platform=browser --minify && esbuild src/webview/operator-health-report/index.tsx --bundle --outfile=media/operator-health-report/main.js --format=iife --platform=browser --minify && cp src/webview/pod-logs/styles.css media/pod-logs/styles.css && cp src/webview/operator-health-report/styles.css media/operator-health-report/styles.css",
     "pretest": "npm run compile && npm run lint",
     "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js'",
     "pretest:unit": "npm run compile && npm run lint",

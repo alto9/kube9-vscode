@@ -5,7 +5,7 @@ feature_id:
   - operator-health-report
 spec_id:
   - operator-health-report-spec
-status: pending
+status: completed
 ---
 
 # Create React Component for Operator Health Report
