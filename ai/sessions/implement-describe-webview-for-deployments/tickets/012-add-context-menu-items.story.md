@@ -5,7 +5,7 @@ feature_id:
   - deployment-describe-webview
 spec_id:
   - deployment-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Add Context Menu Items
@@ -20,12 +20,12 @@ The context menu for deployment items should offer two describe options: the gra
 
 ## Acceptance Criteria
 
-- [ ] Right-click deployment shows "Describe" option
-- [ ] Right-click deployment shows "Describe (Raw)" option
-- [ ] "Describe" opens DeploymentDescribeWebview
-- [ ] "Describe (Raw)" opens text editor with kubectl output
-- [ ] Context menu items appear in logical order
-- [ ] Menu items have appropriate icons (if applicable)
+- [x] Right-click deployment shows "Describe" option
+- [x] Right-click deployment shows "Describe (Raw)" option
+- [x] "Describe" opens DeploymentDescribeWebview
+- [x] "Describe (Raw)" opens text editor with kubectl output
+- [x] Context menu items appear in logical order
+- [x] Menu items have appropriate icons (if applicable)
 
 ## Implementation Steps
 
@@ -63,4 +63,17 @@ The context menu for deployment items should offer two describe options: the gra
 - Context menu contributions may already exist generically for all resources
 - Verify with regex pattern matching: `viewItem =~ /resource:Deployment/`
 - Menu groups like "describe@1" control ordering within the context menu
+
+## Implementation Summary
+
+**Verification Complete**: The generic pattern `/^resource/` in `package.json` (lines 440-447) already matches `resource:Deployment`, so both "Describe" and "Describe (Raw)" context menu items are available for deployments. The implementation was verified:
+
+1. ✅ `package.json` has generic pattern `/^resource/` for both commands (lines 440-447)
+2. ✅ `DeploymentsSubcategory.ts` sets `contextValue = 'resource:Deployment'` (line 84)
+3. ✅ Commands are registered in `extension.ts` (lines 453-490)
+4. ✅ `DescribeWebview.showFromTreeItem()` routes deployments to `DeploymentDescribeWebview` (lines 205-223)
+5. ✅ `describeRawCommand()` handles raw describe output for all resources including deployments
+6. ✅ Build and tests pass successfully
+
+**Commit Message**: `chore: verify deployment describe context menu items`
 
