@@ -128,6 +128,21 @@ export interface DeploymentDetailsResult {
 }
 
 /**
+ * Result of a deployment events query operation.
+ */
+export interface DeploymentEventsResult {
+    /**
+     * Array of CoreV1Event objects related to the deployment, empty if query failed or no events found.
+     */
+    events: k8s.CoreV1Event[];
+    
+    /**
+     * Error information if the events query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
  * Result of a ReplicaSets query operation.
  */
 export interface ReplicaSetsResult {
@@ -594,6 +609,74 @@ export class WorkloadCommands {
             
             return {
                 deployment: undefined,
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves Kubernetes events related to a specific deployment using the Kubernetes API client.
+     * Filters events by involvedObject.kind='Deployment' and involvedObject.name matching the deployment name.
+     * 
+     * @param deploymentName Name of the deployment to retrieve events for
+     * @param namespace Namespace where the deployment is located
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param contextName Name of the context to query
+     * @returns DeploymentEventsResult with events array and optional error information
+     */
+    public static async getDeploymentEvents(
+        deploymentName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<DeploymentEventsResult> {
+        try {
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch all events in the namespace from API
+            const response = await apiClient.core.listNamespacedEvent({
+                namespace: namespace,
+                timeoutSeconds: 10
+            });
+            
+            const allEvents = response.items || [];
+            
+            // Filter events by involvedObject.kind='Deployment' and involvedObject.name matching deployment name
+            const filteredEvents = allEvents.filter(event =>
+                event.involvedObject?.kind === 'Deployment' &&
+                event.involvedObject?.name === deploymentName
+            );
+            
+            // Sort events by lastTimestamp (most recent first), fall back to firstTimestamp if lastTimestamp is missing
+            const sortedEvents = filteredEvents.sort((a, b) => {
+                const aTimestamp = a.lastTimestamp || a.firstTimestamp || '';
+                const bTimestamp = b.lastTimestamp || b.firstTimestamp || '';
+                
+                // Compare timestamps (most recent first)
+                if (aTimestamp > bTimestamp) {
+                    return -1;
+                }
+                if (aTimestamp < bTimestamp) {
+                    return 1;
+                }
+                return 0;
+            });
+            
+            return {
+                events: sortedEvents,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            // API call failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Deployment events query failed for deployment ${deploymentName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                events: [],
                 error: kubectlError
             };
         }
