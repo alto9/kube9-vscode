@@ -5,7 +5,7 @@ feature_id:
   - deployment-describe-webview
 spec_id:
   - deployment-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Create Utility Functions
@@ -20,13 +20,13 @@ These utilities will be used by the data transformer to convert raw Kubernetes v
 
 ## Acceptance Criteria
 
-- [ ] `parseResourceValue()` function handles CPU (millicores) and memory (bytes) parsing
-- [ ] `calculateAge()` function converts ISO timestamps to relative ages ("2h", "5d")
-- [ ] `calculateRelativeTime()` function creates "2h ago" format timestamps
-- [ ] `parseIntOrPercent()` function handles "25%" or "1" values for maxSurge/maxUnavailable
-- [ ] `extractImageTag()` function splits image:tag into separate parts
-- [ ] Functions are exported and reusable
-- [ ] Functions handle edge cases (undefined, null, invalid formats)
+- [x] `parseResourceValue()` function handles CPU (millicores) and memory (bytes) parsing
+- [x] `calculateAge()` function converts ISO timestamps to relative ages ("2h", "5d")
+- [x] `calculateRelativeTime()` function creates "2h ago" format timestamps
+- [x] `parseIntOrPercent()` function handles "25%" or "1" values for maxSurge/maxUnavailable
+- [x] `extractImageTag()` function splits image:tag into separate parts
+- [x] Functions are exported and reusable
+- [x] Functions handle edge cases (undefined, null, invalid formats)
 
 ## Implementation Steps
 
