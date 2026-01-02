@@ -5,7 +5,7 @@ feature_id:
   - interactive-tutorial
 spec_id:
   - vscode-walkthroughs
-status: pending
+status: completed
 estimated_time: 15 minutes
 ---
 
@@ -48,12 +48,12 @@ context.subscriptions.push(completeStep3);
 
 ## Acceptance Criteria
 
-- [ ] Command `kube9.internal.completeStep3` registered
-- [ ] Command fires walkthrough completion event `kube9.onNamespaceExpanded`
-- [ ] Helpful message shown to user after completion
-- [ ] Command added to context.subscriptions
-- [ ] Step 3 marks as complete when command executed
-- [ ] Tutorial can progress to Step 4 after using fallback
+- [x] Command `kube9.internal.completeStep3` registered
+- [x] Command fires walkthrough completion event `kube9.onNamespaceExpanded`
+- [x] Helpful message shown to user after completion
+- [x] Command added to context.subscriptions
+- [x] Step 3 marks as complete when command executed
+- [x] Tutorial can progress to Step 4 after using fallback
 
 ## Testing
 

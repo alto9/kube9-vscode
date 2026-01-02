@@ -1530,6 +1530,25 @@ function registerCommands(): void {
     );
     context.subscriptions.push(showTutorialCommand);
     disposables.push(showTutorialCommand);
+    
+    // Step 3 fallback - Navigate Resources
+    const completeStep3 = vscode.commands.registerCommand(
+        'kube9.internal.completeStep3',
+        async () => {
+            // Fire the completion event that Step 3 expects
+            await vscode.commands.executeCommand(
+                'workbench.action.fireWalkthroughCompletionEvent',
+                'kube9.onNamespaceExpanded'
+            );
+            
+            // Helpful message for users without clusters
+            vscode.window.showInformationMessage(
+                'Great! When you connect a cluster, you can expand namespaces to explore resources.'
+            );
+        }
+    );
+    context.subscriptions.push(completeStep3);
+    disposables.push(completeStep3);
 }
 
 /**
