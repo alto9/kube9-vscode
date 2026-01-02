@@ -774,25 +774,39 @@ export const clipboard = {
 /**
  * Mock extensions API
  */
-const extensions: unknown[] = [];
+interface MockExtension {
+    id: string;
+    packageJSON: {
+        version: string;
+    };
+}
+
+const extensionsList: MockExtension[] = [];
 
 export const extensionsApi = {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    getExtension: (_extensionId: string): unknown | undefined => {
-        return extensions.find(() => true);
+    getExtension: (extensionId: string): MockExtension | undefined => {
+        return extensionsList.find(ext => ext.id === extensionId);
     },
-    all: extensions,
+    all: extensionsList,
     _clearExtensions: (): void => {
-        extensions.length = 0;
+        extensionsList.length = 0;
     },
-    _addExtension: (ext: unknown): void => {
-        extensions.push(ext);
+    _addExtension: (ext: MockExtension): void => {
+        extensionsList.push(ext);
     },
-    _setExtension: (ext: unknown): void => {
-        extensions.length = 0;
-        extensions.push(ext);
+    _setExtension: (extensionId: string, version: string): void => {
+        extensionsList.length = 0;
+        extensionsList.push({
+            id: extensionId,
+            packageJSON: {
+                version: version
+            }
+        });
     }
 };
+
+// Export as 'extensions' for compatibility with vscode.extensions usage
+export const extensions = extensionsApi;
 
 /**
  * Module exports object that provides all vscode API components
