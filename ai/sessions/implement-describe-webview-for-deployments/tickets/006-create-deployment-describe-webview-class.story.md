@@ -5,7 +5,7 @@ feature_id:
   - deployment-describe-webview
 spec_id:
   - deployment-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Create DeploymentDescribeWebview Class
@@ -20,15 +20,15 @@ This is the main controller class that orchestrates data fetching, transformatio
 
 ## Acceptance Criteria
 
-- [ ] `DeploymentDescribeWebview.ts` file exists in `src/webview/`
-- [ ] Class has static shared panel pattern (singleton approach)
-- [ ] `show()` static method creates or reuses webview panel
-- [ ] `refreshDeploymentData()` private method fetches and updates data
-- [ ] Message handlers for refresh, navigateToReplicaSet, copyValue
-- [ ] Parallel data fetching using Promise.all()
-- [ ] Error handling with user-friendly messages
-- [ ] Panel disposal cleanup
-- [ ] Webview retains context when hidden
+- [x] `DeploymentDescribeWebview.ts` file exists in `src/webview/`
+- [x] Class has static shared panel pattern (singleton approach)
+- [x] `show()` static method creates or reuses webview panel
+- [x] `refreshDeploymentData()` private method fetches and updates data
+- [x] Message handlers for refresh, navigateToReplicaSet, copyValue
+- [x] Parallel data fetching using Promise.all()
+- [x] Error handling with user-friendly messages
+- [x] Panel disposal cleanup
+- [x] Webview retains context when hidden
 
 ## Implementation Steps
 
