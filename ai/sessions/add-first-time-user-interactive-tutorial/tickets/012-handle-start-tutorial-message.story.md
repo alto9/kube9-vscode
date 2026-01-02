@@ -6,7 +6,7 @@ feature_id:
   - initial-configuration
 spec_id:
   - vscode-walkthroughs
-status: pending
+status: completed
 estimated_time: 15 minutes
 ---
 

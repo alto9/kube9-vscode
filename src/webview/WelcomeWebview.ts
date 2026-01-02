@@ -77,6 +77,16 @@ export class WelcomeWebview {
                         // Open VS Code settings for kube9 extension
                         vscode.commands.executeCommand('workbench.action.openSettings', 'kube9');
                         break;
+
+                    case 'startTutorial':
+                        try {
+                            await vscode.commands.executeCommand('kube9.showTutorial');
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            console.error('Failed to open tutorial:', errorMessage);
+                            vscode.window.showErrorMessage(`Failed to open tutorial: ${errorMessage}`);
+                        }
+                        break;
                 }
             },
             undefined,
