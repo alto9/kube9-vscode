@@ -143,6 +143,37 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Initialize global state management
         GlobalState.initialize(context);
         
+        // Check if tutorial has been completed
+        const tutorialCompleted = context.globalState.get<boolean>(
+            'kube9.tutorialCompleted',
+            false
+        );
+
+        // Set context for 'when' clause in package.json
+        await vscode.commands.executeCommand(
+            'setContext',
+            'kube9.tutorialCompleted',
+            tutorialCompleted
+        );
+
+        // Register command to mark tutorial as complete
+        const markTutorialComplete = vscode.commands.registerCommand(
+            'kube9.internal.markTutorialComplete',
+            async () => {
+                await context.globalState.update('kube9.tutorialCompleted', true);
+                await vscode.commands.executeCommand(
+                    'setContext',
+                    'kube9.tutorialCompleted',
+                    true
+                );
+                vscode.window.showInformationMessage(
+                    'Tutorial completed! You can replay it anytime from the Command Palette.'
+                );
+            }
+        );
+
+        context.subscriptions.push(markTutorialComplete);
+        
         // Initialize Output Panel Logger for error logging
         OutputPanelLogger.getInstance();
         // Logger is now ready for use
