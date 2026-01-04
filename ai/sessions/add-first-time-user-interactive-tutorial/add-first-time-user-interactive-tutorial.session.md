@@ -1,7 +1,7 @@
 ---
 session_id: add-first-time-user-interactive-tutorial
 start_time: '2026-01-02T15:48:45.927Z'
-status: development
+status: completed
 problem_statement: Add first-time user interactive tutorial
 changed_files:
   - path: ai/features/setup/interactive-tutorial.feature.md
