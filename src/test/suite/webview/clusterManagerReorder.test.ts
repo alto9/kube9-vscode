@@ -39,7 +39,6 @@ suite('Cluster Manager Reorder Test Suite', () => {
     suite('Folder Reordering Logic', () => {
         test('should move folder to new parent when dropped inside', () => {
             const dropPosition = 'inside';
-            const targetFolderId = 'parent-folder';
             
             assert.strictEqual(dropPosition, 'inside', 'Folder should become child of target');
         });
