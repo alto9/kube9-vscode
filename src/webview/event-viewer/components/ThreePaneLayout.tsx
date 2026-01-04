@@ -39,9 +39,14 @@ export const ThreePaneLayout: React.FC<ThreePaneLayoutProps> = ({
     const [detailsCollapsed, setDetailsCollapsed] = useState(false);
 
     // Calculate EventTable height dynamically based on details collapsed state
-    const eventTableHeight = detailsCollapsed 
-        ? '100%' 
-        : `calc(100% - ${detailsPaneHeight}px)`;
+    // Using memoization to prevent unnecessary re-renders during resize
+    const eventTableHeight = React.useMemo(() => {
+        if (detailsCollapsed) {
+            return '100%';
+        }
+        // Return stable string representation
+        return `calc(100% - ${detailsPaneHeight}px)`;
+    }, [detailsCollapsed, detailsPaneHeight]);
 
     const layoutStyle: React.CSSProperties = {
         display: 'flex',

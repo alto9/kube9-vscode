@@ -39,9 +39,11 @@ export const FilterPane: React.FC<FilterPaneProps> = ({
     }, [events]);
 
     const filterSectionsStyle: React.CSSProperties = {
-        flex: 1,
+        flex: '1 1 auto',
         overflowY: 'auto',
-        overflowX: 'hidden'
+        overflowX: 'hidden',
+        minHeight: '600px', // Much larger minHeight to fill most of the space
+        display: 'block'
     };
 
     return (
@@ -54,10 +56,11 @@ export const FilterPane: React.FC<FilterPaneProps> = ({
                 borderRight: '1px solid var(--vscode-panel-border)',
                 display: 'flex',
                 flexDirection: 'column',
-                position: 'relative'
+                position: 'relative',
+                height: '100%' // Ensure full height
             }}
         >
-            <div className="filter-pane-header" style={{ padding: '12px', fontWeight: 'bold' }}>
+            <div className="filter-pane-header" style={{ padding: '12px', fontWeight: 'bold', flexShrink: 0 }}>
                 Filters
             </div>
             <div className="filter-sections" style={filterSectionsStyle}>

@@ -149,7 +149,7 @@ export const EventTable: React.FC<EventTableProps> = ({
                 <List
                     height={listHeight}
                     itemCount={sortedEvents.length}
-                    itemSize={40}
+                    itemSize={42}
                     width="100%"
                 >
                     {({ index, style }) => (

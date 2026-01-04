@@ -336,10 +336,9 @@ export class EventsProvider {
             parts.push(`--object-namespace=${filters.namespace}`);
         }
         
-        // Type filter (cluster, operator, insight, assessment, health, system)
-        if (filters.type && filters.type !== 'all') {
-            parts.push(`--type=${filters.type}`);
-        }
+        // NOTE: filters.type is for Kubernetes event types (Normal, Warning, Error)
+        // This is filtered client-side in applyFilters(), NOT sent to operator CLI
+        // The operator CLI --type param expects: cluster, operator, insight, assessment, health, system
         
         // Since filter - convert to ISO 8601 if needed
         if (filters.since && filters.since !== 'all') {
@@ -491,6 +490,12 @@ export class EventsProvider {
         filters: EventFilters
     ): KubernetesEvent[] {
         let filtered = events;
+        
+        // Kubernetes event type filter (Normal, Warning, Error)
+        // This is separate from operator event categories
+        if (filters.type && filters.type !== 'all') {
+            filtered = filtered.filter(event => event.type === filters.type);
+        }
         
         // Search filter
         if (filters.searchText) {

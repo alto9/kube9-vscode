@@ -35,31 +35,6 @@ export const EventDetails: React.FC<EventDetailsProps> = ({
         }
     };
 
-    const handleGoToResource = () => {
-        if (event) {
-            sendMessage({
-                type: 'navigate',
-                resource: {
-                    namespace: event.involvedObject.namespace,
-                    kind: event.involvedObject.kind,
-                    name: event.involvedObject.name
-                }
-            });
-        }
-    };
-
-    const handleViewYaml = () => {
-        if (event) {
-            sendMessage({
-                type: 'viewYaml',
-                resource: {
-                    namespace: event.involvedObject.namespace,
-                    kind: event.involvedObject.kind,
-                    name: event.involvedObject.name
-                }
-            });
-        }
-    };
 
     return (
         <div
@@ -183,52 +158,6 @@ export const EventDetails: React.FC<EventDetailsProps> = ({
                     >
                         <span className="codicon codicon-copy"></span>
                         Copy Message
-                    </button>
-                    <button
-                        onClick={handleGoToResource}
-                        disabled={!event}
-                        title="Go to Resource"
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            backgroundColor: 'var(--vscode-button-background)',
-                            color: 'var(--vscode-button-foreground)',
-                            border: 'none',
-                            borderRadius: '2px',
-                            cursor: event ? 'pointer' : 'not-allowed',
-                            opacity: event ? 1 : 0.5,
-                            fontFamily: 'var(--vscode-font-family)',
-                            fontSize: '13px'
-                        }}
-                        aria-label="Go to Resource"
-                    >
-                        <span className="codicon codicon-go-to-file"></span>
-                        Go to Resource
-                    </button>
-                    <button
-                        onClick={handleViewYaml}
-                        disabled={!event}
-                        title="View YAML"
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            backgroundColor: 'var(--vscode-button-background)',
-                            color: 'var(--vscode-button-foreground)',
-                            border: 'none',
-                            borderRadius: '2px',
-                            cursor: event ? 'pointer' : 'not-allowed',
-                            opacity: event ? 1 : 0.5,
-                            fontFamily: 'var(--vscode-font-family)',
-                            fontSize: '13px'
-                        }}
-                        aria-label="View YAML"
-                    >
-                        <span className="codicon codicon-file-code"></span>
-                        View YAML
                     </button>
                 </div>
             )}
