@@ -291,6 +291,24 @@ Scenario: Loading indicator for individual operations
   Then a loading indicator should appear specific to that operation
   And the indicator should not block the entire UI unnecessarily
   And other operations should remain available if not conflicting
+
+Scenario: Table rows render without overlapping
+  Given the Events Viewer displays multiple events
+  When events are rendered in the virtual list
+  Then each row should have sufficient height for its content
+  And rows should not overlap when scrolling
+  And row height should account for padding and borders (42px total)
+  And hover effects should work correctly on each row
+  And row selection should be visually clear without overlap
+
+Scenario: Resizing details pane does not cause table scrolling
+  Given the Events Viewer is open with events loaded
+  When a user drags the horizontal separator between table and details
+  Then the table should resize smoothly
+  And the table scroll position should remain stable
+  And no wild scrolling behavior should occur during resize
+  And resize updates should be throttled using requestAnimationFrame
+  And the final resize should be applied accurately when drag ends
 ```
 
 ## Integration Points
