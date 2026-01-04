@@ -5,7 +5,7 @@ feature_id:
   - help-commands
 spec_id:
   - help-commands
-status: pending
+status: completed
 estimated_minutes: 25
 ---
 

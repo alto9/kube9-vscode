@@ -861,7 +861,8 @@ const vscodeModule = {
     commands,
     env,
     clipboard,
-    extensions: extensionsApi
+    extensions: extensionsApi,
+    version: '1.80.0'
 };
 /* eslint-enable @typescript-eslint/naming-convention */
 
@@ -891,7 +892,8 @@ if (typeof module !== 'undefined' && module.exports) {
         commands,
         env,
         clipboard,
-        extensions: extensionsApi
+        extensions: extensionsApi,
+        version: '1.80.0'
     });
     /* eslint-enable @typescript-eslint/naming-convention */
 }
