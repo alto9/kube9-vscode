@@ -81,3 +81,65 @@ What you expected to happen.
   }
 }
 
+/**
+ * Interface for help menu quick pick items
+ */
+interface HelpMenuOption extends vscode.QuickPickItem {
+  action: string;
+}
+
+/**
+ * Registers the help menu quick pick command.
+ * 
+ * @param context - The extension context
+ * @param _helpController - The help controller instance (unused but kept for API consistency)
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function registerHelpMenuCommand(context: vscode.ExtensionContext, _helpController: HelpController): void {
+  context.subscriptions.push(
+    vscode.commands.registerCommand('kube9.showHelpMenu', async () => {
+      const selected = await vscode.window.showQuickPick<HelpMenuOption>([
+        {
+          label: '$(book) Documentation',
+          description: 'Open Kube9 documentation website',
+          action: 'docs'
+        },
+        {
+          label: '$(bug) Report Issue',
+          description: 'Report a bug or request a feature',
+          action: 'issue'
+        },
+        {
+          label: '$(keyboard) Keyboard Shortcuts',
+          description: 'View and customize Kube9 keyboard shortcuts',
+          action: 'shortcuts'
+        },
+        {
+          label: '$(question) Getting Started',
+          description: 'View the interactive tutorial',
+          action: 'tutorial'
+        }
+      ], {
+        placeHolder: 'Select a help option'
+      });
+      
+      if (selected) {
+        switch (selected.action) {
+          case 'docs':
+            await vscode.commands.executeCommand('kube9.openDocumentation');
+            break;
+          case 'issue':
+            await vscode.commands.executeCommand('kube9.reportIssue');
+            break;
+          case 'shortcuts':
+            await vscode.commands.executeCommand('kube9.viewKeyboardShortcuts');
+            break;
+          case 'tutorial':
+            await vscode.commands.executeCommand('kube9.showTutorial');
+            break;
+        }
+      }
+    })
+  );
+}
+

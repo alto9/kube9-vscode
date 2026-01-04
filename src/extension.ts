@@ -50,7 +50,7 @@ import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
-import { HelpController } from './help/HelpController';
+import { HelpController, registerHelpMenuCommand } from './help/HelpController';
 import { HelpStatusBar } from './help/HelpStatusBar';
 
 
@@ -194,6 +194,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Initialize help system
         const helpController = new HelpController(context);
         helpController.registerCommands();
+        registerHelpMenuCommand(context, helpController);
         
         // Create and register help status bar
         const helpStatusBar = new HelpStatusBar(helpController);

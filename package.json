@@ -305,6 +305,11 @@
         "command": "kube9.viewKeyboardShortcuts",
         "title": "Kube9: View Keyboard Shortcuts",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.showHelpMenu",
+        "title": "Kube9: Show Help Menu",
+        "category": "Kube9"
       }
     ],
     "menus": {
