@@ -606,6 +606,21 @@
           "command": "kube9.copyErrorDetails",
           "when": "view == kube9ClusterView && viewItem == error",
           "group": "error@2"
+        },
+        {
+          "command": "kube9.helpForPods",
+          "when": "view == kube9ClusterView && viewItem =~ /pod/",
+          "group": "z_help@1"
+        },
+        {
+          "command": "kube9.helpForDeployments",
+          "when": "view == kube9ClusterView && viewItem =~ /deployment/",
+          "group": "z_help@1"
+        },
+        {
+          "command": "kube9.helpForServices",
+          "when": "view == kube9ClusterView && viewItem =~ /service/",
+          "group": "z_help@1"
         }
       ],
       "editor/context": [
