@@ -285,6 +285,11 @@
       {
         "command": "kube9.copyErrorDetails",
         "title": "Copy Error Details"
+      },
+      {
+        "command": "kube9.showTutorial",
+        "title": "Show Getting Started Tutorial",
+        "category": "Kube9"
       }
     ],
     "menus": {
@@ -309,6 +314,9 @@
         },
         {
           "command": "kube9.viewResourceYAMLFromPalette"
+        },
+        {
+          "command": "kube9.showTutorial"
         },
         {
           "command": "kube9.openNamespace",
@@ -617,7 +625,100 @@
           "description": "Error throttle window in milliseconds"
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "kube9.gettingStarted",
+        "title": "Get Started with Kube9",
+        "description": "Learn how to manage your Kubernetes clusters with Kube9",
+        "when": "!kube9.tutorialCompleted",
+        "steps": [
+          {
+            "id": "kube9.step1.exploreClusterView",
+            "title": "Explore the Cluster View",
+            "description": "Discover the Kube9 activity bar icon and learn about the tree structure that organizes clusters, namespaces, and resources.\n\n[Open Kube9 View](command:kube9.focus)",
+            "media": {
+              "image": "media/walkthrough/01-cluster-view.png",
+              "altText": "Kube9 activity bar icon and cluster tree view"
+            },
+            "completionEvents": [
+              "onView:kube9ClusterView"
+            ]
+          },
+          {
+            "id": "kube9.step2.exploreClusterManager",
+            "title": "Explore Cluster Manager",
+            "description": "Learn how to customize your tree view organization with the Cluster Manager. Create custom views, organize namespaces, and tailor the interface to your workflow.\n\n[Open Cluster Manager](command:kube9.openClusterManager)",
+            "media": {
+              "image": "media/walkthrough/02-cluster-manager.png",
+              "altText": "Cluster Manager UI showing customization options"
+            },
+            "completionEvents": [
+              "onCommand:kube9.openClusterManager"
+            ]
+          },
+          {
+            "id": "kube9.step3.navigateResources",
+            "title": "Navigate Resources",
+            "description": "Learn how to expand clusters and namespaces to explore Kubernetes resources organized in a hierarchical tree.\n\n**With clusters:** Try expanding a namespace in the kube9 view to see its resources.\n\n**Without clusters yet?** The image shows what you'll see when you connect a cluster. [Mark Complete](command:kube9.internal.completeStep3)",
+            "media": {
+              "image": "media/walkthrough/03-navigation.png",
+              "altText": "Expanded namespace showing resource hierarchy"
+            },
+            "completionEvents": [
+              "kube9.onNamespaceExpanded",
+              "onCommand:kube9.internal.completeStep3"
+            ]
+          },
+          {
+            "id": "kube9.step4.viewResources",
+            "title": "View Resources",
+            "description": "View detailed information about any resource by clicking on it. See current status, conditions, events, and more in the describe webview.\n\n**With resources:** Click any pod in the tree view to see its details.\n\n**Without resources yet?** The image shows what you'll see. [Mark Complete](command:kube9.internal.completeStep4)",
+            "media": {
+              "image": "media/walkthrough/04-view-resource.png",
+              "altText": "Resource describe webview showing pod status and details"
+            },
+            "completionEvents": [
+              "kube9.onPodClicked",
+              "onCommand:kube9.internal.completeStep4"
+            ]
+          },
+          {
+            "id": "kube9.step5.viewLogs",
+            "title": "View Pod Logs",
+            "description": "Access pod logs directly from the tree view for debugging and monitoring. Logs open in a dedicated viewer with filtering and search.\n\n[View Pod Logs](command:kube9.viewPodLogs)",
+            "media": {
+              "image": "media/walkthrough/05-logs.png",
+              "altText": "Pod logs viewer interface"
+            },
+            "completionEvents": [
+              "onCommand:kube9.viewPodLogs"
+            ]
+          },
+          {
+            "id": "kube9.step6.manageResources",
+            "title": "Manage Resources",
+            "description": "Scale deployments and manage other workload resources. Right-click any workload to see management options like scale and delete.\n\n[Scale Workload](command:kube9.scaleWorkload)",
+            "media": {
+              "image": "media/walkthrough/06-management.png",
+              "altText": "Resource management operations including scale and delete"
+            },
+            "completionEvents": [
+              "onCommand:kube9.scaleWorkload"
+            ]
+          },
+          {
+            "id": "kube9.step7.documentation",
+            "title": "Documentation",
+            "description": "You've learned the essentials! Find more help and resources:\n\n- Use **Cmd/Ctrl+Shift+P** to access all kube9 commands\n- Right-click resources for context menus\n- Check out [our documentation](https://alto9.github.io/kube9/) for detailed guides\n- Join our [community](https://github.com/alto9/kube9-vscode) for support\n\nHappy Kubernetes management! 🚀",
+            "media": {
+              "image": "media/walkthrough/07-documentation.png",
+              "altText": "Documentation and help resources"
+            }
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "build": "webpack --mode production && npm run build:webview",
@@ -666,6 +767,7 @@
     "react-dom": "^18.2.0",
     "react-window": "^1.8.10",
     "semantic-release": "^25.0.2",
+    "sharp": "^0.34.5",
     "source-map-support": "^0.5.21",
     "style-loader": "^3.3.3",
     "ts-loader": "^9.5.4",

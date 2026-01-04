@@ -236,7 +236,7 @@ export class ErrorHandler {
      * @returns Formatted issue template string
      */
     private generateIssueTemplate(details: ErrorDetails): string {
-        const extensionVersion = vscode.extensions.getExtension('alto9.kube9')?.packageJSON.version || 'unknown';
+        const extensionVersion = vscode.extensions.getExtension('Alto9.kube9-vscode')?.packageJSON.version || 'unknown';
         
         return `
 ## Bug Report

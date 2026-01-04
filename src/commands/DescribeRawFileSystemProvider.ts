@@ -141,14 +141,13 @@ export class DescribeRawFileSystemProvider implements vscode.FileSystemProvider 
 
     /**
      * Extract resource name from URI path.
-     * URI format: kube9-describe://<resource-name>.describe
-     * or: kube9-describe://<namespace>/<resource-name>.describe
+     * URI format: kube9-describe://<namespace>/<resource-name>.describe or kube9-describe://<resource-name>.describe
      * 
      * @param uri The URI
-     * @returns The resource name (with namespace prefix if present, without .describe suffix)
+     * @returns The resource name with namespace prefix if present (e.g., "namespace/resource-name.describe" or "resource-name.describe")
      */
     private getResourceNameFromUri(uri: vscode.Uri): string {
-        // Path format: /<resource-name>.describe or /<namespace>/<resource-name>.describe
+        // Path format: /<namespace>/<resource-name>.describe or /<resource-name>.describe
         const path = uri.path;
         if (path.startsWith('/')) {
             const parts = path.slice(1).split('/');
@@ -163,13 +162,14 @@ export class DescribeRawFileSystemProvider implements vscode.FileSystemProvider 
  * Create a kube9-describe:// URI for a resource.
  * 
  * @param resourceName The resource name
- * @param namespace Optional namespace to include in the path
+ * @param namespace Optional namespace to include in the URI path
  * @returns The created URI
  */
 export function createDescribeUri(resourceName: string, namespace?: string): vscode.Uri {
     const path = namespace 
         ? `/${namespace}/${resourceName}.describe`
         : `/${resourceName}.describe`;
+    
     return vscode.Uri.from({
         scheme: 'kube9-describe',
         path: path

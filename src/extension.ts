@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { GlobalState } from './state/GlobalState';
-import { WelcomeWebview } from './webview/WelcomeWebview';
+import { TutorialWebview } from './webview/TutorialWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DescribeWebview } from './webview/DescribeWebview';
 import { HealthReportPanel } from './webview/HealthReportPanel';
@@ -143,6 +143,37 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Initialize global state management
         GlobalState.initialize(context);
         
+        // Check if tutorial has been completed
+        const tutorialCompleted = context.globalState.get<boolean>(
+            'kube9.tutorialCompleted',
+            false
+        );
+
+        // Set context for 'when' clause in package.json
+        await vscode.commands.executeCommand(
+            'setContext',
+            'kube9.tutorialCompleted',
+            tutorialCompleted
+        );
+
+        // Register command to mark tutorial as complete
+        const markTutorialComplete = vscode.commands.registerCommand(
+            'kube9.internal.markTutorialComplete',
+            async () => {
+                await context.globalState.update('kube9.tutorialCompleted', true);
+                await vscode.commands.executeCommand(
+                    'setContext',
+                    'kube9.tutorialCompleted',
+                    true
+                );
+                vscode.window.showInformationMessage(
+                    'Tutorial completed! You can replay it anytime from the Command Palette.'
+                );
+            }
+        );
+
+        context.subscriptions.push(markTutorialComplete);
+        
         // Initialize Output Panel Logger for error logging
         OutputPanelLogger.getInstance();
         // Logger is now ready for use
@@ -178,6 +209,50 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             treeDataProvider: clusterTreeProvider
         });
         clusterTreeProvider.setTreeView(treeView);
+        
+        // Add expansion event listener for tutorial Step 3 tracking
+        treeView.onDidExpandElement((event) => {
+            // Check if expanded element is a namespace
+            // Use type check as primary identifier since contextValue may vary
+            const element = event.element as ClusterTreeItem;
+            if (element.type === 'namespace') {
+                // Fire completion event for walkthrough Step 3
+                // Wrap in Promise.resolve to handle Thenable and catch errors silently
+                Promise.resolve(
+                    vscode.commands.executeCommand(
+                        'workbench.action.fireWalkthroughCompletionEvent',
+                        'kube9.onNamespaceExpanded'
+                    )
+                ).catch((err: unknown) => {
+                    // Silently handle errors (event may not be needed if walkthrough not active)
+                    console.debug('Failed to fire walkthrough completion event:', err);
+                });
+            }
+        });
+        
+        // Add selection event listener for tutorial Step 4 tracking
+        treeView.onDidChangeSelection((event) => {
+            // Check if user selected anything
+            if (event.selection.length > 0) {
+                const selectedItem = event.selection[0] as ClusterTreeItem;
+                
+                // Check if selected item is a pod
+                // Use type check as primary identifier since contextValue may vary
+                if (selectedItem.type === 'pod') {
+                    // Fire completion event for walkthrough Step 4
+                    // Wrap in Promise.resolve to handle Thenable and catch errors silently
+                    Promise.resolve(
+                        vscode.commands.executeCommand(
+                            'workbench.action.fireWalkthroughCompletionEvent',
+                            'kube9.onPodClicked'
+                        )
+                    ).catch((err: unknown) => {
+                        // Silently handle errors (event may not be needed if walkthrough not active)
+                        console.debug('Failed to fire walkthrough completion event:', err);
+                    });
+                }
+            }
+        });
         
         const treeViewDisposable = treeView;
         context.subscriptions.push(treeViewDisposable);
@@ -221,10 +296,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         disposables.push(describeFsProviderDisposable);
         console.log('Describe file system provider registered successfully.');
         
-        // Show welcome screen on first activation
-        const globalState = GlobalState.getInstance();
-        if (!globalState.getWelcomeScreenDismissed()) {
-            WelcomeWebview.show(context);
+        // Show tutorial on first activation
+        // Wrap in try-catch to handle any errors gracefully
+        try {
+            const globalState = GlobalState.getInstance();
+            if (!globalState.getWelcomeScreenDismissed()) {
+                TutorialWebview.show(context);
+            }
+        } catch (error) {
+            // Silently handle tutorial errors (non-critical)
+            // This prevents errors from blocking extension activation
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.debug('Failed to show tutorial (non-critical):', errorMessage);
         }
         
         // Start watching for external namespace context changes
@@ -1484,6 +1567,121 @@ function registerCommands(): void {
     );
     context.subscriptions.push(revealReplicaSetCmd);
     disposables.push(revealReplicaSetCmd);
+    
+    // Register show tutorial command
+    const showTutorialCommand = vscode.commands.registerCommand(
+        'kube9.showTutorial',
+        async () => {
+            try {
+                // Get the extension ID dynamically from the extension context
+                const extensionId = context.extension.id;
+                const walkthroughId = 'kube9.gettingStarted';
+                
+                // Detect if we're running in Cursor (which has walkthrough compatibility issues)
+                const isCursor = vscode.env.appName.toLowerCase().includes('cursor');
+                
+                console.log(`Opening walkthrough: ${extensionId}#${walkthroughId}`);
+                console.log(`Extension ID: ${extensionId}`);
+                console.log(`App Name: ${vscode.env.appName}`);
+                console.log(`Is Cursor: ${isCursor}`);
+                
+                // In Cursor, walkthroughs don't work reliably, so use webview fallback
+                if (isCursor) {
+                    console.log('Detected Cursor - using webview fallback for tutorial');
+                    TutorialWebview.show(context);
+                    return;
+                }
+                
+                // For VS Code, try to open the native walkthrough
+                const fullWalkthroughId = `${extensionId}#${walkthroughId}`;
+                console.log(`Attempting to open native walkthrough: ${fullWalkthroughId}`);
+                
+                try {
+                    await vscode.commands.executeCommand(
+                        'workbench.action.openWalkthrough',
+                        fullWalkthroughId
+                    );
+                    console.log('Successfully opened native walkthrough');
+                } catch (walkthroughError) {
+                    const errorMessage = walkthroughError instanceof Error ? walkthroughError.message : String(walkthroughError);
+                    console.warn('Failed to open native walkthrough, falling back to webview:', errorMessage);
+                    // Fallback to webview if native walkthrough fails
+                    TutorialWebview.show(context);
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                const errorStack = error instanceof Error ? error.stack : undefined;
+                
+                console.error('Failed to open tutorial walkthrough after all attempts:', errorMessage);
+                console.error('Error stack:', errorStack);
+                console.error('Extension ID used:', context.extension.id);
+                console.error('App Name:', vscode.env.appName);
+                
+                // Show user-friendly error message
+                const isCursor = vscode.env.appName.toLowerCase().includes('cursor');
+                const errorText = isCursor
+                    ? `Failed to open tutorial in Cursor. This is a known Cursor compatibility issue with walkthroughs.\n\nError: ${errorMessage}`
+                    : `Failed to open tutorial: ${errorMessage}`;
+                
+                const action = await vscode.window.showErrorMessage(
+                    errorText,
+                    'View Documentation',
+                    'Copy Error Details'
+                );
+                
+                if (action === 'View Documentation') {
+                    await vscode.env.openExternal(
+                        vscode.Uri.parse('https://alto9.github.io/kube9/')
+                    );
+                } else if (action === 'Copy Error Details') {
+                    await vscode.env.clipboard.writeText(
+                        `Error: ${errorMessage}\nExtension ID: ${context.extension.id}\nApp Name: ${vscode.env.appName}\nStack: ${errorStack || 'N/A'}`
+                    );
+                    vscode.window.showInformationMessage('Error details copied to clipboard');
+                }
+            }
+        }
+    );
+    context.subscriptions.push(showTutorialCommand);
+    disposables.push(showTutorialCommand);
+    
+    // Step 3 fallback - Navigate Resources
+    const completeStep3 = vscode.commands.registerCommand(
+        'kube9.internal.completeStep3',
+        async () => {
+            // Fire the completion event that Step 3 expects
+            await vscode.commands.executeCommand(
+                'workbench.action.fireWalkthroughCompletionEvent',
+                'kube9.onNamespaceExpanded'
+            );
+            
+            // Helpful message for users without clusters
+            vscode.window.showInformationMessage(
+                'Great! When you connect a cluster, you can expand namespaces to explore resources.'
+            );
+        }
+    );
+    context.subscriptions.push(completeStep3);
+    disposables.push(completeStep3);
+    
+    // Step 4 fallback - View Resources
+    const completeStep4 = vscode.commands.registerCommand(
+        'kube9.internal.completeStep4',
+        async () => {
+            // Fire the completion event that Step 4 expects
+            await vscode.commands.executeCommand(
+                'workbench.action.fireWalkthroughCompletionEvent',
+                'kube9.onPodClicked'
+            );
+            
+            // Helpful message for users without resources
+            vscode.window.showInformationMessage(
+                'Connect a cluster to view resource details. Click any pod to see its current status, conditions, and events.'
+            );
+        }
+    );
+    context.subscriptions.push(completeStep4);
+    disposables.push(completeStep4);
 }
 
 /**

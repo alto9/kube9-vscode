@@ -42,41 +42,45 @@ Scenario: Marketplace publisher profile shows kube9 icon
   And the publisher icon should be a transparent PNG with a square aspect ratio (at least 128x128)
   And the icon should match the activity bar branding for consistency
 
-Scenario: Welcome screen appears on first launch
+Scenario: Tutorial appears on first launch (replaces welcome screen)
   Given the kube9 extension has just been installed
   And the extension has activated for the first time
   When VS Code completes the activation
-  Then a welcome screen webview should open automatically
-  And the welcome screen should display the kube9 logo and title
-  And the welcome screen should show a quick start guide
-  And the welcome screen should have a "Do not show this again" checkbox
+  Then the tutorial webview should open automatically
+  And the tutorial should display the kube9 logo and title
+  And the tutorial should show the Kube9 ecosystem section
+  And the tutorial should show a quick start guide
+  And the tutorial should have a "Do not show this again" checkbox at the top
   And the checkbox should be unchecked by default
+  And the tutorial should display all 7 tutorial steps
 
-Scenario: Welcome screen content provides helpful guidance
-  Given the welcome screen is displayed
-  Then the quick start guide should explain the extension's core features
-  And the guide should list cluster viewing, resource navigation, and AI recommendations
-  And the welcome screen should include a link to full documentation
-  And the welcome screen should have a "Get Started" or "Close" button
+Scenario: Tutorial content provides helpful guidance
+  Given the tutorial webview is displayed
+  Then the ecosystem section should show information about Kube9 Operator, Kube9 VS Code, and Kube9 Desktop
+  And the quick start guide should list steps for getting started
+  And the tutorial steps should explain cluster viewing, resource navigation, and management features
+  And the tutorial should include links to full documentation
+  And the tutorial should have "Complete Tutorial" and "Close" buttons at the bottom
 
-Scenario: User dismisses welcome screen temporarily
-  Given the welcome screen is displayed
+Scenario: User dismisses tutorial temporarily
+  Given the tutorial webview is displayed
   And the "Do not show this again" checkbox is not checked
-  When the user clicks the "Close" or "Get Started" button
-  Then the welcome screen should close
+  When the user clicks the "Close" button
+  Then the tutorial should close
   And the extension should proceed to show detected clusters in the side panel
   When the user closes and reopens VS Code
-  Then the welcome screen should appear again on activation
+  Then the tutorial should appear again on activation
 
-Scenario: User dismisses welcome screen permanently
-  Given the welcome screen is displayed
+Scenario: User dismisses tutorial permanently
+  Given the tutorial webview is displayed
   When the user checks the "Do not show this again" checkbox
-  And the user clicks the "Close" or "Get Started" button
-  Then the welcome screen should close
+  And the user clicks the "Close" button
+  Then the tutorial should close
   And the extension should save the user's preference
   When the user closes and reopens VS Code
-  Then the welcome screen should not appear
+  Then the tutorial should not appear automatically
   And the extension should proceed directly to showing clusters
+  But the tutorial should still be accessible via command palette
 
 Scenario: Automatic cluster detection on activation
   Given the kube9 extension has activated
@@ -148,7 +152,7 @@ Scenario: Re-activating extension after initial setup
 
 ### Implementation Considerations
 
-1. **Welcome Screen Persistence**: Store the "Do not show this again" preference in VS Code's global state using `context.globalState.update()`. Key suggestion: `kube9.welcomeScreen.dismissed`.
+1. **Tutorial Persistence**: Store the "Do not show this again" preference in VS Code's global state using `context.globalState.update()`. Key: `kube9.welcomeScreen.dismissed` (reused from welcome screen since they've been merged).
 
 2. **Kubeconfig Location**: The extension should check the standard kubeconfig location (`~/.kube/config`) first, but also respect the `KUBECONFIG` environment variable for custom locations.
 
@@ -161,13 +165,15 @@ Scenario: Re-activating extension after initial setup
 
 5. **Performance**: Cluster detection should not block the UI. Use async/await patterns and consider implementing a loading state in the tree view.
 
-6. **Welcome Screen Design**: The webview should:
+6. **Tutorial Webview Design**: The tutorial webview (which replaces the welcome screen) should:
    - Match VS Code's theme (light/dark mode)
    - Use VS Code's webview styling for consistency
    - Be responsive and readable at different window sizes
-   - Include clear call-to-action buttons
+   - Include ecosystem information and quick start guide
+   - Display all instructional content inline without requiring button clicks
+   - Include clear call-to-action buttons for completing the tutorial
 
-7. **Accessibility**: Ensure the welcome screen and side panel meet accessibility standards:
+7. **Accessibility**: Ensure the tutorial webview and side panel meet accessibility standards:
    - Proper ARIA labels
    - Keyboard navigation support
    - Screen reader compatibility
@@ -178,7 +184,9 @@ Scenario: Re-activating extension after initial setup
    - Missing kubeconfig file
    - Corrupted kubeconfig file
    - Custom KUBECONFIG environment variable
+   - Tutorial dismissal checkbox behavior
+   - Tutorial showing/hiding based on dismissal state
 
-9. **Future Enhancement**: Consider adding a "Setup Wizard" command that users can invoke later to reconfigure or see the welcome content again, even if they dismissed it permanently.
+9. **Tutorial Access**: Users can always access the tutorial via the command palette (`kube9.showTutorial`) even if they dismissed it permanently.
 
 10. **Icon Assets**: Provide transparent PNG assets for both the activity bar (24x24 px with padding) and the marketplace publisher profile (square, at least 128x128 px). Keep visual contrast suitable for light and dark themes and include the files within the packaged extension.

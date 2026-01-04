@@ -423,7 +423,7 @@ suite('ErrorHandler Test Suite', () => {
 
     suite('reportIssue() - GitHub Issue Generation', () => {
         test('Should open GitHub issue URL for UNEXPECTED errors', async () => {
-            vscode.extensions._setExtension('alto9.kube9', '1.7.0');
+            vscode.extensions._setExtension('Alto9.kube9-vscode', '1.7.0');
             const handler = ErrorHandler.getInstance();
             const details: ErrorDetails = {
                 type: ErrorType.UNEXPECTED,
@@ -447,7 +447,7 @@ suite('ErrorHandler Test Suite', () => {
         });
 
         test('Should generate issue template with all required information', async () => {
-            vscode.extensions._setExtension('alto9.kube9', '1.7.0');
+            vscode.extensions._setExtension('Alto9.kube9-vscode', '1.7.0');
             const handler = ErrorHandler.getInstance();
             const error = new Error('Test error');
             error.stack = 'Error: Test error\n    at test.js:1:1';
