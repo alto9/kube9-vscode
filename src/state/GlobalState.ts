@@ -54,18 +54,20 @@ export class GlobalState {
     }
 
     /**
-     * Check if the welcome screen has been dismissed by the user.
+     * Check if the tutorial has been dismissed by the user.
+     * Reuses the welcome screen dismissal key since the welcome screen and tutorial have been merged.
      * 
-     * @returns true if the user has dismissed the welcome screen, false otherwise
+     * @returns true if the user has dismissed the tutorial, false otherwise
      */
     public getWelcomeScreenDismissed(): boolean {
         return this.globalState.get<boolean>(GlobalState.welcomeScreenDismissedKey, false);
     }
 
     /**
-     * Set whether the welcome screen has been dismissed.
+     * Set whether the tutorial has been dismissed.
+     * Reuses the welcome screen dismissal key since the welcome screen and tutorial have been merged.
      * 
-     * @param dismissed - true to mark the welcome screen as dismissed, false otherwise
+     * @param dismissed - true to mark the tutorial as dismissed, false otherwise
      * @returns Promise that resolves when the state has been saved
      */
     public async setWelcomeScreenDismissed(dismissed: boolean): Promise<void> {

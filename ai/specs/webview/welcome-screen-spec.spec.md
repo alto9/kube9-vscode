@@ -8,9 +8,17 @@ context_id: [vscode-extension-development]
 
 # Welcome Screen Specification
 
+## ⚠️ DEPRECATED
+
+**Status**: This specification is deprecated. The welcome screen has been merged into the tutorial webview (`TutorialWebview`). The tutorial now includes all welcome screen content (ecosystem section, quick start guide) along with the interactive tutorial steps.
+
+**See**: `ai/features/setup/interactive-tutorial.feature.md` for the current tutorial specification.
+
 ## Overview
 
-This specification defines the technical requirements for implementing the improved welcome screen UI/UX as described in GitHub issue #33. The welcome screen is a webview that displays on first activation of the Kube9 VS Code extension, providing users with an introduction to the Kube9 ecosystem and a quick start guide.
+This specification defined the technical requirements for implementing the improved welcome screen UI/UX as described in GitHub issue #33. The welcome screen was a webview that displayed on first activation of the Kube9 VS Code extension, providing users with an introduction to the Kube9 ecosystem and a quick start guide.
+
+**Note**: As of the merge, the welcome screen functionality is now part of the tutorial webview. This spec is retained for historical reference.
 
 ## Requirements Summary
 

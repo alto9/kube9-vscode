@@ -89,7 +89,7 @@ suite('Tutorial Command Tests', () => {
                 async () => {
                     await vscode.commands.executeCommand(
                         'workbench.action.openWalkthrough',
-                        'alto9.kube9#kube9.gettingStarted',
+                        'Alto9.kube9-vscode#kube9.gettingStarted',
                         false
                     );
                 }

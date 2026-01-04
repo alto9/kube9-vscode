@@ -24,12 +24,13 @@ Background:
 
 Scenario: Tutorial appears automatically for first-time users
   Given this is the user's first time using kube9
-  And the welcome screen has been shown
-  When the user clicks "Start Tutorial" on the welcome screen
-  Then the VSCode walkthrough should open
-  And the walkthrough title should be "Get Started with Kube9"
-  And the first step "Explore the Cluster View" should be highlighted
-  And progress should show "0 of 7 steps completed"
+  When the extension activates
+  Then the tutorial webview should open automatically
+  And the tutorial title should be "Get Started with Kube9"
+  And the tutorial should display the Kube9 ecosystem section
+  And the tutorial should display the quick start guide
+  And the tutorial should have a "Do not show this again" checkbox at the top
+  And the first step "Explore the Cluster View" should be visible
 
 Scenario: Step 1 - Explore the Cluster View
   Given the walkthrough is open on Step 1
@@ -56,50 +57,52 @@ Scenario: Step 2 - Explore Cluster Manager
 
 Scenario: Step 3 - Navigate Resources
   Given Step 2 is completed
-  And the walkthrough is on Step 3
+  And the tutorial is on Step 3
   When the user reads the step description
   Then they should see an image showing expanded namespace hierarchy
   And the description should explain resource grouping
   And there should be instructions to expand a namespace
-  When the user expands any namespace in the tree view
-  Then Step 3 should be marked as complete
+  And there should be no "Mark Complete" button (instructions are informational only)
+  When the user expands any namespace in the tree view (if clusters are available)
+  Then Step 3 should be marked as complete automatically
   And progress should update to "3 of 7 steps completed"
 
 Scenario: Step 4 - View Resources
   Given Step 3 is completed
-  And the walkthrough is on Step 4
+  And the tutorial is on Step 4
   When the user reads the step description
   Then they should see an image showing resource describe webview
   And the description should explain how to view current resource status
   And there should be instructions to left-click a pod
-  When the user clicks on any pod in the tree view
+  And there should be no "Mark Complete" button (instructions are informational only)
+  When the user clicks on any pod in the tree view (if resources are available)
   Then the describe webview should open showing the pod's current status
-  And Step 4 should be marked as complete
+  And Step 4 should be marked as complete automatically
   And progress should update to "4 of 7 steps completed"
 
 Scenario: Step 5 - View Pod Logs
   Given Step 4 is completed
-  And the walkthrough is on Step 5
+  And the tutorial is on Step 5
   When the user reads the step description
   Then they should see an image showing log viewer
   And the description should explain log viewing for debugging
-  And there should be an action button "View Pod Logs"
-  When the user clicks "View Pod Logs" or runs the command manually
-  Then a pod logs webview should open
-  And Step 5 should be marked as complete
-  And progress should update to "5 of 7 steps completed"
+  And there should be an informational message displayed inline explaining how to view pod logs
+  And the message should say "Right-click any pod in the Kube9 tree view and select View Logs from the context menu"
+  And there should be no button requiring a click to see the instruction
+  When the user reads the step
+  Then they should see all instructions without needing to interact with buttons
 
 Scenario: Step 6 - Manage Resources
   Given Step 5 is completed
-  And the walkthrough is on Step 6
+  And the tutorial is on Step 6
   When the user reads the step description
   Then they should see an image showing resource management operations
   And the description should explain scaling and deletion
-  And there should be an action button "Scale Workload"
-  When the user clicks "Scale Workload" or runs the command manually
-  Then the scale dialog should appear
-  And Step 6 should be marked as complete
-  And progress should update to "6 of 7 steps completed"
+  And there should be an informational message displayed inline explaining how to scale workloads
+  And the message should say "Right-click any Deployment or StatefulSet in the Kube9 tree view and select Scale from the context menu"
+  And there should be no button requiring a click to see the instruction
+  When the user reads the step
+  Then they should see all instructions without needing to interact with buttons
 
 Scenario: Step 7 - Documentation
   Given Step 6 is completed
@@ -141,13 +144,16 @@ Scenario: User can exit tutorial at any time
   And the extension should continue functioning normally
   And the user can reopen the walkthrough later to continue
 
-Scenario: Tutorial only shows for users who haven't completed it
+Scenario: Tutorial shows with dismissal option
   Given the user has never opened kube9 before
   When the extension activates
-  Then the walkthrough should be suggested (via welcome screen)
-  Given the user has completed the tutorial
-  When the extension activates
-  Then the walkthrough should not appear automatically
+  Then the tutorial webview should open automatically
+  And there should be a "Do not show this again" checkbox at the top
+  And the checkbox should be unchecked by default
+  When the user checks the checkbox and closes the tutorial
+  Then the dismissal preference should be saved
+  When the user reopens VS Code
+  Then the tutorial should not appear automatically
   But it should still be accessible via command palette
 
 Scenario: Visual assets support light and dark themes
@@ -172,15 +178,23 @@ Scenario: Completion events trigger correctly for each step
   Then the describe webview should open
   And step 4 should be marked complete
 
-Scenario: Tutorial integrates with existing welcome screen
-  Given the welcome screen is displayed for a first-time user
-  When the welcome screen renders
-  Then there should be a prominent "Start Tutorial" button
-  And the button should be visually distinct
-  When the user clicks "Start Tutorial"
-  Then the welcome screen should remain open (or close based on UX decision)
-  And the walkthrough should open immediately
-  And the user should begin at step 1
+Scenario: Tutorial includes ecosystem information
+  Given the tutorial webview is displayed
+  When the user views the tutorial
+  Then they should see a section titled "The Kube9 Ecosystem" before the tutorial steps
+  And the ecosystem section should display three cards:
+    - Kube9 Operator
+    - Kube9 VS Code
+    - Kube9 Desktop
+  And each card should have a description and link to GitHub
+  And there should be a link to the complete ecosystem documentation
+
+Scenario: Tutorial includes quick start guide
+  Given the tutorial webview is displayed
+  When the user views the tutorial
+  Then they should see a "Quick Start Guide" section after the header
+  And the quick start guide should list 5 steps for getting started
+  And the steps should include instructions about kubeconfig, activity bar icon, and basic navigation
 
 Scenario: Tutorial provides links to additional resources
   Given the user is viewing step 7 "Documentation"
@@ -202,15 +216,14 @@ Scenario: Tutorial accessibility for keyboard users
 
 Scenario: Tutorial handles missing clusters gracefully
   Given the user has no clusters configured
-  And the walkthrough is open on step 3 "Navigate Resources"
+  And the tutorial is open on step 3 "Navigate Resources"
   When the user views the step
   Then the step should show instructional content and images
   And the description should explain what will be possible with clusters
   And there should be a tip: "Connect a cluster to try this feature"
-  And the step should provide a "Mark as Complete" button as fallback
-  When the user clicks "Mark as Complete"
-  Then the step should complete without requiring actual cluster interaction
-  And the user should be able to continue to the next step
+  And there should be no "Mark Complete" button (instructions are informational)
+  And the user can read and learn from the step content
+  And the user can continue reading subsequent steps
 
 Scenario: Tutorial works with user's actual resources when available
   Given the user has clusters configured
@@ -222,14 +235,17 @@ Scenario: Tutorial works with user's actual resources when available
   Then the completion event fires naturally
   And the step marks as complete automatically
 
-Scenario: Tutorial action buttons adapt to resource availability
-  Given the walkthrough is open on step 4 "View Resources"
-  And the user has no resources available
+Scenario: Tutorial displays all information without requiring button clicks
+  Given the tutorial is open on step 5 "View Pod Logs"
   When the step renders
-  Then the instructions should still be visible
-  And attempting to click a pod should show a helpful message if no pods exist
-  And the step description should indicate "This works when you have resources"
-  And a manual "Continue" or "Mark Complete" button should be available
+  Then all instructional information should be visible immediately
+  And there should be no button that needs to be clicked to see instructions
+  And the "How to View Pod Logs" message should be displayed inline
+  Given the tutorial is open on step 6 "Manage Resources"
+  When the step renders
+  Then all instructional information should be visible immediately
+  And there should be no button that needs to be clicked to see instructions
+  And the "How to Scale Workloads" message should be displayed inline
 ```
 
 ## Implementation Notes
@@ -280,13 +296,15 @@ This follows VSCode best practices used by Docker, GitHub, and Remote Developmen
 - Add to Command Palette with title "Kube9: Show Getting Started Tutorial"
 - Make command always available (not dependent on context)
 
-### Welcome Screen Integration
-- Add "Start Tutorial" button to existing welcome screen
-- Button opens walkthrough via `vscode.openWalkthrough()` API
-- Consider keeping welcome screen open or closing it based on UX testing
+### Tutorial Webview (Merged with Welcome Screen)
+- The tutorial webview now includes content previously shown in the welcome screen
+- Ecosystem section displays Kube9 Operator, Kube9 VS Code, and Kube9 Desktop
+- Quick start guide provides immediate getting started steps
+- "Do not show this again" checkbox allows users to dismiss the tutorial permanently
+- Tutorial shows automatically on first activation if not dismissed
 
 ## Related Features
-- **initial-configuration**: Provides the welcome screen that links to this tutorial
+- **initial-configuration**: Tutorial replaces the welcome screen and shows on first activation
 - **cluster-view-navigation**: Features demonstrated in the tutorial
 - **resource-operations**: Features taught in management steps
 
