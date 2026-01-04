@@ -1,3 +1,11 @@
+## [1.18.2](https://github.com/alto9/kube9-vscode/compare/v1.18.1...v1.18.2) (2026-01-04)
+
+
+### Bug Fixes
+
+* **cluster-manager:** improve usability with rename buttons, context menus, and drag-drop reordering ([ef62963](https://github.com/alto9/kube9-vscode/commit/ef62963afcbb7f6b2bb36578ce2f4f3535456d91))
+* remove unused variable in clusterManagerReorder test ([532614c](https://github.com/alto9/kube9-vscode/commit/532614c9ae7f8d178fd6d2740d5e3828c76736c9))
+
 ## [1.18.1](https://github.com/alto9/kube9-vscode/compare/v1.18.0...v1.18.1) (2026-01-04)
 
 
