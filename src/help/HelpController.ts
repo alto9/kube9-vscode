@@ -1,34 +1,3 @@
----
-story_id: 001-create-help-controller-class
-session_id: add-documentation-and-help-resources-to-extension
-feature_id:
-  - help-commands
-spec_id:
-  - help-commands
-status: completed
-estimated_minutes: 25
----
-
-# Create HelpController Class
-
-## Objective
-
-Create the foundational `HelpController` class that centralizes all help-related functionality including URL management, issue template generation, and contextual help routing.
-
-## Context
-
-This is the foundation for the entire help system. The HelpController will be used by all help entry points (commands, status bar, webviews, context menus, error messages).
-
-See:
-- Feature: `ai/features/help/help-commands.feature.md`
-- Spec: `ai/specs/help/help-commands.spec.md`
-- Diagram: `ai/diagrams/help/help-system-architecture.diagram.md`
-
-## Implementation
-
-Create `src/help/HelpController.ts`:
-
-```typescript
 import * as vscode from 'vscode';
 
 export class HelpController {
@@ -106,31 +75,9 @@ What you expected to happen.
         vscode.window.showErrorMessage('Failed to open URL in browser. Please check your default browser settings.');
       }
     } catch (error) {
-      vscode.window.showErrorMessage(`Error opening URL: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`Error opening URL: ${errorMessage}`);
     }
   }
 }
-```
-
-## Files to Modify
-
-- **CREATE**: `src/help/HelpController.ts`
-
-## Acceptance Criteria
-
-- [ ] HelpController class created with all methods
-- [ ] URL constants defined (DOCS_URL, ISSUES_URL)
-- [ ] registerCommands() registers three help commands
-- [ ] buildIssueTemplate() includes system information
-- [ ] getContextualHelpUrl() maps contexts to documentation URLs
-- [ ] openUrl() handles errors gracefully
-- [ ] All methods properly typed with TypeScript
-
-## Testing Notes
-
-Unit tests in next story will verify:
-- URL construction
-- Issue template generation
-- Context mapping
-- Error handling
 
