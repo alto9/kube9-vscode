@@ -46,6 +46,56 @@ export class ErrorHandler {
     }
 
     /**
+     * Display error message with "Learn More" and "Report Issue" action buttons.
+     * Maps error codes to specific troubleshooting documentation URLs.
+     * 
+     * @param message - The error message to display
+     * @param errorCode - The error code (e.g., 'KUBECONFIG_NOT_FOUND')
+     * @param helpUrl - Optional custom help URL (overrides default mapping)
+     */
+    public static async showErrorWithHelp(
+        message: string,
+        errorCode: string,
+        helpUrl?: string
+    ): Promise<void> {
+        const learnMore = 'Learn More';
+        const reportIssue = 'Report Issue';
+        
+        const action = await vscode.window.showErrorMessage(
+            `${message} (Error: ${errorCode})`,
+            learnMore,
+            reportIssue
+        );
+        
+        if (action === learnMore) {
+            const url = helpUrl || ErrorHandler.getErrorHelpUrl(errorCode);
+            await vscode.env.openExternal(vscode.Uri.parse(url));
+        } else if (action === reportIssue) {
+            await vscode.commands.executeCommand('kube9.reportIssue');
+        }
+    }
+
+    /**
+     * Get the help URL for a specific error code.
+     * Returns general troubleshooting page for unknown error codes.
+     * 
+     * @param errorCode - The error code to look up
+     * @returns The documentation URL for the error code
+     */
+    private static getErrorHelpUrl(errorCode: string): string {
+        const ERROR_URL_MAP: Record<string, string> = {
+            'KUBECONFIG_NOT_FOUND': 'https://alto9.github.io/kube9/troubleshooting/kubeconfig/',
+            'CLUSTER_UNREACHABLE': 'https://alto9.github.io/kube9/troubleshooting/connection/',
+            'RBAC_PERMISSION_DENIED': 'https://alto9.github.io/kube9/troubleshooting/permissions/',
+            'RESOURCE_NOT_FOUND': 'https://alto9.github.io/kube9/troubleshooting/resources/',
+            'OPERATOR_NOT_FOUND': 'https://alto9.github.io/kube9/troubleshooting/operator/',
+            'TIMEOUT': 'https://alto9.github.io/kube9/troubleshooting/timeout/'
+        };
+        
+        return ERROR_URL_MAP[errorCode] || 'https://alto9.github.io/kube9/troubleshooting/';
+    }
+
+    /**
      * Main error handling method that orchestrates the full error processing flow:
      * logging, metrics tracking, throttling, and user notification.
      * 

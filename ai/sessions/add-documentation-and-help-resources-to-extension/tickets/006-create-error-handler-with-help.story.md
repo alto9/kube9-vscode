@@ -5,7 +5,7 @@ feature_id:
   - help-ui-elements
 spec_id:
   - help-ui-integration
-status: pending
+status: completed
 estimated_minutes: 25
 ---
 
