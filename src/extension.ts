@@ -50,6 +50,7 @@ import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
+import { HelpController } from './help/HelpController';
 
 
 /**
@@ -188,6 +189,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Register commands first before populating the tree
         // This ensures commands are available when tree items are clicked
         registerCommands();
+        
+        // Initialize help system
+        const helpController = new HelpController(context);
+        helpController.registerCommands();
         
         // Initialize cluster customization service
         // This service manages aliases, folders, and visibility customizations
