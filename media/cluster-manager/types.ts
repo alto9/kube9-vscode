@@ -151,6 +151,29 @@ export interface ImportConfigurationMessage {
 }
 
 /**
+ * Message sent from webview to extension to reorder a folder.
+ */
+export interface ReorderFolderMessage {
+    type: 'reorderFolder';
+    data: {
+        folderId: string;
+        newParentId: string | null;
+        newOrder: number;
+    };
+}
+
+/**
+ * Message sent from webview to extension to reorder a cluster.
+ */
+export interface ReorderClusterMessage {
+    type: 'reorderCluster';
+    data: {
+        contextName: string;
+        newOrder: number;
+    };
+}
+
+/**
  * Message sent from extension to webview when customizations are updated.
  */
 export interface CustomizationsUpdatedMessage {
@@ -184,5 +207,5 @@ export type ExtensionToWebviewMessage = InitializeMessage | CustomizationsUpdate
 /**
  * Union type for all webview messages from webview to extension.
  */
-export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage;
+export type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage | ReorderFolderMessage | ReorderClusterMessage;
 

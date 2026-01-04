@@ -26,6 +26,10 @@ interface ClusterListProps {
     onDeleteFolder?: (folderId: string, moveToRoot: boolean) => void;
     /** Callback function to handle creating a subfolder */
     onCreateSubfolder?: (parentId: string) => void;
+    /** Callback function to handle reordering a folder */
+    onReorderFolder?: (folderId: string, newParentId: string | null, newOrder: number) => void;
+    /** Callback function to handle reordering a cluster */
+    onReorderCluster?: (contextName: string, newOrder: number) => void;
     /** Whether to filter to show only hidden clusters */
     showHiddenOnly?: boolean;
 }
@@ -96,7 +100,7 @@ function countClustersInFolder(
 /**
  * ClusterList component displays folders and clusters in a hierarchical structure
  */
-export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm, onMoveCluster, onRenameFolder, onDeleteFolder, onCreateSubfolder, showHiddenOnly }: ClusterListProps): JSX.Element {
+export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisibility, searchTerm, onMoveCluster, onRenameFolder, onDeleteFolder, onCreateSubfolder, onReorderFolder, onReorderCluster, showHiddenOnly }: ClusterListProps): JSX.Element {
     // Local state for folder expansion (UI-only for now, persistence handled in future story)
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
         // Initialize with folders that have expanded: true
@@ -186,6 +190,7 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
                 onRenameFolder={handleRenameFolder}
                 onDeleteFolder={handleDeleteFolderRequest}
                 onCreateSubfolder={handleCreateSubfolder}
+                onReorderFolder={onReorderFolder}
                 clusterCount={clusterCount}
             >
                 {childFolders.map(childFolder => renderFolder(childFolder, level + 1))}
@@ -197,6 +202,8 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
                         onSetAlias={onSetAlias}
                         onToggleVisibility={onToggleVisibility}
                         searchTerm={searchTerm}
+                        onReorderCluster={onReorderCluster}
+                        folderId={folder.id}
                     />
                 ))}
             </FolderItem>
@@ -234,6 +241,8 @@ export function ClusterList({ clusters, customizations, onSetAlias, onToggleVisi
                         onSetAlias={onSetAlias}
                         onToggleVisibility={onToggleVisibility}
                         searchTerm={searchTerm}
+                        onReorderCluster={onReorderCluster}
+                        folderId={null}
                     />
                 ))}
             </div>

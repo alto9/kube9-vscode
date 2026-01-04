@@ -23,6 +23,8 @@ interface FolderItemProps {
     onDeleteFolder?: (folderId: string) => void;
     /** Callback when new subfolder is requested */
     onCreateSubfolder?: (parentId: string) => void;
+    /** Callback when folder is reordered */
+    onReorderFolder?: (folderId: string, newParentId: string | null, newOrder: number) => void;
     /** Number of clusters in this folder */
     clusterCount?: number;
 }
@@ -30,9 +32,11 @@ interface FolderItemProps {
 /**
  * FolderItem component displays a folder with expand/collapse functionality
  */
-export function FolderItem({ folder, level, onToggleExpand, children, onMoveCluster, customizations, onRenameFolder, onDeleteFolder, onCreateSubfolder, clusterCount = 0 }: FolderItemProps): JSX.Element {
+export function FolderItem({ folder, level, onToggleExpand, children, onMoveCluster, customizations, onRenameFolder, onDeleteFolder, onCreateSubfolder, onReorderFolder, clusterCount = 0 }: FolderItemProps): JSX.Element {
     const [isDragOver, setIsDragOver] = useState(false);
     const [isInvalidDrop, setIsInvalidDrop] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
     const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
     const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const [isEditing, setIsEditing] = useState(false);
@@ -78,28 +82,81 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
         onToggleExpand(folder.id);
     };
 
+    const handleFolderDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
+        if (e.dataTransfer) {
+            e.dataTransfer.setData('folder', folder.id);
+            e.dataTransfer.setData('folderParentId', folder.parentId || '');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        setIsDragging(true);
+        e.stopPropagation();
+    };
+
+    const handleFolderDragEnd = (): void => {
+        setIsDragging(false);
+        setIsDragOver(false);
+        setDropPosition(null);
+    };
+
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
         e.preventDefault();
         e.stopPropagation();
         
-        // Check if cluster is already in this folder
+        const draggedFolder = e.dataTransfer.getData('folder');
         const contextName = e.dataTransfer.getData('cluster');
-        let isValid = true;
         
-        if (contextName && customizations) {
-            const clusterConfig = customizations.clusters[contextName];
-            if (clusterConfig && clusterConfig.folderId === folder.id) {
-                // Cluster is already in this folder - invalid drop
-                isValid = false;
+        if (draggedFolder) {
+            // Folder being dragged
+            if (draggedFolder === folder.id) {
+                // Can't drop on self
+                setIsDragOver(false);
+                setIsInvalidDrop(true);
+                if (e.dataTransfer) {
+                    e.dataTransfer.dropEffect = 'none';
+                }
+                return;
             }
+            
+            // Determine drop position based on mouse position
+            if (headerRef.current) {
+                const rect = headerRef.current.getBoundingClientRect();
+                const relativeY = e.clientY - rect.top;
+                const height = rect.height;
+                
+                if (relativeY < height * 0.25) {
+                    setDropPosition('before');
+                } else if (relativeY > height * 0.75) {
+                    setDropPosition('after');
+                } else {
+                    setDropPosition('inside');
+                }
+            }
+            
+            setIsDragOver(true);
+            setIsInvalidDrop(false);
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+        } else if (contextName) {
+            // Cluster being dragged
+            let isValid = true;
+            
+            if (customizations) {
+                const clusterConfig = customizations.clusters[contextName];
+                if (clusterConfig && clusterConfig.folderId === folder.id) {
+                    // Cluster is already in this folder - invalid drop
+                    isValid = false;
+                }
+            }
+            
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = isValid ? 'move' : 'none';
+            }
+            
+            setIsDragOver(true);
+            setIsInvalidDrop(!isValid);
+            setDropPosition('inside');
         }
-        
-        if (e.dataTransfer) {
-            e.dataTransfer.dropEffect = isValid ? 'move' : 'none';
-        }
-        
-        setIsDragOver(true);
-        setIsInvalidDrop(!isValid);
     };
 
     const handleDragLeave = (e: React.DragEvent<HTMLDivElement>): void => {
@@ -109,6 +166,7 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
         if (e.currentTarget === e.target) {
             setIsDragOver(false);
             setIsInvalidDrop(false);
+            setDropPosition(null);
         }
     };
 
@@ -117,37 +175,53 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
         e.stopPropagation();
         setIsDragOver(false);
         setIsInvalidDrop(false);
+        const currentDropPosition = dropPosition;
+        setDropPosition(null);
 
-        if (!onMoveCluster) {
-            return;
-        }
-
+        const draggedFolder = e.dataTransfer.getData('folder');
         const contextName = e.dataTransfer.getData('cluster');
-        if (!contextName) {
-            return;
-        }
 
-        // Validate: don't drop if cluster is already in this folder
-        if (customizations) {
-            const clusterConfig = customizations.clusters[contextName];
-            if (clusterConfig && clusterConfig.folderId === folder.id) {
-                // Already in this folder - ignore drop
+        if (draggedFolder && onReorderFolder) {
+            // Folder being dropped
+            if (draggedFolder === folder.id) {
+                // Can't drop on self
                 return;
             }
-        }
 
-        // Calculate order: get max order in folder + 1
-        let maxOrder = -1;
-        if (customizations) {
-            Object.values(customizations.clusters).forEach(config => {
-                if (config.folderId === folder.id && config.order > maxOrder) {
-                    maxOrder = config.order;
+            if (currentDropPosition === 'inside') {
+                // Drop inside folder (make it a child)
+                onReorderFolder(draggedFolder, folder.id, 0);
+            } else if (currentDropPosition === 'before') {
+                // Drop before folder (same parent, order before this folder)
+                onReorderFolder(draggedFolder, folder.parentId, folder.order);
+            } else if (currentDropPosition === 'after') {
+                // Drop after folder (same parent, order after this folder)
+                onReorderFolder(draggedFolder, folder.parentId, folder.order + 1);
+            }
+        } else if (contextName && onMoveCluster) {
+            // Cluster being dropped
+            // Validate: don't drop if cluster is already in this folder
+            if (customizations) {
+                const clusterConfig = customizations.clusters[contextName];
+                if (clusterConfig && clusterConfig.folderId === folder.id) {
+                    // Already in this folder - ignore drop
+                    return;
                 }
-            });
-        }
-        const order = maxOrder + 1;
+            }
 
-        onMoveCluster(contextName, folder.id, order);
+            // Calculate order: get max order in folder + 1
+            let maxOrder = -1;
+            if (customizations) {
+                Object.values(customizations.clusters).forEach(config => {
+                    if (config.folderId === folder.id && config.order > maxOrder) {
+                        maxOrder = config.order;
+                    }
+                });
+            }
+            const order = maxOrder + 1;
+
+            onMoveCluster(contextName, folder.id, order);
+        }
     };
 
     const handleContextMenu = (e: React.MouseEvent): void => {
@@ -206,9 +280,12 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
         <div className="folder-item">
             <div
                 ref={headerRef}
-                className={`folder-item-header ${isDragOver ? (isInvalidDrop ? 'drag-over-invalid' : 'drag-over') : ''}`}
+                className={`folder-item-header ${isDragOver ? (isInvalidDrop ? 'drag-over-invalid' : 'drag-over') : ''} ${isDragging ? 'dragging' : ''} ${dropPosition === 'before' ? 'drop-before' : ''} ${dropPosition === 'after' ? 'drop-after' : ''} ${dropPosition === 'inside' ? 'drop-inside' : ''}`}
                 onClick={handleClick}
                 onContextMenu={handleContextMenu}
+                draggable={true}
+                onDragStart={handleFolderDragStart}
+                onDragEnd={handleFolderDragEnd}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
@@ -243,7 +320,21 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
                         aria-label={`Rename folder ${folder.name}`}
                     />
                 ) : (
-                    <span className="folder-item-name">{folder.name}</span>
+                    <>
+                        <span className="folder-item-name">{folder.name}</span>
+                        <button
+                            className="folder-item-rename-button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleRenameClick();
+                            }}
+                            title="Rename folder"
+                            aria-label="Rename folder"
+                            type="button"
+                        >
+                            Rename
+                        </button>
+                    </>
                 )}
             </div>
             {isContextMenuOpen && (
@@ -261,7 +352,6 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
                         onClick={handleRenameClick}
                         type="button"
                     >
-                        <span className="codicon codicon-edit"></span>
                         Rename Folder
                     </button>
                     <button
@@ -269,7 +359,6 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
                         onClick={handleNewSubfolderClick}
                         type="button"
                     >
-                        <span className="codicon codicon-new-folder"></span>
                         New Subfolder
                     </button>
                     <button
@@ -277,7 +366,6 @@ export function FolderItem({ folder, level, onToggleExpand, children, onMoveClus
                         onClick={handleDeleteClick}
                         type="button"
                     >
-                        <span className="codicon codicon-trash"></span>
                         Delete Folder
                     </button>
                 </div>
