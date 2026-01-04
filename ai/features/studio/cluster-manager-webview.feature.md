@@ -152,7 +152,19 @@ Scenario: Cluster Organizer displays inactive clusters
   And the cluster is grayed out
   And a tooltip explains "This cluster is not in your kubeconfig"
   And the user can delete the inactive cluster manually
+
+Scenario: Cluster context menu provides actions
+  Given the Cluster Organizer is open
+  And a cluster "prod-eks" is visible
+  When the user right-clicks on the cluster
+  Then a context menu appears with options:
+    | Rename |
+    | Hide   |
+  When the cluster is hidden
+  And the user right-clicks on it
+  Then the context menu shows "Show" instead of "Hide"
 ```
+
 
 
 

@@ -31,8 +31,7 @@ export function Toolbar({ searchValue, onSearchChange, onSearchClear, onNewFolde
                 title="Export Configuration"
                 aria-label="Export configuration to JSON file"
             >
-                <span className="codicon codicon-export"></span>
-                <span>Export</span>
+                Export
             </button>
             <button
                 className="cluster-manager-toolbar-button"
@@ -40,8 +39,7 @@ export function Toolbar({ searchValue, onSearchChange, onSearchClear, onNewFolde
                 title="Import Configuration"
                 aria-label="Import configuration from JSON file"
             >
-                <span className="codicon codicon-import"></span>
-                <span>Import</span>
+                Import
             </button>
             <button
                 className="cluster-manager-toolbar-button"
@@ -49,8 +47,7 @@ export function Toolbar({ searchValue, onSearchChange, onSearchClear, onNewFolde
                 title="New Folder"
                 aria-label="Create new folder"
             >
-                <span className="codicon codicon-new-folder"></span>
-                <span>New Folder</span>
+                New Folder
             </button>
             <SearchFilter
                 value={searchValue}

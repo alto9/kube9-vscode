@@ -239,6 +239,31 @@ function ClusterManagerApp(): JSX.Element {
         setShowHiddenOnly(false);
     };
 
+    // Handle reordering folder
+    const handleReorderFolder = (folderId: string, newParentId: string | null, newOrder: number): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'reorderFolder',
+            data: {
+                folderId,
+                newParentId,
+                newOrder
+            }
+        });
+    };
+
+    // Handle reordering cluster
+    const handleReorderCluster = (contextName: string, newOrder: number): void => {
+        const vscode = getVSCodeAPI();
+        vscode.postMessage({
+            type: 'reorderCluster',
+            data: {
+                contextName,
+                newOrder
+            }
+        });
+    };
+
     return (
         <div className={`cluster-manager-app theme-${theme}`}>
             <header className="cluster-manager-header">
@@ -271,6 +296,8 @@ function ClusterManagerApp(): JSX.Element {
                         onRenameFolder={handleRenameFolder}
                         onDeleteFolder={handleDeleteFolder}
                         onCreateSubfolder={handleCreateSubfolder}
+                        onReorderFolder={handleReorderFolder}
+                        onReorderCluster={handleReorderCluster}
                     />
                 )}
             </main>

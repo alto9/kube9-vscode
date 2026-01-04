@@ -134,9 +134,32 @@ interface ThemeChangedMessage {
 }
 
 /**
+ * Message sent from webview to extension to reorder a folder.
+ */
+interface ReorderFolderMessage {
+    type: 'reorderFolder';
+    data: {
+        folderId: string;
+        newParentId: string | null;
+        newOrder: number;
+    };
+}
+
+/**
+ * Message sent from webview to extension to reorder a cluster.
+ */
+interface ReorderClusterMessage {
+    type: 'reorderCluster';
+    data: {
+        contextName: string;
+        newOrder: number;
+    };
+}
+
+/**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage | ReorderFolderMessage | ReorderClusterMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
@@ -319,6 +342,10 @@ export class ClusterManagerWebview {
                 await this.handleExportConfiguration();
             } else if (message.type === 'importConfiguration') {
                 await this.handleImportConfiguration();
+            } else if (message.type === 'reorderFolder') {
+                await this.handleReorderFolder(message.data.folderId, message.data.newParentId, message.data.newOrder);
+            } else if (message.type === 'reorderCluster') {
+                await this.handleReorderCluster(message.data.contextName, message.data.newOrder);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -579,6 +606,114 @@ export class ClusterManagerWebview {
                 }
             };
             this.panel.webview.postMessage(initializeMessage);
+        }
+    }
+
+    /**
+     * Handle reorderFolder message by reordering a folder.
+     * 
+     * @param folderId - The folder ID to reorder
+     * @param newParentId - The new parent folder ID, or null for root level
+     * @param newOrder - The new display order
+     */
+    private async handleReorderFolder(folderId: string, newParentId: string | null, newOrder: number): Promise<void> {
+        try {
+            const config = await this.customizationService.getConfiguration();
+            
+            // Find the folder to reorder
+            const folderIndex = config.folders.findIndex(f => f.id === folderId);
+            if (folderIndex === -1) {
+                throw new Error(`Folder ${folderId} not found`);
+            }
+            
+            const folder = config.folders[folderIndex];
+            const oldParentId = folder.parentId;
+            
+            // Update folder's parentId and order
+            folder.parentId = newParentId;
+            folder.order = newOrder;
+            
+            // Renumber siblings in old parent
+            if (oldParentId !== newParentId) {
+                const oldSiblings = config.folders.filter(f => f.parentId === oldParentId && f.id !== folderId);
+                oldSiblings.sort((a, b) => a.order - b.order);
+                oldSiblings.forEach((f, index) => {
+                    f.order = index;
+                });
+            }
+            
+            // Renumber siblings in new parent
+            const newSiblings = config.folders.filter(f => f.parentId === newParentId && f.id !== folderId);
+            newSiblings.sort((a, b) => a.order - b.order);
+            
+            // Insert at new position and renumber
+            newSiblings.splice(newOrder, 0, folder);
+            newSiblings.forEach((f, index) => {
+                f.order = index;
+            });
+            
+            await this.customizationService.updateConfiguration(config);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error reordering folder:', errorMessage);
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
+        }
+    }
+
+    /**
+     * Handle reorderCluster message by reordering a cluster within its current folder.
+     * 
+     * @param contextName - The kubeconfig context name of the cluster
+     * @param newOrder - The new display order
+     */
+    private async handleReorderCluster(contextName: string, newOrder: number): Promise<void> {
+        try {
+            const config = await this.customizationService.getConfiguration();
+            
+            // Get or create cluster config
+            if (!config.clusters[contextName]) {
+                config.clusters[contextName] = {
+                    alias: null,
+                    hidden: false,
+                    folderId: null,
+                    order: 0
+                };
+            }
+            
+            const clusterConfig = config.clusters[contextName];
+            const folderId = clusterConfig.folderId;
+            
+            // Update cluster's order
+            clusterConfig.order = newOrder;
+            
+            // Renumber siblings in same folder
+            const siblings = Object.entries(config.clusters)
+                .filter(([name, cfg]) => cfg.folderId === folderId && name !== contextName)
+                .map(([name, cfg]) => ({ name, config: cfg }));
+            
+            siblings.sort((a, b) => a.config.order - b.config.order);
+            
+            // Insert at new position and renumber
+            siblings.splice(newOrder, 0, { name: contextName, config: clusterConfig });
+            siblings.forEach(({ name }, index) => {
+                config.clusters[name].order = index;
+            });
+            
+            await this.customizationService.updateConfiguration(config);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error reordering cluster:', errorMessage);
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
         }
     }
 

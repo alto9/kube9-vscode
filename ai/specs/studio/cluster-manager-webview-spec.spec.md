@@ -206,6 +206,31 @@ class ClusterManagerWebview {
 // Response: 'customizationsUpdated' message
 ```
 
+#### Reorder Folder
+```typescript
+{
+  type: 'reorderFolder',
+  data: {
+    folderId: string;
+    newParentId: string | null;
+    newOrder: number;
+  }
+}
+// Response: 'customizationsUpdated' message
+```
+
+#### Reorder Cluster
+```typescript
+{
+  type: 'reorderCluster',
+  data: {
+    contextName: string;
+    newOrder: number;
+  }
+}
+// Response: 'customizationsUpdated' message
+```
+
 ## React Component Structure
 
 ### Main Components
@@ -222,22 +247,24 @@ class ClusterManagerWebview {
 
 #### FolderItem
 - Collapsible folder with nested clusters
-- Rename folder inline editing
+- Rename folder with visible "Rename" button
 - Delete folder with confirmation
-- Drag-and-drop support
+- Right-click context menu with Rename, New Subfolder, Delete options (text only, no icons)
+- Drag-and-drop support for reordering and moving to different parent
 
 #### ClusterItem
 - Individual cluster display
-- Inline alias editing
-- Visibility toggle switch
+- Inline alias editing with "Rename" button
+- Visibility toggle with "Hide"/"Show" button (text only, no icons)
+- Right-click context menu with Rename and Hide/Show options
 - Shows original context name in tooltip
 - Badge for active cluster
+- Drag-and-drop support for reordering within same folder
 
 #### Toolbar
-- New Folder button
+- New Folder button (text only, no icon)
 - Search/filter input
-- Import/Export buttons
-- Reset to defaults button
+- Import/Export buttons (text only, no icons)
 
 #### SearchFilter
 - Filters clusters by name or alias
@@ -399,6 +426,7 @@ Memoize computed values:
 - Hide/show cluster workflow
 - Import/export configuration
 - Search and filter behavior
+
 
 
 
