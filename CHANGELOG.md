@@ -1,3 +1,26 @@
+# [1.18.0](https://github.com/alto9/kube9-vscode/compare/v1.17.0...v1.18.0) (2026-01-04)
+
+
+### Bug Fixes
+
+* add namespace support to describeRaw command and fix Uri mock ([05b549b](https://github.com/alto9/kube9-vscode/commit/05b549b45458ce3a28c3e5116e5127413fed80a3))
+
+
+### Features
+
+* add namespace expansion tracking for tutorial Step 3 ([6e7e678](https://github.com/alto9/kube9-vscode/commit/6e7e678c2db91076152652cde5a2114ed0ef36e7))
+* add show tutorial command for walkthrough replay ([fa9ce7d](https://github.com/alto9/kube9-vscode/commit/fa9ce7dcff8555e59d5b23ee60e3770257ad7758))
+* add start tutorial button to welcome screen ([b8806a6](https://github.com/alto9/kube9-vscode/commit/b8806a69febd9dd54cb71f3787539ea3d90fe896))
+* add walkthrough contribution for interactive tutorial step 1 ([cfaead7](https://github.com/alto9/kube9-vscode/commit/cfaead713ceadf6e09cdde8dba7f164a386babb0)), closes [001-add-walkthrou#contribution-step1](https://github.com/001-add-walkthrou/issues/contribution-step1)
+* add walkthrough steps 2-3 for interactive tutorial ([fc412f5](https://github.com/alto9/kube9-vscode/commit/fc412f5b8472b65312ef5e6637bcb1d6869d9737))
+* add walkthrough steps 4-5 for resource viewing and pod logs ([27ab168](https://github.com/alto9/kube9-vscode/commit/27ab168277e0423b357b5c9dc0afec19b9a21301)), closes [003-add-walkthrou#steps4-5](https://github.com/003-add-walkthrou/issues/steps4-5)
+* add walkthrough steps 6-7 for resource management and documentation ([175d586](https://github.com/alto9/kube9-vscode/commit/175d58610c6233b429011bee32739e4651989cd8)), closes [004-add-walkthrou#steps6-7](https://github.com/004-add-walkthrou/issues/steps6-7)
+* handle start tutorial message from welcome screen ([c751275](https://github.com/alto9/kube9-vscode/commit/c7512753c01d1d3da425fcfbbd90c535d40b082a))
+* implement pod click tracking for tutorial step 4 ([753b266](https://github.com/alto9/kube9-vscode/commit/753b266acfd8f30e3a5c262c0f84730a335ced8d))
+* implement tutorial completion state management ([4edf566](https://github.com/alto9/kube9-vscode/commit/4edf566216dd8180eb54eb915f951518d0fad9f4))
+* register Step 4 fallback command for tutorial ([2ae8a9a](https://github.com/alto9/kube9-vscode/commit/2ae8a9a665d86b7b59b6c5d71cbf8ed95da3fe45))
+* **tutorial:** register step 3 fallback command ([9fab42b](https://github.com/alto9/kube9-vscode/commit/9fab42bdff6605bc837f33d6cc340e648d6882da))
+
 # [1.17.0](https://github.com/alto9/kube9-vscode/compare/v1.16.0...v1.17.0) (2026-01-02)
 
 
