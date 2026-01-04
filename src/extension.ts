@@ -51,6 +51,7 @@ import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
 import { HelpController } from './help/HelpController';
+import { HelpStatusBar } from './help/HelpStatusBar';
 
 
 /**
@@ -193,6 +194,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Initialize help system
         const helpController = new HelpController(context);
         helpController.registerCommands();
+        
+        // Create and register help status bar
+        const helpStatusBar = new HelpStatusBar(helpController);
+        context.subscriptions.push(helpStatusBar);
         
         // Initialize cluster customization service
         // This service manages aliases, folders, and visibility customizations
