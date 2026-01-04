@@ -5,6 +5,8 @@ import { PodDescribeProvider } from '../providers/PodDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
+import { WebviewHelpHandler } from './WebviewHelpHandler';
+import { getHelpController } from '../extension';
 
 /**
  * Resource information for the Describe webview.
@@ -326,6 +328,10 @@ export class DescribeWebview {
 
         // Set up message handling
         DescribeWebview.setupMessageHandling(panel, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
 
         // Fetch and send Pod data
         await DescribeWebview.loadPodData(podConfig, panel);

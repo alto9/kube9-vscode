@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { EventsProvider } from '../services/EventsProvider';
 import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from '../types/Events';
+import { WebviewHelpHandler } from './WebviewHelpHandler';
+import { getHelpController } from '../extension';
 
 /**
  * EventViewerPanel manages webview panels for Events Viewer.
@@ -110,6 +112,10 @@ export class EventViewerPanel {
 
         // Set up message handling
         this.setupMessageHandling();
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(this.panel.webview);
 
         // Handle panel disposal
         this.panel.onDidDispose(() => this.dispose(), null, this.disposables);

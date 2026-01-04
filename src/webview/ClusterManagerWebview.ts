@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ClusterCustomizationService, ClusterCustomizationConfig } from '../services/ClusterCustomizationService';
 import { KubeconfigParser, ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
+import { getHelpController } from '../extension';
 
 /**
  * Message sent from webview to extension requesting cluster list.
@@ -91,6 +92,14 @@ interface ImportConfigurationMessage {
 }
 
 /**
+ * Message sent from webview to extension to open contextual help.
+ */
+interface OpenHelpMessage {
+    type: 'openHelp';
+    context?: string;
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -159,7 +168,7 @@ interface ReorderClusterMessage {
 /**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage | ReorderFolderMessage | ReorderClusterMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage | OpenHelpMessage | ReorderFolderMessage | ReorderClusterMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
@@ -324,7 +333,9 @@ export class ClusterManagerWebview {
      */
     private async handleMessage(message: WebviewMessage): Promise<void> {
         try {
-            if (message.type === 'getClusters') {
+            if (message.type === 'openHelp') {
+                await getHelpController().openContextualHelp(message.context || 'cluster-manager');
+            } else if (message.type === 'getClusters') {
                 await this.handleGetClusters();
             } else if (message.type === 'setAlias') {
                 await this.handleSetAlias(message.data.contextName, message.data.alias);

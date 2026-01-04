@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { LogsProvider } from '../providers/LogsProvider';
 import { PreferencesManager } from '../utils/PreferencesManager';
 import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InitialState, PodInfo } from '../types/messages';
+import { WebviewHelpHandler } from './WebviewHelpHandler';
+import { getHelpController } from '../extension';
 
 /**
  * Interface for storing panel information.
@@ -207,6 +209,10 @@ export class PodLogsViewerPanel {
 
         // Set up message handling
         PodLogsViewerPanel.setupMessageHandling(panel, contextName, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
 
         // NOTE: Do NOT start streaming here - wait for webview 'ready' message
         // to avoid race conditions. Streaming will be started via sendInitialState()
