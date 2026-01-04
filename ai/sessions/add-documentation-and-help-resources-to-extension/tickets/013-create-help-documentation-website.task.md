@@ -7,7 +7,7 @@ feature_id:
 spec_id:
   - help-commands
   - help-ui-integration
-status: pending
+status: completed
 estimated_minutes: 0
 ---
 
