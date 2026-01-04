@@ -1,3 +1,13 @@
+## [1.18.1](https://github.com/alto9/kube9-vscode/compare/v1.18.0...v1.18.1) (2026-01-04)
+
+
+### Bug Fixes
+
+* **event-viewer:** prevent Kubernetes event types from being sent to operator CLI ([e2c714d](https://github.com/alto9/kube9-vscode/commit/e2c714d197d70bcffb5ad17cea21ed5ba3563522))
+* **event-viewer:** remove Go to Resource and View YAML buttons ([a02000c](https://github.com/alto9/kube9-vscode/commit/a02000c5c7ab644df33983f1c94397a6acaa7b85))
+* **event-viewer:** resolve filters panel, row overlap, and resize scrolling issues ([6f7697e](https://github.com/alto9/kube9-vscode/commit/6f7697e91e4c448a0ef3814199ccac00795d8bbd))
+* **event-viewer:** resolve UI issues - filters panel, row overlap, and resize scrolling ([0e9e92d](https://github.com/alto9/kube9-vscode/commit/0e9e92da2761032e095cfc066af3d257f57c4909))
+
 # [1.18.0](https://github.com/alto9/kube9-vscode/compare/v1.17.0...v1.18.0) (2026-01-04)
 
 
