@@ -310,6 +310,21 @@
         "command": "kube9.showHelpMenu",
         "title": "Kube9: Show Help Menu",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.helpForPods",
+        "title": "Help: Working with Pods",
+        "category": "Kube9"
+      },
+      {
+        "command": "kube9.helpForDeployments",
+        "title": "Help: Working with Deployments",
+        "category": "Kube9"
+      },
+      {
+        "command": "kube9.helpForServices",
+        "title": "Help: Working with Services",
+        "category": "Kube9"
       }
     ],
     "menus": {

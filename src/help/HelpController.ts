@@ -143,3 +143,30 @@ export function registerHelpMenuCommand(context: vscode.ExtensionContext, _helpC
   );
 }
 
+/**
+ * Registers context menu help commands for resource types.
+ * 
+ * @param context - The extension context
+ */
+export function registerContextMenuHelpCommands(context: vscode.ExtensionContext): void {
+  context.subscriptions.push(
+    vscode.commands.registerCommand('kube9.helpForPods', async () => {
+      await vscode.env.openExternal(
+        vscode.Uri.parse('https://alto9.github.io/kube9/resources/pods/')
+      );
+    }),
+    
+    vscode.commands.registerCommand('kube9.helpForDeployments', async () => {
+      await vscode.env.openExternal(
+        vscode.Uri.parse('https://alto9.github.io/kube9/resources/deployments/')
+      );
+    }),
+    
+    vscode.commands.registerCommand('kube9.helpForServices', async () => {
+      await vscode.env.openExternal(
+        vscode.Uri.parse('https://alto9.github.io/kube9/resources/services/')
+      );
+    })
+  );
+}
+
