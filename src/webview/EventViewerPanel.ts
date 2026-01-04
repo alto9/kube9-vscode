@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { EventsProvider } from '../services/EventsProvider';
 import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from '../types/Events';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
@@ -432,6 +434,24 @@ export class EventViewerPanel {
             vscode.Uri.joinPath(this.extensionContext.extensionUri, 'media', 'event-viewer', 'index.css')
         );
 
+        // Get help button resource URIs
+        const helpButtonCssUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionContext.extensionUri, 'src', 'webview', 'styles', 'help-button.css')
+        );
+        const helpButtonJsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this.extensionContext.extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
+        );
+
+        // Read help button HTML template
+        const helpButtonHtmlPath = path.join(
+            this.extensionContext.extensionPath,
+            'src',
+            'webview',
+            'templates',
+            'help-button.html'
+        );
+        const helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
+
         const nonce = getNonce();
 
         return `<!DOCTYPE html>
@@ -441,11 +461,14 @@ export class EventViewerPanel {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <link href="${styleUri}" rel="stylesheet">
+    <link href="${helpButtonCssUri}" rel="stylesheet">
     <title>Events Viewer</title>
 </head>
-<body>
+<body data-help-context="events-viewer">
+    ${helpButtonHtml}
     <div id="root"></div>
     <script nonce="${nonce}" src="${scriptUri}"></script>
+    <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
     }
