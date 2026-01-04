@@ -290,6 +290,21 @@
         "command": "kube9.showTutorial",
         "title": "Show Getting Started Tutorial",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.openDocumentation",
+        "title": "Kube9: Open Documentation",
+        "category": "Kube9"
+      },
+      {
+        "command": "kube9.reportIssue",
+        "title": "Kube9: Report Issue",
+        "category": "Kube9"
+      },
+      {
+        "command": "kube9.viewKeyboardShortcuts",
+        "title": "Kube9: View Keyboard Shortcuts",
+        "category": "Kube9"
       }
     ],
     "menus": {

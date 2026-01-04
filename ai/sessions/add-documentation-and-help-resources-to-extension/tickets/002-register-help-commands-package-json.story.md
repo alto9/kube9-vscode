@@ -5,7 +5,7 @@ feature_id:
   - help-commands
 spec_id:
   - help-commands
-status: pending
+status: completed
 estimated_minutes: 15
 ---
 
@@ -57,12 +57,12 @@ Add to `package.json` in the `contributes.commands` section:
 
 ## Acceptance Criteria
 
-- [ ] Three help commands added to contributes.commands
-- [ ] Each command has correct command ID
-- [ ] Each command has descriptive title starting with "Kube9:"
-- [ ] All commands have category "Kube9"
-- [ ] Commands appear in command palette when searched
-- [ ] Command titles are searchable by "help", "docs", "bug", "shortcuts"
+- [x] Three help commands added to contributes.commands
+- [x] Each command has correct command ID
+- [x] Each command has descriptive title starting with "Kube9:"
+- [x] All commands have category "Kube9"
+- [x] Commands appear in command palette when searched
+- [x] Command titles are searchable by "help", "docs", "bug", "shortcuts"
 
 ## Testing Notes
 
