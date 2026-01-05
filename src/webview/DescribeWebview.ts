@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
-import { extractKindFromContextValue } from '../extension';
+import { extractKindFromContextValue, getYAMLEditorManager } from '../extension';
 import { PodDescribeProvider } from '../providers/PodDescribeProvider';
 import { NamespaceDescribeProvider } from '../providers/NamespaceDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
@@ -11,6 +11,7 @@ import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
 import { NamespaceTreeItemConfig } from '../tree/items/NamespaceTreeItem';
+import { setNamespace } from '../utils/kubectlContext';
 
 /**
  * Resource information for the Describe webview.
@@ -484,8 +485,26 @@ export class DescribeWebview {
                         break;
 
                     case 'viewYaml':
-                        // TODO: Implement YAML view functionality
-                        vscode.window.showInformationMessage('View YAML functionality coming soon');
+                        await DescribeWebview.openYamlEditor();
+                        break;
+
+                    case 'setDefaultNamespace':
+                        if (message.data && message.data.namespace) {
+                            await DescribeWebview.setDefaultNamespace(message.data.namespace);
+                        } else {
+                            vscode.window.showErrorMessage('Invalid namespace data in setDefaultNamespace message');
+                        }
+                        break;
+
+                    case 'navigateToResource':
+                        if (message.data && message.data.resourceType && message.data.namespace) {
+                            await DescribeWebview.navigateToResource(
+                                message.data.resourceType,
+                                message.data.namespace
+                            );
+                        } else {
+                            vscode.window.showErrorMessage('Invalid resource data in navigateToResource message');
+                        }
                         break;
 
                     case 'openTerminal':
@@ -505,6 +524,106 @@ export class DescribeWebview {
             null,
             context.subscriptions
         );
+    }
+
+    /**
+     * Open YAML editor for the current namespace.
+     * Uses the current namespace configuration to build a ResourceIdentifier.
+     */
+    private static async openYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentNamespaceConfig) {
+            vscode.window.showErrorMessage('No namespace is currently being displayed');
+            return;
+        }
+
+        try {
+            const namespaceConfig = DescribeWebview.currentNamespaceConfig;
+            
+            // Build ResourceIdentifier for namespace
+            // Namespaces are cluster-scoped, so namespace field is undefined
+            const resource = {
+                kind: 'Namespace',
+                name: namespaceConfig.name,
+                namespace: undefined, // Namespaces are cluster-scoped
+                apiVersion: 'v1',
+                cluster: namespaceConfig.context
+            };
+
+            console.log('Opening YAML editor for namespace:', resource);
+
+            // Get YAML editor manager and open editor
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for namespace:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Set the default namespace in kubectl context.
+     * 
+     * @param namespace The namespace name to set as default
+     */
+    private static async setDefaultNamespace(namespace: string): Promise<void> {
+        if (!DescribeWebview.currentNamespaceConfig) {
+            vscode.window.showErrorMessage('No namespace context available');
+            return;
+        }
+
+        try {
+            const namespaceConfig = DescribeWebview.currentNamespaceConfig;
+            const contextName = namespaceConfig.context;
+
+            // Set namespace in kubectl context
+            const success = await setNamespace(namespace, contextName);
+            
+            if (success) {
+                vscode.window.showInformationMessage(`Default namespace set to: ${namespace}`);
+                // Refresh tree view to reflect the change
+                await vscode.commands.executeCommand('kube9.refreshTree');
+            } else {
+                vscode.window.showErrorMessage(`Failed to set default namespace: ${namespace}`);
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to set default namespace:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to set default namespace: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Navigate tree view to show a specific resource type in a namespace.
+     * 
+     * @param resourceType The resource type to navigate to (e.g., 'pods', 'deployments')
+     * @param namespace The namespace name
+     */
+    private static async navigateToResource(resourceType: string, namespace: string): Promise<void> {
+        if (!DescribeWebview.currentNamespaceConfig) {
+            vscode.window.showErrorMessage('No namespace context available');
+            return;
+        }
+
+        try {
+            const namespaceConfig = DescribeWebview.currentNamespaceConfig;
+            const contextName = namespaceConfig.context;
+
+            // Convert resource type to proper kind (e.g., 'pods' -> 'Pod')
+            const kind = resourceType.charAt(0).toUpperCase() + resourceType.slice(1).toLowerCase();
+            
+            // Execute navigate command
+            await vscode.commands.executeCommand('kube9.navigateToResource', {
+                clusterContext: contextName,
+                kind: kind,
+                name: '', // We're navigating to a resource type, not a specific resource
+                namespace: namespace
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to navigate to resource:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to navigate to resource: ${errorMessage}`);
+        }
     }
 
     /**
