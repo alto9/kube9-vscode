@@ -4,11 +4,13 @@ import * as path from 'path';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { extractKindFromContextValue } from '../extension';
 import { PodDescribeProvider } from '../providers/PodDescribeProvider';
+import { NamespaceDescribeProvider } from '../providers/NamespaceDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
+import { NamespaceTreeItemConfig } from '../tree/items/NamespaceTreeItem';
 
 /**
  * Resource information for the Describe webview.
@@ -55,6 +57,18 @@ export class DescribeWebview {
      * Used for refresh operations.
      */
     private static currentPodConfig: PodTreeItemConfig | undefined;
+
+    /**
+     * Namespace describe provider instance for fetching Namespace data.
+     * Initialized lazily when first needed.
+     */
+    private static namespaceProvider: NamespaceDescribeProvider | undefined;
+
+    /**
+     * Current Namespace configuration being displayed.
+     * Used for refresh operations.
+     */
+    private static currentNamespaceConfig: NamespaceTreeItemConfig | undefined;
 
     /**
      * Show the Describe webview for a resource.
@@ -453,17 +467,20 @@ export class DescribeWebview {
     ): void {
         panel.webview.onDidReceiveMessage(
             async (message) => {
-                if (!DescribeWebview.currentPodConfig) {
-                    return;
-                }
-
                 switch (message.command) {
                     case 'refresh':
-                        // Re-fetch Pod data and send update
-                        await DescribeWebview.loadPodData(
-                            DescribeWebview.currentPodConfig,
-                            panel
-                        );
+                        // Re-fetch data based on current resource type
+                        if (DescribeWebview.currentPodConfig) {
+                            await DescribeWebview.loadPodData(
+                                DescribeWebview.currentPodConfig,
+                                panel
+                            );
+                        } else if (DescribeWebview.currentNamespaceConfig) {
+                            await DescribeWebview.loadNamespaceData(
+                                DescribeWebview.currentNamespaceConfig,
+                                panel
+                            );
+                        }
                         break;
 
                     case 'viewYaml':
@@ -587,6 +604,203 @@ export class DescribeWebview {
     <h1>Pod / ${escapedPodName}</h1>
     <div class="error">
         Failed to load webview template. Please check that dist/media/pod-describe/index.js exists.
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Show the Describe webview for a Namespace resource.
+     * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * 
+     * @param context The VS Code extension context
+     * @param namespaceConfig Namespace configuration with name, status, metadata, and context
+     */
+    public static async showNamespaceDescribe(
+        context: vscode.ExtensionContext,
+        namespaceConfig: NamespaceTreeItemConfig
+    ): Promise<void> {
+        // Store the extension context for later use
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.currentNamespaceConfig = namespaceConfig;
+
+        // Initialize Namespace provider if not already initialized
+        if (!DescribeWebview.namespaceProvider) {
+            const k8sClient = getKubernetesApiClient();
+            DescribeWebview.namespaceProvider = new NamespaceDescribeProvider(k8sClient);
+        }
+
+        // If we already have a panel, reuse it and update the content
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updateNamespacePanel(namespaceConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create title with Namespace name
+        const title = `Namespace / ${namespaceConfig.name}`;
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+
+        // Set the webview's HTML content
+        panel.webview.html = DescribeWebview.getNamespaceWebviewContent(panel.webview, namespaceConfig);
+
+        // Set up message handling
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        // Fetch and send Namespace data
+        await DescribeWebview.loadNamespaceData(namespaceConfig, panel);
+
+        // Handle panel disposal - clear all describe webview state
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentNamespaceConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Update an existing panel with new Namespace information.
+     * 
+     * @param namespaceConfig Namespace configuration
+     */
+    private static async updateNamespacePanel(namespaceConfig: NamespaceTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+
+        // Update panel title
+        const title = `Namespace / ${namespaceConfig.name}`;
+        DescribeWebview.currentPanel.title = title;
+        DescribeWebview.currentNamespaceConfig = namespaceConfig;
+
+        // Update panel content
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getNamespaceWebviewContent(DescribeWebview.currentPanel.webview, namespaceConfig);
+
+        // Reload Namespace data
+        await DescribeWebview.loadNamespaceData(namespaceConfig, DescribeWebview.currentPanel);
+    }
+
+    /**
+     * Load Namespace data and send it to the webview.
+     * 
+     * @param namespaceConfig Namespace configuration
+     * @param panel Webview panel to send data to
+     */
+    private static async loadNamespaceData(
+        namespaceConfig: NamespaceTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.namespaceProvider) {
+            return;
+        }
+
+        try {
+            const namespaceData = await DescribeWebview.namespaceProvider.getNamespaceDetails(
+                namespaceConfig.name,
+                namespaceConfig.context
+            );
+
+            panel.webview.postMessage({
+                command: 'updateNamespaceData',
+                data: namespaceData
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: `Failed to load Namespace details: ${errorMessage}`
+                }
+            });
+        }
+    }
+
+    /**
+     * Generate the HTML content for the Namespace Describe webview.
+     * Placeholder HTML ready for React bundle injection in story 007.
+     * 
+     * @param webview The webview instance
+     * @param namespaceConfig Namespace configuration
+     * @returns HTML content string
+     */
+    private static getNamespaceWebviewContent(webview: vscode.Webview, namespaceConfig: NamespaceTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            // Fallback if extension context is not available
+            return this.getNamespaceFallbackHtml(namespaceConfig);
+        }
+
+        const cspSource = webview.cspSource;
+        const escapedNamespaceName = DescribeWebview.escapeHtml(namespaceConfig.name);
+        
+        const nonce = getNonce();
+
+        // Placeholder HTML - React app will be added in story 007
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>Namespace / ${escapedNamespaceName}</title>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Fallback HTML content if extension context is not available.
+     * 
+     * @param namespaceConfig Namespace configuration
+     * @returns Fallback HTML content string
+     */
+    private static getNamespaceFallbackHtml(namespaceConfig: NamespaceTreeItemConfig): string {
+        const escapedNamespaceName = DescribeWebview.escapeHtml(namespaceConfig.name);
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>Namespace / ${escapedNamespaceName}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            margin: 0;
+        }
+        .error {
+            padding: 20px;
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 4px;
+            color: var(--vscode-errorForeground);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Namespace / ${escapedNamespaceName}</h1>
+    <div class="error">
+        Failed to load webview template. Extension context is not available.
     </div>
 </body>
 </html>`;

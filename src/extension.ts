@@ -23,6 +23,7 @@ import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
 import { Kube9YAMLFileSystemProvider } from './yaml/Kube9YAMLFileSystemProvider';
 import { ClusterTreeItem } from './tree/ClusterTreeItem';
+import { NamespaceTreeItemConfig } from './tree/items/NamespaceTreeItem';
 import { OperatorStatusClient } from './services/OperatorStatusClient';
 import { OperatorStatusMode } from './kubernetes/OperatorStatusTypes';
 import { FreeDashboardPanel } from './dashboard/FreeDashboardPanel';
@@ -651,6 +652,26 @@ function registerCommands(): void {
     );
     context.subscriptions.push(describePodCmd);
     disposables.push(describePodCmd);
+    
+    // Register describe Namespace command
+    const describeNamespaceCmd = vscode.commands.registerCommand(
+        'kube9.describeNamespace',
+        async (namespaceConfig: NamespaceTreeItemConfig) => {
+            try {
+                if (!namespaceConfig || !namespaceConfig.name || !namespaceConfig.context) {
+                    throw new Error('Invalid Namespace configuration');
+                }
+                
+                await DescribeWebview.showNamespaceDescribe(context, namespaceConfig);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to describe Namespace:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe Namespace: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describeNamespaceCmd);
+    disposables.push(describeNamespaceCmd);
     
     // Register describe resource (raw) command
     const describeRawCmd = vscode.commands.registerCommand(
