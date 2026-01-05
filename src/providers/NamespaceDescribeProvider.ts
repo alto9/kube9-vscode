@@ -318,13 +318,33 @@ export class NamespaceDescribeProvider {
             console.log(`Failed to fetch quotas/limit ranges for namespace ${name}: ${error}`);
         }
 
+        // Fetch namespace-level events
+        let events: k8s.CoreV1Event[] = [];
+        try {
+            const fieldSelector = `involvedObject.kind=Namespace,involvedObject.name=${name}`;
+            const eventsResponse = await this.k8sClient.core.listNamespacedEvent({
+                namespace: name,
+                fieldSelector: fieldSelector
+            });
+            events = eventsResponse.items || [];
+            
+            // Defensive filter to ensure namespace-level events only
+            events = events.filter(event => 
+                event.involvedObject?.kind === 'Namespace' && 
+                event.involvedObject?.name === name
+            );
+        } catch (error) {
+            // Log but don't fail if events can't be fetched
+            console.log(`Failed to fetch events for namespace ${name}: ${error}`);
+        }
+
         // Format data
         return {
             overview: this.formatOverview(namespace),
             resources: await this.countNamespacedResources(name),
             quotas: this.formatResourceQuotas(quotas),
             limitRanges: this.formatLimitRanges(limitRanges),
-            events: [],
+            events: this.formatEvents(events),
             metadata: this.formatMetadata(namespace.metadata!)
         };
     }
@@ -888,6 +908,57 @@ export class NamespaceDescribeProvider {
                 };
             })
         }));
+    }
+
+    /**
+     * Formats and groups Namespace events by type and reason.
+     */
+    private formatEvents(events: k8s.CoreV1Event[]): NamespaceEvent[] {
+        // Group events by type and reason
+        const grouped = new Map<string, k8s.CoreV1Event[]>();
+
+        events.forEach(event => {
+            const key = `${event.type || 'Normal'}-${event.reason || 'Unknown'}`;
+            if (!grouped.has(key)) {
+                grouped.set(key, []);
+            }
+            grouped.get(key)!.push(event);
+        });
+
+        // Format grouped events
+        return Array.from(grouped.values()).map(group => {
+            const first = group[0];
+            const sorted = group.sort((a, b) => {
+                const aTime = this.getEventTimestamp(a.lastTimestamp || a.firstTimestamp);
+                const bTime = this.getEventTimestamp(b.lastTimestamp || b.firstTimestamp);
+                return bTime.getTime() - aTime.getTime();
+            });
+            const last = sorted[0];
+
+            return {
+                type: (first.type || 'Normal') as 'Normal' | 'Warning',
+                reason: first.reason || 'Unknown',
+                message: first.message || 'No message',
+                count: first.count || group.length,
+                firstTimestamp: this.formatTimestamp(first.firstTimestamp) || 'Unknown',
+                lastTimestamp: this.formatTimestamp(last.lastTimestamp || last.firstTimestamp) || 'Unknown',
+                source: first.source?.component || 'Unknown',
+                age: this.calculateAge(this.getEventTimestamp(last.lastTimestamp || last.firstTimestamp))
+            };
+        });
+    }
+
+    /**
+     * Gets a Date object from a timestamp (Date or string).
+     */
+    private getEventTimestamp(timestamp?: string | Date): Date {
+        if (!timestamp) {
+            return new Date();
+        }
+        if (timestamp instanceof Date) {
+            return timestamp;
+        }
+        return new Date(timestamp);
     }
 
     /**
