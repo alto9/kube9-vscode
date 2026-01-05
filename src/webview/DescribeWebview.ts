@@ -747,9 +747,13 @@ export class DescribeWebview {
         const cspSource = webview.cspSource;
         const escapedNamespaceName = DescribeWebview.escapeHtml(namespaceConfig.name);
         
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'describe', 'index.js')
+        );
+
         const nonce = getNonce();
 
-        // Placeholder HTML - React app will be added in story 007
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -760,6 +764,7 @@ export class DescribeWebview {
 </head>
 <body>
     <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
     }
