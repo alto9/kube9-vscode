@@ -10,6 +10,7 @@ import { OverviewTab } from './components/OverviewTab';
 import { ResourcesTab } from './components/ResourcesTab';
 import { QuotasTab } from './components/QuotasTab';
 import { LimitRangesTab } from './components/LimitRangesTab';
+import { EventsTab } from './components/EventsTab';
 
 /**
  * Root component for Namespace Describe webview.
@@ -255,9 +256,7 @@ export const NamespaceDescribeApp: React.FC<{vscode: VSCodeAPI}> = ({vscode}) =>
                         <LimitRangesTab limitRanges={namespaceData.limitRanges} />
                     )}
                     {activeTab === 'events' && (
-                        <div className="tab-placeholder">
-                            <p>Events tab content will be implemented in story 012</p>
-                        </div>
+                        <EventsTab events={namespaceData.events} />
                     )}
                 </main>
             </div>

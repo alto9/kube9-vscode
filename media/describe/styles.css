@@ -695,6 +695,60 @@ body {
     word-break: break-word;
 }
 
+/* ==========================================================================
+   Events Tab Styles
+   ========================================================================== */
+
+.events-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.events-controls {
+    display: flex;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.events-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--vscode-foreground);
+    cursor: pointer;
+    user-select: none;
+}
+
+.events-filter-checkbox {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--vscode-focusBorder);
+}
+
+.events-filter-label:hover {
+    color: var(--vscode-textLink-foreground);
+}
+
+/* Event timeline styles are defined in podDescribe.css and reused here */
+/* The following classes are available from podDescribe.css:
+   - .events-timeline
+   - .event-item
+   - .event-item.warning
+   - .event-item.normal
+   - .event-icon
+   - .event-content
+   - .event-header
+   - .event-reason
+   - .event-count
+   - .event-age
+   - .event-message
+   - .event-meta
+*/
+
 /* Responsive adjustments for smaller screens */
 @media (max-width: 768px) {
     .info-grid {
