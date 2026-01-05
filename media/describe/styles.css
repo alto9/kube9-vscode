@@ -260,3 +260,149 @@ body {
     max-width: 600px;
 }
 
+/* ==========================================================================
+   Overview Tab Styles
+   ========================================================================== */
+
+.overview-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.info-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.info-section h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 8px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    padding: 8px 0;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--vscode-descriptionForeground);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--vscode-foreground);
+}
+
+.info-value-text {
+    flex: 1;
+    word-break: break-word;
+}
+
+.copy-btn {
+    background: transparent;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 3px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--vscode-foreground);
+    transition: all 0.2s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 24px;
+}
+
+.copy-btn:hover {
+    background-color: var(--vscode-list-hoverBackground);
+    border-color: var(--vscode-focusBorder);
+}
+
+.copy-btn:active {
+    background-color: var(--vscode-list-activeSelectionBackground);
+}
+
+.copy-btn:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* ==========================================================================
+   Key-Value List Styles (for Labels and Annotations)
+   ========================================================================== */
+
+.key-value-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.key-value-item {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.key-value-item:last-child {
+    border-bottom: none;
+}
+
+.key-value-key {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+    word-break: break-word;
+}
+
+.key-value-value {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--vscode-foreground);
+}
+
+.key-value-value-text {
+    flex: 1;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .key-value-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+

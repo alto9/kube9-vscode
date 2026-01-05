@@ -6,6 +6,7 @@ import {
     VSCodeAPI,
     TabType
 } from './types';
+import { OverviewTab } from './components/OverviewTab';
 
 /**
  * Root component for Namespace Describe webview.
@@ -232,9 +233,10 @@ export const NamespaceDescribeApp: React.FC<{vscode: VSCodeAPI}> = ({vscode}) =>
                 {/* Tab Content */}
                 <main className="tab-content">
                     {activeTab === 'overview' && (
-                        <div className="tab-placeholder">
-                            <p>Overview tab content will be implemented in story 008</p>
-                        </div>
+                        <OverviewTab 
+                            data={namespaceData.overview} 
+                            metadata={namespaceData.metadata} 
+                        />
                     )}
                     {activeTab === 'resources' && (
                         <div className="tab-placeholder">
