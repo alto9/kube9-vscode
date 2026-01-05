@@ -624,6 +624,77 @@ body {
     font-style: italic;
 }
 
+/* ==========================================================================
+   Limit Ranges Tab Styles
+   ========================================================================== */
+
+.limit-ranges-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.limit-range-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.limit-range-section h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 8px;
+}
+
+.limit-range-card {
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    background-color: var(--vscode-editor-background);
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.limit-range-type-heading {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+}
+
+.limit-range-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.limit-range-row {
+    border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.limit-range-row:last-child {
+    border-bottom: none;
+}
+
+.limit-range-label {
+    padding: 8px 12px 8px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+    vertical-align: top;
+    width: 180px;
+    cursor: help;
+}
+
+.limit-range-value {
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-editor-font-family);
+    word-break: break-word;
+}
+
 /* Responsive adjustments for smaller screens */
 @media (max-width: 768px) {
     .info-grid {
