@@ -76,9 +76,21 @@ export interface SetDefaultNamespaceMessage {
 }
 
 /**
+ * Message sent from webview to extension to navigate to a resource type in the tree view.
+ */
+export interface NavigateToResourceMessage {
+    command: 'navigateToResource';
+    data: { resourceType: string; namespace: string };
+}
+
+/**
  * Union type for all messages from webview to extension.
  */
-export type WebviewToExtensionMessage = RefreshMessage | ViewYamlMessage | SetDefaultNamespaceMessage;
+export type WebviewToExtensionMessage = 
+    RefreshMessage | 
+    ViewYamlMessage | 
+    SetDefaultNamespaceMessage |
+    NavigateToResourceMessage;
 
 /**
  * Re-export NamespaceDescribeData from NamespaceDescribeProvider for convenience.

@@ -394,6 +394,136 @@ body {
     white-space: pre-wrap;
 }
 
+/* ==========================================================================
+   Resources Tab Styles
+   ========================================================================== */
+
+.resources-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.resource-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.resource-section h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    border-bottom: 1px solid var(--vscode-panel-border);
+    padding-bottom: 8px;
+}
+
+.resource-table {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--vscode-panel-border);
+    border-radius: 4px;
+    overflow: hidden;
+    background-color: var(--vscode-editor-background);
+}
+
+.resource-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    align-items: center;
+}
+
+.resource-row:last-child {
+    border-bottom: none;
+}
+
+.resource-row:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.resource-row:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.resource-row:active {
+    background-color: var(--vscode-list-activeSelectionBackground);
+}
+
+.resource-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--vscode-foreground);
+}
+
+.resource-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    text-align: right;
+    min-width: 60px;
+}
+
+.resource-details {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: var(--vscode-descriptionForeground);
+    margin-top: 4px;
+    padding-left: 24px;
+}
+
+.health-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+.health-indicator.health-healthy {
+    background-color: var(--vscode-testing-iconPassed);
+}
+
+.health-indicator.health-degraded {
+    background-color: var(--vscode-editorWarning-foreground);
+}
+
+.health-indicator.health-failed {
+    background-color: var(--vscode-testing-iconFailed);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--vscode-descriptionForeground);
+}
+
+.empty-state p {
+    margin: 8px 0;
+    font-size: 0.95em;
+}
+
+.empty-state .hint {
+    font-size: 0.85em;
+    color: var(--vscode-descriptionForeground);
+    opacity: 0.8;
+    font-style: italic;
+}
+
 /* Responsive adjustments for smaller screens */
 @media (max-width: 768px) {
     .info-grid {
@@ -403,6 +533,15 @@ body {
     .key-value-item {
         grid-template-columns: 1fr;
         gap: 8px;
+    }
+
+    .resource-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .resource-count {
+        text-align: left;
     }
 }
 
