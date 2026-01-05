@@ -298,12 +298,32 @@ export class NamespaceDescribeProvider {
             throw new Error(`Failed to fetch Namespace ${name}: ${errorMessage}`);
         }
 
+        // Fetch resource quotas and limit ranges in parallel
+        let quotas: k8s.V1ResourceQuota[] = [];
+        let limitRanges: k8s.V1LimitRange[] = [];
+        
+        try {
+            const [quotasResponse, limitRangesResponse] = await Promise.all([
+                this.k8sClient.core.listNamespacedResourceQuota({
+                    namespace: name
+                }).catch(() => ({ items: [] })),
+                this.k8sClient.core.listNamespacedLimitRange({
+                    namespace: name
+                }).catch(() => ({ items: [] }))
+            ]);
+            quotas = quotasResponse.items || [];
+            limitRanges = limitRangesResponse.items || [];
+        } catch (error) {
+            // Log error but don't throw - namespace describe should still work
+            console.log(`Failed to fetch quotas/limit ranges for namespace ${name}: ${error}`);
+        }
+
         // Format data
         return {
             overview: this.formatOverview(namespace),
             resources: await this.countNamespacedResources(name),
-            quotas: [],
-            limitRanges: [],
+            quotas: this.formatResourceQuotas(quotas),
+            limitRanges: this.formatLimitRanges(limitRanges),
             events: [],
             metadata: this.formatMetadata(namespace.metadata!)
         };
@@ -743,6 +763,131 @@ export class NamespaceDescribeProvider {
                 controller: ref.controller || false
             }))
         };
+    }
+
+    /**
+     * Parses Kubernetes resource value string to numeric value for calculations.
+     * Handles millicores (100m), memory units (Ki, Mi, Gi, Ti, K, M, G, T), and plain numbers.
+     * 
+     * @param value - Resource value string (e.g., "100m", "1Gi", "10")
+     * @returns Numeric value for calculations
+     */
+    private parseResourceValue(value: string | undefined | null): number {
+        // Handle edge cases
+        if (!value || value === '') {
+            return 0;
+        }
+
+        // Handle millicores (e.g., "100m" = 0.1 cores)
+        if (value.endsWith('m')) {
+            const numericValue = parseFloat(value.slice(0, -1));
+            if (isNaN(numericValue)) {
+                return 0;
+            }
+            return numericValue / 1000;
+        }
+
+        // Handle memory units - binary (Ki, Mi, Gi, Ti)
+        const binaryUnits: Record<string, number> = {
+            'Ki': 1024,
+            'Mi': 1024 * 1024,
+            'Gi': 1024 * 1024 * 1024,
+            'Ti': 1024 * 1024 * 1024 * 1024
+        };
+
+        for (const [unit, multiplier] of Object.entries(binaryUnits)) {
+            if (value.endsWith(unit)) {
+                const numericValue = parseFloat(value.slice(0, -unit.length));
+                if (isNaN(numericValue)) {
+                    return 0;
+                }
+                return numericValue * multiplier;
+            }
+        }
+
+        // Handle memory units - decimal (K, M, G, T)
+        const decimalUnits: Record<string, number> = {
+            'K': 1000,
+            'M': 1000 * 1000,
+            'G': 1000 * 1000 * 1000,
+            'T': 1000 * 1000 * 1000 * 1000
+        };
+
+        for (const [unit, multiplier] of Object.entries(decimalUnits)) {
+            if (value.endsWith(unit)) {
+                const numericValue = parseFloat(value.slice(0, -unit.length));
+                if (isNaN(numericValue)) {
+                    return 0;
+                }
+                return numericValue * multiplier;
+            }
+        }
+
+        // Handle plain numbers
+        const numericValue = parseFloat(value);
+        if (isNaN(numericValue)) {
+            return 0;
+        }
+        return numericValue;
+    }
+
+    /**
+     * Formats resource quotas with percentage calculations.
+     * 
+     * @param quotas - Array of V1ResourceQuota objects
+     * @returns Array of formatted ResourceQuotaInfo objects
+     */
+    private formatResourceQuotas(quotas: k8s.V1ResourceQuota[]): ResourceQuotaInfo[] {
+        return quotas.map(quota => {
+            const hard = quota.spec?.hard || {};
+            const used = quota.status?.used || {};
+            const percentUsed: Record<string, number> = {};
+
+            // Calculate percentage for each resource in hard limits
+            Object.keys(hard).forEach(resource => {
+                const hardValue = this.parseResourceValue(hard[resource]);
+                const usedValue = this.parseResourceValue(used[resource] || '0');
+
+                if (hardValue > 0) {
+                    percentUsed[resource] = (usedValue / hardValue) * 100;
+                } else {
+                    percentUsed[resource] = 0;
+                }
+            });
+
+            return {
+                name: quota.metadata?.name || 'Unknown',
+                hard,
+                used,
+                percentUsed
+            };
+        });
+    }
+
+    /**
+     * Formats limit ranges with constraint extraction.
+     * 
+     * @param limitRanges - Array of V1LimitRange objects
+     * @returns Array of formatted LimitRangeInfo objects
+     */
+    private formatLimitRanges(limitRanges: k8s.V1LimitRange[]): LimitRangeInfo[] {
+        return limitRanges.map(lr => ({
+            name: lr.metadata?.name || 'Unknown',
+            limits: (lr.spec?.limits || []).map(limit => {
+                // V1LimitRangeItem uses _default instead of default (reserved keyword)
+                // eslint-disable-next-line @typescript-eslint/naming-convention
+                const limitItem = limit as k8s.V1LimitRangeItem & { _default?: Record<string, string> };
+                return {
+                    type: limit.type as 'Container' | 'Pod' | 'PersistentVolumeClaim',
+                    // eslint-disable-next-line @typescript-eslint/naming-convention
+                    default: limitItem._default,
+                    defaultRequest: limit.defaultRequest,
+                    min: limit.min,
+                    max: limit.max,
+                    maxLimitRequestRatio: limit.maxLimitRequestRatio
+                };
+            })
+        }));
     }
 
     /**
