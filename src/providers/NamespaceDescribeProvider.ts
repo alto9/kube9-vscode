@@ -301,7 +301,7 @@ export class NamespaceDescribeProvider {
         // Format data
         return {
             overview: this.formatOverview(namespace),
-            resources: this.createEmptyResourceSummary(),
+            resources: await this.countNamespacedResources(name),
             quotas: [],
             limitRanges: [],
             events: [],
@@ -337,52 +337,395 @@ export class NamespaceDescribeProvider {
     }
 
     /**
-     * Creates an empty resource summary structure.
-     * Will be populated in story 003.
+     * Counts all namespaced resources in parallel for performance.
+     * 
+     * @param namespace - Namespace name to count resources in
+     * @returns Promise resolving to ResourceSummary with all counts
      */
-    private createEmptyResourceSummary(): ResourceSummary {
+    private async countNamespacedResources(namespace: string): Promise<ResourceSummary> {
+        const [
+            pods,
+            deployments,
+            statefulSets,
+            daemonSets,
+            services,
+            configMaps,
+            secrets,
+            ingresses,
+            jobs,
+            cronJobs,
+            pvcs,
+            replicaSets,
+            endpoints,
+            networkPolicies,
+            serviceAccounts,
+            roles,
+            roleBindings
+        ] = await Promise.all([
+            this.countPods(namespace),
+            this.countResource('deployments', namespace, 'apps'),
+            this.countResource('statefulsets', namespace, 'apps'),
+            this.countResource('daemonsets', namespace, 'apps'),
+            this.countServices(namespace),
+            this.countResource('configmaps', namespace, 'core'),
+            this.countResource('secrets', namespace, 'core'),
+            this.countResource('ingresses', namespace, 'networking'),
+            this.countJobs(namespace),
+            this.countResource('cronjobs', namespace, 'batch'),
+            this.countPVCs(namespace),
+            this.countResource('replicasets', namespace, 'apps'),
+            this.countResource('endpoints', namespace, 'core'),
+            this.countResource('networkpolicies', namespace, 'networking'),
+            this.countResource('serviceaccounts', namespace, 'core'),
+            this.countResource('roles', namespace, 'rbac'),
+            this.countResource('rolebindings', namespace, 'rbac')
+        ]);
+
         return {
-            pods: {
+            pods,
+            deployments,
+            statefulSets,
+            daemonSets,
+            services,
+            configMaps,
+            secrets,
+            ingresses,
+            jobs,
+            cronJobs,
+            persistentVolumeClaims: pvcs,
+            replicaSets,
+            endpoints,
+            networkPolicies,
+            serviceAccounts,
+            roles,
+            roleBindings
+        };
+    }
+
+    /**
+     * Counts pods by status (Running, Pending, Failed, Succeeded, Unknown).
+     * 
+     * @param namespace - Namespace name
+     * @returns Promise resolving to PodSummary with status breakdown
+     */
+    private async countPods(namespace: string): Promise<PodSummary> {
+        try {
+            const response = await this.k8sClient.core.listNamespacedPod({
+                namespace: namespace
+            });
+            const pods = response.items;
+
+            const summary: PodSummary = {
+                total: pods.length,
+                running: 0,
+                pending: 0,
+                failed: 0,
+                succeeded: 0,
+                unknown: 0
+            };
+
+            pods.forEach((pod: k8s.V1Pod) => {
+                const phase = pod.status?.phase?.toLowerCase();
+                switch (phase) {
+                    case 'running':
+                        summary.running++;
+                        break;
+                    case 'pending':
+                        summary.pending++;
+                        break;
+                    case 'failed':
+                        summary.failed++;
+                        break;
+                    case 'succeeded':
+                        summary.succeeded++;
+                        break;
+                    default:
+                        summary.unknown++;
+                }
+            });
+
+            return summary;
+        } catch (error) {
+            console.log(`Failed to count pods in namespace ${namespace}: ${error}`);
+            return {
                 total: 0,
                 running: 0,
                 pending: 0,
                 failed: 0,
                 succeeded: 0,
                 unknown: 0
-            },
-            deployments: 0,
-            statefulSets: 0,
-            daemonSets: 0,
-            services: {
+            };
+        }
+    }
+
+    /**
+     * Counts services by type (ClusterIP, NodePort, LoadBalancer, ExternalName).
+     * 
+     * @param namespace - Namespace name
+     * @returns Promise resolving to ServiceSummary with type breakdown
+     */
+    private async countServices(namespace: string): Promise<ServiceSummary> {
+        try {
+            const response = await this.k8sClient.core.listNamespacedService({
+                namespace: namespace
+            });
+            const services = response.items;
+
+            const summary: ServiceSummary = {
+                total: services.length,
+                clusterIP: 0,
+                nodePort: 0,
+                loadBalancer: 0,
+                externalName: 0
+            };
+
+            services.forEach((service: k8s.V1Service) => {
+                const type = service.spec?.type?.toLowerCase();
+                switch (type) {
+                    case 'clusterip':
+                        summary.clusterIP++;
+                        break;
+                    case 'nodeport':
+                        summary.nodePort++;
+                        break;
+                    case 'loadbalancer':
+                        summary.loadBalancer++;
+                        break;
+                    case 'externalname':
+                        summary.externalName++;
+                        break;
+                    default:
+                        // Default is ClusterIP if type is undefined
+                        summary.clusterIP++;
+                }
+            });
+
+            return summary;
+        } catch (error) {
+            console.log(`Failed to count services in namespace ${namespace}: ${error}`);
+            return {
                 total: 0,
                 clusterIP: 0,
                 nodePort: 0,
                 loadBalancer: 0,
                 externalName: 0
-            },
-            configMaps: 0,
-            secrets: 0,
-            ingresses: 0,
-            jobs: {
+            };
+        }
+    }
+
+    /**
+     * Counts jobs by status (Active, Completed, Failed).
+     * 
+     * @param namespace - Namespace name
+     * @returns Promise resolving to JobSummary with status breakdown
+     */
+    private async countJobs(namespace: string): Promise<JobSummary> {
+        try {
+            const response = await this.k8sClient.batch.listNamespacedJob({
+                namespace: namespace
+            });
+            const jobs = response.items;
+
+            const summary: JobSummary = {
+                total: jobs.length,
+                active: 0,
+                completed: 0,
+                failed: 0
+            };
+
+            jobs.forEach((job: k8s.V1Job) => {
+                const status = job.status;
+                if (status?.active && status.active > 0) {
+                    summary.active++;
+                } else if (status?.succeeded && status.succeeded > 0) {
+                    summary.completed++;
+                } else if (status?.failed && status.failed > 0) {
+                    summary.failed++;
+                }
+            });
+
+            return summary;
+        } catch (error) {
+            console.log(`Failed to count jobs in namespace ${namespace}: ${error}`);
+            return {
                 total: 0,
                 active: 0,
                 completed: 0,
                 failed: 0
-            },
-            cronJobs: 0,
-            persistentVolumeClaims: {
+            };
+        }
+    }
+
+    /**
+     * Counts PVCs by phase (Bound, Pending, Lost).
+     * 
+     * @param namespace - Namespace name
+     * @returns Promise resolving to PVCSummary with phase breakdown
+     */
+    private async countPVCs(namespace: string): Promise<PVCSummary> {
+        try {
+            const response = await this.k8sClient.core.listNamespacedPersistentVolumeClaim({
+                namespace: namespace
+            });
+            const pvcs = response.items;
+
+            const summary: PVCSummary = {
+                total: pvcs.length,
+                bound: 0,
+                pending: 0,
+                lost: 0
+            };
+
+            pvcs.forEach((pvc: k8s.V1PersistentVolumeClaim) => {
+                const phase = pvc.status?.phase?.toLowerCase();
+                switch (phase) {
+                    case 'bound':
+                        summary.bound++;
+                        break;
+                    case 'pending':
+                        summary.pending++;
+                        break;
+                    case 'lost':
+                        summary.lost++;
+                        break;
+                }
+            });
+
+            return summary;
+        } catch (error) {
+            console.log(`Failed to count PVCs in namespace ${namespace}: ${error}`);
+            return {
                 total: 0,
                 bound: 0,
                 pending: 0,
                 lost: 0
-            },
-            replicaSets: 0,
-            endpoints: 0,
-            networkPolicies: 0,
-            serviceAccounts: 0,
-            roles: 0,
-            roleBindings: 0
-        };
+            };
+        }
+    }
+
+    /**
+     * Generic method to count simple resources (deployments, configmaps, etc.).
+     * 
+     * @param resourceType - Resource type name (e.g., 'deployments', 'configmaps')
+     * @param namespace - Namespace name
+     * @param apiGroup - API group ('core', 'apps', 'batch', 'networking', 'rbac')
+     * @returns Promise resolving to count of resources
+     */
+    private async countResource(
+        resourceType: string,
+        namespace: string,
+        apiGroup: 'core' | 'apps' | 'batch' | 'networking' | 'rbac'
+    ): Promise<number> {
+        try {
+            let response: { items: unknown[] };
+
+            switch (apiGroup) {
+                case 'core':
+                    switch (resourceType) {
+                        case 'configmaps':
+                            response = await this.k8sClient.core.listNamespacedConfigMap({
+                                namespace: namespace
+                            });
+                            break;
+                        case 'secrets':
+                            response = await this.k8sClient.core.listNamespacedSecret({
+                                namespace: namespace
+                            });
+                            break;
+                        case 'endpoints':
+                            response = await this.k8sClient.core.listNamespacedEndpoints({
+                                namespace: namespace
+                            });
+                            break;
+                        case 'serviceaccounts':
+                            response = await this.k8sClient.core.listNamespacedServiceAccount({
+                                namespace: namespace
+                            });
+                            break;
+                        default:
+                            return 0;
+                    }
+                    break;
+                case 'apps':
+                    switch (resourceType) {
+                        case 'deployments':
+                            response = await this.k8sClient.apps.listNamespacedDeployment({
+                                namespace: namespace
+                            });
+                            break;
+                        case 'statefulsets':
+                            response = await this.k8sClient.apps.listNamespacedStatefulSet({
+                                namespace: namespace
+                            });
+                            break;
+                        case 'daemonsets':
+                            response = await this.k8sClient.apps.listNamespacedDaemonSet({
+                                namespace: namespace
+                            });
+                            break;
+                        case 'replicasets':
+                            response = await this.k8sClient.apps.listNamespacedReplicaSet({
+                                namespace: namespace
+                            });
+                            break;
+                        default:
+                            return 0;
+                    }
+                    break;
+                case 'batch':
+                    switch (resourceType) {
+                        case 'cronjobs':
+                            response = await this.k8sClient.batch.listNamespacedCronJob({
+                                namespace: namespace
+                            });
+                            break;
+                        default:
+                            return 0;
+                    }
+                    break;
+                case 'networking':
+                    switch (resourceType) {
+                        case 'ingresses':
+                            response = await this.k8sClient.networking.listNamespacedIngress({
+                                namespace: namespace
+                            });
+                            break;
+                        case 'networkpolicies':
+                            response = await this.k8sClient.networking.listNamespacedNetworkPolicy({
+                                namespace: namespace
+                            });
+                            break;
+                        default:
+                            return 0;
+                    }
+                    break;
+                case 'rbac':
+                    switch (resourceType) {
+                        case 'roles':
+                            response = await this.k8sClient.rbac.listNamespacedRole({
+                                namespace: namespace
+                            });
+                            break;
+                        case 'rolebindings':
+                            response = await this.k8sClient.rbac.listNamespacedRoleBinding({
+                                namespace: namespace
+                            });
+                            break;
+                        default:
+                            return 0;
+                    }
+                    break;
+                default:
+                    return 0;
+            }
+
+            return response.items.length;
+        } catch (error) {
+            // Resource type not available or permission denied - return 0
+            // Log error for debugging but don't throw
+            console.log(`Failed to count ${resourceType} in namespace ${namespace}: ${error}`);
+            return 0;
+        }
     }
 
     /**
