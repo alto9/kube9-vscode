@@ -17,6 +17,7 @@ export interface ApplyYAMLResult {
 /**
  * Applies a single Kubernetes resource using server-side apply.
  * Handles create and update operations.
+ * Supports dry-run modes for validation without persisting changes.
  */
 async function applyResource(
     resource: Record<string, unknown>,
@@ -30,12 +31,11 @@ async function applyResource(
     const name = ((resource.metadata as Record<string, unknown>)?.name as string) || '';
     const namespace = (resource.metadata as Record<string, unknown>)?.namespace as string | undefined;
     
-    // For dry-run modes, we'll just validate the resource structure
-    if (mode !== 'apply') {
-        // Dry-run: Just validate the resource can be parsed
-        // In a full implementation, we'd call the API with dry-run headers
-        return `${kind}/${name} validated (dry-run)`;
-    }
+    // Set dry-run parameter based on mode
+    // - undefined: actual apply (persist changes)
+    // - 'All': server-side dry-run (validate with API, admission webhooks, RBAC but don't persist)
+    // Note: client-side dry-run is not supported by the API - we treat it same as server-side
+    const dryRun = mode !== 'apply' ? 'All' : undefined;
     
     // Route to appropriate API based on resource type
     // Note: Using strategic merge patch for updates (true server-side apply requires additional setup)
@@ -46,9 +46,10 @@ async function applyResource(
                 try {
                     await apiClient.core.createNamespacedPod({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -56,9 +57,10 @@ async function applyResource(
                         await apiClient.core.patchNamespacedPod({
                             name,
                             namespace,
-                            body: resource
+                            body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -66,9 +68,10 @@ async function applyResource(
                 try {
                     await apiClient.core.createNamespacedService({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -76,8 +79,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -85,9 +89,10 @@ async function applyResource(
                 try {
                     await apiClient.core.createNamespacedConfigMap({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -95,8 +100,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -104,9 +110,10 @@ async function applyResource(
                 try {
                     await apiClient.core.createNamespacedSecret({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -114,8 +121,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -123,9 +131,10 @@ async function applyResource(
                 try {
                     await apiClient.apps.createNamespacedDeployment({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -133,8 +142,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -142,9 +152,10 @@ async function applyResource(
                 try {
                     await apiClient.apps.createNamespacedStatefulSet({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -152,8 +163,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -161,9 +173,10 @@ async function applyResource(
                 try {
                     await apiClient.apps.createNamespacedDaemonSet({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -171,8 +184,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -180,9 +194,10 @@ async function applyResource(
                 try {
                     await apiClient.apps.createNamespacedReplicaSet({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -190,8 +205,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -199,9 +215,10 @@ async function applyResource(
                 try {
                     await apiClient.batch.createNamespacedJob({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -209,8 +226,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -218,9 +236,10 @@ async function applyResource(
                 try {
                     await apiClient.batch.createNamespacedCronJob({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -228,8 +247,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -237,9 +257,10 @@ async function applyResource(
                 try {
                     await apiClient.core.createNamespacedPersistentVolumeClaim({
                         namespace,
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
@@ -247,8 +268,9 @@ async function applyResource(
                             name,
                             namespace,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
@@ -263,51 +285,57 @@ async function applyResource(
             case 'namespace':
                 try {
                     await apiClient.core.createNamespace({
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
                         await apiClient.core.patchNamespace({
                             name,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
             case 'persistentvolume':
                 try {
                     await apiClient.core.createPersistentVolume({
-                        body: resource
+                        body: resource,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
                         await apiClient.core.patchPersistentVolume({
                             name,
                             body: resource,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
             case 'storageclass':
                 try {
                     await apiClient.storage.createStorageClass({
-                        body: resource as unknown as k8s.V1StorageClass
+                        body: resource as unknown as k8s.V1StorageClass,
+                        dryRun
                     });
-                    return `${kind}/${name} created`;
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
                         await apiClient.storage.patchStorageClass({
                             name,
                             body: resource as unknown as k8s.V1StorageClass,
+                            dryRun
                         });
-                        return `${kind}/${name} configured`;
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
                 }
