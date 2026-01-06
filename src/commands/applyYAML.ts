@@ -551,23 +551,20 @@ async function executeKubectlApply(
     const fileContent = await fs.readFile(filePath, 'utf-8');
     
     // Parse YAML - handle both single and multiple resources
+    // Always use loadAll() to support multi-document YAML files (e.g., Helm charts, kustomize)
     const resources: Record<string, unknown>[] = [];
-    try {
-      // Try parsing as single resource first
-      const singleResource = yaml.load(fileContent);
-      if (singleResource && typeof singleResource === 'object') {
-        // Check if it's a list
-        const single = singleResource as Record<string, unknown>;
-        if (single.kind === 'List' && Array.isArray(single.items)) {
-          resources.push(...(single.items as Record<string, unknown>[]));
+    const parsedDocuments = yaml.loadAll(fileContent);
+    
+    for (const doc of parsedDocuments) {
+      if (doc && typeof doc === 'object') {
+        const resource = doc as Record<string, unknown>;
+        // Check if it's a List kind (which contains multiple items)
+        if (resource.kind === 'List' && Array.isArray(resource.items)) {
+          resources.push(...(resource.items as Record<string, unknown>[]));
         } else {
-          resources.push(single);
+          resources.push(resource);
         }
       }
-    } catch (error) {
-      // If single parse fails, try loadAll for multiple documents
-      const multipleResources = yaml.loadAll(fileContent);
-      resources.push(...multipleResources.filter((r): r is Record<string, unknown> => r !== null && typeof r === 'object'));
     }
     
     if (resources.length === 0) {
