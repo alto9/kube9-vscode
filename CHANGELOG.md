@@ -1,3 +1,13 @@
+## [1.18.3](https://github.com/alto9/kube9-vscode/compare/v1.18.2...v1.18.3) (2026-01-06)
+
+
+### Bug Fixes
+
+* apply all resources from multi-document YAML files ([d72f92b](https://github.com/alto9/kube9-vscode/commit/d72f92be5717f39785669c1c5ff3cf1f9ecd6157))
+* default missing namespace to 'default' for namespaced resources ([1b77f4b](https://github.com/alto9/kube9-vscode/commit/1b77f4bdfc7bab896b5c28c7d2f9ab06ac2715bc))
+* implement proper dry-run validation for apply operations ([8b30d34](https://github.com/alto9/kube9-vscode/commit/8b30d345e3a8abe5c3ee172704e942896d97a403))
+* update tutorial webview ([063d950](https://github.com/alto9/kube9-vscode/commit/063d95010f279ffbdcb6714372297171d1ca1bb8))
+
 ## [1.18.2](https://github.com/alto9/kube9-vscode/compare/v1.18.1...v1.18.2) (2026-01-04)
 
 
