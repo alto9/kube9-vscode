@@ -38,10 +38,11 @@ export class OperatorSubcategory {
         item.tooltip = 'View Kube9 Operator health and status';
         
         // Make Health report clickable to open webview
+        // Pass cluster context name as argument so the correct cluster's health is displayed
         item.command = {
             command: 'kube9.openOperatorHealthReport',
             title: 'Open Operator Health Report',
-            arguments: []
+            arguments: [resourceData.context.name]
         };
         
         return item;

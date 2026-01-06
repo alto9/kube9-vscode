@@ -214,7 +214,6 @@ export class TutorialWebview {
 
         .header {
             text-align: center;
-            margin-bottom: 32px;
             padding-bottom: 24px;
             border-bottom: 2px solid var(--vscode-widget-border);
         }
@@ -524,7 +523,6 @@ export class TutorialWebview {
     <div class="header">
         ${iconHtml}
         <h1>Get Started with Kube9</h1>
-        <p>Learn how to manage your Kubernetes clusters with Kube9</p>
     </div>
 
     <div class="dont-show-container">
@@ -590,7 +588,7 @@ export class TutorialWebview {
             <h2 class="step-title">Explore Cluster Manager</h2>
         </div>
         <div class="step-description">
-            <p>Learn how to customize your tree view organization with the Cluster Manager. Create custom views, organize namespaces, and tailor the interface to your workflow.</p>
+            <p>Learn how to customize your tree view organization with the Cluster Manager. Organize clusters to tailor the interface to your workflow.</p>
             <img src="${getMediaUri('02-cluster-manager.png')}" alt="Cluster Manager UI showing customization options" class="step-image" />
         </div>
         <div class="step-actions">

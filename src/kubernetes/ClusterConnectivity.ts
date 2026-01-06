@@ -1,6 +1,7 @@
 import { ClusterStatus } from './ClusterTypes';
 import { KubectlError } from './KubectlError';
 import { getKubernetesApiClient } from './apiClient';
+import * as fs from 'fs';
 
 /**
  * Timeout for connectivity checks in milliseconds.
@@ -47,7 +48,7 @@ export class ClusterConnectivity {
      * Checks if a cluster is reachable using the Kubernetes API.
      * Uses the Version API as a simple connectivity check.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param kubeconfigPath Path to the kubeconfig file
      * @param contextName Name of the context to check
      * @returns ConnectivityResult with status and optional error information
      */
@@ -56,8 +57,34 @@ export class ClusterConnectivity {
         contextName: string
     ): Promise<ConnectivityResult> {
         try {
+            // Validate kubeconfig file exists
+            if (!fs.existsSync(kubeconfigPath)) {
+                const error = new Error(`Kubeconfig file not found: ${kubeconfigPath}`);
+                const kubectlError = KubectlError.fromExecError(error, contextName);
+                console.log(`Cluster connectivity check failed for context ${contextName}: kubeconfig not found`);
+                return {
+                    status: ClusterStatus.Disconnected,
+                    error: kubectlError
+                };
+            }
+            
             // Set context on API client
             const apiClient = getKubernetesApiClient();
+            
+            // Validate that the context exists before trying to use it
+            const contexts = apiClient.getContexts();
+            const contextExists = contexts.some(ctx => ctx.name === contextName);
+            
+            if (!contextExists) {
+                const error = new Error(`Context '${contextName}' not found in kubeconfig`);
+                const kubectlError = KubectlError.fromExecError(error, contextName);
+                console.log(`Cluster connectivity check failed for context ${contextName}: context not found`);
+                return {
+                    status: ClusterStatus.Disconnected,
+                    error: kubectlError
+                };
+            }
+            
             apiClient.setContext(contextName);
             
             // Use Version API as a simple connectivity check

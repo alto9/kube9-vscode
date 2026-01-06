@@ -495,7 +495,7 @@ function registerCommands(): void {
     // Register open Operator Health report command
     const openOperatorHealthReportCommand = vscode.commands.registerCommand(
         'kube9.openOperatorHealthReport',
-        async () => {
+        async (contextName?: string) => {
             try {
                 console.log('Opening Operator Health report webview...');
                 
@@ -508,9 +508,11 @@ function registerCommands(): void {
                     return;
                 }
                 
-                // Get current context name
-                const contextInfo = await getContextInfo();
-                const contextName = contextInfo.contextName;
+                // If no context name provided (e.g., called from command palette), use current context
+                if (!contextName) {
+                    const contextInfo = await getContextInfo();
+                    contextName = contextInfo.contextName;
+                }
                 
                 if (!contextName) {
                     vscode.window.showWarningMessage('No cluster context available');
@@ -528,7 +530,7 @@ function registerCommands(): void {
                     contextName
                 );
                 
-                console.log('Opened Operator Health report webview');
+                console.log(`Opened Operator Health report webview for context: ${contextName}`);
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error('Failed to open Operator Health report webview:', errorMessage);
