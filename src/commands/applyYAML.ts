@@ -29,7 +29,7 @@ async function applyResource(
     
     const kind = (resource.kind as string)?.toLowerCase() || '';
     const name = ((resource.metadata as Record<string, unknown>)?.name as string) || '';
-    const namespace = (resource.metadata as Record<string, unknown>)?.namespace as string | undefined;
+    const namespaceFromManifest = (resource.metadata as Record<string, unknown>)?.namespace as string | undefined;
     
     // Set dry-run parameter based on mode
     // - undefined: actual apply (persist changes)
@@ -37,10 +37,15 @@ async function applyResource(
     // Note: client-side dry-run is not supported by the API - we treat it same as server-side
     const dryRun = mode !== 'apply' ? 'All' : undefined;
     
+    // Define cluster-scoped resource types
+    const clusterScopedTypes = ['node', 'namespace', 'persistentvolume', 'storageclass', 'customresourcedefinition', 'crd'];
+    const isClusterScoped = clusterScopedTypes.includes(kind);
+    
     // Route to appropriate API based on resource type
     // Note: Using strategic merge patch for updates (true server-side apply requires additional setup)
-    if (namespace) {
-        // Namespaced resource
+    if (!isClusterScoped) {
+        // Namespaced resource - namespace defaults to 'default' if not provided
+        const namespace = namespaceFromManifest || 'default';
         switch (kind) {
             case 'pod':
                 try {
