@@ -105,6 +105,7 @@ export class KubectlError {
             : '';
         const errorMessage = err.message || 'Unknown error';
         const details = stderr || stdout || errorMessage;
+        const lowerDetails = details.toLowerCase();
 
         // Detect binary not found (ENOENT error code)
         if (err.code === 'ENOENT') {
@@ -116,8 +117,8 @@ export class KubectlError {
             );
         }
 
-        // Detect timeout (killed by timeout or SIGTERM)
-        if (err.killed || err.signal === 'SIGTERM') {
+        // Detect timeout (killed by timeout, SIGTERM, ETIMEDOUT, or timeout in error message)
+        if (err.killed || err.signal === 'SIGTERM' || err.code === 'ETIMEDOUT' || lowerDetails.includes('timeout')) {
             return new KubectlError(
                 KubectlErrorType.Timeout,
                 `Connection to cluster '${contextName}' timed out. The cluster may be slow to respond.`,
@@ -127,7 +128,6 @@ export class KubectlError {
         }
 
         // Detect permission/authentication errors by checking stderr content
-        const lowerDetails = details.toLowerCase();
         if (
             lowerDetails.includes('forbidden') ||
             lowerDetails.includes('unauthorized') ||

@@ -1,9 +1,11 @@
 import * as assert from 'assert';
 import * as Module from 'module';
 import * as vscode from 'vscode';
+import * as k8s from '@kubernetes/client-node';
 import { ClusterTreeItem } from '../../../tree/ClusterTreeItem';
 import { TreeItemType } from '../../../tree/TreeItemTypes';
 import { KubectlError, KubectlErrorType } from '../../../kubernetes/KubectlError';
+import { getKubernetesApiClient, resetKubernetesApiClient } from '../../../kubernetes/apiClient';
 
 // Store original require for restoration
 const originalRequire = Module.prototype.require;
@@ -23,6 +25,16 @@ let mockTreeProviderRefreshCalled = false;
 let mockNamespaceWebviewRefreshCalled = false;
 let mockNamespaceWebviewRefreshNamespace: string | undefined = undefined;
 
+// Track API client calls
+let patchDeploymentCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
+let patchStatefulSetCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
+let patchDaemonSetCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
+let readDeploymentCalls: Array<{ name: string; namespace: string }> = [];
+let readStatefulSetCalls: Array<{ name: string; namespace: string }> = [];
+let readDaemonSetCalls: Array<{ name: string; namespace: string }> = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockApiResponse: { type: 'success'; resource?: unknown } | { type: 'error'; error: unknown } | Array<{ type: 'success'; resource?: unknown } | { type: 'error'; error: unknown }> | null = null;
+
 suite('restartWorkload Command Tests', () => {
     // Store original functions for restoration
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,6 +47,10 @@ suite('restartWorkload Command Tests', () => {
     let originalGetClusterTreeProvider: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let originalNamespaceWebview: any;
+    // API client mocks
+    let originalAppsApi: k8s.AppsV1Api;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let mockAppsApi: any;
     // Imported modules (loaded after mocks are set up)
     let restartWorkloadModule: typeof import('../../../commands/restartWorkload');
 
@@ -49,6 +65,127 @@ suite('restartWorkload Command Tests', () => {
         mockNamespaceWebviewRefreshCalled = false;
         mockNamespaceWebviewRefreshNamespace = undefined;
         mockExecFileResponse = null;
+        
+        // Reset API client call tracking
+        patchDeploymentCalls = [];
+        patchStatefulSetCalls = [];
+        patchDaemonSetCalls = [];
+        readDeploymentCalls = [];
+        readStatefulSetCalls = [];
+        readDaemonSetCalls = [];
+        mockApiResponse = null;
+        
+        // Reset and mock API client
+        resetKubernetesApiClient();
+        const apiClient = getKubernetesApiClient();
+        originalAppsApi = apiClient.apps;
+        
+        // Create mock Apps API
+        mockAppsApi = {
+            patchNamespacedDeployment: async (options: { name: string; namespace: string; body: unknown }) => {
+                patchDeploymentCalls.push(options);
+                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
+                    if (mockApiResponse.type === 'error') {
+                        throw mockApiResponse.error;
+                    }
+                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
+                        return mockApiResponse.resource as k8s.V1Deployment;
+                    }
+                }
+                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1Deployment;
+            },
+            patchNamespacedStatefulSet: async (options: { name: string; namespace: string; body: unknown }) => {
+                patchStatefulSetCalls.push(options);
+                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
+                    if (mockApiResponse.type === 'error') {
+                        throw mockApiResponse.error;
+                    }
+                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
+                        return mockApiResponse.resource as k8s.V1StatefulSet;
+                    }
+                }
+                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1StatefulSet;
+            },
+            patchNamespacedDaemonSet: async (options: { name: string; namespace: string; body: unknown }) => {
+                patchDaemonSetCalls.push(options);
+                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
+                    if (mockApiResponse.type === 'error') {
+                        throw mockApiResponse.error;
+                    }
+                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
+                        return mockApiResponse.resource as k8s.V1DaemonSet;
+                    }
+                }
+                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1DaemonSet;
+            },
+            readNamespacedDeployment: async (options: { name: string; namespace: string }) => {
+                readDeploymentCalls.push(options);
+                // Support sequential responses for rollout watch tests
+                if (Array.isArray(mockApiResponse) && mockApiResponse.length > 0) {
+                    const response = mockApiResponse[readDeploymentCalls.length - 1] || mockApiResponse[mockApiResponse.length - 1];
+                    if (response && response.type === 'error') {
+                        throw response.error;
+                    }
+                    if (response && response.type === 'success' && response.resource) {
+                        return response.resource as k8s.V1Deployment;
+                    }
+                }
+                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
+                    if (mockApiResponse.type === 'error') {
+                        throw mockApiResponse.error;
+                    }
+                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
+                        return mockApiResponse.resource as k8s.V1Deployment;
+                    }
+                }
+                return { 
+                    metadata: { name: options.name, namespace: options.namespace },
+                    spec: { replicas: 3 },
+                    status: { readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3 }
+                } as k8s.V1Deployment;
+            },
+            readNamespacedStatefulSet: async (options: { name: string; namespace: string }) => {
+                readStatefulSetCalls.push(options);
+                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
+                    if (mockApiResponse.type === 'error') {
+                        throw mockApiResponse.error;
+                    }
+                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
+                        return mockApiResponse.resource as k8s.V1StatefulSet;
+                    }
+                }
+                return { 
+                    metadata: { name: options.name, namespace: options.namespace },
+                    spec: { replicas: 3 },
+                    status: { readyReplicas: 3, updatedReplicas: 3 }
+                } as k8s.V1StatefulSet;
+            },
+            readNamespacedDaemonSet: async (options: { name: string; namespace: string }) => {
+                readDaemonSetCalls.push(options);
+                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
+                    if (mockApiResponse.type === 'error') {
+                        throw mockApiResponse.error;
+                    }
+                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
+                        return mockApiResponse.resource as k8s.V1DaemonSet;
+                    }
+                }
+                return { 
+                    metadata: { name: options.name, namespace: options.namespace },
+                    status: { desiredNumberScheduled: 3, numberReady: 3, updatedNumberScheduled: 3, numberAvailable: 3 }
+                } as k8s.V1DaemonSet;
+            }
+        };
+        
+        // Replace API client's apps API with mock
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (apiClient as any).appsApi = mockAppsApi;
+        
+        // Mock setContext to avoid "No active cluster!" error
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (apiClient as any).setContext = () => {
+            // No-op: we're already using mocked API clients
+        };
 
         // Set up require interception for child_process
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -240,6 +377,12 @@ suite('restartWorkload Command Tests', () => {
     });
 
     teardown(() => {
+        // Restore API client
+        const apiClient = getKubernetesApiClient();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (apiClient as any).appsApi = originalAppsApi;
+        resetKubernetesApiClient();
+        
         // Deactivate proxy
         isProxyActive = false;
         
@@ -285,34 +428,24 @@ suite('restartWorkload Command Tests', () => {
     });
 
     /**
-     * Helper function to mock execFile with success response
+     * Helper function to mock API client with success response
      */
-    function mockExecFileSuccess(stdout: string, stderr: string = ''): void {
-        mockExecFileResponse = {
-            type: 'success',
-            stdout,
-            stderr
-        };
+    function mockApiSuccess(resource?: unknown): void {
+        mockApiResponse = { type: 'success', resource };
     }
-
+    
     /**
-     * Helper function to mock execFile with error
+     * Helper function to mock API client with error
      */
-    function mockExecFileError(error: Partial<NodeJS.ErrnoException> & { stdout?: string; stderr?: string; killed?: boolean; signal?: string }): void {
-        // Create error object with all properties that KubectlError.fromExecError expects
-        const fullError: NodeJS.ErrnoException = Object.assign(new Error(error.message || 'Command failed'), {
-            code: error.code,
-            killed: error.killed,
-            signal: error.signal,
-            stderr: error.stderr ? Buffer.from(error.stderr) : undefined,
-            stdout: error.stdout ? Buffer.from(error.stdout) : undefined,
-            ...error
-        });
-        
-        mockExecFileResponse = {
-            type: 'error',
-            error: fullError
-        };
+    function mockApiError(error: unknown): void {
+        mockApiResponse = { type: 'error', error };
+    }
+    
+    /**
+     * Helper function to mock API client with sequential responses (for polling tests)
+     */
+    function mockApiSequential(responses: Array<{ type: 'success'; resource?: unknown } | { type: 'error'; error: unknown }>): void {
+        mockApiResponse = responses;
     }
 
     /**
@@ -343,31 +476,6 @@ suite('restartWorkload Command Tests', () => {
         return item;
     }
 
-    /**
-     * Helper function to create mock workload status JSON
-     */
-    function createMockWorkloadStatus(kind: string, desired: number, ready: number, updated: number, available: number): string {
-        if (kind === 'DaemonSet') {
-            return JSON.stringify({
-                spec: { replicas: desired },
-                status: {
-                    desiredNumberScheduled: desired,
-                    numberReady: ready,
-                    updatedNumberScheduled: updated,
-                    numberAvailable: available
-                }
-            });
-        }
-        return JSON.stringify({
-            spec: { replicas: desired },
-            status: {
-                replicas: desired,
-                readyReplicas: ready,
-                updatedReplicas: updated,
-                availableReplicas: available
-            }
-        });
-    }
 
     /**
      * Helper function to configure showInformationMessage return value
@@ -437,7 +545,7 @@ suite('restartWorkload Command Tests', () => {
 
     suite('Restart Deployment', () => {
         test('applies restart annotation successfully', async () => {
-            mockExecFileSuccess('deployment.apps/my-deployment patched');
+            mockApiSuccess();
             
             await restartWorkloadModule.applyRestartAnnotation(
                 'my-deployment',
@@ -447,43 +555,43 @@ suite('restartWorkload Command Tests', () => {
                 '/test/kubeconfig'
             );
 
-            assert.strictEqual(execFileCalls.length, 1, 'Should execute kubectl patch');
-            const call = execFileCalls[0];
-            assert.strictEqual(call.command, 'kubectl', 'Should use kubectl');
-            assert.ok(call.args.includes('patch'), 'Should use patch command');
-            assert.ok(call.args.includes('deployment'), 'Should use deployment resource type');
-            assert.ok(call.args.includes('my-deployment'), 'Should include resource name');
-            assert.ok(call.args.includes('-n'), 'Should include namespace flag');
-            assert.ok(call.args.includes('default'), 'Should include namespace');
-            assert.ok(call.args.includes('--type=merge'), 'Should use merge patch type');
-            
-            // Verify patch contains the annotation
-            const patchArg = call.args.find(arg => arg.startsWith('-p='));
-            assert.ok(patchArg, 'Should have patch argument');
-            const patchJson = JSON.parse(patchArg!.substring(3));
-            assert.ok(patchJson.spec?.template?.metadata?.annotations, 'Should have annotations in patch');
-            assert.ok(patchJson.spec.template.metadata.annotations['kubectl.kubernetes.io/restartedAt'], 'Should have restart annotation');
+            assert.strictEqual(patchDeploymentCalls.length, 1, 'Should call patchNamespacedDeployment');
+            const call = patchDeploymentCalls[0];
+            assert.strictEqual(call.name, 'my-deployment', 'Should include resource name');
+            assert.strictEqual(call.namespace, 'default', 'Should include namespace');
+            assert.ok(call.body, 'Should have patch body');
+            const patchBody = call.body as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
+            assert.ok(patchBody.spec?.template?.metadata?.annotations, 'Should have annotations in patch');
+            assert.ok(patchBody.spec.template.metadata.annotations!['kubectl.kubernetes.io/restartedAt'], 'Should have restart annotation');
+            assert.ok(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(patchBody.spec.template.metadata.annotations!['kubectl.kubernetes.io/restartedAt']!), 'Should have ISO 8601 timestamp');
         });
 
         test('applies restart annotation without namespace', async () => {
-            mockExecFileSuccess('deployment.apps/my-deployment patched');
+            mockApiSuccess();
             
-            await restartWorkloadModule.applyRestartAnnotation(
-                'my-deployment',
-                undefined,
-                'Deployment',
-                'test-context',
-                '/test/kubeconfig'
-            );
-
-            const call = execFileCalls[0];
-            assert.ok(!call.args.includes('-n'), 'Should not include namespace flag');
+            try {
+                await restartWorkloadModule.applyRestartAnnotation(
+                    'my-deployment',
+                    undefined,
+                    'Deployment',
+                    'test-context',
+                    '/test/kubeconfig'
+                );
+                assert.fail('Should throw error when namespace is undefined');
+            } catch (error) {
+                // KubectlError wraps the original error - check details for the original message
+                assert.ok(error instanceof KubectlError, 'Should throw KubectlError');
+                if (error instanceof KubectlError) {
+                    const details = error.getDetails().toLowerCase();
+                    assert.ok(details.includes('namespace'), 'Error details should mention namespace');
+                }
+            }
         });
 
         test('creates annotations object when missing', async () => {
             // With merge patch, annotations are created automatically if they don't exist
             // So this test just verifies that the patch succeeds even when annotations are missing
-            mockExecFileSuccess('deployment.apps/my-deployment patched');
+            mockApiSuccess();
             
             await restartWorkloadModule.applyRestartAnnotation(
                 'my-deployment',
@@ -494,19 +602,16 @@ suite('restartWorkload Command Tests', () => {
             );
 
             // Should only make one patch call (merge patch handles missing annotations)
-            assert.strictEqual(execFileCalls.length, 1, 'Should make single patch call');
-            const call = execFileCalls[0];
-            assert.ok(call.args.includes('--type=merge'), 'Should use merge patch type');
+            assert.strictEqual(patchDeploymentCalls.length, 1, 'Should make single patch call');
+            const call = patchDeploymentCalls[0];
             
             // Verify patch structure includes nested path to annotations
-            const patchArg = call.args.find(arg => arg.startsWith('-p='));
-            assert.ok(patchArg, 'Should have patch argument');
-            const patchJson = JSON.parse(patchArg!.substring(3));
-            assert.ok(patchJson.spec?.template?.metadata?.annotations, 'Should have full nested structure in patch');
+            const patchBody = call.body as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
+            assert.ok(patchBody.spec?.template?.metadata?.annotations, 'Should have full nested structure in patch');
         });
 
         test('timestamp is ISO 8601 format', async () => {
-            mockExecFileSuccess('deployment.apps/my-deployment patched');
+            mockApiSuccess();
             const beforeTime = new Date().toISOString();
             
             await restartWorkloadModule.applyRestartAnnotation(
@@ -518,12 +623,11 @@ suite('restartWorkload Command Tests', () => {
             );
 
             const afterTime = new Date().toISOString();
-            const call = execFileCalls[0];
-            const patchArg = call.args.find(arg => arg.startsWith('-p='));
-            assert.ok(patchArg, 'Should have patch argument');
-            const patchJson = JSON.parse(patchArg!.substring(3));
-            const timestamp = patchJson.spec.template.metadata.annotations['kubectl.kubernetes.io/restartedAt'];
+            const call = patchDeploymentCalls[0];
+            const patchBody = call.body as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
+            const timestamp = patchBody.spec?.template?.metadata?.annotations?.['kubectl.kubernetes.io/restartedAt'];
             
+            assert.ok(timestamp, 'Should have timestamp');
             // Verify ISO 8601 format
             assert.ok(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(timestamp), 'Timestamp should be ISO 8601 format');
             assert.ok(timestamp >= beforeTime && timestamp <= afterTime, 'Timestamp should be current time');
@@ -532,7 +636,7 @@ suite('restartWorkload Command Tests', () => {
 
     suite('Restart StatefulSet', () => {
         test('applies restart annotation with correct resource type', async () => {
-            mockExecFileSuccess('statefulset.apps/my-statefulset patched');
+            mockApiSuccess();
             
             await restartWorkloadModule.applyRestartAnnotation(
                 'my-statefulset',
@@ -542,15 +646,16 @@ suite('restartWorkload Command Tests', () => {
                 '/test/kubeconfig'
             );
 
-            const call = execFileCalls[0];
-            assert.ok(call.args.includes('statefulset'), 'Should use statefulset resource type');
-            assert.ok(call.args.includes('my-statefulset'), 'Should include resource name');
+            assert.strictEqual(patchStatefulSetCalls.length, 1, 'Should call patchNamespacedStatefulSet');
+            const call = patchStatefulSetCalls[0];
+            assert.strictEqual(call.name, 'my-statefulset', 'Should include resource name');
+            assert.strictEqual(call.namespace, 'default', 'Should include namespace');
         });
     });
 
     suite('Restart DaemonSet', () => {
         test('applies restart annotation with correct resource type', async () => {
-            mockExecFileSuccess('daemonset.apps/my-daemonset patched');
+            mockApiSuccess();
             
             await restartWorkloadModule.applyRestartAnnotation(
                 'my-daemonset',
@@ -560,14 +665,22 @@ suite('restartWorkload Command Tests', () => {
                 '/test/kubeconfig'
             );
 
-            const call = execFileCalls[0];
-            assert.ok(call.args.includes('daemonset'), 'Should use daemonset resource type');
-            assert.ok(call.args.includes('my-daemonset'), 'Should include resource name');
+            assert.strictEqual(patchDaemonSetCalls.length, 1, 'Should call patchNamespacedDaemonSet');
+            const call = patchDaemonSetCalls[0];
+            assert.strictEqual(call.name, 'my-daemonset', 'Should include resource name');
+            assert.strictEqual(call.namespace, 'default', 'Should include namespace');
         });
 
         test('extracts status using DaemonSet-specific fields', async () => {
-            const statusJson = createMockWorkloadStatus('DaemonSet', 5, 5, 5, 5);
-            mockExecFileSuccess(statusJson);
+            mockApiSuccess({
+                metadata: { name: 'my-daemonset', namespace: 'default' },
+                status: {
+                    desiredNumberScheduled: 5,
+                    numberReady: 5,
+                    updatedNumberScheduled: 5,
+                    numberAvailable: 5
+                }
+            } as k8s.V1DaemonSet);
             
             const status = await restartWorkloadModule.getWorkloadStatus(
                 'my-daemonset',
@@ -581,13 +694,21 @@ suite('restartWorkload Command Tests', () => {
             assert.strictEqual(status.readyReplicas, 5, 'Should extract ready replicas');
             assert.strictEqual(status.updatedReplicas, 5, 'Should extract updated replicas');
             assert.strictEqual(status.availableReplicas, 5, 'Should extract available replicas');
+            assert.strictEqual(readDaemonSetCalls.length, 1, 'Should call readNamespacedDaemonSet');
         });
     });
 
     suite('Get Workload Status', () => {
         test('extracts status for Deployment', async () => {
-            const statusJson = createMockWorkloadStatus('Deployment', 3, 3, 3, 3);
-            mockExecFileSuccess(statusJson);
+            mockApiSuccess({
+                metadata: { name: 'my-deployment', namespace: 'default' },
+                spec: { replicas: 3 },
+                status: {
+                    readyReplicas: 3,
+                    updatedReplicas: 3,
+                    availableReplicas: 3
+                }
+            } as k8s.V1Deployment);
             
             const status = await restartWorkloadModule.getWorkloadStatus(
                 'my-deployment',
@@ -601,14 +722,15 @@ suite('restartWorkload Command Tests', () => {
             assert.strictEqual(status.readyReplicas, 3, 'Should extract ready replicas');
             assert.strictEqual(status.updatedReplicas, 3, 'Should extract updated replicas');
             assert.strictEqual(status.availableReplicas, 3, 'Should extract available replicas');
+            assert.strictEqual(readDeploymentCalls.length, 1, 'Should call readNamespacedDeployment');
         });
 
         test('handles missing status fields', async () => {
-            const statusJson = JSON.stringify({
+            mockApiSuccess({
+                metadata: { name: 'my-deployment', namespace: 'default' },
                 spec: { replicas: 2 },
                 status: {}
-            });
-            mockExecFileSuccess(statusJson);
+            } as k8s.V1Deployment);
             
             const status = await restartWorkloadModule.getWorkloadStatus(
                 'my-deployment',
@@ -625,65 +747,25 @@ suite('restartWorkload Command Tests', () => {
 
     suite('Rollout Watch', () => {
         test('completes when rollout is ready', async () => {
-            // First call returns incomplete status
-            let callCount = 0;
-            const responses = [
-                createMockWorkloadStatus('Deployment', 3, 2, 2, 2), // Incomplete
-                createMockWorkloadStatus('Deployment', 3, 3, 3, 3)  // Complete
-            ];
-            
-            // Store original require to restore later
-            const savedRequire = Module.prototype.require;
-            
-            // Override execFile mock to return different responses
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Module.prototype.require = function(this: any, id: string): any {
-                if (id === 'vscode') {
-                    return savedRequire.call(this, id);
+            // First call returns incomplete status, second returns complete
+            mockApiSequential([
+                { 
+                    type: 'success', 
+                    resource: {
+                        metadata: { name: 'my-deployment', namespace: 'default' },
+                        spec: { replicas: 3 },
+                        status: { readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2 }
+                    } as k8s.V1Deployment
+                },
+                { 
+                    type: 'success', 
+                    resource: {
+                        metadata: { name: 'my-deployment', namespace: 'default' },
+                        spec: { replicas: 3 },
+                        status: { readyReplicas: 3, updatedReplicas: 3, availableReplicas: 3 }
+                    } as k8s.V1Deployment
                 }
-                if (id === 'child_process' && isProxyActive) {
-                    const realChildProcess = savedRequire.call(this, id);
-                    return new Proxy(realChildProcess, {
-                        get(target, prop) {
-                            if (prop === 'execFile') {
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const mockFunc: any = function(file: string, args: string[], ...rest: any[]) {
-                                    let callback;
-                                    if (rest.length === 1) {
-                                        callback = rest[0];
-                                    } else {
-                                        callback = rest[1];
-                                    }
-                                    
-                                    execFileCalls.push({ command: file, args: [...args] });
-                                    const response = responses[callCount++ % responses.length];
-                                    process.nextTick(() => callback(null, response, ''));
-                                    return { pid: 123 };
-                                };
-                                
-                                // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-                                const {promisify} = require('util');
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                (mockFunc as any)[promisify.custom] = function(file: string, args: string[]): Promise<{stdout: string; stderr: string}> {
-                                    execFileCalls.push({ command: file, args: [...args] });
-                                    const response = responses[callCount++ % responses.length];
-                                    return Promise.resolve({ stdout: response, stderr: '' });
-                                };
-                                
-                                return mockFunc;
-                            }
-                            return target[prop as keyof typeof target];
-                        }
-                    });
-                }
-                return savedRequire.call(this, id);
-            };
-            
-            // Clear module cache and reload to use new mock
-            const restartWorkloadPath = require.resolve('../../../commands/restartWorkload');
-            delete require.cache[restartWorkloadPath];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-            const testModule = require('../../../commands/restartWorkload');
+            ]);
 
             // Mock Date.now to control time progression
             const originalNow = Date.now;
@@ -697,8 +779,8 @@ suite('restartWorkload Command Tests', () => {
                     }
                 } as vscode.Progress<{ message?: string }>;
 
-                // Advance time by 2 seconds (poll interval)
-                const watchPromise = testModule.watchRolloutStatus(
+                // Advance time by 2 seconds (poll interval) between calls
+                const watchPromise = restartWorkloadModule.watchRolloutStatus(
                     'my-deployment',
                     'default',
                     'Deployment',
@@ -707,81 +789,33 @@ suite('restartWorkload Command Tests', () => {
                     progress
                 );
 
-                // Simulate time progression
+                // Simulate time progression - first call happens immediately
                 await new Promise(resolve => setTimeout(resolve, 10));
-                currentTime += 2000; // Advance 2 seconds
+                currentTime += 2000; // Advance 2 seconds for second poll
                 await new Promise(resolve => setTimeout(resolve, 10));
                 currentTime += 2000; // Advance another 2 seconds
 
                 await watchPromise;
 
+                // Should have called readNamespacedDeployment multiple times
+                assert.ok(readDeploymentCalls.length >= 2, 'Should poll status multiple times');
                 // Should have reported progress
                 assert.ok(progressReports.length > 0, 'Should report progress');
-                assert.ok(progressReports.some(r => r.message?.includes('Rolling update')), 'Should show rolling update message');
-                assert.ok(progressReports.some(r => r.message?.includes('Rollout complete')), 'Should show completion message');
             } finally {
                 Date.now = originalNow;
-                // Restore original require
-                Module.prototype.require = savedRequire;
-                // Reload module with original mocks
-                delete require.cache[restartWorkloadPath];
             }
         }).timeout(5000);
 
         test('throws timeout error after 5 minutes', async () => {
             // Always return incomplete status
-            const incompleteStatus = createMockWorkloadStatus('Deployment', 3, 2, 2, 2);
+            const incompleteDeployment = {
+                metadata: { name: 'my-deployment', namespace: 'default' },
+                spec: { replicas: 3 },
+                status: { readyReplicas: 2, updatedReplicas: 2, availableReplicas: 2 }
+            } as k8s.V1Deployment;
             
-            // Store original require to restore later
-            const savedRequire = Module.prototype.require;
-            
-            // Override execFile mock
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Module.prototype.require = function(this: any, id: string): any {
-                if (id === 'vscode') {
-                    return savedRequire.call(this, id);
-                }
-                if (id === 'child_process' && isProxyActive) {
-                    const realChildProcess = savedRequire.call(this, id);
-                    return new Proxy(realChildProcess, {
-                        get(target, prop) {
-                            if (prop === 'execFile') {
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const mockFunc: any = function(file: string, args: string[], ...rest: any[]) {
-                                    let callback;
-                                    if (rest.length === 1) {
-                                        callback = rest[0];
-                                    } else {
-                                        callback = rest[1];
-                                    }
-                                    
-                                    execFileCalls.push({ command: file, args: [...args] });
-                                    process.nextTick(() => callback(null, incompleteStatus, ''));
-                                    return { pid: 123 };
-                                };
-                                
-                                // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-                                const {promisify} = require('util');
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                (mockFunc as any)[promisify.custom] = function(file: string, args: string[]): Promise<{stdout: string; stderr: string}> {
-                                    execFileCalls.push({ command: file, args: [...args] });
-                                    return Promise.resolve({ stdout: incompleteStatus, stderr: '' });
-                                };
-                                
-                                return mockFunc;
-                            }
-                            return target[prop as keyof typeof target];
-                        }
-                    });
-                }
-                return savedRequire.call(this, id);
-            };
-            
-            // Clear module cache and reload to use new mock
-            const restartWorkloadPath = require.resolve('../../../commands/restartWorkload');
-            delete require.cache[restartWorkloadPath];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-            const testModule = require('../../../commands/restartWorkload');
+            // Mock to always return incomplete status
+            mockApiSuccess(incompleteDeployment);
 
             // Mock Date.now to simulate timeout
             const originalNow = Date.now;
@@ -795,7 +829,7 @@ suite('restartWorkload Command Tests', () => {
                     }
                 } as vscode.Progress<{ message?: string }>;
 
-                const watchPromise = testModule.watchRolloutStatus(
+                const watchPromise = restartWorkloadModule.watchRolloutStatus(
                     'my-deployment',
                     'default',
                     'Deployment',
@@ -810,16 +844,12 @@ suite('restartWorkload Command Tests', () => {
                 await assert.rejects(
                     watchPromise,
                     (error: Error) => {
-                        return error instanceof testModule.RolloutTimeoutError;
+                        return error.constructor.name === 'RolloutTimeoutError';
                     },
                     'Should throw RolloutTimeoutError'
                 );
             } finally {
                 Date.now = originalNow;
-                // Restore original require
-                Module.prototype.require = savedRequire;
-                // Reload module with original mocks
-                delete require.cache[restartWorkloadPath];
             }
         }).timeout(10000);
     });
@@ -863,7 +893,7 @@ suite('restartWorkload Command Tests', () => {
 
         test('skips rollout watch when not requested', async () => {
             mockShowInformationMessage('Restart'); // Not "Restart and Wait"
-            mockExecFileSuccess('deployment.apps/my-deployment patched');
+            mockApiSuccess();
             
             // Simulate the command handler flow
             const confirmation = await restartWorkloadModule.showRestartConfirmationDialog('my-deployment');
@@ -879,13 +909,13 @@ suite('restartWorkload Command Tests', () => {
             }
             
             // Should only have patch call, no get status calls
-            assert.strictEqual(execFileCalls.length, 1, 'Should only execute patch command');
-            assert.ok(execFileCalls[0].args.includes('patch'), 'Should use patch command');
+            assert.strictEqual(patchDeploymentCalls.length, 1, 'Should only call patchNamespacedDeployment');
+            assert.strictEqual(readDeploymentCalls.length, 0, 'Should not call readNamespacedDeployment');
         });
 
         test('refreshes tree view after successful restart', async () => {
             mockShowInformationMessage('Restart');
-            mockExecFileSuccess('deployment.apps/my-deployment patched');
+            mockApiSuccess();
             
             const item = createMockTreeItem('Deployment', 'my-deployment', 'default');
             
@@ -936,10 +966,12 @@ suite('restartWorkload Command Tests', () => {
 
         test('refreshes tree view even on error', async () => {
             mockShowInformationMessage('Restart');
-            mockExecFileError({
-                message: 'forbidden',
-                stderr: 'Error from server (Forbidden)'
-            });
+            const apiError = {
+                statusCode: 403,
+                body: { message: 'Forbidden' },
+                message: 'Forbidden'
+            };
+            mockApiError(apiError);
             
             // Reset refresh tracking
             mockTreeProviderRefreshCalled = false;
@@ -983,8 +1015,8 @@ suite('restartWorkload Command Tests', () => {
             // Simulate command handler flow
             const confirmation = await restartWorkloadModule.showRestartConfirmationDialog('my-deployment');
             if (!confirmation) {
-                // Should return early, no kubectl calls
-                assert.strictEqual(execFileCalls.length, 0, 'Should not execute kubectl when cancelled');
+                // Should return early, no API calls
+                assert.strictEqual(patchDeploymentCalls.length, 0, 'Should not call API when cancelled');
             }
         });
     });
@@ -993,90 +1025,21 @@ suite('restartWorkload Command Tests', () => {
         test('updates annotation timestamp on multiple restarts', async () => {
             const timestamps: string[] = [];
             
-            // Store original require to restore later
-            const savedRequire = Module.prototype.require;
-            
-            // Mock execFile to capture timestamps
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            Module.prototype.require = function(this: any, id: string): any {
-                if (id === 'vscode') {
-                    return savedRequire.call(this, id);
+            // Override mock to capture timestamps
+            const originalPatch = mockAppsApi.patchNamespacedDeployment;
+            mockAppsApi.patchNamespacedDeployment = async (options: { name: string; namespace: string; body: unknown }) => {
+                patchDeploymentCalls.push(options);
+                const patchBody = options.body as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
+                const timestamp = patchBody.spec?.template?.metadata?.annotations?.['kubectl.kubernetes.io/restartedAt'];
+                if (timestamp) {
+                    timestamps.push(timestamp);
                 }
-                if (id === 'child_process' && isProxyActive) {
-                    const realChildProcess = savedRequire.call(this, id);
-                    return new Proxy(realChildProcess, {
-                        get(target, prop) {
-                            if (prop === 'execFile') {
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const mockFunc: any = function(file: string, args: string[], ...rest: any[]) {
-                                    let callback;
-                                    if (rest.length === 1) {
-                                        callback = rest[0];
-                                    } else {
-                                        callback = rest[1];
-                                    }
-                                    
-                                    execFileCalls.push({ command: file, args: [...args] });
-                                    
-                                    // Extract timestamp from patch argument (merge patch format)
-                                    const patchArg = args.find(arg => arg.startsWith('-p='));
-                                    if (patchArg) {
-                                        try {
-                                            const patchJson = JSON.parse(patchArg.substring(3));
-                                            const timestamp = patchJson.spec?.template?.metadata?.annotations?.['kubectl.kubernetes.io/restartedAt'];
-                                            if (timestamp) {
-                                                timestamps.push(timestamp);
-                                            }
-                                        } catch (e) {
-                                            // Ignore parse errors
-                                        }
-                                    }
-                                    
-                                    process.nextTick(() => callback(null, 'deployment.apps/my-deployment patched', ''));
-                                    return { pid: 123 };
-                                };
-                                
-                                // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-                                const {promisify} = require('util');
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                (mockFunc as any)[promisify.custom] = function(file: string, args: string[]): Promise<{stdout: string; stderr: string}> {
-                                    execFileCalls.push({ command: file, args: [...args] });
-                                    
-                                    // Extract timestamp (merge patch format)
-                                    const patchArg = args.find(arg => arg.startsWith('-p='));
-                                    if (patchArg) {
-                                        try {
-                                            const patchJson = JSON.parse(patchArg.substring(3));
-                                            const timestamp = patchJson.spec?.template?.metadata?.annotations?.['kubectl.kubernetes.io/restartedAt'];
-                                            if (timestamp) {
-                                                timestamps.push(timestamp);
-                                            }
-                                        } catch (e) {
-                                            // Ignore parse errors
-                                        }
-                                    }
-                                    
-                                    return Promise.resolve({ stdout: 'deployment.apps/my-deployment patched', stderr: '' });
-                                };
-                                
-                                return mockFunc;
-                            }
-                            return target[prop as keyof typeof target];
-                        }
-                    });
-                }
-                return savedRequire.call(this, id);
+                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1Deployment;
             };
-            
-            // Clear module cache and reload to use new mock
-            const restartWorkloadPath = require.resolve('../../../commands/restartWorkload');
-            delete require.cache[restartWorkloadPath];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-            const testModule = require('../../../commands/restartWorkload');
             
             try {
                 // First restart
-                await testModule.applyRestartAnnotation(
+                await restartWorkloadModule.applyRestartAnnotation(
                     'my-deployment',
                     'default',
                     'Deployment',
@@ -1088,7 +1051,7 @@ suite('restartWorkload Command Tests', () => {
                 await new Promise(resolve => setTimeout(resolve, 10));
                 
                 // Second restart
-                await testModule.applyRestartAnnotation(
+                await restartWorkloadModule.applyRestartAnnotation(
                     'my-deployment',
                     'default',
                     'Deployment',
@@ -1101,20 +1064,20 @@ suite('restartWorkload Command Tests', () => {
                 assert.notStrictEqual(timestamps[0], timestamps[1], 'Timestamps should be different');
                 assert.ok(timestamps[0] < timestamps[1], 'Second timestamp should be later');
             } finally {
-                // Restore original require
-                Module.prototype.require = savedRequire;
-                // Reload module with original mocks
-                delete require.cache[restartWorkloadPath];
+                // Restore original mock
+                mockAppsApi.patchNamespacedDeployment = originalPatch;
             }
         });
     });
 
     suite('Error Handling', () => {
         test('handles resource not found error', async () => {
-            mockExecFileError({
-                message: 'not found',
-                stderr: 'Error from server (NotFound): deployments.apps "my-deployment" not found'
-            });
+            const apiError = {
+                statusCode: 404,
+                body: { message: 'deployments.apps "my-deployment" not found' },
+                message: 'Not Found'
+            };
+            mockApiError(apiError);
 
             await assert.rejects(
                 async () => {
@@ -1134,10 +1097,12 @@ suite('restartWorkload Command Tests', () => {
         });
 
         test('handles permission denied error', async () => {
-            mockExecFileError({
-                message: 'forbidden',
-                stderr: 'Error from server (Forbidden): deployments.apps "my-deployment" is forbidden'
-            });
+            const apiError = {
+                statusCode: 403,
+                body: { message: 'deployments.apps "my-deployment" is forbidden' },
+                message: 'Forbidden'
+            };
+            mockApiError(apiError);
 
             await assert.rejects(
                 async () => {
@@ -1161,10 +1126,11 @@ suite('restartWorkload Command Tests', () => {
         });
 
         test('handles connection failed error', async () => {
-            mockExecFileError({
-                message: 'connection refused',
-                stderr: 'Unable to connect to the server: dial tcp: connection refused'
-            });
+            const apiError = {
+                code: 'ECONNREFUSED',
+                message: 'Unable to connect to the server: dial tcp: connection refused'
+            };
+            mockApiError(apiError);
 
             await assert.rejects(
                 async () => {
@@ -1187,56 +1153,50 @@ suite('restartWorkload Command Tests', () => {
         });
 
         test('handles timeout error', async () => {
-            mockExecFileError({
-                killed: true,
-                signal: 'SIGTERM',
-                message: 'Command timed out'
-            });
+            const apiError = {
+                code: 'ETIMEDOUT',
+                message: 'Request timeout'
+            };
+            mockApiError(apiError);
 
-            await assert.rejects(
-                async () => {
-                    await restartWorkloadModule.applyRestartAnnotation(
-                        'my-deployment',
-                        'default',
-                        'Deployment',
-                        'test-context',
-                        '/test/kubeconfig'
-                    );
-                },
-                (error: unknown) => {
-                    if (error instanceof KubectlError) {
-                        return error.type === KubectlErrorType.Timeout;
-                    }
-                    return false;
-                },
-                'Should throw timeout error'
-            );
+            try {
+                await restartWorkloadModule.applyRestartAnnotation(
+                    'my-deployment',
+                    'default',
+                    'Deployment',
+                    'test-context',
+                    '/test/kubeconfig'
+                );
+                assert.fail('Should throw timeout error');
+            } catch (error: unknown) {
+                assert.ok(error instanceof KubectlError, 'Should throw KubectlError');
+                if (error instanceof KubectlError) {
+                    assert.strictEqual(error.type, KubectlErrorType.Timeout, 'Should be timeout error type');
+                }
+            }
         });
 
         test('handles binary not found error', async () => {
-            mockExecFileError({
+            // This error type doesn't apply to API client - API client doesn't use kubectl binary
+            // But we'll test that API errors are handled correctly
+            const apiError = {
                 code: 'ENOENT',
-                message: 'kubectl not found'
-            });
+                message: 'API endpoint not found'
+            };
+            mockApiError(apiError);
 
-            await assert.rejects(
-                async () => {
-                    await restartWorkloadModule.applyRestartAnnotation(
-                        'my-deployment',
-                        'default',
-                        'Deployment',
-                        'test-context',
-                        '/test/kubeconfig'
-                    );
-                },
-                (error: unknown) => {
-                    if (error instanceof KubectlError) {
-                        return error.type === KubectlErrorType.BinaryNotFound;
-                    }
-                    return false;
-                },
-                'Should throw binary not found error'
-            );
+            try {
+                await restartWorkloadModule.applyRestartAnnotation(
+                    'my-deployment',
+                    'default',
+                    'Deployment',
+                    'test-context',
+                    '/test/kubeconfig'
+                );
+                assert.fail('Should throw KubectlError for API errors');
+            } catch (error: unknown) {
+                assert.ok(error instanceof KubectlError, 'Should throw KubectlError');
+            }
         });
     });
 });

@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { TreeItemData } from '../tree/TreeItemTypes';
 import { TreeItemFactory } from '../tree/TreeItemFactory';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import * as k8s from '@kubernetes/client-node';
 
 /**
  * Options for deleting a Kubernetes resource.
@@ -134,15 +134,6 @@ export async function showDeleteConfirmation(
     }
 }
 
-/**
- * Timeout for kubectl delete commands in milliseconds.
- */
-const KUBECTL_TIMEOUT_MS = 30000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
 
 /**
  * Handles kubectl delete errors by parsing stderr and detecting specific error types.
@@ -347,11 +338,11 @@ export interface DeleteResult {
 }
 
 /**
- * Executes kubectl delete command to delete a Kubernetes resource.
+ * Executes delete operation using the Kubernetes API client to delete a Kubernetes resource.
  * Shows progress indication and handles errors appropriately.
  * 
  * @param options - Delete options including resource type, name, namespace, and force flag
- * @param kubeconfigPath - Path to the kubeconfig file
+ * @param kubeconfigPath - Path to the kubeconfig file (unused, kept for backward compatibility)
  * @param contextName - Name of the kubectl context to use
  * @returns Promise resolving to DeleteResult with success status and refresh indication
  */
@@ -372,47 +363,102 @@ export async function executeKubectlDelete(
         },
         async () => {
             try {
-                // Build kubectl command arguments
-                const args: string[] = [
-                    'delete',
-                    options.resourceType.toLowerCase(),
-                    options.resourceName
-                ];
-
-                // Add namespace flag only for namespaced resources
+                // Set context on API client
+                const apiClient = getKubernetesApiClient();
+                apiClient.setContext(contextName);
+                
+                // Prepare delete options body
+                const deleteOptionsBody: k8s.V1DeleteOptions = {
+                    gracePeriodSeconds: options.forceDelete ? 0 : undefined,
+                    propagationPolicy: options.forceDelete ? 'Background' : undefined
+                };
+                
+                // Route to appropriate delete method based on resource type
+                const resourceType = options.resourceType.toLowerCase();
+                
                 if (options.namespace) {
-                    args.push('-n', options.namespace);
-                }
-
-                // Add force delete flags if forceDelete is enabled
-                if (options.forceDelete) {
-                    args.push('--grace-period=0', '--force');
-                }
-
-                // Add cluster context flags
-                // Note: kubectl delete doesn't support --output flag, only -o name is supported
-                // We don't need output for delete operations anyway
-                args.push(
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                );
-
-                // Execute kubectl delete command
-                await execFileAsync(
-                    'kubectl',
-                    args,
-                    {
-                        timeout: KUBECTL_TIMEOUT_MS,
-                        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-                        env: { ...process.env }
+                    // Namespaced resource
+                    const deleteParams = {
+                        name: options.resourceName,
+                        namespace: options.namespace,
+                        body: deleteOptionsBody
+                    };
+                    
+                    switch (resourceType) {
+                        case 'pod':
+                            await apiClient.core.deleteNamespacedPod(deleteParams);
+                            break;
+                        case 'service':
+                            await apiClient.core.deleteNamespacedService(deleteParams);
+                            break;
+                        case 'configmap':
+                            await apiClient.core.deleteNamespacedConfigMap(deleteParams);
+                            break;
+                        case 'secret':
+                            await apiClient.core.deleteNamespacedSecret(deleteParams);
+                            break;
+                        case 'deployment':
+                            await apiClient.apps.deleteNamespacedDeployment(deleteParams);
+                            break;
+                        case 'statefulset':
+                            await apiClient.apps.deleteNamespacedStatefulSet(deleteParams);
+                            break;
+                        case 'daemonset':
+                            await apiClient.apps.deleteNamespacedDaemonSet(deleteParams);
+                            break;
+                        case 'replicaset':
+                            await apiClient.apps.deleteNamespacedReplicaSet(deleteParams);
+                            break;
+                        case 'job':
+                            await apiClient.batch.deleteNamespacedJob(deleteParams);
+                            break;
+                        case 'cronjob':
+                            await apiClient.batch.deleteNamespacedCronJob(deleteParams);
+                            break;
+                        case 'persistentvolumeclaim':
+                            await apiClient.core.deleteNamespacedPersistentVolumeClaim(deleteParams);
+                            break;
+                        default:
+                            throw new Error(`Unsupported namespaced resource type: ${options.resourceType}`);
                     }
-                );
+                } else {
+                    // Cluster-scoped resource
+                    const deleteParams = {
+                        name: options.resourceName,
+                        body: deleteOptionsBody
+                    };
+                    
+                    switch (resourceType) {
+                        case 'node':
+                            await apiClient.core.deleteNode(deleteParams);
+                            break;
+                        case 'namespace':
+                            await apiClient.core.deleteNamespace(deleteParams);
+                            break;
+                        case 'persistentvolume':
+                            await apiClient.core.deletePersistentVolume(deleteParams);
+                            break;
+                        case 'storageclass':
+                            await apiClient.storage.deleteStorageClass(deleteParams);
+                            break;
+                        default:
+                            throw new Error(`Unsupported cluster-scoped resource type: ${options.resourceType}`);
+                    }
+                }
 
                 // Deletion succeeded
                 return { success: true, shouldRefresh: true };
             } catch (error: unknown) {
                 // Handle error using specialized delete error handler
-                const errorResult = handleDeleteError(error, options);
+                // Convert API error to kubectl-like error format for compatibility
+                const apiError = error as { statusCode?: number; code?: number; body?: { message?: string }; message?: string };
+                const kubectlLikeError = {
+                    code: apiError.statusCode || apiError.code,
+                    message: apiError.body?.message || apiError.message || 'Unknown error',
+                    stderr: apiError.body?.message || apiError.message || '',
+                    stdout: ''
+                };
+                const errorResult = handleDeleteError(kubectlLikeError, options);
                 
                 // Get output channel for logging
                 const outputChannel = getDeleteOutputChannel();

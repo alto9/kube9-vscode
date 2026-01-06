@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { GlobalState } from './state/GlobalState';
 import { TutorialWebview } from './webview/TutorialWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
@@ -53,10 +51,6 @@ import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
 
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
 
 /**
  * Global extension context accessible to all components.
@@ -501,7 +495,7 @@ function registerCommands(): void {
     // Register open Operator Health report command
     const openOperatorHealthReportCommand = vscode.commands.registerCommand(
         'kube9.openOperatorHealthReport',
-        async () => {
+        async (contextName?: string) => {
             try {
                 console.log('Opening Operator Health report webview...');
                 
@@ -514,9 +508,11 @@ function registerCommands(): void {
                     return;
                 }
                 
-                // Get current context name
-                const contextInfo = await getContextInfo();
-                const contextName = contextInfo.contextName;
+                // If no context name provided (e.g., called from command palette), use current context
+                if (!contextName) {
+                    const contextInfo = await getContextInfo();
+                    contextName = contextInfo.contextName;
+                }
                 
                 if (!contextName) {
                     vscode.window.showWarningMessage('No cluster context available');
@@ -534,7 +530,7 @@ function registerCommands(): void {
                     contextName
                 );
                 
-                console.log('Opened Operator Health report webview');
+                console.log(`Opened Operator Health report webview for context: ${contextName}`);
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error('Failed to open Operator Health report webview:', errorMessage);
@@ -1444,29 +1440,25 @@ function registerCommands(): void {
                 const nodeName = treeItem.resourceData.resourceName || (treeItem.label as string);
                 const contextName = treeItem.resourceData.context.name;
                 
-                // Get kubeconfig path
-                const treeProvider = getClusterTreeProvider();
-                const kubeconfigPath = treeProvider.getKubeconfigPath();
-                if (!kubeconfigPath) {
-                    vscode.window.showErrorMessage('Kubeconfig path not available');
-                    return;
-                }
-                
-                // Execute kubectl describe node
+                // Fetch node using API client and convert to YAML
                 let describeOutput: string;
                 try {
-                    const { stdout } = await execFileAsync(
-                        'kubectl',
-                        ['describe', 'node', nodeName, `--kubeconfig=${kubeconfigPath}`, `--context=${contextName}`],
-                        {
-                            timeout: 30000,
-                            maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large describe output
-                            env: { ...process.env }
-                        }
-                    );
-                    describeOutput = stdout;
+                    const { getKubernetesApiClient } = await import('./kubernetes/apiClient');
+                    const { default: yaml } = await import('js-yaml');
+                    
+                    const apiClient = getKubernetesApiClient();
+                    apiClient.setContext(contextName);
+                    
+                    const node = await apiClient.core.readNode({ name: nodeName });
+                    
+                    // Convert to YAML format
+                    describeOutput = yaml.dump(node, {
+                        indent: 2,
+                        lineWidth: -1,
+                        noRefs: true
+                    });
                 } catch (error: unknown) {
-                    // kubectl failed - create structured error for detailed handling
+                    // API call failed - create structured error for detailed handling
                     const kubectlError = KubectlError.fromExecError(error, contextName);
                     
                     // Log error details for debugging

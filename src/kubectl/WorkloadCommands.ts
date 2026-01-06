@@ -248,135 +248,8 @@ export interface ScaleResult {
 }
 
 
-/**
- * Interface for kubectl pod response items.
- */
-interface PodItem {
-    metadata?: {
-        name?: string;
-        namespace?: string;
-    };
-    status?: {
-        phase?: string;
-    };
-}
 
-/**
- * Interface for kubectl statefulset response items.
- */
-interface StatefulSetItem {
-    metadata?: {
-        name?: string;
-        namespace?: string;
-    };
-    spec?: {
-        replicas?: number;
-        selector?: {
-            matchLabels?: {
-                [key: string]: string;
-            };
-        };
-    };
-    status?: {
-        readyReplicas?: number;
-        replicas?: number;
-    };
-}
 
-/**
- * Interface for kubectl statefulset list response.
- */
-interface StatefulSetListResponse {
-    items?: StatefulSetItem[];
-}
-
-/**
- * Interface for kubectl daemonset response items.
- */
-interface DaemonSetItem {
-    metadata?: {
-        name?: string;
-        namespace?: string;
-    };
-    spec?: {
-        selector?: {
-            matchLabels?: {
-                [key: string]: string;
-            };
-        };
-    };
-    status?: {
-        desiredNumberScheduled?: number;
-        numberReady?: number;
-    };
-}
-
-/**
- * Interface for kubectl daemonset list response.
- */
-interface DaemonSetListResponse {
-    items?: DaemonSetItem[];
-}
-
-/**
- * Interface for kubectl pod list response.
- */
-interface PodListResponse {
-    items?: PodItem[];
-}
-
-/**
- * Interface for kubectl cronjob response items.
- */
-interface CronJobItem {
-    metadata?: {
-        name?: string;
-        namespace?: string;
-    };
-    spec?: {
-        schedule?: string;
-        suspend?: boolean;
-    };
-    status?: {
-        lastScheduleTime?: string;
-    };
-}
-
-/**
- * Interface for kubectl cronjob list response.
- */
-interface CronJobListResponse {
-    items?: CronJobItem[];
-}
-
-/**
- * Interface for kubectl job response items.
- */
-interface JobItem {
-    metadata?: {
-        name?: string;
-        namespace?: string;
-        ownerReferences?: Array<{
-            kind?: string;
-            name?: string;
-            uid?: string;
-        }>;
-    };
-    spec?: {
-        selector?: {
-            matchLabels?: {
-                [key: string]: string;
-            };
-        };
-    };
-}
-
-/**
- * Interface for kubectl job list response.
- */
-interface JobListResponse {
-    items?: JobItem[];
-}
 
 /**
  * Interface for kubectl deployment response items with creationTimestamp.
@@ -741,10 +614,10 @@ export class WorkloadCommands {
     }
 
     /**
-     * Retrieves the list of statefulsets from all namespaces using kubectl.
-     * Uses kubectl get statefulsets command with JSON output for parsing.
+     * Retrieves the list of statefulsets from all namespaces using the Kubernetes API client.
+     * Uses direct API calls to fetch StatefulSet resources.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @returns StatefulSetsResult with statefulsets array and optional error information
      */
@@ -753,40 +626,32 @@ export class WorkloadCommands {
         contextName: string
     ): Promise<StatefulSetsResult> {
         try {
-            // Build kubectl command arguments
-            // Always use the namespace (either from context or 'default')
-            // kubectl will automatically use the context namespace if set
-            const args = [
-                'get',
-                'statefulsets',
-                '--output=json',
-                `--kubeconfig=${kubeconfigPath}`,
-                `--context=${contextName}`
-            ];
-
-            // Execute kubectl get statefulsets with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                args,
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: StatefulSetListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract statefulset information from the items array
-            const statefulsets: StatefulSetInfo[] = response.items?.map((item: StatefulSetItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const namespace = item.metadata?.namespace || 'default';
-                const replicas = item.spec?.replicas || 0;
-                const readyReplicas = item.status?.readyReplicas || 0;
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = `${contextName}:statefulsets`;
+            const cached = cache.get<StatefulSetInfo[]>(cacheKey);
+            if (cached) {
+                return { statefulsets: cached };
+            }
+            
+            // Fetch from API - get all statefulsets across all namespaces
+            const response = await apiClient.apps.listStatefulSetForAllNamespaces({
+                timeoutSeconds: 10
+            });
+            
+            // Transform k8s.V1StatefulSet[] to StatefulSetInfo[] format
+            const statefulsets: StatefulSetInfo[] = response.items.map(statefulset => {
+                const name = statefulset.metadata?.name || 'Unknown';
+                const namespace = statefulset.metadata?.namespace || 'default';
+                const replicas = statefulset.spec?.replicas || 0;
+                const readyReplicas = statefulset.status?.readyReplicas || 0;
                 
                 // Build label selector from matchLabels
-                const matchLabels = item.spec?.selector?.matchLabels || {};
+                const matchLabels = statefulset.spec?.selector?.matchLabels || {};
                 const selector = Object.entries(matchLabels)
                     .map(([key, value]) => `${key}=${value}`)
                     .join(',');
@@ -798,7 +663,7 @@ export class WorkloadCommands {
                     replicas,
                     selector
                 };
-            }) || [];
+            });
             
             // Sort statefulsets by namespace, then by name
             statefulsets.sort((a, b) => {
@@ -806,9 +671,12 @@ export class WorkloadCommands {
                 return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
             });
             
+            // Cache result
+            cache.set(cacheKey, statefulsets, CACHE_TTL.DEPLOYMENTS); // Use same TTL as deployments
+            
             return { statefulsets };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
@@ -822,10 +690,10 @@ export class WorkloadCommands {
     }
 
     /**
-     * Retrieves the list of pods for a specific statefulset using kubectl.
+     * Retrieves the list of pods for a specific statefulset using the Kubernetes API client.
      * Uses label selector to find pods belonging to the statefulset.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @param statefulsetName Name of the statefulset
      * @param namespace Namespace of the statefulset
@@ -845,49 +713,36 @@ export class WorkloadCommands {
                 return { pods: [] };
             }
 
-            // Execute kubectl get pods with label selector
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'pods',
-                    '-n',
-                    namespace,
-                    '--selector',
-                    labelSelector,
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: PodListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract pod information from the items array
-            const pods: PodInfo[] = response.items?.map((item: PodItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const podNamespace = item.metadata?.namespace || namespace;
-                const phase = item.status?.phase || 'Unknown';
+            // Use fetchPods helper with label selector
+            const v1Pods = await fetchPods({
+                namespace,
+                labelSelector,
+                timeout: 10
+            });
+            
+            // Transform k8s.V1Pod[] to PodInfo[] format
+            const pods: PodInfo[] = v1Pods.map(pod => {
+                const name = pod.metadata?.name || 'Unknown';
+                const podNamespace = pod.metadata?.namespace || namespace;
+                const phase = pod.status?.phase || 'Unknown';
                 
                 return {
                     name,
                     namespace: podNamespace,
                     phase
                 };
-            }) || [];
+            });
             
             // Sort pods alphabetically by name
             pods.sort((a, b) => a.name.localeCompare(b.name));
             
             return { pods };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
@@ -978,10 +833,10 @@ export class WorkloadCommands {
     }
 
     /**
-     * Retrieves the list of daemonsets from all namespaces using kubectl.
-     * Uses kubectl get daemonsets command with JSON output for parsing.
+     * Retrieves the list of daemonsets from all namespaces using the Kubernetes API client.
+     * Uses direct API calls to fetch DaemonSet resources.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @returns DaemonSetsResult with daemonsets array and optional error information
      */
@@ -990,40 +845,32 @@ export class WorkloadCommands {
         contextName: string
     ): Promise<DaemonSetsResult> {
         try {
-            // Build kubectl command arguments
-            // Always use the namespace (either from context or 'default')
-            // kubectl will automatically use the context namespace if set
-            const args = [
-                'get',
-                'daemonsets',
-                '--output=json',
-                `--kubeconfig=${kubeconfigPath}`,
-                `--context=${contextName}`
-            ];
-
-            // Execute kubectl get daemonsets with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                args,
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: DaemonSetListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract daemonset information from the items array
-            const daemonsets: DaemonSetInfo[] = response.items?.map((item: DaemonSetItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const namespace = item.metadata?.namespace || 'default';
-                const desiredNodes = item.status?.desiredNumberScheduled || 0;
-                const readyNodes = item.status?.numberReady || 0;
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = `${contextName}:daemonsets`;
+            const cached = cache.get<DaemonSetInfo[]>(cacheKey);
+            if (cached) {
+                return { daemonsets: cached };
+            }
+            
+            // Fetch from API - get all daemonsets across all namespaces
+            const response = await apiClient.apps.listDaemonSetForAllNamespaces({
+                timeoutSeconds: 10
+            });
+            
+            // Transform k8s.V1DaemonSet[] to DaemonSetInfo[] format
+            const daemonsets: DaemonSetInfo[] = response.items.map(daemonset => {
+                const name = daemonset.metadata?.name || 'Unknown';
+                const namespace = daemonset.metadata?.namespace || 'default';
+                const desiredNodes = daemonset.status?.desiredNumberScheduled || 0;
+                const readyNodes = daemonset.status?.numberReady || 0;
                 
                 // Build label selector from matchLabels
-                const matchLabels = item.spec?.selector?.matchLabels || {};
+                const matchLabels = daemonset.spec?.selector?.matchLabels || {};
                 const selector = Object.entries(matchLabels)
                     .map(([key, value]) => `${key}=${value}`)
                     .join(',');
@@ -1035,7 +882,7 @@ export class WorkloadCommands {
                     desiredNodes,
                     selector
                 };
-            }) || [];
+            });
             
             // Sort daemonsets by namespace, then by name
             daemonsets.sort((a, b) => {
@@ -1043,9 +890,12 @@ export class WorkloadCommands {
                 return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
             });
             
+            // Cache result
+            cache.set(cacheKey, daemonsets, CACHE_TTL.DEPLOYMENTS); // Use same TTL as deployments
+            
             return { daemonsets };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
@@ -1059,10 +909,10 @@ export class WorkloadCommands {
     }
 
     /**
-     * Retrieves the list of pods for a specific daemonset using kubectl.
+     * Retrieves the list of pods for a specific daemonset using the Kubernetes API client.
      * Uses label selector to find pods belonging to the daemonset.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @param daemonsetName Name of the daemonset
      * @param namespace Namespace of the daemonset
@@ -1082,49 +932,36 @@ export class WorkloadCommands {
                 return { pods: [] };
             }
 
-            // Execute kubectl get pods with label selector
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'pods',
-                    '-n',
-                    namespace,
-                    '--selector',
-                    labelSelector,
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: PodListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract pod information from the items array
-            const pods: PodInfo[] = response.items?.map((item: PodItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const podNamespace = item.metadata?.namespace || namespace;
-                const phase = item.status?.phase || 'Unknown';
+            // Use fetchPods helper with label selector
+            const v1Pods = await fetchPods({
+                namespace,
+                labelSelector,
+                timeout: 10
+            });
+            
+            // Transform k8s.V1Pod[] to PodInfo[] format
+            const pods: PodInfo[] = v1Pods.map(pod => {
+                const name = pod.metadata?.name || 'Unknown';
+                const podNamespace = pod.metadata?.namespace || namespace;
+                const phase = pod.status?.phase || 'Unknown';
                 
                 return {
                     name,
                     namespace: podNamespace,
                     phase
                 };
-            }) || [];
+            });
             
             // Sort pods alphabetically by name
             pods.sort((a, b) => a.name.localeCompare(b.name));
             
             return { pods };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
@@ -1138,10 +975,10 @@ export class WorkloadCommands {
     }
 
     /**
-     * Retrieves the list of cronjobs from all namespaces using kubectl.
-     * Uses kubectl get cronjobs command with JSON output for parsing.
+     * Retrieves the list of cronjobs from all namespaces using the Kubernetes API client.
+     * Uses direct API calls to fetch CronJob resources.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @returns CronJobsResult with cronjobs array and optional error information
      */
@@ -1150,47 +987,39 @@ export class WorkloadCommands {
         contextName: string
     ): Promise<CronJobsResult> {
         try {
-            // Build kubectl command arguments
-            // Always use the namespace (either from context or 'default')
-            // kubectl will automatically use the context namespace if set
-            const args = [
-                'get',
-                'cronjobs',
-                '--output=json',
-                `--kubeconfig=${kubeconfigPath}`,
-                `--context=${contextName}`
-            ];
-
-            // Execute kubectl get cronjobs with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                args,
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: CronJobListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract cronjob information from the items array
-            const cronjobs: CronJobInfo[] = response.items?.map((item: CronJobItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const namespace = item.metadata?.namespace || 'default';
-                const schedule = item.spec?.schedule || 'Unknown';
-                const suspended = item.spec?.suspend || false;
-                const lastScheduleTime = item.status?.lastScheduleTime;
+            // Check cache first
+            const cache = getResourceCache();
+            const cacheKey = `${contextName}:cronjobs`;
+            const cached = cache.get<CronJobInfo[]>(cacheKey);
+            if (cached) {
+                return { cronjobs: cached };
+            }
+            
+            // Fetch from API - get all cronjobs across all namespaces
+            const response = await apiClient.batch.listCronJobForAllNamespaces({
+                timeoutSeconds: 10
+            });
+            
+            // Transform k8s.V1CronJob[] to CronJobInfo[] format
+            const cronjobs: CronJobInfo[] = response.items.map(cronjob => {
+                const name = cronjob.metadata?.name || 'Unknown';
+                const namespace = cronjob.metadata?.namespace || 'default';
+                const schedule = cronjob.spec?.schedule || 'Unknown';
+                const suspended = cronjob.spec?.suspend || false;
+                const lastScheduleTime = cronjob.status?.lastScheduleTime;
                 
                 return {
                     name,
                     namespace,
                     schedule,
                     suspended,
-                    lastScheduleTime
+                    lastScheduleTime: lastScheduleTime ? new Date(lastScheduleTime).toISOString() : undefined
                 };
-            }) || [];
+            });
             
             // Sort cronjobs by namespace, then by name
             cronjobs.sort((a, b) => {
@@ -1198,9 +1027,12 @@ export class WorkloadCommands {
                 return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
             });
             
+            // Cache result
+            cache.set(cacheKey, cronjobs, CACHE_TTL.DEPLOYMENTS); // Use same TTL as deployments
+            
             return { cronjobs };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
@@ -1214,10 +1046,10 @@ export class WorkloadCommands {
     }
 
     /**
-     * Retrieves the list of jobs owned by a specific cronjob using kubectl.
+     * Retrieves the list of jobs owned by a specific cronjob using the Kubernetes API client.
      * Queries all jobs in the namespace and filters by owner reference.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @param cronjobName Name of the cronjob
      * @param namespace Namespace of the cronjob
@@ -1230,57 +1062,47 @@ export class WorkloadCommands {
         namespace: string
     ): Promise<JobsResult> {
         try {
-            // Execute kubectl get jobs in the namespace
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'jobs',
-                    '-n',
-                    namespace,
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: JobListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch all jobs in the namespace
+            const response = await apiClient.batch.listNamespacedJob({
+                namespace,
+                timeoutSeconds: 10
+            });
             
             // Filter jobs that are owned by this cronjob
-            const jobs: JobInfo[] = response.items?.filter((item: JobItem) => {
-                const ownerRefs = item.metadata?.ownerReferences || [];
-                return ownerRefs.some(ref => 
-                    ref.kind === 'CronJob' && ref.name === cronjobName
-                );
-            }).map((item: JobItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const jobNamespace = item.metadata?.namespace || namespace;
-                
-                // Build label selector from matchLabels
-                const matchLabels = item.spec?.selector?.matchLabels || {};
-                const selector = Object.entries(matchLabels)
-                    .map(([key, value]) => `${key}=${value}`)
-                    .join(',');
-                
-                return {
-                    name,
-                    namespace: jobNamespace,
-                    selector
-                };
-            }) || [];
+            const jobs: JobInfo[] = response.items
+                .filter(job => {
+                    const ownerRefs = job.metadata?.ownerReferences || [];
+                    return ownerRefs.some(ref => 
+                        ref.kind === 'CronJob' && ref.name === cronjobName
+                    );
+                })
+                .map(job => {
+                    const name = job.metadata?.name || 'Unknown';
+                    const jobNamespace = job.metadata?.namespace || namespace;
+                    
+                    // Build label selector from matchLabels
+                    const matchLabels = job.spec?.selector?.matchLabels || {};
+                    const selector = Object.entries(matchLabels)
+                        .map(([key, value]) => `${key}=${value}`)
+                        .join(',');
+                    
+                    return {
+                        name,
+                        namespace: jobNamespace,
+                        selector
+                    };
+                });
             
             // Sort jobs alphabetically by name
             jobs.sort((a, b) => a.name.localeCompare(b.name));
             
             return { jobs };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
@@ -1294,10 +1116,10 @@ export class WorkloadCommands {
     }
 
     /**
-     * Retrieves the list of pods for a specific job using kubectl.
+     * Retrieves the list of pods for a specific job using the Kubernetes API client.
      * Uses label selector to find pods belonging to the job.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @param jobName Name of the job
      * @param namespace Namespace of the job
@@ -1317,49 +1139,36 @@ export class WorkloadCommands {
                 return { pods: [] };
             }
 
-            // Execute kubectl get pods with label selector
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'pods',
-                    '-n',
-                    namespace,
-                    '--selector',
-                    labelSelector,
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: PodListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Extract pod information from the items array
-            const pods: PodInfo[] = response.items?.map((item: PodItem) => {
-                const name = item.metadata?.name || 'Unknown';
-                const podNamespace = item.metadata?.namespace || namespace;
-                const phase = item.status?.phase || 'Unknown';
+            // Use fetchPods helper with label selector
+            const v1Pods = await fetchPods({
+                namespace,
+                labelSelector,
+                timeout: 10
+            });
+            
+            // Transform k8s.V1Pod[] to PodInfo[] format
+            const pods: PodInfo[] = v1Pods.map(pod => {
+                const name = pod.metadata?.name || 'Unknown';
+                const podNamespace = pod.metadata?.namespace || namespace;
+                const phase = pod.status?.phase || 'Unknown';
                 
                 return {
                     name,
                     namespace: podNamespace,
                     phase
                 };
-            }) || [];
+            });
             
             // Sort pods alphabetically by name
             pods.sort((a, b) => a.name.localeCompare(b.name));
             
             return { pods };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
@@ -1761,9 +1570,10 @@ export class WorkloadCommands {
     }
 
     /**
-     * Scales a workload to a specified replica count using kubectl scale command.
+     * Scales a workload to a specified replica count using the Kubernetes API client.
+     * Uses patch API to update the replica count.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @param kind The workload kind (Deployment, StatefulSet, or ReplicaSet)
      * @param name Name of the workload
@@ -1780,35 +1590,44 @@ export class WorkloadCommands {
         replicas: number
     ): Promise<ScaleResult> {
         try {
-            // Convert kind to lowercase for kubectl command
-            const kindLower = kind.toLowerCase();
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // Build kubectl scale command arguments
-            const args = [
-                'scale',
-                `${kindLower}/${name}`,
-                `--replicas=${replicas}`,
-                '-n',
-                namespace,
-                `--kubeconfig=${kubeconfigPath}`,
-                `--context=${contextName}`
-            ];
-
-            // Execute kubectl scale command
-            await execFileAsync(
-                'kubectl',
-                args,
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer
-                    env: { ...process.env }
+            // Prepare patch body with replicas update
+            const patchBody = {
+                spec: {
+                    replicas: replicas
                 }
-            );
+            };
+            
+            // Use appropriate API based on workload kind
+            if (kind === 'Deployment') {
+                await apiClient.apps.patchNamespacedDeployment({
+                    name,
+                    namespace,
+                    body: patchBody
+                });
+            } else if (kind === 'StatefulSet') {
+                await apiClient.apps.patchNamespacedStatefulSet({
+                    name,
+                    namespace,
+                    body: patchBody
+                });
+            } else if (kind === 'ReplicaSet') {
+                await apiClient.apps.patchNamespacedReplicaSet({
+                    name,
+                    namespace,
+                    body: patchBody
+                });
+            } else {
+                throw new Error(`Unsupported workload kind: ${kind}`);
+            }
 
             // Scale operation succeeded
             return { success: true };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging

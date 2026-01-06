@@ -1,19 +1,9 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { getClusterTreeProvider } from '../extension';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 
-/**
- * Timeout for kubectl commands in milliseconds.
- */
-const KUBECTL_TIMEOUT_MS = 30000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
 
 /**
  * Interface for Kubernetes pod status response from kubectl get pod.
@@ -30,47 +20,54 @@ interface PodStatusResponse {
 }
 
 /**
- * Queries the status of a Kubernetes pod using kubectl.
+ * Queries the status of a Kubernetes pod using the Kubernetes API client.
  * Verifies the pod exists and extracts its status and container information.
  * 
  * @param podName - The name of the pod to query
  * @param namespace - The namespace containing the pod
  * @param contextName - The kubectl context name
- * @param kubeconfigPath - The path to the kubeconfig file
+ * @param kubeconfigPath - The path to the kubeconfig file (unused, kept for backward compatibility)
  * @returns PodStatusResponse with pod status and container information
- * @throws {KubectlError} If kubectl command fails or pod not found
+ * @throws {KubectlError} If API call fails or pod not found
  */
 async function queryPodStatus(
     podName: string,
     namespace: string,
     contextName: string,
-    kubeconfigPath: string
+    _kubeconfigPath: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<PodStatusResponse> {
-    // Build kubectl command arguments
-    const args = [
-        'get',
-        'pod',
-        podName,
-        `--namespace=${namespace}`,
-        '--output=json',
-        `--kubeconfig=${kubeconfigPath}`,
-        `--context=${contextName}`
-    ];
-
     try {
-        // Execute kubectl get pod command
-        const { stdout } = await execFileAsync(
-            'kubectl',
-            args,
-            {
-                timeout: KUBECTL_TIMEOUT_MS,
-                maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                env: { ...process.env }
+        // Set context on API client
+        const apiClient = getKubernetesApiClient();
+        apiClient.setContext(contextName);
+        
+        // Fetch pod from API
+        const pod = await apiClient.core.readNamespacedPod({
+            name: podName,
+            namespace
+        });
+        
+        // Transform k8s.V1Pod to PodStatusResponse format
+        const response: PodStatusResponse = {
+            metadata: {
+                name: pod.metadata?.name || podName,
+                namespace: pod.metadata?.namespace || namespace
+            },
+            spec: {
+                containers: (pod.spec?.containers || []).map(container => ({
+                    name: container.name || '',
+                    image: container.image || ''
+                })),
+                initContainers: (pod.spec?.initContainers || []).map(container => ({
+                    name: container.name || '',
+                    image: container.image || ''
+                }))
+            },
+            status: {
+                phase: (pod.status?.phase as PodStatusResponse['status']['phase']) || 'Unknown'
             }
-        );
-
-        // Parse the JSON response
-        const response: PodStatusResponse = JSON.parse(stdout);
+        };
+        
         return response;
     } catch (error: unknown) {
         // Create structured error for detailed handling

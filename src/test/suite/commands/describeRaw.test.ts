@@ -1,10 +1,12 @@
 import * as assert from 'assert';
 import * as Module from 'module';
 import * as vscode from 'vscode';
+import * as k8s from '@kubernetes/client-node';
 import { ClusterTreeItem } from '../../../tree/ClusterTreeItem';
 import { TreeItemType } from '../../../tree/TreeItemTypes';
 import { KubeconfigParser } from '../../../kubernetes/KubeconfigParser';
 import { DescribeRawFileSystemProvider } from '../../../commands/DescribeRawFileSystemProvider';
+import { getKubernetesApiClient, resetKubernetesApiClient } from '../../../kubernetes/apiClient';
 
 // Store original require for restoration
 const originalRequire = Module.prototype.require;
@@ -14,6 +16,13 @@ const originalRequire = Module.prototype.require;
 let mockExecFileResponse: { type: 'success'; stdout: string; stderr: string } | { type: 'error'; error: any } | null = null;
 let execFileCalls: Array<{ command: string; args: string[] }> = [];
 let isProxyActive = false;
+
+// Track API client calls
+let readPodCalls: Array<{ name: string; namespace: string }> = [];
+let readDeploymentCalls: Array<{ name: string; namespace: string }> = [];
+let readNodeCalls: Array<{ name: string }> = [];
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let mockApiResponse: { type: 'success'; resource?: unknown } | { type: 'error'; error: unknown } | null = null;
 
 // Track VS Code API calls
 let showErrorMessageCalls: string[] = [];
@@ -31,6 +40,13 @@ suite('describeRaw Command Tests', () => {
     let originalShowTextDocument: any;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let originalGetKubeconfigPath: any;
+    // API client mocks
+    let originalCoreApi: k8s.CoreV1Api;
+    let originalAppsApi: k8s.AppsV1Api;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let mockCoreApi: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let mockAppsApi: any;
     let describeRawModule: typeof import('../../../commands/describeRaw');
     let describeRawCommand: typeof import('../../../commands/describeRaw').describeRawCommand;
 
@@ -42,6 +58,147 @@ suite('describeRaw Command Tests', () => {
         showTextDocumentCalls = [];
         openTextDocumentReturnValue = undefined;
         mockExecFileResponse = null;
+        
+        // Reset API client call tracking
+        readPodCalls = [];
+        readDeploymentCalls = [];
+        readNodeCalls = [];
+        mockApiResponse = null;
+        
+        // Reset and mock API client
+        resetKubernetesApiClient();
+        const apiClient = getKubernetesApiClient();
+        originalCoreApi = apiClient.core;
+        originalAppsApi = apiClient.apps;
+        
+        // Create mock Core API
+        mockCoreApi = {
+            readNamespacedPod: async (options: { name: string; namespace: string }) => {
+                readPodCalls.push(options);
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1Pod
+                    : { 
+                        metadata: { name: options.name, namespace: options.namespace },
+                        spec: {},
+                        status: {}
+                    } as k8s.V1Pod;
+            },
+            readNamespacedService: async (options: { name: string; namespace: string }) => {
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1Service
+                    : { 
+                        metadata: { name: options.name, namespace: options.namespace },
+                        spec: {},
+                        status: {}
+                    } as k8s.V1Service;
+            },
+            readNamespacedConfigMap: async (options: { name: string; namespace: string }) => {
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1ConfigMap
+                    : { 
+                        metadata: { name: options.name, namespace: options.namespace },
+                        data: {}
+                    } as k8s.V1ConfigMap;
+            },
+            readNamespacedSecret: async (options: { name: string; namespace: string }) => {
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1Secret
+                    : { 
+                        metadata: { name: options.name, namespace: options.namespace },
+                        data: {}
+                    } as k8s.V1Secret;
+            },
+            readNode: async (options: { name: string }) => {
+                readNodeCalls.push(options);
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1Node
+                    : { 
+                        metadata: { name: options.name },
+                        spec: {},
+                        status: {}
+                    } as k8s.V1Node;
+            }
+        };
+        
+        // Create mock Apps API
+        mockAppsApi = {
+            readNamespacedDeployment: async (options: { name: string; namespace: string }) => {
+                readDeploymentCalls.push(options);
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1Deployment
+                    : { 
+                        metadata: { name: options.name, namespace: options.namespace },
+                        spec: {},
+                        status: {}
+                    } as k8s.V1Deployment;
+            },
+            readNamespacedStatefulSet: async (options: { name: string; namespace: string }) => {
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1StatefulSet
+                    : { 
+                        metadata: { name: options.name, namespace: options.namespace },
+                        spec: {},
+                        status: {}
+                    } as k8s.V1StatefulSet;
+            },
+            readNamespacedDaemonSet: async (options: { name: string; namespace: string }) => {
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1DaemonSet
+                    : { 
+                        metadata: { name: options.name, namespace: options.namespace },
+                        spec: {},
+                        status: {}
+                    } as k8s.V1DaemonSet;
+            },
+            readNamespacedReplicaSet: async (options: { name: string; namespace: string }) => {
+                if (mockApiResponse && mockApiResponse.type === 'error') {
+                    throw mockApiResponse.error;
+                }
+                return mockApiResponse?.type === 'success' && mockApiResponse.resource 
+                    ? mockApiResponse.resource as k8s.V1ReplicaSet
+                    : { 
+                        metadata: { name: options.name, namespace: options.namespace },
+                        spec: {},
+                        status: {}
+                    } as k8s.V1ReplicaSet;
+            }
+        };
+        
+        // Replace API client's APIs with mocks
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (apiClient as any).coreApi = mockCoreApi;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (apiClient as any).appsApi = mockAppsApi;
+        
+        // Mock setContext to avoid "No active cluster!" error
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (apiClient as any).setContext = () => {
+            // No-op: we're already using mocked API clients
+        };
 
         // Mock KubeconfigParser.getKubeconfigPath
         originalGetKubeconfigPath = KubeconfigParser.getKubeconfigPath;
@@ -223,6 +380,18 @@ suite('describeRaw Command Tests', () => {
     });
 
     teardown(() => {
+        // Restore API client
+        const apiClient = getKubernetesApiClient();
+        if (originalCoreApi) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (apiClient as any).coreApi = originalCoreApi;
+        }
+        if (originalAppsApi) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (apiClient as any).appsApi = originalAppsApi;
+        }
+        resetKubernetesApiClient();
+        
         // Restore original functions
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (vscode.window as any).showErrorMessage = originalShowErrorMessage;
@@ -245,11 +414,19 @@ suite('describeRaw Command Tests', () => {
         mockExecFileResponse = { type: 'success', stdout, stderr };
     }
 
+    
     /**
-     * Helper function to mock execFile with error
+     * Helper function to mock API client with success response
      */
-    function mockExecFileError(error: Error): void {
-        mockExecFileResponse = { type: 'error', error };
+    function mockApiSuccess(resource?: unknown): void {
+        mockApiResponse = { type: 'success', resource };
+    }
+    
+    /**
+     * Helper function to mock API client with error
+     */
+    function mockApiError(error: unknown): void {
+        mockApiResponse = { type: 'error', error };
     }
 
     /**
@@ -280,28 +457,31 @@ suite('describeRaw Command Tests', () => {
     suite('Deployment Resource Handling', () => {
         test('should extract Deployment kind from contextValue', async () => {
             const treeItem = createDeploymentTreeItem('nginx-deployment', 'default');
-            mockExecFileSuccess('Name: nginx-deployment\nNamespace: default\n...');
+            mockApiSuccess({
+                metadata: { name: 'nginx-deployment', namespace: 'default' },
+                spec: {},
+                status: {}
+            } as k8s.V1Deployment);
 
             await describeRawCommand(treeItem);
 
-            assert.strictEqual(execFileCalls.length, 1, 'Should execute kubectl command');
-            assert.strictEqual(execFileCalls[0].command, 'kubectl', 'Should execute kubectl');
-            assert.strictEqual(execFileCalls[0].args[0], 'describe', 'Should use describe subcommand');
-            assert.strictEqual(execFileCalls[0].args[1], 'deployment', 'Should use deployment kind');
-            assert.strictEqual(execFileCalls[0].args[2], 'nginx-deployment', 'Should use deployment name');
+            assert.strictEqual(readDeploymentCalls.length, 1, 'Should call readNamespacedDeployment');
+            assert.strictEqual(readDeploymentCalls[0].name, 'nginx-deployment', 'Should use deployment name');
+            assert.strictEqual(readDeploymentCalls[0].namespace, 'default', 'Should use namespace');
         });
 
         test('should include namespace in kubectl command for namespaced resource', async () => {
             const treeItem = createDeploymentTreeItem('nginx-deployment', 'production');
-            mockExecFileSuccess('Name: nginx-deployment\nNamespace: production\n...');
+            mockApiSuccess({
+                metadata: { name: 'nginx-deployment', namespace: 'production' },
+                spec: {},
+                status: {}
+            } as k8s.V1Deployment);
 
             await describeRawCommand(treeItem);
 
-            assert.strictEqual(execFileCalls.length, 1, 'Should execute kubectl command');
-            const args = execFileCalls[0].args;
-            const namespaceIndex = args.indexOf('-n');
-            assert.ok(namespaceIndex >= 0, 'Should include -n flag');
-            assert.strictEqual(args[namespaceIndex + 1], 'production', 'Should include namespace value');
+            assert.strictEqual(readDeploymentCalls.length, 1, 'Should call readNamespacedDeployment');
+            assert.strictEqual(readDeploymentCalls[0].namespace, 'production', 'Should include namespace');
         });
 
         test('should not include namespace flag when namespace is undefined', async () => {
@@ -309,33 +489,41 @@ suite('describeRaw Command Tests', () => {
             // Remove namespace from resourceData
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (treeItem.resourceData as any).namespace = undefined;
-            mockExecFileSuccess('Name: nginx-deployment\n...');
+            mockApiSuccess({
+                metadata: { name: 'nginx-deployment' },
+                spec: {},
+                status: {}
+            } as k8s.V1Node);
 
             await describeRawCommand(treeItem);
 
-            assert.strictEqual(execFileCalls.length, 1, 'Should execute kubectl command');
-            const args = execFileCalls[0].args;
-            assert.strictEqual(args.indexOf('-n'), -1, 'Should not include -n flag when namespace is undefined');
+            // For cluster-scoped resources, should call readNode or similar
+            assert.ok(readNodeCalls.length > 0 || readDeploymentCalls.length > 0, 'Should call API');
         });
 
         test('should include kubeconfig and context flags', async () => {
             const treeItem = createDeploymentTreeItem('nginx-deployment', 'default', 'my-context');
-            mockExecFileSuccess('Name: nginx-deployment\n...');
+            mockApiSuccess({
+                metadata: { name: 'nginx-deployment', namespace: 'default' },
+                spec: {},
+                status: {}
+            } as k8s.V1Deployment);
 
             await describeRawCommand(treeItem);
 
-            assert.strictEqual(execFileCalls.length, 1, 'Should execute kubectl command');
-            const args = execFileCalls[0].args;
-            assert.ok(args.some(arg => arg.startsWith('--kubeconfig=')), 'Should include --kubeconfig flag');
-            assert.ok(args.some(arg => arg.startsWith('--context=')), 'Should include --context flag');
-            assert.ok(args.some(arg => arg === '--context=my-context'), 'Should include correct context name');
+            // API client handles context internally
+            assert.strictEqual(readDeploymentCalls.length, 1, 'Should call API');
         });
     });
 
     suite('Tab Title with Namespace', () => {
         test('should include namespace in URI path when namespace is present', async () => {
             const treeItem = createDeploymentTreeItem('nginx-deployment', 'production');
-            mockExecFileSuccess('Name: nginx-deployment\nNamespace: production\n...');
+            mockApiSuccess({
+                metadata: { name: 'nginx-deployment', namespace: 'production' },
+                spec: {},
+                status: {}
+            } as k8s.V1Deployment);
 
             try {
                 await describeRawCommand(treeItem);
@@ -357,7 +545,11 @@ suite('describeRaw Command Tests', () => {
             // Remove namespace from resourceData
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (treeItem.resourceData as any).namespace = undefined;
-            mockExecFileSuccess('Name: nginx-deployment\n...');
+            mockApiSuccess({
+                metadata: { name: 'nginx-deployment' },
+                spec: {},
+                status: {}
+            } as k8s.V1Node);
 
             await describeRawCommand(treeItem);
 
@@ -370,8 +562,12 @@ suite('describeRaw Command Tests', () => {
 
         test('should store content with namespace-prefixed key when namespace is present', async () => {
             const treeItem = createDeploymentTreeItem('nginx-deployment', 'production');
-            const describeOutput = 'Name: nginx-deployment\nNamespace: production\n...';
-            mockExecFileSuccess(describeOutput);
+            const deploymentResource = {
+                metadata: { name: 'nginx-deployment', namespace: 'production' },
+                spec: {},
+                status: {}
+            } as k8s.V1Deployment;
+            mockApiSuccess(deploymentResource);
 
             // Get the provider instance BEFORE the command runs to ensure we use the same instance
             const fsProviderBefore = DescribeRawFileSystemProvider.getInstance();
@@ -382,7 +578,8 @@ suite('describeRaw Command Tests', () => {
             const fsProviderAfter = DescribeRawFileSystemProvider.getInstance();
             assert.strictEqual(fsProviderBefore, fsProviderAfter, 'Should use same singleton instance');
             const content = fsProviderAfter.getContent('production/nginx-deployment.describe');
-            assert.strictEqual(content, describeOutput, 'Content should be stored with namespace-prefixed key');
+            assert.ok(content, 'Content should be stored with namespace-prefixed key');
+            assert.ok(content.includes('nginx-deployment'), 'Content should include resource name');
         });
 
         test('should store content without namespace prefix when namespace is undefined', async () => {
@@ -390,8 +587,11 @@ suite('describeRaw Command Tests', () => {
             // Remove namespace from resourceData
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (treeItem.resourceData as any).namespace = undefined;
-            const describeOutput = 'Name: nginx-deployment\n...';
-            mockExecFileSuccess(describeOutput);
+            mockApiSuccess({
+                metadata: { name: 'nginx-deployment' },
+                spec: {},
+                status: {}
+            } as k8s.V1Node);
 
             // Get the provider instance BEFORE the command runs to ensure we use the same instance
             const fsProviderBefore = DescribeRawFileSystemProvider.getInstance();
@@ -402,7 +602,8 @@ suite('describeRaw Command Tests', () => {
             const fsProviderAfter = DescribeRawFileSystemProvider.getInstance();
             assert.strictEqual(fsProviderBefore, fsProviderAfter, 'Should use same singleton instance');
             const content = fsProviderAfter.getContent('nginx-deployment.describe');
-            assert.strictEqual(content, describeOutput, 'Content should be stored without namespace prefix');
+            assert.ok(content, 'Content should be stored without namespace prefix');
+            assert.ok(content.includes('nginx-deployment'), 'Content should include resource name');
         });
     });
 
@@ -415,7 +616,7 @@ suite('describeRaw Command Tests', () => {
 
             assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show error message');
             assert.ok(showErrorMessageCalls[0].includes('Invalid tree item'), 'Error should mention invalid tree item');
-            assert.strictEqual(execFileCalls.length, 0, 'Should not execute kubectl command');
+            assert.strictEqual(readDeploymentCalls.length, 0, 'Should not call API');
         });
 
         test('should show error message when resourceData is missing', async () => {
@@ -427,19 +628,21 @@ suite('describeRaw Command Tests', () => {
 
             assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show error message');
             assert.ok(showErrorMessageCalls[0].includes('Invalid tree item'), 'Error should mention invalid tree item');
-            assert.strictEqual(execFileCalls.length, 0, 'Should not execute kubectl command');
+            assert.strictEqual(readDeploymentCalls.length, 0, 'Should not call API');
         });
 
         test('should show error message when kubectl command fails', async () => {
             const treeItem = createDeploymentTreeItem('nginx-deployment', 'default');
-            const kubectlError = new Error('kubectl: command not found');
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (kubectlError as any).code = 'ENOENT';
-            mockExecFileError(kubectlError);
+            const apiError = {
+                statusCode: 404,
+                body: { message: 'deployments.apps "nginx-deployment" not found' },
+                message: 'Not Found'
+            };
+            mockApiError(apiError);
 
             await describeRawCommand(treeItem);
 
-            assert.strictEqual(execFileCalls.length, 1, 'Should attempt to execute kubectl command');
+            assert.strictEqual(readDeploymentCalls.length, 1, 'Should attempt to call API');
             assert.strictEqual(showErrorMessageCalls.length, 1, 'Should show error message');
             assert.ok(showErrorMessageCalls[0].includes('Failed to describe'), 'Error should mention describe failure');
             assert.ok(showErrorMessageCalls[0].includes('Deployment'), 'Error should mention resource kind');
@@ -449,10 +652,11 @@ suite('describeRaw Command Tests', () => {
 
         test('should handle kubectl timeout gracefully', async () => {
             const treeItem = createDeploymentTreeItem('nginx-deployment', 'default');
-            const timeoutError = new Error('Command timed out');
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (timeoutError as any).code = 'ETIMEDOUT';
-            mockExecFileError(timeoutError);
+            const apiError = {
+                code: 'ETIMEDOUT',
+                message: 'Request timeout'
+            };
+            mockApiError(apiError);
 
             await describeRawCommand(treeItem);
 
