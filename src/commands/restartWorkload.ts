@@ -1,17 +1,7 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 
-/**
- * Timeout for kubectl patch commands in milliseconds.
- */
-const KUBECTL_TIMEOUT_MS = 30000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
 
 /**
  * Result of restart confirmation dialog.
@@ -70,45 +60,24 @@ export async function showRestartConfirmationDialog(
     }
 }
 
-/**
- * Maps Kubernetes resource kind to kubectl resource name.
- * 
- * @param kind - The Kubernetes resource kind (e.g., "Deployment", "StatefulSet")
- * @returns The kubectl resource name (e.g., "deployment", "statefulset")
- */
-function getKubectlResourceName(kind: string): string {
-    const kindMap: { [key: string]: string } = {
-        'Deployment': 'deployment',
-        'StatefulSet': 'statefulset',
-        'DaemonSet': 'daemonset'
-    };
-    
-    const resourceName = kindMap[kind];
-    if (!resourceName) {
-        throw new Error(`Unsupported workload kind: ${kind}`);
-    }
-    
-    return resourceName;
-}
 
 /**
  * Applies the restart annotation to a Kubernetes workload resource.
- * Uses kubectl patch with JSON Patch format to add/update the restart annotation.
- * If the annotations object doesn't exist, it will be created first.
+ * Uses the Kubernetes API client to patch the resource with the restart annotation.
  * 
  * @param name - The name of the workload resource
  * @param namespace - The namespace containing the resource (undefined for cluster-scoped)
  * @param kind - The Kubernetes resource kind (Deployment, StatefulSet, or DaemonSet)
  * @param contextName - The kubectl context name
- * @param kubeconfigPath - The path to the kubeconfig file
- * @throws {KubectlError} If kubectl patch command fails
+ * @param kubeconfigPath - The path to the kubeconfig file (unused, kept for backward compatibility)
+ * @throws {KubectlError} If API patch operation fails
  */
 export async function applyRestartAnnotation(
     name: string,
     namespace: string | undefined,
     kind: string,
     contextName: string,
-    kubeconfigPath: string
+    _kubeconfigPath: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<void> {
     // Generate ISO 8601 timestamp
     const timestamp = new Date().toISOString();
@@ -116,47 +85,55 @@ export async function applyRestartAnnotation(
     // Create annotation key
     const annotationKey = 'kubectl.kubernetes.io/restartedAt';
     
-    // Get kubectl resource name
-    const resourceName = getKubectlResourceName(kind);
+    // Set context on API client
+    const apiClient = getKubernetesApiClient();
+    apiClient.setContext(contextName);
     
-    // Build base kubectl patch command arguments
-    // Use strategic merge patch which handles nested objects automatically
-    const baseArgs = [
-        'patch',
-        resourceName,
-        name,
-        '--type=merge',
-        `--kubeconfig=${kubeconfigPath}`,
-        `--context=${contextName}`
-    ];
-    
-    // Add namespace flag for namespaced resources
-    if (namespace) {
-        baseArgs.push('-n', namespace);
-    }
-    
-    try {
-        // Use strategic merge patch - this automatically creates nested objects if they don't exist
-        // and merges the annotation into existing annotations
-        const mergePatch = {
-            spec: {
-                template: {
-                    metadata: {
-                        annotations: {
-                            [annotationKey]: timestamp
-                        }
+    // Use strategic merge patch - this automatically creates nested objects if they don't exist
+    // and merges the annotation into existing annotations
+    const mergePatch = {
+        spec: {
+            template: {
+                metadata: {
+                    annotations: {
+                        [annotationKey]: timestamp
                     }
                 }
             }
-        };
+        }
+    };
+    
+    try {
+        // Route to appropriate patch method based on workload type
+        if (!namespace) {
+            throw new Error('Workload resources must have a namespace');
+        }
         
-        const patchArgs = [...baseArgs, `-p=${JSON.stringify(mergePatch)}`];
-        
-        await execFileAsync('kubectl', patchArgs, {
-            timeout: KUBECTL_TIMEOUT_MS,
-            maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-            env: { ...process.env }
-        });
+        switch (kind) {
+            case 'Deployment':
+                await apiClient.apps.patchNamespacedDeployment({
+                    name,
+                    namespace,
+                    body: mergePatch
+                });
+                break;
+            case 'StatefulSet':
+                await apiClient.apps.patchNamespacedStatefulSet({
+                    name,
+                    namespace,
+                    body: mergePatch
+                });
+                break;
+            case 'DaemonSet':
+                await apiClient.apps.patchNamespacedDaemonSet({
+                    name,
+                    namespace,
+                    body: mergePatch
+                });
+                break;
+            default:
+                throw new Error(`Unsupported workload kind: ${kind}`);
+        }
         
         console.log(`Successfully applied restart annotation to ${kind}/${name}`);
     } catch (error: unknown) {
@@ -188,29 +165,6 @@ export interface WorkloadStatus {
     availableReplicas: number;
 }
 
-/**
- * Kubernetes workload resource response structure.
- */
-interface WorkloadResource {
-    metadata?: {
-        name?: string;
-        namespace?: string;
-    };
-    spec?: {
-        replicas?: number;
-    };
-    status?: {
-        replicas?: number;
-        readyReplicas?: number;
-        updatedReplicas?: number;
-        availableReplicas?: number;
-        // DaemonSet specific fields
-        desiredNumberScheduled?: number;
-        numberReady?: number;
-        updatedNumberScheduled?: number;
-        numberAvailable?: number;
-    };
-}
 
 /**
  * Sleep utility function for creating delays in async code.
@@ -223,73 +177,82 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Queries the status of a Kubernetes workload resource.
+ * Queries the status of a Kubernetes workload resource using the Kubernetes API client.
  * Extracts replica counts from the workload status.
  * 
  * @param name - The name of the workload resource
  * @param namespace - The namespace containing the resource (undefined for cluster-scoped)
  * @param kind - The Kubernetes resource kind (Deployment, StatefulSet, or DaemonSet)
  * @param contextName - The kubectl context name
- * @param kubeconfigPath - The path to the kubeconfig file
+ * @param kubeconfigPath - The path to the kubeconfig file (unused, kept for backward compatibility)
  * @returns WorkloadStatus with replica counts
- * @throws {KubectlError} If kubectl command fails or resource not found
+ * @throws {KubectlError} If API call fails or resource not found
  */
 export async function getWorkloadStatus(
     name: string,
     namespace: string | undefined,
     kind: string,
     contextName: string,
-    kubeconfigPath: string
+    _kubeconfigPath: string // eslint-disable-line @typescript-eslint/no-unused-vars
 ): Promise<WorkloadStatus> {
-    // Get kubectl resource name
-    const resourceName = getKubectlResourceName(kind);
+    // Set context on API client
+    const apiClient = getKubernetesApiClient();
+    apiClient.setContext(contextName);
     
-    // Build kubectl get command arguments
-    const args = [
-        'get',
-        resourceName,
-        name,
-        '--output=json',
-        `--kubeconfig=${kubeconfigPath}`,
-        `--context=${contextName}`
-    ];
-    
-    // Add namespace flag for namespaced resources
-    if (namespace) {
-        args.push('-n', namespace);
+    if (!namespace) {
+        throw new Error('Workload resources must have a namespace');
     }
     
     try {
-        // Execute kubectl get command
-        const { stdout } = await execFileAsync('kubectl', args, {
-            timeout: KUBECTL_TIMEOUT_MS,
-            maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-            env: { ...process.env }
-        });
+        let desiredReplicas = 0;
+        let readyReplicas = 0;
+        let updatedReplicas = 0;
+        let availableReplicas = 0;
         
-        // Parse JSON response
-        const resource: WorkloadResource = JSON.parse(stdout);
-        
-        // Extract replica counts based on workload type
-        const spec = resource.spec || {};
-        const status = resource.status || {};
-        
-        // For DaemonSets, use different field names
-        if (kind === 'DaemonSet') {
-            return {
-                desiredReplicas: status.desiredNumberScheduled || 0,
-                readyReplicas: status.numberReady || 0,
-                updatedReplicas: status.updatedNumberScheduled || 0,
-                availableReplicas: status.numberAvailable || 0
-            };
+        // Route to appropriate read method based on workload type
+        switch (kind) {
+            case 'Deployment': {
+                const resource = await apiClient.apps.readNamespacedDeployment({
+                    name,
+                    namespace
+                });
+                desiredReplicas = resource.spec?.replicas || 0;
+                readyReplicas = resource.status?.readyReplicas || 0;
+                updatedReplicas = resource.status?.updatedReplicas || 0;
+                availableReplicas = resource.status?.availableReplicas || 0;
+                break;
+            }
+            case 'StatefulSet': {
+                const resource = await apiClient.apps.readNamespacedStatefulSet({
+                    name,
+                    namespace
+                });
+                desiredReplicas = resource.spec?.replicas || 0;
+                readyReplicas = resource.status?.readyReplicas || 0;
+                updatedReplicas = resource.status?.updatedReplicas || 0;
+                availableReplicas = resource.status?.availableReplicas || 0;
+                break;
+            }
+            case 'DaemonSet': {
+                const resource = await apiClient.apps.readNamespacedDaemonSet({
+                    name,
+                    namespace
+                });
+                desiredReplicas = resource.status?.desiredNumberScheduled || 0;
+                readyReplicas = resource.status?.numberReady || 0;
+                updatedReplicas = resource.status?.updatedNumberScheduled || 0;
+                availableReplicas = resource.status?.numberAvailable || 0;
+                break;
+            }
+            default:
+                throw new Error(`Unsupported workload kind: ${kind}`);
         }
         
-        // For Deployments and StatefulSets
         return {
-            desiredReplicas: spec.replicas || 0,
-            readyReplicas: status.readyReplicas || 0,
-            updatedReplicas: status.updatedReplicas || 0,
-            availableReplicas: status.availableReplicas || 0
+            desiredReplicas,
+            readyReplicas,
+            updatedReplicas,
+            availableReplicas
         };
     } catch (error: unknown) {
         // Convert execution error to structured KubectlError

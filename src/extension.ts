@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { GlobalState } from './state/GlobalState';
 import { TutorialWebview } from './webview/TutorialWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
@@ -53,10 +51,6 @@ import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
 
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
 
 /**
  * Global extension context accessible to all components.
@@ -1444,29 +1438,25 @@ function registerCommands(): void {
                 const nodeName = treeItem.resourceData.resourceName || (treeItem.label as string);
                 const contextName = treeItem.resourceData.context.name;
                 
-                // Get kubeconfig path
-                const treeProvider = getClusterTreeProvider();
-                const kubeconfigPath = treeProvider.getKubeconfigPath();
-                if (!kubeconfigPath) {
-                    vscode.window.showErrorMessage('Kubeconfig path not available');
-                    return;
-                }
-                
-                // Execute kubectl describe node
+                // Fetch node using API client and convert to YAML
                 let describeOutput: string;
                 try {
-                    const { stdout } = await execFileAsync(
-                        'kubectl',
-                        ['describe', 'node', nodeName, `--kubeconfig=${kubeconfigPath}`, `--context=${contextName}`],
-                        {
-                            timeout: 30000,
-                            maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large describe output
-                            env: { ...process.env }
-                        }
-                    );
-                    describeOutput = stdout;
+                    const { getKubernetesApiClient } = await import('./kubernetes/apiClient');
+                    const { default: yaml } = await import('js-yaml');
+                    
+                    const apiClient = getKubernetesApiClient();
+                    apiClient.setContext(contextName);
+                    
+                    const node = await apiClient.core.readNode({ name: nodeName });
+                    
+                    // Convert to YAML format
+                    describeOutput = yaml.dump(node, {
+                        indent: 2,
+                        lineWidth: -1,
+                        noRefs: true
+                    });
                 } catch (error: unknown) {
-                    // kubectl failed - create structured error for detailed handling
+                    // API call failed - create structured error for detailed handling
                     const kubectlError = KubectlError.fromExecError(error, contextName);
                     
                     // Log error details for debugging

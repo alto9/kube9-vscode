@@ -1,7 +1,6 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { ClusterStatus } from './ClusterTypes';
 import { KubectlError } from './KubectlError';
+import { getKubernetesApiClient } from './apiClient';
 
 /**
  * Timeout for connectivity checks in milliseconds.
@@ -9,26 +8,6 @@ import { KubectlError } from './KubectlError';
  */
 const CONNECTIVITY_TIMEOUT_MS = 5000;
 
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
-
-/**
- * Interface for kubectl namespace response items.
- */
-interface NamespaceItem {
-    metadata?: {
-        name?: string;
-    };
-}
-
-/**
- * Interface for kubectl namespace list response.
- */
-interface NamespaceListResponse {
-    items?: NamespaceItem[];
-}
 
 /**
  * Result of a connectivity check operation.
@@ -61,14 +40,14 @@ export interface NamespaceResult {
 }
 
 /**
- * Utility class for checking Kubernetes cluster connectivity using kubectl.
+ * Utility class for checking Kubernetes cluster connectivity using the Kubernetes API client.
  */
 export class ClusterConnectivity {
     /**
-     * Checks if a cluster is reachable using kubectl cluster-info command.
-     * Uses the specified kubeconfig file and context to verify connectivity.
+     * Checks if a cluster is reachable using the Kubernetes API.
+     * Uses the Version API as a simple connectivity check.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to check
      * @returns ConnectivityResult with status and optional error information
      */
@@ -77,25 +56,18 @@ export class ClusterConnectivity {
         contextName: string
     ): Promise<ConnectivityResult> {
         try {
-            // Execute kubectl cluster-info with explicit kubeconfig and context
-            await execFileAsync(
-                'kubectl',
-                [
-                    'cluster-info',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: CONNECTIVITY_TIMEOUT_MS,
-                    // Set environment to avoid picking up unwanted kubectl settings
-                    env: { ...process.env }
-                }
-            );
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
             
-            // If kubectl succeeds (exit code 0), cluster is connected
+            // Use Version API as a simple connectivity check
+            // This is a lightweight endpoint that just returns cluster version info
+            await apiClient.version.getCode();
+            
+            // If API call succeeds, cluster is connected
             return { status: ClusterStatus.Connected };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging
@@ -127,10 +99,9 @@ export class ClusterConnectivity {
     }
 
     /**
-     * Retrieves the list of namespaces from a cluster using kubectl.
-     * Uses kubectl get namespaces command with JSON output for parsing.
+     * Retrieves the list of namespaces from a cluster using the Kubernetes API client.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @returns NamespaceResult with namespaces array and optional error information
      */
@@ -139,34 +110,26 @@ export class ClusterConnectivity {
         contextName: string
     ): Promise<NamespaceResult> {
         try {
-            // Execute kubectl get namespaces with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: CONNECTIVITY_TIMEOUT_MS,
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: NamespaceListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch namespaces from API
+            const response = await apiClient.core.listNamespace({
+                timeoutSeconds: Math.floor(CONNECTIVITY_TIMEOUT_MS / 1000)
+            });
             
             // Extract namespace names from the items array
-            const namespaces: string[] = response.items?.map((item: NamespaceItem) => item.metadata?.name).filter((name): name is string => Boolean(name)) || [];
+            const namespaces: string[] = (response.items || [])
+                .map(item => item.metadata?.name)
+                .filter((name): name is string => Boolean(name));
             
             // Sort alphabetically
             namespaces.sort((a, b) => a.localeCompare(b));
             
             return { namespaces };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging

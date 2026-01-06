@@ -1,8 +1,9 @@
+import * as vscode from 'vscode';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import * as vscode from 'vscode';
 import { OperatorStatusClient } from './OperatorStatusClient';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import {
     ArgoCDInstallationStatus,
     DETECTION_CACHE_TTL,
@@ -33,7 +34,10 @@ import {
 const KUBECTL_TIMEOUT_MS = 5000;
 
 /**
- * Promisified version of execFile for async/await usage.
+ * NOTE: Application CRD operations (getApplication, getApplications, syncApplication, etc.)
+ * still use kubectl because they require CustomObjectsApi which is more complex to implement.
+ * These operations can be migrated in a future iteration using the CustomObjectsApi from
+ * @kubernetes/client-node to interact with custom resources.
  */
 const execFileAsync = promisify(execFile);
 
@@ -394,29 +398,17 @@ export class ArgoCDService {
      */
     private async checkCRDExists(context: string): Promise<boolean> {
         try {
-            // Execute kubectl get crd for applications.argoproj.io
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'crd',
-                    'applications.argoproj.io',
-                    '--output=json',
-                    `--kubeconfig=${this.kubeconfigPath}`,
-                    `--context=${context}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse JSON to verify CRD exists
-            const crdData = JSON.parse(stdout);
+            // Use API client to check if CRD exists
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(context);
+            
+            // Try to read the CRD
+            const crd = await apiClient.apiextensions.readCustomResourceDefinition({
+                name: 'applications.argoproj.io'
+            });
             
             // Check if CRD has required metadata
-            if (crdData.metadata && crdData.metadata.name === 'applications.argoproj.io') {
+            if (crd.metadata && crd.metadata.name === 'applications.argoproj.io') {
                 return true;
             }
             
@@ -471,27 +463,15 @@ export class ArgoCDService {
      */
     private async findArgoCDServer(context: string): Promise<ArgoCDServerInfo | null> {
         try {
-            // Execute kubectl get deployments with label selector
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'deployments',
-                    '--all-namespaces',
-                    '--selector=app.kubernetes.io/name=argocd-server',
-                    '--output=json',
-                    `--kubeconfig=${this.kubeconfigPath}`,
-                    `--context=${context}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse JSON response
-            const response = JSON.parse(stdout);
+            // Use API client to find ArgoCD server deployment
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(context);
+            
+            // Query deployments with label selector
+            const response = await apiClient.apps.listDeploymentForAllNamespaces({
+                labelSelector: 'app.kubernetes.io/name=argocd-server',
+                timeoutSeconds: Math.floor(KUBECTL_TIMEOUT_MS / 1000)
+            });
             
             // Check if any deployments found
             if (!response.items || response.items.length === 0) {
