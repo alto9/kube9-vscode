@@ -5,7 +5,7 @@ feature_id:
   - helm-release-management
 spec_id:
   - helm-release-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Installed Releases Section Component
@@ -20,15 +20,15 @@ The Installed Releases section shows all Helm releases from the cluster with vis
 
 ## Acceptance Criteria
 
-- [ ] Create `InstalledReleasesSection.tsx` component
-- [ ] Create `ReleaseList.tsx` component
-- [ ] Create `ReleaseCard.tsx` component for individual releases
-- [ ] Display release name, namespace, chart, version, status
-- [ ] Show status indicator (🟢 deployed, 🟡 upgrade available, 🔴 failed)
-- [ ] Include "Upgrade", "View Details", "Uninstall" buttons per release
-- [ ] Create `ReleaseFilters.tsx` component (namespace, status, search)
-- [ ] Handle empty state (no releases installed)
-- [ ] Style release cards with appropriate status colors
+- [x] Create `InstalledReleasesSection.tsx` component
+- [x] Create `ReleaseList.tsx` component
+- [x] Create `ReleaseCard.tsx` component for individual releases
+- [x] Display release name, namespace, chart, version, status
+- [x] Show status indicator (🟢 deployed, 🟡 upgrade available, 🔴 failed)
+- [x] Include "Upgrade", "View Details", "Uninstall" buttons per release
+- [x] Create `ReleaseFilters.tsx` component (namespace, status, search)
+- [x] Handle empty state (no releases installed)
+- [x] Style release cards with appropriate status colors
 
 ## Implementation Notes
 

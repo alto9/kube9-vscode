@@ -5,7 +5,7 @@ feature_id:
   - helm-operator-quick-install
 spec_id:
   - helm-operator-installation
-status: pending
+status: completed
 ---
 
 # Story: Implement Featured Charts Section Component

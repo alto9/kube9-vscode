@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI } from './types';
+import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease } from './types';
+import { InstalledReleasesSection } from './components/InstalledReleasesSection';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -17,6 +18,12 @@ export const HelmPackageManager: React.FC = () => {
         loading: true,
         error: null,
         currentCluster: ''
+    });
+
+    const [releaseFilters, setReleaseFilters] = useState<ReleaseFilters>({
+        namespace: 'all',
+        status: 'all',
+        searchQuery: ''
     });
 
     // Send message to extension
@@ -122,20 +129,59 @@ export const HelmPackageManager: React.FC = () => {
             </section>
 
             {/* Repositories Section */}
-            <section className="repositories-section">
-                <h2>Repositories</h2>
-                <div className="section-placeholder">
-                    Repositories will be displayed here
-                </div>
-            </section>
+            <RepositoriesSection
+                repositories={state.repositories}
+                onAddRepository={() => {
+                    // Stub - will be implemented in story 007
+                    console.log('Add repository clicked');
+                }}
+                onUpdateRepository={(name: string) => {
+                    // Stub - will be implemented in story 006
+                    console.log('Update repository clicked:', name);
+                    sendMessage({
+                        command: 'updateRepository',
+                        name
+                    });
+                }}
+                onRemoveRepository={(name: string) => {
+                    // Stub - will be implemented in story 006
+                    console.log('Remove repository clicked:', name);
+                    sendMessage({
+                        command: 'removeRepository',
+                        name
+                    });
+                }}
+            />
 
             {/* Releases Section */}
-            <section className="releases-section">
-                <h2>Installed Releases</h2>
-                <div className="section-placeholder">
-                    Installed releases will be displayed here
-                </div>
-            </section>
+            <InstalledReleasesSection
+                releases={state.releases}
+                filters={releaseFilters}
+                onFilterChange={setReleaseFilters}
+                onUpgrade={(release: HelmRelease) => {
+                    sendMessage({
+                        command: 'upgradeRelease',
+                        name: release.name,
+                        namespace: release.namespace,
+                        chart: release.chart,
+                        params: { version: release.upgradeAvailable }
+                    });
+                }}
+                onViewDetails={(release: HelmRelease) => {
+                    sendMessage({
+                        command: 'getReleaseDetails',
+                        name: release.name,
+                        namespace: release.namespace
+                    });
+                }}
+                onUninstall={(release: HelmRelease) => {
+                    sendMessage({
+                        command: 'uninstallRelease',
+                        name: release.name,
+                        namespace: release.namespace
+                    });
+                }}
+            />
 
             {/* Discovery Section */}
             <section className="discovery-section">

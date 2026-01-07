@@ -5,7 +5,7 @@ feature_id:
   - helm-chart-discovery
 spec_id:
   - helm-chart-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Discover Charts Section Component
@@ -20,15 +20,15 @@ The Discover Charts section allows users to search for charts across all reposit
 
 ## Acceptance Criteria
 
-- [ ] Create `DiscoverChartsSection.tsx` component
-- [ ] Create `SearchBar.tsx` component with debounced input
-- [ ] Create `ChartResults.tsx` component for search results
-- [ ] Create `ChartResultCard.tsx` for individual chart display
-- [ ] Implement 300ms debounce on search input
-- [ ] Display chart name, version, description, repository
-- [ ] Handle loading state during search
-- [ ] Handle empty search results with helpful message
-- [ ] Make chart cards clickable to view details
+- [x] Create `DiscoverChartsSection.tsx` component
+- [x] Create `SearchBar.tsx` component with debounced input
+- [x] Create `ChartResults.tsx` component for search results
+- [x] Create `ChartResultCard.tsx` for individual chart display
+- [x] Implement 300ms debounce on search input
+- [x] Display chart name, version, description, repository
+- [x] Handle loading state during search
+- [x] Handle empty search results with helpful message
+- [x] Make chart cards clickable to view details
 
 ## Implementation Notes
 

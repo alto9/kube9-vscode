@@ -33,6 +33,11 @@ export interface HelmRepository {
 }
 
 /**
+ * Helm release status type.
+ */
+export type ReleaseStatus = 'deployed' | 'failed' | 'pending-install' | 'pending-upgrade' | 'pending-rollback' | 'superseded' | 'uninstalled' | 'uninstalling' | 'unknown';
+
+/**
  * Helm release information.
  */
 export interface HelmRelease {
@@ -40,7 +45,7 @@ export interface HelmRelease {
     namespace: string;
     chart: string;
     version: string;
-    status: 'deployed' | 'failed' | 'pending' | 'superseded';
+    status: ReleaseStatus;
     revision: number;
     updated: Date;
     upgradeAvailable?: string;
@@ -68,6 +73,31 @@ export interface ChartSearchResult {
     version: string;
     appVersion?: string;
     repository?: string;
+}
+
+/**
+ * Release filters for filtering installed releases.
+ */
+export interface ReleaseFilters {
+    namespace: string | 'all';
+    status: ReleaseStatus | 'all';
+    searchQuery: string;
+}
+
+/**
+ * Operator installation status information.
+ */
+export interface OperatorInstallationStatus {
+    /** Whether the operator is installed */
+    installed: boolean;
+    /** Installed version (if installed) */
+    version?: string;
+    /** Namespace where operator is installed */
+    namespace?: string;
+    /** Whether an upgrade is available */
+    upgradeAvailable: boolean;
+    /** Latest available version (if upgrade available) */
+    latestVersion?: string;
 }
 
 /**

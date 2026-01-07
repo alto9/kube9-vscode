@@ -5,7 +5,7 @@ feature_id:
   - helm-repository-management
 spec_id:
   - helm-repository-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Repositories Section Component
@@ -20,14 +20,14 @@ The Repositories section shows all configured Helm repositories with their URLs,
 
 ## Acceptance Criteria
 
-- [ ] Create `RepositoriesSection.tsx` component
-- [ ] Create `RepositoryList.tsx` component
-- [ ] Create `RepositoryCard.tsx` component for individual repositories
-- [ ] Display repository name, URL, and chart count
-- [ ] Show "Update" and "Remove" buttons for each repository
-- [ ] Include "+ Add Repository" button at section header
-- [ ] Handle empty state (no repositories configured)
-- [ ] Style consistently with VS Code theme
+- [x] Create `RepositoriesSection.tsx` component
+- [x] Create `RepositoryList.tsx` component
+- [x] Create `RepositoryCard.tsx` component for individual repositories
+- [x] Display repository name, URL, and chart count
+- [x] Show "Update" and "Remove" buttons for each repository
+- [x] Include "+ Add Repository" button at section header
+- [x] Handle empty state (no repositories configured)
+- [x] Style consistently with VS Code theme
 
 ## Implementation Notes
 
