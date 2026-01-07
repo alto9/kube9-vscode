@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - helm-chart-operations
   - helm-cli-integration
-status: pending
+status: completed
 ---
 
 # Story: Implement Chart Discovery Commands
@@ -21,14 +21,14 @@ Chart commands enable searching across repositories and fetching detailed chart 
 
 ## Acceptance Criteria
 
-- [ ] Implement `searchCharts(query)` method in HelmService
-- [ ] Implement `getChartDetails(chart)` method in HelmService
-- [ ] Implement `getChartReadme(chart)` method in HelmService
-- [ ] Implement `getChartValues(chart)` method in HelmService
-- [ ] Create command handlers in message listener
-- [ ] Send search results to webview
-- [ ] Handle empty search results gracefully
-- [ ] Implement error handling for chart not found
+- [x] Implement `searchCharts(query)` method in HelmService
+- [x] Implement `getChartDetails(chart)` method in HelmService
+- [x] Implement `getChartReadme(chart)` method in HelmService
+- [x] Implement `getChartValues(chart)` method in HelmService
+- [x] Create command handlers in message listener
+- [x] Send search results to webview
+- [x] Handle empty search results gracefully
+- [x] Implement error handling for chart not found
 
 ## Implementation Notes
 

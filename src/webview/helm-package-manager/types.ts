@@ -76,6 +76,20 @@ export interface ChartSearchResult {
 }
 
 /**
+ * Chart details information.
+ */
+export interface ChartDetails {
+    name: string;
+    description: string;
+    readme: string;
+    values: string;
+    versions: string[];
+    maintainers: Array<{ name: string; email?: string }>;
+    keywords: string[];
+    home: string;
+}
+
+/**
  * Release filters for filtering installed releases.
  */
 export interface ReleaseFilters {
@@ -143,6 +157,7 @@ export interface WebviewToExtensionMessage {
     name?: string;
     url?: string;
     query?: string;
+    repository?: string;
     chart?: string;
     namespace?: string;
     revision?: number;

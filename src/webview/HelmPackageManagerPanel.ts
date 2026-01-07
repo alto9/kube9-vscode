@@ -146,6 +146,22 @@ export class HelmPackageManagerPanel {
                             }
                             break;
 
+                        case 'searchCharts':
+                            if (message.query !== undefined) {
+                                await this.handleSearchCharts(message.query, message.repository);
+                            } else {
+                                this.sendError('Search query is required');
+                            }
+                            break;
+
+                        case 'getChartDetails':
+                            if (message.chart) {
+                                await this.handleGetChartDetails(message.chart);
+                            } else {
+                                this.sendError('Chart name is required');
+                            }
+                            break;
+
                         case 'ready':
                             // Webview is ready, load initial repository list
                             await this.handleListRepositories();
@@ -282,6 +298,53 @@ export class HelmPackageManagerPanel {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.sendError(`Failed to remove repository: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle searchCharts command.
+     * 
+     * @param query Search query string
+     * @param repository Optional repository name to filter by
+     */
+    private async handleSearchCharts(query: string, repository?: string): Promise<void> {
+        try {
+            const results = await this.helmService.searchCharts(query, repository);
+            
+            // Always send results, even if empty (empty array is valid)
+            this.sendMessage({
+                type: 'chartSearchResults',
+                data: results
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.sendError(`Failed to search charts: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle getChartDetails command.
+     * 
+     * @param chart Chart name (e.g., "bitnami/postgresql")
+     */
+    private async handleGetChartDetails(chart: string): Promise<void> {
+        try {
+            const details = await this.helmService.getChartDetails(chart);
+            
+            this.sendMessage({
+                type: 'chartDetails',
+                data: details
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // Check for chart not found error specifically
+            const lowerError = errorMessage.toLowerCase();
+            if (lowerError.includes('not found') || lowerError.includes('chart not found')) {
+                this.sendError(`Chart '${chart}' not found. Please verify the chart name and repository.`);
+            } else {
+                this.sendError(`Failed to get chart details: ${errorMessage}`);
+            }
         }
     }
 

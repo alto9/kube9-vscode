@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import { ChartSearchResult, ChartDetails } from '../webview/helm-package-manager/types';
 
 /**
  * Options for executing Helm commands.
@@ -253,6 +254,127 @@ export class HelmService {
      */
     public async removeRepository(name: string): Promise<void> {
         await this.executeCommand(['repo', 'remove', name]);
+    }
+
+    /**
+     * Searches for Helm charts across configured repositories.
+     * 
+     * @param query Search query string
+     * @param repository Optional repository name to limit search to
+     * @returns Promise resolving to array of chart search results
+     * @throws Error if command fails
+     */
+    public async searchCharts(query: string, repository?: string): Promise<ChartSearchResult[]> {
+        const args = ['search', 'repo', query, '--output', 'json'];
+        
+        if (repository) {
+            args.push('--regexp', `^${repository}/`);
+        }
+        
+        try {
+            const output = await this.executeCommand(args);
+            
+            // Handle empty output (no results)
+            if (!output || output.trim().length === 0) {
+                return [];
+            }
+            
+            const results = JSON.parse(output) as Array<{
+                name: string;
+                version: string;
+                app_version?: string;
+                description: string;
+            }>;
+            
+            // Handle empty array
+            if (!Array.isArray(results) || results.length === 0) {
+                return [];
+            }
+            
+            return results.map(r => {
+                const parts = r.name.split('/');
+                return {
+                    name: r.name,
+                    chart: parts.length > 1 ? parts[1] : parts[0],
+                    version: r.version,
+                    appVersion: r.app_version,
+                    description: r.description,
+                    repository: parts.length > 1 ? parts[0] : undefined
+                };
+            });
+        } catch (error) {
+            // If error is "not found" or similar, return empty array instead of throwing
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const lowerError = errorMessage.toLowerCase();
+            
+            if (lowerError.includes('not found') || lowerError.includes('no results')) {
+                return [];
+            }
+            
+            // Re-throw other errors
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the README content for a Helm chart.
+     * 
+     * @param chart Chart name (e.g., "bitnami/postgresql")
+     * @returns Promise resolving to README markdown content
+     * @throws Error if chart not found or command fails
+     */
+    public async getChartReadme(chart: string): Promise<string> {
+        const output = await this.executeCommand(['show', 'readme', chart]);
+        return output;
+    }
+
+    /**
+     * Gets the default values YAML for a Helm chart.
+     * 
+     * @param chart Chart name (e.g., "bitnami/postgresql")
+     * @returns Promise resolving to values YAML content
+     * @throws Error if chart not found or command fails
+     */
+    public async getChartValues(chart: string): Promise<string> {
+        const output = await this.executeCommand(['show', 'values', chart]);
+        return output;
+    }
+
+    /**
+     * Gets detailed information about a Helm chart.
+     * Fetches README, values, and chart metadata in parallel.
+     * 
+     * @param chart Chart name (e.g., "bitnami/postgresql")
+     * @returns Promise resolving to chart details
+     * @throws Error if chart not found or command fails
+     */
+    public async getChartDetails(chart: string): Promise<ChartDetails> {
+        // Fetch readme, values, and chart.yaml in parallel
+        const [readme, values, chartYaml] = await Promise.all([
+            this.getChartReadme(chart),
+            this.getChartValues(chart),
+            this.executeCommand(['show', 'chart', chart, '--output', 'json'])
+        ]);
+        
+        // Parse chart.yaml JSON
+        const chartInfo = JSON.parse(chartYaml) as {
+            name?: string;
+            description?: string;
+            maintainers?: Array<{ name: string; email?: string }>;
+            keywords?: string[];
+            home?: string;
+        };
+        
+        return {
+            name: chart,
+            description: chartInfo.description || '',
+            readme,
+            values,
+            versions: [], // Would need separate call or caching
+            maintainers: chartInfo.maintainers || [],
+            keywords: chartInfo.keywords || [],
+            home: chartInfo.home || ''
+        };
     }
 
     /**
