@@ -4,6 +4,7 @@ import * as path from 'path';
 import { getHelpController } from '../extension';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { HelmService } from '../services/HelmService';
+import { HelmError } from '../services/HelmError';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams, ListReleasesParams, UpgradeParams, UIState } from './helm-package-manager/types';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
@@ -315,13 +316,28 @@ export class HelmPackageManagerPanel {
                             }
                             break;
 
+                        case 'logError':
+                            // Handle error logging from React error boundary
+                            if (message.error) {
+                                console.error('[React Error Boundary]', {
+                                    error: message.error,
+                                    stack: message.stack
+                                });
+                            }
+                            break;
+
                         default:
                             console.log('Helm Package Manager received unknown message:', message);
                     }
                 } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : String(error);
-                    console.error('Error handling message:', errorMessage);
-                    this.sendError(errorMessage);
+                    console.error('Error handling message:', error);
+                    // Convert to HelmError if possible, otherwise use as-is
+                    if (error instanceof HelmError) {
+                        this.sendError(error);
+                    } else {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        this.sendError(errorMessage);
+                    }
                 }
             },
             null,
@@ -482,8 +498,13 @@ export class HelmPackageManagerPanel {
                 data: repositories
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.sendError(`Failed to list repositories: ${errorMessage}`);
+            console.error('Failed to list repositories:', error);
+            if (error instanceof HelmError) {
+                this.sendError(error);
+            } else {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.sendError(`Failed to list repositories: ${errorMessage}`);
+            }
         }
     }
 
@@ -567,8 +588,13 @@ export class HelmPackageManagerPanel {
             // Show success notification
             vscode.window.showInformationMessage(`Repository '${name}' updated successfully`);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.sendError(`Failed to update repository: ${errorMessage}`);
+            console.error('Failed to update repository:', error);
+            if (error instanceof HelmError) {
+                this.sendError(error);
+            } else {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.sendError(`Failed to update repository: ${errorMessage}`);
+            }
         }
     }
 
@@ -594,8 +620,13 @@ export class HelmPackageManagerPanel {
             // Show success notification
             vscode.window.showInformationMessage(`Repository '${name}' removed successfully`);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.sendError(`Failed to remove repository: ${errorMessage}`);
+            console.error('Failed to remove repository:', error);
+            if (error instanceof HelmError) {
+                this.sendError(error);
+            } else {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.sendError(`Failed to remove repository: ${errorMessage}`);
+            }
         }
     }
 
@@ -615,8 +646,13 @@ export class HelmPackageManagerPanel {
                 data: results
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.sendError(`Failed to search charts: ${errorMessage}`);
+            console.error('Failed to search charts:', error);
+            if (error instanceof HelmError) {
+                this.sendError(error);
+            } else {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.sendError(`Failed to search charts: ${errorMessage}`);
+            }
         }
     }
 
@@ -634,13 +670,11 @@ export class HelmPackageManagerPanel {
                 data: details
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            
-            // Check for chart not found error specifically
-            const lowerError = errorMessage.toLowerCase();
-            if (lowerError.includes('not found') || lowerError.includes('chart not found')) {
-                this.sendError(`Chart '${chart}' not found. Please verify the chart name and repository.`);
+            console.error('Failed to get chart details:', error);
+            if (error instanceof HelmError) {
+                this.sendError(error);
             } else {
+                const errorMessage = error instanceof Error ? error.message : String(error);
                 this.sendError(`Failed to get chart details: ${errorMessage}`);
             }
         }
@@ -776,8 +810,13 @@ export class HelmPackageManagerPanel {
             await this.helmService.invalidateOperatorStatusCache();
             await this.handleGetOperatorStatus();
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.sendError(`Failed to list releases: ${errorMessage}`);
+            console.error('Failed to list releases:', error);
+            if (error instanceof HelmError) {
+                this.sendError(error);
+            } else {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.sendError(`Failed to list releases: ${errorMessage}`);
+            }
         }
     }
 
@@ -985,9 +1024,13 @@ export class HelmPackageManagerPanel {
             // Optionally update the repository list
             await this.handleListRepositories();
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error('Failed to ensure kube9 repository:', errorMessage);
-            this.sendError(`Failed to ensure kube9 repository: ${errorMessage}`);
+            console.error('Failed to ensure kube9 repository:', error);
+            if (error instanceof HelmError) {
+                this.sendError(error);
+            } else {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.sendError(`Failed to ensure kube9 repository: ${errorMessage}`);
+            }
         }
     }
 
@@ -1005,8 +1048,13 @@ export class HelmPackageManagerPanel {
                 data: details
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            this.sendError(`Failed to get release details: ${errorMessage}`);
+            console.error('Failed to get release details:', error);
+            if (error instanceof HelmError) {
+                this.sendError(error);
+            } else {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                this.sendError(`Failed to get release details: ${errorMessage}`);
+            }
         }
     }
 
@@ -1237,11 +1285,37 @@ export class HelmPackageManagerPanel {
      * 
      * @param errorMessage Error message
      */
-    private sendError(errorMessage: string): void {
+    /**
+     * Send error message to webview.
+     * Supports both simple string errors and structured HelmError instances.
+     * 
+     * @param error Error message string or HelmError instance
+     */
+    private sendError(error: string | HelmError | Error): void {
+        let errorMessage: string;
+        let errorInfo: { message: string; type: string; suggestion?: string; retryable: boolean } | undefined;
+
+        if (error instanceof HelmError) {
+            errorMessage = error.message;
+            errorInfo = {
+                message: error.message,
+                type: error.type,
+                suggestion: error.suggestion,
+                retryable: error.retryable
+            };
+        } else if (error instanceof Error) {
+            errorMessage = error.message;
+        } else {
+            errorMessage = error;
+        }
+
         this.sendMessage({
-            type: 'operationError',
-            error: errorMessage
+            type: errorInfo ? 'error' : 'operationError',
+            error: errorMessage,
+            errorInfo: errorInfo
         });
+        
+        // Show error notification in VS Code
         vscode.window.showErrorMessage(errorMessage);
     }
 

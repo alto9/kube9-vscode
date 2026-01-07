@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus, UIState } from './types';
+import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus, UIState, HelmErrorInfo } from './types';
 import { InstalledReleasesSection } from './components/InstalledReleasesSection';
 import { RepositoriesSection } from './components/RepositoriesSection';
 import { ReleaseDetailModal } from './components/ReleaseDetailModal';
 import { UpgradeReleaseModal } from './components/UpgradeReleaseModal';
 import { FeaturedChartsSection } from './components/FeaturedChartsSection';
 import { OperatorInstallModal } from './components/OperatorInstallModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ErrorMessage } from './components/ErrorMessage';
+import { HelmErrorType } from '../../services/HelmError';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -24,6 +27,8 @@ export const HelmPackageManager: React.FC = () => {
         error: null,
         currentCluster: ''
     });
+
+    const [errorInfo, setErrorInfo] = useState<HelmErrorInfo | null>(null);
 
     const [releaseFilters, setReleaseFilters] = useState<ReleaseFilters>({
         namespace: 'all',
@@ -141,6 +146,17 @@ export const HelmPackageManager: React.FC = () => {
                         loading: false,
                         error: message.error || 'An error occurred'
                     }));
+                    setErrorInfo(message.errorInfo || null);
+                    break;
+
+                case 'error':
+                    // Structured error message
+                    setState(prev => ({
+                        ...prev,
+                        loading: false,
+                        error: message.error || 'An error occurred'
+                    }));
+                    setErrorInfo(message.errorInfo || null);
                     break;
 
                 case 'operationProgress':
@@ -203,17 +219,29 @@ export const HelmPackageManager: React.FC = () => {
     if (state.error) {
         return (
             <div className="helm-package-manager">
-                <div className="error-state">
-                    <div className="error-icon">⚠️</div>
-                    <div className="error-message">{state.error}</div>
-                </div>
+                <ErrorMessage
+                    error={state.error}
+                    type={errorInfo?.type as HelmErrorType}
+                    suggestion={errorInfo?.suggestion}
+                    retryable={errorInfo?.retryable || false}
+                    onRetry={errorInfo?.retryable ? () => {
+                        setState(prev => ({ ...prev, error: null, loading: true }));
+                        setErrorInfo(null);
+                        sendMessage({ command: 'ready' });
+                    } : undefined}
+                    onDismiss={() => {
+                        setState(prev => ({ ...prev, error: null }));
+                        setErrorInfo(null);
+                    }}
+                />
             </div>
         );
     }
 
     // Render main UI with placeholder sections
     return (
-        <div className="helm-package-manager">
+        <ErrorBoundary>
+            <div className="helm-package-manager">
             <h1>Helm Package Manager</h1>
             
             {/* Featured Charts Section */}
@@ -379,7 +407,8 @@ export const HelmPackageManager: React.FC = () => {
                     });
                 }}
             />
-        </div>
+            </div>
+        </ErrorBoundary>
     );
 };
 

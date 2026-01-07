@@ -3,6 +3,7 @@
 import * as assert from 'assert';
 import * as Module from 'module';
 import { HelmService } from '../../../services/HelmService';
+import { HelmError, HelmErrorType, parseHelmError } from '../../../services/HelmError';
 
 // Store original require for restoration
 const originalRequire = Module.prototype.require;
@@ -229,7 +230,7 @@ suite('HelmService Test Suite', () => {
             }
         });
 
-        test('should parse Helm error messages', async () => {
+        test('should parse Helm error messages and return HelmError', async () => {
             setMockSpawnResponse({
                 type: 'error',
                 exitCode: 1,
@@ -241,12 +242,15 @@ suite('HelmService Test Suite', () => {
                 await testService.executeCommand(['install', 'test']);
                 assert.fail('Should have thrown an error');
             } catch (error: any) {
-                assert.ok(error instanceof Error);
+                assert.ok(error instanceof HelmError);
+                assert.strictEqual(error.type, HelmErrorType.RELEASE_EXISTS);
                 assert.ok(error.message.includes('already exists'));
+                assert.ok(error.suggestion);
+                assert.strictEqual(error.retryable, false);
             }
         });
 
-        test('should handle connection errors', async () => {
+        test('should handle connection errors and return HelmError', async () => {
             setMockSpawnResponse({
                 type: 'error',
                 exitCode: 1,
@@ -258,8 +262,11 @@ suite('HelmService Test Suite', () => {
                 await testService.executeCommand(['list']);
                 assert.fail('Should have thrown an error');
             } catch (error: any) {
-                assert.ok(error instanceof Error);
-                assert.ok(error.message.includes('Unable to connect'));
+                assert.ok(error instanceof HelmError);
+                assert.strictEqual(error.type, HelmErrorType.NETWORK_ERROR);
+                assert.ok(error.message.includes('connect'));
+                assert.ok(error.suggestion);
+                assert.strictEqual(error.retryable, true);
             }
         });
 
@@ -275,8 +282,9 @@ suite('HelmService Test Suite', () => {
                 await testService.executeCommand(['list']);
                 assert.fail('Should have thrown an error');
             } catch (error: any) {
-                assert.ok(error instanceof Error);
-                assert.ok(error.message.includes('Permission denied'));
+                assert.ok(error instanceof HelmError);
+                // Permission denied errors are parsed as UNKNOWN since they don't match specific patterns
+                assert.ok(error.message.includes('permission') || error.message.includes('Permission') || error.message.includes('denied'));
             }
         });
 
@@ -408,6 +416,57 @@ suite('HelmService Test Suite', () => {
             } catch (error: any) {
                 assert.ok(error instanceof Error);
             }
+        });
+    });
+
+    suite('HelmError parsing', () => {
+        test('should parse CLI_NOT_FOUND error', () => {
+            const error = parseHelmError('helm: command not found', '');
+            assert.strictEqual(error.type, HelmErrorType.CLI_NOT_FOUND);
+            assert.ok(error.message.includes('not installed'));
+            assert.strictEqual(error.retryable, false);
+        });
+
+        test('should parse NETWORK_ERROR', () => {
+            const error = parseHelmError('Error: connection refused', '');
+            assert.strictEqual(error.type, HelmErrorType.NETWORK_ERROR);
+            assert.ok(error.message.includes('connect'));
+            assert.strictEqual(error.retryable, true);
+        });
+
+        test('should parse RELEASE_EXISTS error', () => {
+            const error = parseHelmError('Error: release already exists', '');
+            assert.strictEqual(error.type, HelmErrorType.RELEASE_EXISTS);
+            assert.ok(error.message.includes('already exists'));
+            assert.strictEqual(error.retryable, false);
+        });
+
+        test('should parse RESOURCE_NOT_FOUND error', () => {
+            const error = parseHelmError('Error: chart not found', '');
+            assert.strictEqual(error.type, HelmErrorType.RESOURCE_NOT_FOUND);
+            assert.ok(error.message.includes('not found'));
+            assert.strictEqual(error.retryable, false);
+        });
+
+        test('should parse TIMEOUT error', () => {
+            const error = parseHelmError('Error: operation timed out', '');
+            assert.strictEqual(error.type, HelmErrorType.TIMEOUT);
+            assert.ok(error.message.includes('timeout') || error.message.includes('timed out'));
+            assert.strictEqual(error.retryable, true);
+        });
+
+        test('should parse INVALID_INPUT error', () => {
+            const error = parseHelmError('Error: invalid input provided', '');
+            assert.strictEqual(error.type, HelmErrorType.INVALID_INPUT);
+            assert.ok(error.message.includes('Invalid'));
+            assert.strictEqual(error.retryable, false);
+        });
+
+        test('should parse UNKNOWN error for unrecognized patterns', () => {
+            const error = parseHelmError('Some unexpected error occurred', '');
+            assert.strictEqual(error.type, HelmErrorType.UNKNOWN);
+            assert.ok(error.message.includes('unexpected') || error.message.includes('unknown'));
+            assert.strictEqual(error.retryable, true);
         });
     });
 });

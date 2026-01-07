@@ -4,6 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus, UpgradeInfo, OperatorInstallationStatus } from '../webview/helm-package-manager/types';
 import { getContextInfo } from '../utils/kubectlContext';
+import { HelmError, parseHelmError } from './HelmError';
 
 /**
  * Options for executing Helm commands.
@@ -103,7 +104,11 @@ export class HelmService {
             if (timeoutMs > 0) {
                 timeoutHandle = setTimeout(() => {
                     helm.kill();
-                    reject(new Error(`Helm command timed out after ${timeoutMs}ms`));
+                    const timeoutError = parseHelmError(
+                        `Helm command timed out after ${timeoutMs}ms`,
+                        ''
+                    );
+                    reject(timeoutError);
                 }, timeoutMs);
             }
 
@@ -124,13 +129,22 @@ export class HelmService {
                 if (code === 0) {
                     resolve(stdout.trim());
                 } else {
-                    // Parse stderr for user-friendly error message
-                    const errorMessage = this.parseHelmError(stderr || stdout);
-                    const error = new Error(errorMessage);
-                    (error as Error & { code?: number; stderr?: string; stdout?: string }).code = code || undefined;
-                    (error as Error & { code?: number; stderr?: string; stdout?: string }).stderr = stderr;
-                    (error as Error & { code?: number; stderr?: string; stdout?: string }).stdout = stdout;
-                    reject(error);
+                    // Parse error and create structured HelmError
+                    const helmError = parseHelmError(stderr, stdout);
+                    
+                    // Log detailed error for debugging
+                    console.error('[Helm CLI Error]', {
+                        args,
+                        type: helmError.type,
+                        message: helmError.message,
+                        suggestion: helmError.suggestion,
+                        retryable: helmError.retryable,
+                        exitCode: code,
+                        stderr: stderr || '(empty)',
+                        stdout: stdout || '(empty)'
+                    });
+                    
+                    reject(helmError);
                 }
             });
 
@@ -141,11 +155,32 @@ export class HelmService {
                 }
 
                 const errnoError = error as NodeJS.ErrnoException;
+                let helmError: HelmError;
+                
                 if (errnoError.code === 'ENOENT') {
-                    reject(new Error('Helm CLI not found. Please install Helm 3.x'));
+                    helmError = parseHelmError(
+                        'Helm CLI not found. Please install Helm 3.x',
+                        ''
+                    );
                 } else {
-                    reject(new Error(`Failed to spawn helm: ${error.message}`));
+                    helmError = parseHelmError(
+                        `Failed to spawn helm: ${error.message}`,
+                        ''
+                    );
                 }
+                
+                // Log detailed error for debugging
+                console.error('[Helm CLI Error]', {
+                    args,
+                    type: helmError.type,
+                    message: helmError.message,
+                    suggestion: helmError.suggestion,
+                    retryable: helmError.retryable,
+                    spawnError: error.message,
+                    errorCode: errnoError.code
+                });
+                
+                reject(helmError);
             });
         });
     }
@@ -910,32 +945,5 @@ export class HelmService {
         }
     }
 
-    /**
-     * Parses Helm error output to create user-friendly error messages.
-     * 
-     * @param stderr The stderr output from Helm command
-     * @returns User-friendly error message
-     */
-    private parseHelmError(stderr: string): string {
-        const lowerStderr = stderr.toLowerCase();
-
-        if (lowerStderr.includes('not found')) {
-            return 'Chart or release not found';
-        } else if (lowerStderr.includes('already exists')) {
-            return 'Release already exists';
-        } else if (lowerStderr.includes('connection refused') || lowerStderr.includes('unable to connect')) {
-            return 'Unable to connect to Kubernetes cluster';
-        } else if (lowerStderr.includes('permission denied') || lowerStderr.includes('forbidden')) {
-            return 'Permission denied: insufficient permissions to perform this operation';
-        } else if (lowerStderr.includes('timeout')) {
-            return 'Operation timed out';
-        } else if (lowerStderr.includes('invalid') || lowerStderr.includes('error')) {
-            // Return the original stderr if it contains error information
-            return stderr.trim() || 'Helm command failed';
-        }
-
-        // Return original stderr if no known patterns match
-        return stderr.trim() || 'Helm command failed';
-    }
 }
 

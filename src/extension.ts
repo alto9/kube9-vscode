@@ -50,6 +50,8 @@ import { restartPortForwardCommand } from './commands/restartPortForward';
 import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { ErrorCommands } from './commands/errorCommands';
 import { openPackageManager } from './commands/helmCommands';
+import { HelmService } from './services/HelmService';
+import { HelmError, HelmErrorType } from './services/HelmError';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
 import { HelpController, registerHelpMenuCommand, registerContextMenuHelpCommands } from './help/HelpController';
@@ -146,6 +148,34 @@ export function getHelpController(): HelpController {
 }
 
 /**
+ * Checks if Helm CLI is installed and shows a warning if not found.
+ * This is non-blocking and will not prevent extension activation.
+ */
+async function checkHelmCLI(): Promise<void> {
+    try {
+        const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+        const helmService = new HelmService(kubeconfigPath);
+        await helmService.version();
+        console.log('Helm CLI detected and available');
+    } catch (error) {
+        // Check if it's a HelmError with CLI_NOT_FOUND type
+        if (error instanceof HelmError && error.type === HelmErrorType.CLI_NOT_FOUND) {
+            vscode.window.showWarningMessage(
+                'Helm CLI not found. Install Helm 3.x to use the Helm Package Manager feature.',
+                'Learn More'
+            ).then((selection) => {
+                if (selection === 'Learn More') {
+                    vscode.env.openExternal(vscode.Uri.parse('https://helm.sh/docs/intro/install/'));
+                }
+            });
+        } else {
+            // For other errors, just log them
+            console.warn('Helm CLI check failed:', error);
+        }
+    }
+}
+
+/**
  * This method is called when the extension is activated.
  * The extension is activated when VS Code starts up (onStartupFinished).
  */
@@ -198,6 +228,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // This is non-blocking and will gracefully handle missing/invalid configs
         const kubeconfig = await KubeconfigParser.parseKubeconfig();
         console.log(`Kubeconfig parsing completed. Found ${kubeconfig.clusters.length} cluster(s).`);
+        
+        // Check for Helm CLI installation (non-blocking)
+        checkHelmCLI().catch((error) => {
+            // Silently log but don't block activation
+            console.warn('Helm CLI check failed:', error);
+        });
         
         // Initialize PortForwardManager singleton
         const portForwardManager = PortForwardManager.getInstance();

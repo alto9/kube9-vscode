@@ -224,11 +224,25 @@ export interface UIState {
 }
 
 /**
+ * Structured error information for webview communication.
+ */
+export interface HelmErrorInfo {
+    /** Error message */
+    message: string;
+    /** Error type */
+    type: string;
+    /** Optional suggestion for resolving the error */
+    suggestion?: string;
+    /** Whether the error is retryable */
+    retryable: boolean;
+}
+
+/**
  * Message sent from extension to webview.
  */
 export interface ExtensionToWebviewMessage {
     /** Message type */
-    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded' | 'upgradeInfoLoaded' | 'operatorStatusUpdated' | 'uiStateRestored';
+    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded' | 'upgradeInfoLoaded' | 'operatorStatusUpdated' | 'uiStateRestored' | 'error';
     /** Message data */
     data?: unknown;
     /** Operation name (for progress/complete/error messages) */
@@ -239,6 +253,8 @@ export interface ExtensionToWebviewMessage {
     success?: boolean;
     /** Error message (for operationError) */
     error?: string;
+    /** Structured error information (for error type) */
+    errorInfo?: HelmErrorInfo;
     /** Success/error message (for operationComplete) */
     message?: string;
 }
@@ -248,7 +264,7 @@ export interface ExtensionToWebviewMessage {
  */
 export interface WebviewToExtensionMessage {
     /** Command type */
-    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo' | 'getOperatorStatus' | 'openExternalLink' | 'ensureKube9Repository' | 'saveUIState';
+    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo' | 'getOperatorStatus' | 'openExternalLink' | 'ensureKube9Repository' | 'saveUIState' | 'logError';
     /** Optional data payload */
     name?: string;
     url?: string;
@@ -266,4 +282,8 @@ export interface WebviewToExtensionMessage {
     content?: string;
     /** UI state to save (for saveUIState command) */
     uiState?: UIState;
+    /** Error information (for logError command) */
+    error?: string;
+    /** Error stack trace (for logError command) */
+    stack?: string;
 }
