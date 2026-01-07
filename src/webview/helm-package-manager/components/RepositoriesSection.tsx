@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HelmRepository } from '../types';
 import { RepositoryList } from './RepositoryList';
+import { AddRepositoryModal } from './AddRepositoryModal';
+import { ConfirmDialog } from './ConfirmDialog';
 
 /**
  * Props for RepositoriesSection component.
@@ -8,11 +10,11 @@ import { RepositoryList } from './RepositoryList';
 interface RepositoriesSectionProps {
     /** Array of repositories to display */
     repositories: HelmRepository[];
-    /** Callback when add repository button is clicked */
-    onAddRepository: () => void;
+    /** Callback when add repository form is submitted */
+    onAddRepository: (name: string, url: string) => Promise<void>;
     /** Callback when update repository button is clicked */
     onUpdateRepository: (name: string) => void;
-    /** Callback when remove repository button is clicked */
+    /** Callback when remove repository is confirmed */
     onRemoveRepository: (name: string) => void;
 }
 
@@ -26,6 +28,10 @@ export const RepositoriesSection: React.FC<RepositoriesSectionProps> = ({
     onUpdateRepository,
     onRemoveRepository
 }) => {
+    const [addModalOpen, setAddModalOpen] = useState(false);
+    const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+    const [repositoryToRemove, setRepositoryToRemove] = useState<string | null>(null);
+
     const sectionStyle: React.CSSProperties = {
         marginBottom: '24px'
     };
@@ -61,28 +67,99 @@ export const RepositoriesSection: React.FC<RepositoriesSectionProps> = ({
         backgroundColor: 'var(--vscode-button-hoverBackground)'
     };
 
-    const [isAddButtonHovered, setIsAddButtonHovered] = React.useState(false);
+    const [isAddButtonHovered, setIsAddButtonHovered] = useState(false);
+
+    /**
+     * Handle add repository button click - open modal.
+     */
+    const handleAddRepositoryClick = () => {
+        setAddModalOpen(true);
+    };
+
+    /**
+     * Handle add repository form submission.
+     */
+    const handleAddRepositorySubmit = async (name: string, url: string) => {
+        await onAddRepository(name, url);
+        setAddModalOpen(false);
+    };
+
+    /**
+     * Handle remove repository button click - show confirmation dialog.
+     */
+    const handleRemoveRepositoryClick = (name: string) => {
+        setRepositoryToRemove(name);
+        setRemoveConfirmOpen(true);
+    };
+
+    /**
+     * Handle remove repository confirmation.
+     */
+    const handleRemoveConfirm = () => {
+        if (repositoryToRemove) {
+            onRemoveRepository(repositoryToRemove);
+            setRepositoryToRemove(null);
+        }
+        setRemoveConfirmOpen(false);
+    };
+
+    /**
+     * Handle remove repository cancellation.
+     */
+    const handleRemoveCancel = () => {
+        setRepositoryToRemove(null);
+        setRemoveConfirmOpen(false);
+    };
+
+    // Get list of existing repository names for duplicate checking
+    const existingRepositoryNames = repositories.map((repo) => repo.name);
 
     return (
-        <section className="repositories-section" style={sectionStyle}>
-            <div style={headerStyle}>
-                <h2 style={titleStyle}>📚 Repositories</h2>
-                <button
-                    style={isAddButtonHovered ? { ...addButtonStyle, ...addButtonHoverStyle } : addButtonStyle}
-                    onClick={onAddRepository}
-                    onMouseEnter={() => setIsAddButtonHovered(true)}
-                    onMouseLeave={() => setIsAddButtonHovered(false)}
-                    aria-label="Add repository"
-                >
-                    + Add Repository
-                </button>
-            </div>
-            <RepositoryList
-                repositories={repositories}
-                onUpdate={onUpdateRepository}
-                onRemove={onRemoveRepository}
+        <>
+            <section className="repositories-section" style={sectionStyle}>
+                <div style={headerStyle}>
+                    <h2 style={titleStyle}>📚 Repositories</h2>
+                    <button
+                        style={isAddButtonHovered ? { ...addButtonStyle, ...addButtonHoverStyle } : addButtonStyle}
+                        onClick={handleAddRepositoryClick}
+                        onMouseEnter={() => setIsAddButtonHovered(true)}
+                        onMouseLeave={() => setIsAddButtonHovered(false)}
+                        aria-label="Add repository"
+                    >
+                        + Add Repository
+                    </button>
+                </div>
+                <RepositoryList
+                    repositories={repositories}
+                    onUpdate={onUpdateRepository}
+                    onRemove={handleRemoveRepositoryClick}
+                />
+            </section>
+
+            <AddRepositoryModal
+                open={addModalOpen}
+                existingRepositories={existingRepositoryNames}
+                onClose={() => setAddModalOpen(false)}
+                onSubmit={handleAddRepositorySubmit}
             />
-        </section>
+
+            <ConfirmDialog
+                open={removeConfirmOpen}
+                title="Remove Repository"
+                message={`Are you sure you want to remove repository '${repositoryToRemove || ''}'?`}
+                detail={
+                    repositoryToRemove
+                        ? repositories.find((r) => r.name === repositoryToRemove)?.chartCount
+                            ? `This repository contains ${repositories.find((r) => r.name === repositoryToRemove)?.chartCount} charts.`
+                            : undefined
+                        : undefined
+                }
+                confirmLabel="Remove"
+                cancelLabel="Cancel"
+                onConfirm={handleRemoveConfirm}
+                onCancel={handleRemoveCancel}
+            />
+        </>
     );
 };
 

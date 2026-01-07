@@ -5,7 +5,7 @@ feature_id:
   - helm-repository-management
 spec_id:
   - helm-repository-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Repository Add and Confirm Modals
@@ -20,15 +20,15 @@ Modals provide forms for adding repositories and confirming destructive actions.
 
 ## Acceptance Criteria
 
-- [ ] Create `AddRepositoryModal.tsx` component
-- [ ] Include name and URL input fields
-- [ ] Implement inline validation (required fields, URL format, duplicate names)
-- [ ] Show validation errors in real-time
-- [ ] Disable submit button while invalid
-- [ ] Create `ConfirmDialog.tsx` reusable component
-- [ ] Use ConfirmDialog for repository removal confirmation
-- [ ] Handle modal open/close state
-- [ ] Show loading state during submission
+- [x] Create `AddRepositoryModal.tsx` component
+- [x] Include name and URL input fields
+- [x] Implement inline validation (required fields, URL format, duplicate names)
+- [x] Show validation errors in real-time
+- [x] Disable submit button while invalid
+- [x] Create `ConfirmDialog.tsx` reusable component
+- [x] Use ConfirmDialog for repository removal confirmation
+- [x] Handle modal open/close state
+- [x] Show loading state during submission
 
 ## Implementation Notes
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease } from './types';
 import { InstalledReleasesSection } from './components/InstalledReleasesSection';
+import { RepositoriesSection } from './components/RepositoriesSection';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -131,12 +132,26 @@ export const HelmPackageManager: React.FC = () => {
             {/* Repositories Section */}
             <RepositoriesSection
                 repositories={state.repositories}
-                onAddRepository={() => {
-                    // Stub - will be implemented in story 007
-                    console.log('Add repository clicked');
+                onAddRepository={async (name: string, url: string) => {
+                    try {
+                        console.log('Adding repository:', name, url);
+                        sendMessage({
+                            command: 'addRepository',
+                            name,
+                            url
+                        });
+                        // Repository list will be refreshed when extension sends 'repositoriesLoaded' message
+                    } catch (error) {
+                        console.error('Failed to add repository:', error);
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        setState(prev => ({
+                            ...prev,
+                            error: `Failed to add repository: ${errorMessage}`
+                        }));
+                        throw error;
+                    }
                 }}
                 onUpdateRepository={(name: string) => {
-                    // Stub - will be implemented in story 006
                     console.log('Update repository clicked:', name);
                     sendMessage({
                         command: 'updateRepository',
@@ -144,7 +159,6 @@ export const HelmPackageManager: React.FC = () => {
                     });
                 }}
                 onRemoveRepository={(name: string) => {
-                    // Stub - will be implemented in story 006
                     console.log('Remove repository clicked:', name);
                     sendMessage({
                         command: 'removeRepository',
