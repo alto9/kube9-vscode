@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus } from './types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus, UIState } from './types';
 import { InstalledReleasesSection } from './components/InstalledReleasesSection';
 import { RepositoriesSection } from './components/RepositoriesSection';
 import { ReleaseDetailModal } from './components/ReleaseDetailModal';
@@ -40,6 +40,10 @@ export const HelmPackageManager: React.FC = () => {
         upgradeAvailable: false
     });
     const [operatorInstallModalOpen, setOperatorInstallModalOpen] = useState(false);
+    const [selectedTab, setSelectedTab] = useState<string>('repositories');
+    
+    // Ref to track if initial state has been restored
+    const stateRestoredRef = useRef(false);
 
     // Send message to extension
     const sendMessage = useCallback((message: WebviewToExtensionMessage) => {
@@ -47,6 +51,52 @@ export const HelmPackageManager: React.FC = () => {
             vscode.postMessage(message);
         }
     }, []);
+
+    // Save UI state to extension
+    const saveUIState = useCallback((uiState: UIState) => {
+        sendMessage({
+            command: 'saveUIState',
+            uiState
+        });
+    }, [sendMessage]);
+
+    // Restore UI state from webview state (scroll positions, etc.)
+    useEffect(() => {
+        if (!vscode) {
+            return;
+        }
+
+        const webviewState = vscode.getState() as { scrollPositions?: Record<string, number> } | undefined;
+        if (webviewState?.scrollPositions) {
+            // Restore scroll positions if needed
+            // This would be handled by individual components that need scroll restoration
+        }
+    }, []);
+
+    // Persist release filters when they change
+    useEffect(() => {
+        if (!stateRestoredRef.current) {
+            return; // Don't save until initial state is restored
+        }
+
+        const uiState: UIState = {
+            releaseFilters,
+            lastSelectedNamespace: releaseFilters.namespace !== 'all' ? releaseFilters.namespace : undefined
+        };
+        saveUIState(uiState);
+    }, [releaseFilters, saveUIState]);
+
+    // Persist selected tab when it changes
+    useEffect(() => {
+        if (!stateRestoredRef.current) {
+            return; // Don't save until initial state is restored
+        }
+
+        const uiState: UIState = {
+            selectedTab
+        };
+        saveUIState(uiState);
+    }, [selectedTab, saveUIState]);
 
     // Handle messages from extension
     useEffect(() => {
@@ -100,6 +150,24 @@ export const HelmPackageManager: React.FC = () => {
 
                 case 'operatorStatusUpdated':
                     setOperatorStatus(message.data as OperatorInstallationStatus);
+                    break;
+
+                case 'uiStateRestored':
+                    // Restore UI state from extension
+                    const restoredState = message.data as UIState;
+                    if (restoredState) {
+                        if (restoredState.releaseFilters) {
+                            setReleaseFilters(restoredState.releaseFilters);
+                        }
+                        if (restoredState.selectedTab) {
+                            setSelectedTab(restoredState.selectedTab);
+                        }
+                        // Restore scroll positions to webview state
+                        if (restoredState.scrollPositions && vscode) {
+                            vscode.setState({ scrollPositions: restoredState.scrollPositions });
+                        }
+                    }
+                    stateRestoredRef.current = true;
                     break;
 
                 default:

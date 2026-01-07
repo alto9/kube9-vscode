@@ -208,11 +208,27 @@ export interface HelmState {
 }
 
 /**
+ * UI state interface for persisting user preferences.
+ */
+export interface UIState {
+    /** Selected tab identifier */
+    selectedTab?: string;
+    /** Release filters state */
+    releaseFilters?: ReleaseFilters;
+    /** Sort order preference */
+    sortOrder?: string;
+    /** Last selected namespace in filters */
+    lastSelectedNamespace?: string;
+    /** Scroll positions for different sections */
+    scrollPositions?: Record<string, number>;
+}
+
+/**
  * Message sent from extension to webview.
  */
 export interface ExtensionToWebviewMessage {
     /** Message type */
-    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded' | 'upgradeInfoLoaded' | 'operatorStatusUpdated';
+    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded' | 'upgradeInfoLoaded' | 'operatorStatusUpdated' | 'uiStateRestored';
     /** Message data */
     data?: unknown;
     /** Operation name (for progress/complete/error messages) */
@@ -232,7 +248,7 @@ export interface ExtensionToWebviewMessage {
  */
 export interface WebviewToExtensionMessage {
     /** Command type */
-    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo' | 'getOperatorStatus' | 'openExternalLink' | 'ensureKube9Repository';
+    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo' | 'getOperatorStatus' | 'openExternalLink' | 'ensureKube9Repository' | 'saveUIState';
     /** Optional data payload */
     name?: string;
     url?: string;
@@ -248,4 +264,6 @@ export interface WebviewToExtensionMessage {
     value?: string;
     /** Content to copy (alternative to value for copyValue command) */
     content?: string;
+    /** UI state to save (for saveUIState command) */
+    uiState?: UIState;
 }

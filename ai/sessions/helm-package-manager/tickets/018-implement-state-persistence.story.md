@@ -5,7 +5,7 @@ feature_id:
   - helm-package-manager-access
 spec_id:
   - helm-webview-architecture
-status: pending
+status: completed
 ---
 
 # Story: Implement State Persistence and Caching
@@ -20,14 +20,14 @@ State persistence maintains user preferences across sessions, and caching reduce
 
 ## Acceptance Criteria
 
-- [ ] Store UI preferences in workspace state (filters, sort order)
-- [ ] Implement 5-minute TTL cache for repository list
-- [ ] Implement cache for release list
-- [ ] Restore filter state when webview reopens
-- [ ] Invalidate cache on relevant operations (add repo, install chart)
-- [ ] Persist scroll position when switching tabs
-- [ ] Store last selected namespace in filters
-- [ ] Clear cache on cluster context switch
+- [x] Store UI preferences in workspace state (filters, sort order)
+- [x] Implement 5-minute TTL cache for repository list
+- [x] Implement cache for release list
+- [x] Restore filter state when webview reopens
+- [x] Invalidate cache on relevant operations (add repo, install chart)
+- [x] Persist scroll position when switching tabs
+- [x] Store last selected namespace in filters
+- [x] Clear cache on cluster context switch
 
 ## Implementation Notes
 

@@ -5,9 +5,18 @@ import { getHelpController } from '../extension';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { HelmService } from '../services/HelmService';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
-import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams, ListReleasesParams, UpgradeParams } from './helm-package-manager/types';
+import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams, ListReleasesParams, UpgradeParams, UIState } from './helm-package-manager/types';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { getContextInfo } from '../utils/kubectlContext';
+
+/**
+ * Cache entry with TTL support.
+ */
+interface CacheEntry {
+    data: unknown;
+    timestamp: number;
+    ttl: number;
+}
 
 /**
  * HelmPackageManagerPanel manages a webview panel for the Helm Package Manager.
@@ -39,6 +48,16 @@ export class HelmPackageManagerPanel {
      * Disposables for event listeners and subscriptions.
      */
     private readonly disposables: vscode.Disposable[] = [];
+
+    /**
+     * In-memory cache with TTL support.
+     */
+    private readonly cache: Map<string, CacheEntry> = new Map();
+
+    /**
+     * Current Kubernetes context name for cache invalidation.
+     */
+    private currentContextName: string | undefined;
 
     /**
      * Create or show the Helm Package Manager webview panel.
@@ -87,6 +106,9 @@ export class HelmPackageManagerPanel {
         // Initialize HelmService with kubeconfig path
         const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
         this.helmService = new HelmService(kubeconfigPath);
+
+        // Initialize current context name
+        this.initializeContextTracking();
 
         // Set the webview's HTML content
         this.panel.webview.html = HelmPackageManagerPanel.getWebviewContent(this.panel.webview, context);
@@ -229,9 +251,8 @@ export class HelmPackageManagerPanel {
                         }
 
                         case 'ready':
-                            // Webview is ready, load initial repository list and operator status
-                            await this.handleListRepositories();
-                            await this.handleGetOperatorStatus();
+                            // Webview is ready, restore UI state and load initial data
+                            await this.handleReady();
                             break;
 
                         case 'getOperatorStatus':
@@ -258,6 +279,12 @@ export class HelmPackageManagerPanel {
                             await this.handleEnsureKube9Repository();
                             break;
 
+                        case 'saveUIState':
+                            if (message.uiState) {
+                                await this.handleSaveUIState(message.uiState);
+                            }
+                            break;
+
                         default:
                             console.log('Helm Package Manager received unknown message:', message);
                     }
@@ -274,11 +301,152 @@ export class HelmPackageManagerPanel {
     }
 
     /**
+     * Get cached data or fetch and cache it.
+     * 
+     * @param key Cache key
+     * @param fetcher Function to fetch data if not cached or expired
+     * @param ttl Time to live in milliseconds (default: 5 minutes)
+     * @returns Cached or freshly fetched data
+     */
+    private async getCached<T>(
+        key: string,
+        fetcher: () => Promise<T>,
+        ttl: number = 300000 // 5 minutes
+    ): Promise<T> {
+        const cached = this.cache.get(key);
+        const now = Date.now();
+
+        if (cached && (now - cached.timestamp < cached.ttl)) {
+            return cached.data as T;
+        }
+
+        const data = await fetcher();
+        this.cache.set(key, { data, timestamp: now, ttl });
+        return data;
+    }
+
+    /**
+     * Invalidate cache entries matching a pattern.
+     * 
+     * @param pattern Pattern to match against cache keys
+     */
+    private invalidateCache(pattern: string): void {
+        for (const key of this.cache.keys()) {
+            if (key.includes(pattern)) {
+                this.cache.delete(key);
+            }
+        }
+    }
+
+    /**
+     * Clear all cache entries.
+     */
+    private clearCache(): void {
+        this.cache.clear();
+    }
+
+    /**
+     * Save UI state to workspace storage.
+     * 
+     * @param state UI state to save
+     */
+    private async saveState(state: UIState): Promise<void> {
+        if (HelmPackageManagerPanel.extensionContext) {
+            await HelmPackageManagerPanel.extensionContext.workspaceState.update('helm.uiState', state);
+        }
+    }
+
+    /**
+     * Restore UI state from workspace storage.
+     * 
+     * @returns Restored UI state or undefined if none exists
+     */
+    private async restoreState(): Promise<UIState | undefined> {
+        if (HelmPackageManagerPanel.extensionContext) {
+            return HelmPackageManagerPanel.extensionContext.workspaceState.get<UIState>('helm.uiState');
+        }
+        return undefined;
+    }
+
+    /**
+     * Initialize context tracking and check for context changes.
+     */
+    private async initializeContextTracking(): Promise<void> {
+        try {
+            const contextInfo = await getContextInfo();
+            const newContextName = contextInfo.contextName;
+
+            // If context changed, clear cache
+            if (this.currentContextName && this.currentContextName !== newContextName) {
+                this.clearCache();
+            }
+
+            this.currentContextName = newContextName;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to initialize context tracking:', errorMessage);
+        }
+    }
+
+    /**
+     * Check for context changes and clear cache if needed.
+     */
+    private async checkContextChange(): Promise<void> {
+        try {
+            const contextInfo = await getContextInfo();
+            const newContextName = contextInfo.contextName;
+
+            if (this.currentContextName && this.currentContextName !== newContextName) {
+                this.clearCache();
+            }
+
+            this.currentContextName = newContextName;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to check context change:', errorMessage);
+        }
+    }
+
+    /**
+     * Handle ready command - restore UI state and load initial data.
+     */
+    private async handleReady(): Promise<void> {
+        // Check for context changes
+        await this.checkContextChange();
+
+        // Restore UI state
+        const restoredState = await this.restoreState();
+        if (restoredState) {
+            this.sendMessage({
+                type: 'uiStateRestored',
+                data: restoredState
+            });
+        }
+
+        // Load initial repository list and operator status
+        await this.handleListRepositories();
+        await this.handleGetOperatorStatus();
+    }
+
+    /**
+     * Handle saveUIState command.
+     * 
+     * @param uiState UI state to save
+     */
+    private async handleSaveUIState(uiState: UIState): Promise<void> {
+        await this.saveState(uiState);
+    }
+
+    /**
      * Handle listRepositories command.
      */
     private async handleListRepositories(): Promise<void> {
         try {
-            const repositories = await this.helmService.listRepositories();
+            const repositories = await this.getCached(
+                'repositories',
+                () => this.helmService.listRepositories(),
+                300000 // 5 minutes
+            );
             this.sendMessage({
                 type: 'repositoriesLoaded',
                 data: repositories
@@ -313,6 +481,9 @@ export class HelmPackageManagerPanel {
 
             // Add repository
             await this.helmService.addRepository(name, url);
+
+            // Invalidate cache
+            this.invalidateCache('repositories');
 
             // Refresh repository list
             const updated = await this.helmService.listRepositories();
@@ -353,6 +524,9 @@ export class HelmPackageManagerPanel {
                 }
             );
 
+            // Invalidate cache
+            this.invalidateCache('repositories');
+
             // Refresh repository list
             const updated = await this.helmService.listRepositories();
             this.sendMessage({
@@ -376,6 +550,9 @@ export class HelmPackageManagerPanel {
     private async handleRemoveRepository(name: string): Promise<void> {
         try {
             await this.helmService.removeRepository(name);
+
+            // Invalidate cache
+            this.invalidateCache('repositories');
 
             // Refresh repository list
             const updated = await this.helmService.listRepositories();
@@ -500,6 +677,9 @@ export class HelmPackageManagerPanel {
                             `Successfully installed ${params.releaseName}`
                         );
 
+                        // Invalidate releases cache
+                        this.invalidateCache('releases');
+
                         // Refresh releases list if listReleases handler exists
                         // For now, send a message to trigger refresh in webview
                         this.sendMessage({
@@ -545,7 +725,18 @@ export class HelmPackageManagerPanel {
             const listParams: ListReleasesParams = params || {
                 allNamespaces: true
             };
-            const releases = await this.helmService.listReleases(listParams);
+            
+            // Build cache key based on namespace filter
+            const cacheKey = listParams.allNamespaces 
+                ? 'releases:all' 
+                : `releases:${listParams.namespace || 'default'}`;
+            
+            const releases = await this.getCached(
+                cacheKey,
+                () => this.helmService.listReleases(listParams),
+                300000 // 5 minutes
+            );
+            
             this.sendMessage({
                 type: 'releasesLoaded',
                 data: releases
@@ -795,6 +986,9 @@ export class HelmPackageManagerPanel {
                             `Successfully upgraded ${params.releaseName}`
                         );
 
+                        // Invalidate releases cache
+                        this.invalidateCache('releases');
+
                         // Refresh releases list
                         const releases = await this.helmService.listReleases({ allNamespaces: true });
                         this.sendMessage({
@@ -853,6 +1047,9 @@ export class HelmPackageManagerPanel {
                             `Successfully rolled back ${name} to revision ${revision}`
                         );
 
+                        // Invalidate releases cache
+                        this.invalidateCache('releases');
+
                         // Refresh releases list
                         const releases = await this.helmService.listReleases({ allNamespaces: true });
                         this.sendMessage({
@@ -909,6 +1106,9 @@ export class HelmPackageManagerPanel {
                         vscode.window.showInformationMessage(
                             `Successfully uninstalled ${name}`
                         );
+
+                        // Invalidate releases cache
+                        this.invalidateCache('releases');
 
                         // Refresh releases list
                         const releases = await this.helmService.listReleases({ allNamespaces: true });
