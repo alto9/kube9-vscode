@@ -305,7 +305,7 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
             height: 24px;
             background-color: var(--vscode-input-background);
             border: 1px solid var(--vscode-panel-border);
-            border-radius: 4px;
+            border-radius: 0;
             overflow: hidden;
             position: relative;
         }
@@ -313,9 +313,9 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
         .chart-bar-fill {
             height: 100%;
             transition: width 0.3s ease;
-            display: flex;
-            align-items: center;
-            padding-left: 8px;
+            display: block;
+            border-radius: 0;
+            min-width: 0;
         }
         
         .chart-bar-fill.blue {
