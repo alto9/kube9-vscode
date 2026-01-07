@@ -5,7 +5,7 @@ import { getHelpController } from '../extension';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { HelmService } from '../services/HelmService';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
-import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams } from './helm-package-manager/types';
+import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams, ListReleasesParams, UpgradeParams } from './helm-package-manager/types';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { getContextInfo } from '../utils/kubectlContext';
 
@@ -173,6 +173,42 @@ export class HelmPackageManagerPanel {
                                 await this.handleInstallChart(message.params as InstallParams);
                             } else {
                                 this.sendError('Installation parameters are required');
+                            }
+                            break;
+
+                        case 'listReleases':
+                            await this.handleListReleases(message.params as ListReleasesParams | undefined);
+                            break;
+
+                        case 'getReleaseDetails':
+                            if (message.name && message.namespace) {
+                                await this.handleGetReleaseDetails(message.name, message.namespace);
+                            } else {
+                                this.sendError('Release name and namespace are required');
+                            }
+                            break;
+
+                        case 'upgradeRelease':
+                            if (message.params) {
+                                await this.handleUpgradeRelease(message.params as UpgradeParams);
+                            } else {
+                                this.sendError('Upgrade parameters are required');
+                            }
+                            break;
+
+                        case 'rollbackRelease':
+                            if (message.name && message.namespace && message.revision !== undefined) {
+                                await this.handleRollbackRelease(message.name, message.namespace, message.revision);
+                            } else {
+                                this.sendError('Release name, namespace, and revision are required');
+                            }
+                            break;
+
+                        case 'uninstallRelease':
+                            if (message.name && message.namespace) {
+                                await this.handleUninstallRelease(message.name, message.namespace);
+                            } else {
+                                this.sendError('Release name and namespace are required');
                             }
                             break;
 
@@ -456,6 +492,217 @@ export class HelmPackageManagerPanel {
      */
     private sendMessage(message: ExtensionToWebviewMessage): void {
         this.panel.webview.postMessage(message);
+    }
+
+    /**
+     * Handle listReleases command.
+     * 
+     * @param params Optional parameters for listing releases
+     */
+    private async handleListReleases(params?: ListReleasesParams): Promise<void> {
+        try {
+            const listParams: ListReleasesParams = params || {
+                allNamespaces: true
+            };
+            const releases = await this.helmService.listReleases(listParams);
+            this.sendMessage({
+                type: 'releasesLoaded',
+                data: releases
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.sendError(`Failed to list releases: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle getReleaseDetails command.
+     * 
+     * @param name Release name
+     * @param namespace Release namespace
+     */
+    private async handleGetReleaseDetails(name: string, namespace: string): Promise<void> {
+        try {
+            const details = await this.helmService.getReleaseDetails(name, namespace);
+            this.sendMessage({
+                type: 'releaseDetailsLoaded',
+                data: details
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.sendError(`Failed to get release details: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle upgradeRelease command.
+     * Upgrades a Helm release with progress feedback and error handling.
+     * 
+     * @param params Upgrade parameters
+     */
+    private async handleUpgradeRelease(params: UpgradeParams): Promise<void> {
+        try {
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Upgrading ${params.releaseName}...`,
+                    cancellable: false
+                },
+                async (progress) => {
+                    progress.report({ message: 'Preparing upgrade...' });
+
+                    try {
+                        await this.helmService.upgradeRelease(params);
+                        progress.report({ message: 'Upgrade complete!' });
+
+                        vscode.window.showInformationMessage(
+                            `Successfully upgraded ${params.releaseName}`
+                        );
+
+                        // Refresh releases list
+                        const releases = await this.helmService.listReleases({ allNamespaces: true });
+                        this.sendMessage({
+                            type: 'releasesLoaded',
+                            data: releases
+                        });
+
+                        this.sendMessage({
+                            type: 'operationComplete',
+                            operation: 'upgradeRelease',
+                            success: true,
+                            message: `Successfully upgraded ${params.releaseName}`
+                        });
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        vscode.window.showErrorMessage(`Upgrade failed: ${errorMessage}`);
+                        this.sendMessage({
+                            type: 'operationError',
+                            operation: 'upgradeRelease',
+                            error: errorMessage
+                        });
+                        throw error; // Re-throw to trigger outer catch
+                    }
+                }
+            );
+        } catch (error) {
+            // Error already handled in withProgress callback
+            // This catch ensures the error doesn't propagate further
+        }
+    }
+
+    /**
+     * Handle rollbackRelease command.
+     * Rolls back a Helm release with progress feedback and error handling.
+     * 
+     * @param name Release name
+     * @param namespace Release namespace
+     * @param revision Revision number to rollback to
+     */
+    private async handleRollbackRelease(name: string, namespace: string, revision: number): Promise<void> {
+        try {
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Rolling back ${name}...`,
+                    cancellable: false
+                },
+                async (progress) => {
+                    progress.report({ message: 'Preparing rollback...' });
+
+                    try {
+                        await this.helmService.rollbackRelease(name, namespace, revision);
+                        progress.report({ message: 'Rollback complete!' });
+
+                        vscode.window.showInformationMessage(
+                            `Successfully rolled back ${name} to revision ${revision}`
+                        );
+
+                        // Refresh releases list
+                        const releases = await this.helmService.listReleases({ allNamespaces: true });
+                        this.sendMessage({
+                            type: 'releasesLoaded',
+                            data: releases
+                        });
+
+                        this.sendMessage({
+                            type: 'operationComplete',
+                            operation: 'rollbackRelease',
+                            success: true,
+                            message: `Successfully rolled back ${name} to revision ${revision}`
+                        });
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        vscode.window.showErrorMessage(`Rollback failed: ${errorMessage}`);
+                        this.sendMessage({
+                            type: 'operationError',
+                            operation: 'rollbackRelease',
+                            error: errorMessage
+                        });
+                        throw error; // Re-throw to trigger outer catch
+                    }
+                }
+            );
+        } catch (error) {
+            // Error already handled in withProgress callback
+            // This catch ensures the error doesn't propagate further
+        }
+    }
+
+    /**
+     * Handle uninstallRelease command.
+     * Uninstalls a Helm release with progress feedback and error handling.
+     * 
+     * @param name Release name
+     * @param namespace Release namespace
+     */
+    private async handleUninstallRelease(name: string, namespace: string): Promise<void> {
+        try {
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Uninstalling ${name}...`,
+                    cancellable: false
+                },
+                async (progress) => {
+                    progress.report({ message: 'Preparing uninstall...' });
+
+                    try {
+                        await this.helmService.uninstallRelease(name, namespace);
+                        progress.report({ message: 'Uninstall complete!' });
+
+                        vscode.window.showInformationMessage(
+                            `Successfully uninstalled ${name}`
+                        );
+
+                        // Refresh releases list
+                        const releases = await this.helmService.listReleases({ allNamespaces: true });
+                        this.sendMessage({
+                            type: 'releasesLoaded',
+                            data: releases
+                        });
+
+                        this.sendMessage({
+                            type: 'operationComplete',
+                            operation: 'uninstallRelease',
+                            success: true,
+                            message: `Successfully uninstalled ${name}`
+                        });
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        vscode.window.showErrorMessage(`Uninstall failed: ${errorMessage}`);
+                        this.sendMessage({
+                            type: 'operationError',
+                            operation: 'uninstallRelease',
+                            error: errorMessage
+                        });
+                        throw error; // Re-throw to trigger outer catch
+                    }
+                }
+            );
+        } catch (error) {
+            // Error already handled in withProgress callback
+            // This catch ensures the error doesn't propagate further
+        }
     }
 
     /**

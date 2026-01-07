@@ -113,6 +113,60 @@ export interface InstallParams {
 }
 
 /**
+ * Parameters for listing Helm releases.
+ */
+export interface ListReleasesParams {
+    namespace?: string;
+    allNamespaces: boolean;
+    status?: ReleaseStatus;
+}
+
+/**
+ * Parameters for upgrading a Helm release.
+ */
+export interface UpgradeParams {
+    releaseName: string;
+    chart: string;
+    namespace: string;
+    version?: string;
+    values?: string;
+    reuseValues: boolean;
+    wait?: boolean;
+    timeout?: string;
+}
+
+/**
+ * Detailed information about a Helm release.
+ */
+export interface ReleaseDetails {
+    name: string;
+    namespace: string;
+    chart: string;
+    version: string;
+    appVersion?: string;
+    status: ReleaseStatus;
+    revision: number;
+    updated: Date;
+    description?: string;
+    notes?: string;
+    manifest: string;
+    values: string;
+    history: ReleaseRevision[];
+}
+
+/**
+ * Information about a Helm release revision.
+ */
+export interface ReleaseRevision {
+    revision: number;
+    updated: Date;
+    status: string;
+    chart: string;
+    appVersion?: string;
+    description?: string;
+}
+
+/**
  * Operator installation status information.
  */
 export interface OperatorInstallationStatus {
@@ -146,7 +200,7 @@ export interface HelmState {
  */
 export interface ExtensionToWebviewMessage {
     /** Message type */
-    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded';
+    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded';
     /** Message data */
     data?: unknown;
     /** Operation name (for progress/complete/error messages) */

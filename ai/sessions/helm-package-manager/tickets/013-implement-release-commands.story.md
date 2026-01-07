@@ -8,7 +8,7 @@ feature_id:
 spec_id:
   - helm-release-operations
   - helm-cli-integration
-status: pending
+status: completed
 ---
 
 # Story: Implement Release Management Commands
@@ -23,15 +23,15 @@ Release commands manage the lifecycle of installed Helm releases. See [helm-rele
 
 ## Acceptance Criteria
 
-- [ ] Implement `listReleases(params)` method in HelmService
-- [ ] Implement `getReleaseDetails(name, namespace)` method
-- [ ] Implement `getReleaseHistory(name, namespace)` method
-- [ ] Implement `upgradeRelease(params)` method
-- [ ] Implement `rollbackRelease(name, namespace, revision)` method
-- [ ] Implement `uninstallRelease(name, namespace)` method
-- [ ] Create message handlers for all release operations
-- [ ] Handle errors with user-friendly messages
-- [ ] Show progress notifications for operations
+- [x] Implement `listReleases(params)` method in HelmService
+- [x] Implement `getReleaseDetails(name, namespace)` method
+- [x] Implement `getReleaseHistory(name, namespace)` method
+- [x] Implement `upgradeRelease(params)` method
+- [x] Implement `rollbackRelease(name, namespace, revision)` method
+- [x] Implement `uninstallRelease(name, namespace)` method
+- [x] Create message handlers for all release operations
+- [x] Handle errors with user-friendly messages
+- [x] Show progress notifications for operations
 
 ## Implementation Notes
 

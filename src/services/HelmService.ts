@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { ChartSearchResult, ChartDetails, InstallParams } from '../webview/helm-package-manager/types';
+import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus } from '../webview/helm-package-manager/types';
 
 /**
  * Options for executing Helm commands.
@@ -435,6 +435,248 @@ export class HelmService {
                 }
             }
         }
+    }
+
+    /**
+     * Lists installed Helm releases.
+     * 
+     * @param params Parameters for listing releases
+     * @returns Promise resolving to array of release information
+     * @throws Error if command fails
+     */
+    public async listReleases(params: ListReleasesParams): Promise<HelmRelease[]> {
+        const args = ['list', '--output', 'json'];
+
+        if (params.allNamespaces) {
+            args.push('--all-namespaces');
+        } else if (params.namespace) {
+            args.push('--namespace', params.namespace);
+        }
+
+        if (params.status) {
+            args.push('--filter', params.status);
+        }
+
+        const output = await this.executeCommand(args);
+        
+        // Handle empty output
+        if (!output || output.trim().length === 0) {
+            return [];
+        }
+
+        const releases = JSON.parse(output) as Array<{
+            name: string;
+            namespace: string;
+            chart: string;
+            app_version?: string;
+            revision: string;
+            updated: string;
+            status: string;
+        }>;
+
+        return releases.map(r => ({
+            name: r.name,
+            namespace: r.namespace,
+            chart: r.chart,
+            version: r.chart.split('-').slice(-1)[0] || '', // Extract version from chart name
+            status: r.status as ReleaseStatus,
+            revision: parseInt(r.revision, 10),
+            updated: new Date(r.updated)
+        }));
+    }
+
+    /**
+     * Gets detailed information about a Helm release.
+     * Fetches status, manifest, values, and history in parallel.
+     * 
+     * @param name Release name
+     * @param namespace Release namespace
+     * @returns Promise resolving to release details
+     * @throws Error if release not found or command fails
+     */
+    public async getReleaseDetails(name: string, namespace: string): Promise<ReleaseDetails> {
+        const [statusOutput, manifest, values, historyOutput] = await Promise.all([
+            this.executeCommand(['status', name, '--namespace', namespace, '--output', 'json']),
+            this.executeCommand(['get', 'manifest', name, '--namespace', namespace]),
+            this.executeCommand(['get', 'values', name, '--namespace', namespace, '--all']),
+            this.executeCommand(['history', name, '--namespace', namespace, '--output', 'json'])
+        ]);
+
+        const status = JSON.parse(statusOutput) as {
+            name: string;
+            namespace: string;
+            info?: {
+                status: string;
+                revision: string;
+                description?: string;
+                notes?: string;
+            };
+            chart?: {
+                metadata?: {
+                    version?: string;
+                    appVersion?: string;
+                };
+            };
+            version?: string;
+        };
+
+        const history = JSON.parse(historyOutput) as Array<{
+            revision: string;
+            updated: string;
+            status: string;
+            chart: string;
+            app_version?: string;
+            description?: string;
+        }>;
+
+        const historyRevisions: ReleaseRevision[] = history.map(h => ({
+            revision: parseInt(h.revision, 10),
+            updated: new Date(h.updated),
+            status: h.status,
+            chart: h.chart,
+            appVersion: h.app_version,
+            description: h.description
+        }));
+
+        return {
+            name: status.name,
+            namespace: status.namespace,
+            chart: status.chart?.metadata?.version ? `${name}-${status.chart.metadata.version}` : name,
+            version: status.chart?.metadata?.version || status.version || '',
+            appVersion: status.chart?.metadata?.appVersion,
+            status: (status.info?.status || 'unknown') as ReleaseStatus,
+            revision: parseInt(status.info?.revision || '0', 10),
+            updated: new Date(),
+            description: status.info?.description,
+            notes: status.info?.notes,
+            manifest,
+            values,
+            history: historyRevisions
+        };
+    }
+
+    /**
+     * Gets the revision history for a Helm release.
+     * 
+     * @param name Release name
+     * @param namespace Release namespace
+     * @returns Promise resolving to array of release revisions
+     * @throws Error if release not found or command fails
+     */
+    public async getReleaseHistory(name: string, namespace: string): Promise<ReleaseRevision[]> {
+        const output = await this.executeCommand([
+            'history',
+            name,
+            '--namespace', namespace,
+            '--output', 'json'
+        ]);
+
+        const history = JSON.parse(output) as Array<{
+            revision: string;
+            updated: string;
+            status: string;
+            chart: string;
+            app_version?: string;
+            description?: string;
+        }>;
+
+        return history.map(h => ({
+            revision: parseInt(h.revision, 10),
+            updated: new Date(h.updated),
+            status: h.status,
+            chart: h.chart,
+            appVersion: h.app_version,
+            description: h.description
+        }));
+    }
+
+    /**
+     * Upgrades a Helm release with the given parameters.
+     * 
+     * @param params Upgrade parameters
+     * @returns Promise that resolves when upgrade is complete
+     * @throws Error if upgrade fails
+     */
+    public async upgradeRelease(params: UpgradeParams): Promise<void> {
+        const args = [
+            'upgrade',
+            params.releaseName,
+            params.chart,
+            '--namespace', params.namespace
+        ];
+
+        if (params.reuseValues) {
+            args.push('--reuse-values');
+        }
+
+        if (params.version) {
+            args.push('--version', params.version);
+        }
+
+        if (params.wait) {
+            args.push('--wait');
+        }
+
+        if (params.timeout) {
+            args.push('--timeout', params.timeout);
+        }
+
+        // Create temporary values file if custom values provided
+        let valuesFile: string | null = null;
+        if (params.values) {
+            const tmpDir = os.tmpdir();
+            valuesFile = path.join(tmpDir, `helm-values-${Date.now()}.yaml`);
+            await fs.promises.writeFile(valuesFile, params.values, 'utf8');
+            args.push('--values', valuesFile);
+        }
+
+        try {
+            // Execute the upgrade command
+            await this.executeCommand(args);
+        } finally {
+            // Clean up temporary file if it was created
+            if (valuesFile) {
+                try {
+                    await fs.promises.unlink(valuesFile);
+                } catch {
+                    // Ignore cleanup errors
+                }
+            }
+        }
+    }
+
+    /**
+     * Rolls back a Helm release to a specific revision.
+     * 
+     * @param name Release name
+     * @param namespace Release namespace
+     * @param revision Revision number to rollback to
+     * @returns Promise that resolves when rollback is complete
+     * @throws Error if rollback fails
+     */
+    public async rollbackRelease(name: string, namespace: string, revision: number): Promise<void> {
+        await this.executeCommand([
+            'rollback',
+            name,
+            revision.toString(),
+            '--namespace', namespace
+        ]);
+    }
+
+    /**
+     * Uninstalls a Helm release.
+     * 
+     * @param name Release name
+     * @param namespace Release namespace
+     * @returns Promise that resolves when uninstall is complete
+     * @throws Error if uninstall fails
+     */
+    public async uninstallRelease(name: string, namespace: string): Promise<void> {
+        await this.executeCommand([
+            'uninstall',
+            name,
+            '--namespace', namespace
+        ]);
     }
 
     /**
