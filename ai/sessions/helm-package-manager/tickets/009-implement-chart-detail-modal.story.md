@@ -5,7 +5,7 @@ feature_id:
   - helm-chart-discovery
 spec_id:
   - helm-chart-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Chart Detail Modal

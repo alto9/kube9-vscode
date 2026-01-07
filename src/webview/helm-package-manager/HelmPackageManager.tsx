@@ -57,6 +57,11 @@ export const HelmPackageManager: React.FC = () => {
                     setState(prev => ({ ...prev, searchResults: message.data as HelmState['searchResults'] }));
                     break;
 
+                case 'chartDetails':
+                    // Chart details are handled by ChartDetailModal component
+                    // This message type is already handled in the modal's message listener
+                    break;
+
                 case 'operationComplete':
                     // Handle operation completion
                     setState(prev => ({ ...prev, loading: false }));

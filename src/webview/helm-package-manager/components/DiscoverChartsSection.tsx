@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChartSearchResult } from '../types';
 import { SearchBar } from './SearchBar';
 import { ChartResults } from './ChartResults';
+import { ChartDetailModal } from './ChartDetailModal';
 
 /**
  * Props for DiscoverChartsSection component.
@@ -15,6 +16,8 @@ interface DiscoverChartsSectionProps {
     onSearch: (query: string) => void;
     /** Callback when a chart is clicked */
     onChartClick: (chart: ChartSearchResult) => void;
+    /** Callback when install button is clicked in modal */
+    onInstall?: (chart: ChartSearchResult) => void;
 }
 
 /**
@@ -25,8 +28,38 @@ export const DiscoverChartsSection: React.FC<DiscoverChartsSectionProps> = ({
     searchResults,
     searching,
     onSearch,
-    onChartClick
+    onChartClick,
+    onInstall
 }) => {
+    const [selectedChart, setSelectedChart] = useState<ChartSearchResult | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+
+    /**
+     * Handle chart click - open modal with selected chart.
+     */
+    const handleChartClick = (chart: ChartSearchResult) => {
+        setSelectedChart(chart);
+        setModalOpen(true);
+        onChartClick(chart);
+    };
+
+    /**
+     * Handle modal close.
+     */
+    const handleModalClose = () => {
+        setModalOpen(false);
+        setSelectedChart(null);
+    };
+
+    /**
+     * Handle install button click in modal.
+     */
+    const handleInstall = (chart: ChartSearchResult) => {
+        if (onInstall) {
+            onInstall(chart);
+        }
+        handleModalClose();
+    };
     const sectionStyle: React.CSSProperties = {
         marginBottom: '32px'
     };
@@ -119,8 +152,16 @@ export const DiscoverChartsSection: React.FC<DiscoverChartsSectionProps> = ({
             )}
             
             {!searching && searchResults.length > 0 && (
-                <ChartResults results={searchResults} onClick={onChartClick} />
+                <ChartResults results={searchResults} onClick={handleChartClick} />
             )}
+
+            {/* Chart Detail Modal */}
+            <ChartDetailModal
+                chart={selectedChart}
+                open={modalOpen}
+                onClose={handleModalClose}
+                onInstall={handleInstall}
+            />
         </section>
     );
 };
