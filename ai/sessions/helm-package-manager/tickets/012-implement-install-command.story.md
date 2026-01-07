@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - helm-chart-operations
   - helm-cli-integration
-status: pending
+status: completed
 ---
 
 # Story: Implement Chart Installation Command
@@ -21,15 +21,15 @@ The install command executes Helm CLI to install charts into the cluster. It han
 
 ## Acceptance Criteria
 
-- [ ] Implement `installChart(params)` method in HelmService
-- [ ] Create temporary values file from custom YAML
-- [ ] Execute `helm install` with appropriate flags
-- [ ] Handle `--create-namespace` flag
-- [ ] Show progress notification with steps
-- [ ] Clean up temporary values file after install
-- [ ] Handle common installation errors (release exists, timeout, invalid values)
-- [ ] Refresh releases list after successful installation
-- [ ] Send installation result to webview
+- [x] Implement `installChart(params)` method in HelmService
+- [x] Create temporary values file from custom YAML
+- [x] Execute `helm install` with appropriate flags
+- [x] Handle `--create-namespace` flag
+- [x] Show progress notification with steps
+- [x] Clean up temporary values file after install
+- [x] Handle common installation errors (release exists, timeout, invalid values)
+- [x] Refresh releases list after successful installation
+- [x] Send installation result to webview
 
 ## Implementation Notes
 

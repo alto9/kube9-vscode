@@ -1,5 +1,8 @@
 import { spawn } from 'child_process';
-import { ChartSearchResult, ChartDetails } from '../webview/helm-package-manager/types';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { ChartSearchResult, ChartDetails, InstallParams } from '../webview/helm-package-manager/types';
 
 /**
  * Options for executing Helm commands.
@@ -375,6 +378,63 @@ export class HelmService {
             keywords: chartInfo.keywords || [],
             home: chartInfo.home || ''
         };
+    }
+
+    /**
+     * Installs a Helm chart with the given parameters.
+     * 
+     * @param params Installation parameters
+     * @returns Promise that resolves when installation is complete
+     * @throws Error if installation fails
+     */
+    public async installChart(params: InstallParams): Promise<void> {
+        // Build command arguments
+        const args = [
+            'install',
+            params.releaseName,
+            params.chart,
+            '--namespace', params.namespace
+        ];
+
+        // Add optional flags
+        if (params.createNamespace) {
+            args.push('--create-namespace');
+        }
+
+        if (params.version) {
+            args.push('--version', params.version);
+        }
+
+        if (params.wait) {
+            args.push('--wait');
+        }
+
+        if (params.timeout) {
+            args.push('--timeout', params.timeout);
+        }
+
+        // Create temporary values file if custom values provided
+        let valuesFile: string | null = null;
+        if (params.values) {
+            const tmpDir = os.tmpdir();
+            valuesFile = path.join(tmpDir, `helm-values-${Date.now()}.yaml`);
+            await fs.promises.writeFile(valuesFile, params.values, 'utf8');
+            args.push('--values', valuesFile);
+        }
+
+        try {
+            // Execute the install command
+            await this.executeCommand(args);
+        } finally {
+            // Clean up temporary file if it was created
+            if (valuesFile) {
+                try {
+                    await fs.promises.unlink(valuesFile);
+                } catch {
+                    // Ignore cleanup errors
+                }
+            }
+        }
     }
 
     /**

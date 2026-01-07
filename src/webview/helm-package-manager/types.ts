@@ -107,6 +107,9 @@ export interface InstallParams {
     namespace: string;
     createNamespace: boolean;
     values?: string;
+    version?: string;
+    wait?: boolean;
+    timeout?: string;
 }
 
 /**

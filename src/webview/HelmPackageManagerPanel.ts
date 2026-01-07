@@ -5,7 +5,7 @@ import { getHelpController } from '../extension';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { HelmService } from '../services/HelmService';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
-import { WebviewToExtensionMessage, ExtensionToWebviewMessage } from './helm-package-manager/types';
+import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams } from './helm-package-manager/types';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { getContextInfo } from '../utils/kubectlContext';
 
@@ -166,6 +166,14 @@ export class HelmPackageManagerPanel {
 
                         case 'getNamespaces':
                             await this.handleGetNamespaces();
+                            break;
+
+                        case 'installChart':
+                            if (message.params) {
+                                await this.handleInstallChart(message.params as InstallParams);
+                            } else {
+                                this.sendError('Installation parameters are required');
+                            }
                             break;
 
                         case 'ready':
@@ -387,6 +395,57 @@ export class HelmPackageManagerPanel {
                 type: 'namespacesLoaded',
                 data: []
             });
+        }
+    }
+
+    /**
+     * Handle installChart command.
+     * Installs a Helm chart with progress feedback and error handling.
+     * 
+     * @param params Installation parameters
+     */
+    private async handleInstallChart(params: InstallParams): Promise<void> {
+        try {
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Installing ${params.releaseName}...`,
+                    cancellable: false
+                },
+                async (progress) => {
+                    progress.report({ message: 'Preparing installation...' });
+
+                    try {
+                        await this.helmService.installChart(params);
+                        progress.report({ message: 'Installation complete!' });
+
+                        vscode.window.showInformationMessage(
+                            `Successfully installed ${params.releaseName}`
+                        );
+
+                        // Refresh releases list if listReleases handler exists
+                        // For now, send a message to trigger refresh in webview
+                        this.sendMessage({
+                            type: 'operationComplete',
+                            operation: 'installChart',
+                            success: true,
+                            message: `Successfully installed ${params.releaseName}`
+                        });
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        vscode.window.showErrorMessage(`Installation failed: ${errorMessage}`);
+                        this.sendMessage({
+                            type: 'operationError',
+                            operation: 'installChart',
+                            error: errorMessage
+                        });
+                        throw error; // Re-throw to trigger outer catch
+                    }
+                }
+            );
+        } catch (error) {
+            // Error already handled in withProgress callback
+            // This catch ensures the error doesn't propagate further
         }
     }
 
