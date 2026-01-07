@@ -115,8 +115,7 @@ export class HelmPackageManagerPanel {
 
     /**
      * Generate the HTML content for the Helm Package Manager webview.
-     * Creates a minimal skeleton with CSP headers and help button infrastructure.
-     * The React app will be added in story 004.
+     * Loads React bundle from webpack build output.
      * 
      * @param webview The webview instance
      * @param context The extension context
@@ -124,6 +123,11 @@ export class HelmPackageManagerPanel {
      */
     private static getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionContext): string {
         const cspSource = webview.cspSource;
+
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(context.extensionUri, 'media', 'helm-package-manager', 'main.js')
+        );
 
         // Get help button resource URIs
         const helpButtonCssUri = webview.asWebviewUri(
@@ -170,6 +174,7 @@ export class HelmPackageManagerPanel {
 <body data-help-context="helm-package-manager">
     ${helpButtonHtml}
     <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
     <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
