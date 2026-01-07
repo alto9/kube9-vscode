@@ -269,6 +269,11 @@
         "category": "kube9"
       },
       {
+        "command": "kube9.helm.openPackageManager",
+        "title": "Open Helm Package Manager",
+        "category": "Kube9"
+      },
+      {
         "command": "kube9.restartPortForward",
         "title": "Restart Forward",
         "category": "kube9"

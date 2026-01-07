@@ -5,7 +5,7 @@ feature_id:
   - helm-package-manager-access
 spec_id:
   - helm-webview-architecture
-status: pending
+status: completed
 ---
 
 # Story: Add Helm Package Manager Tree Item

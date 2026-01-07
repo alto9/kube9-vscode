@@ -1200,8 +1200,21 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         const rootFolders = await this.buildFolderItems(null);
         const ungroupedClusters = this.buildClustersWithoutFolder();
 
-        // Return folders first, then clusters (maintains order within each group)
-        return [...rootFolders, ...ungroupedClusters];
+        // Create Helm Package Manager tree item
+        const helmItem = new ClusterTreeItem(
+            'Helm Package Manager',
+            'helmPackageManager',
+            vscode.TreeItemCollapsibleState.None
+        );
+        helmItem.command = {
+            command: 'kube9.helm.openPackageManager',
+            title: 'Open Helm Package Manager'
+        };
+        helmItem.iconPath = new vscode.ThemeIcon('package');
+        helmItem.tooltip = 'Manage Helm charts and releases';
+
+        // Return folders first, then clusters, then Helm item
+        return [...rootFolders, ...ungroupedClusters, helmItem];
     }
 
     /**

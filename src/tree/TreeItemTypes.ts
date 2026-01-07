@@ -9,6 +9,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - namespace: Individual namespace items (under Namespaces category)
  * - allNamespaces: Special "All Namespaces" item
  * - info: Informational items (e.g., auth status)
+ * - helmPackageManager: Root-level Helm Package Manager tree item
  * 
  * Category types (appear under clusters):
  * - dashboard: Dashboard category (appears first)
@@ -59,6 +60,7 @@ export type TreeItemType =
     | 'namespace' 
     | 'allNamespaces' 
     | 'info'
+    | 'helmPackageManager'
     | 'dashboard'
     | 'nodes'
     | 'namespaces'

@@ -1353,6 +1353,17 @@ function registerCommands(): void {
     context.subscriptions.push(openEventsViewerCmd);
     disposables.push(openEventsViewerCmd);
     
+    // Register Helm Package Manager command
+    const openHelmPackageManagerCmd = vscode.commands.registerCommand(
+        'kube9.helm.openPackageManager',
+        async () => {
+            // Placeholder: webview will be implemented in story 003
+            vscode.window.showInformationMessage('Helm Package Manager coming soon');
+        }
+    );
+    context.subscriptions.push(openHelmPackageManagerCmd);
+    disposables.push(openHelmPackageManagerCmd);
+    
     // Register command to open Events Viewer from command palette
     const openEventsViewerFromPaletteCmd = vscode.commands.registerCommand(
         'kube9.openEventsViewer',
