@@ -188,6 +188,14 @@ export class HelmPackageManagerPanel {
                             }
                             break;
 
+                        case 'getUpgradeInfo':
+                            if (message.name && message.namespace && message.chart) {
+                                await this.handleGetUpgradeInfo(message.name, message.namespace, message.chart);
+                            } else {
+                                this.sendError('Release name, namespace, and chart are required');
+                            }
+                            break;
+
                         case 'upgradeRelease':
                             if (message.params) {
                                 await this.handleUpgradeRelease(message.params as UpgradeParams);
@@ -555,6 +563,32 @@ export class HelmPackageManagerPanel {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Failed to copy to clipboard:', errorMessage);
             vscode.window.showErrorMessage(`Failed to copy: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle getUpgradeInfo command.
+     * Fetches upgrade information (current values and available versions) for a release.
+     * 
+     * @param releaseName Release name
+     * @param namespace Release namespace
+     * @param chart Chart name
+     */
+    private async handleGetUpgradeInfo(releaseName: string, namespace: string, chart: string): Promise<void> {
+        try {
+            const upgradeInfo = await this.helmService.getUpgradeInfo(releaseName, namespace, chart);
+            
+            this.sendMessage({
+                type: 'upgradeInfoLoaded',
+                data: upgradeInfo
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.sendMessage({
+                type: 'operationError',
+                operation: 'getUpgradeInfo',
+                error: errorMessage
+            });
         }
     }
 

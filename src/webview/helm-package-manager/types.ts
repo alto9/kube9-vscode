@@ -167,6 +167,16 @@ export interface ReleaseRevision {
 }
 
 /**
+ * Upgrade information for a Helm release.
+ */
+export interface UpgradeInfo {
+    /** Current values YAML */
+    currentValues: string;
+    /** Available chart versions */
+    availableVersions: string[];
+}
+
+/**
  * Operator installation status information.
  */
 export interface OperatorInstallationStatus {
@@ -200,7 +210,7 @@ export interface HelmState {
  */
 export interface ExtensionToWebviewMessage {
     /** Message type */
-    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded';
+    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded' | 'upgradeInfoLoaded';
     /** Message data */
     data?: unknown;
     /** Operation name (for progress/complete/error messages) */
@@ -220,7 +230,7 @@ export interface ExtensionToWebviewMessage {
  */
 export interface WebviewToExtensionMessage {
     /** Command type */
-    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue';
+    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo';
     /** Optional data payload */
     name?: string;
     url?: string;

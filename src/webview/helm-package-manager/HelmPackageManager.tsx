@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails } from './types';
+import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams } from './types';
 import { InstalledReleasesSection } from './components/InstalledReleasesSection';
 import { RepositoriesSection } from './components/RepositoriesSection';
 import { ReleaseDetailModal } from './components/ReleaseDetailModal';
+import { UpgradeReleaseModal } from './components/UpgradeReleaseModal';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -31,6 +32,7 @@ export const HelmPackageManager: React.FC = () => {
     const [selectedRelease, setSelectedRelease] = useState<HelmRelease | null>(null);
     const [releaseDetails, setReleaseDetails] = useState<ReleaseDetails | null>(null);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [upgradeModalRelease, setUpgradeModalRelease] = useState<HelmRelease | null>(null);
 
     // Send message to extension
     const sendMessage = useCallback((message: WebviewToExtensionMessage) => {
@@ -187,13 +189,7 @@ export const HelmPackageManager: React.FC = () => {
                 filters={releaseFilters}
                 onFilterChange={setReleaseFilters}
                 onUpgrade={(release: HelmRelease) => {
-                    sendMessage({
-                        command: 'upgradeRelease',
-                        name: release.name,
-                        namespace: release.namespace,
-                        chart: release.chart,
-                        params: { version: release.upgradeAvailable }
-                    });
+                    setUpgradeModalRelease(release);
                 }}
                 onViewDetails={(release: HelmRelease) => {
                     setSelectedRelease(release);
@@ -253,6 +249,28 @@ export const HelmPackageManager: React.FC = () => {
                         name: release.name,
                         namespace: release.namespace
                     });
+                }}
+            />
+
+            {/* Upgrade Release Modal */}
+            <UpgradeReleaseModal
+                release={upgradeModalRelease}
+                open={upgradeModalRelease !== null}
+                onClose={() => {
+                    setUpgradeModalRelease(null);
+                    // Refresh releases list after upgrade
+                    sendMessage({
+                        command: 'listReleases',
+                        params: { allNamespaces: true }
+                    });
+                }}
+                onUpgrade={async (params: UpgradeParams) => {
+                    // Send upgrade command via vscode API
+                    sendMessage({
+                        command: 'upgradeRelease',
+                        params
+                    });
+                    // Wait for operationComplete message (handled in modal)
                 }}
             />
         </div>

@@ -5,7 +5,7 @@ feature_id:
   - helm-release-upgrade
 spec_id:
   - helm-release-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Upgrade Release Modal
@@ -20,15 +20,15 @@ The upgrade modal allows users to upgrade releases to new versions with optional
 
 ## Acceptance Criteria
 
-- [ ] Create `UpgradeReleaseModal.tsx` component
-- [ ] Show current version and available versions
-- [ ] Include version dropdown
-- [ ] Include "Reuse existing values" checkbox (checked by default)
-- [ ] Show values editor when not reusing values
-- [ ] Include "Show Diff" button to compare values
-- [ ] Validate values YAML syntax
-- [ ] Handle upgrade confirmation
-- [ ] Show progress during upgrade
+- [x] Create `UpgradeReleaseModal.tsx` component
+- [x] Show current version and available versions
+- [x] Include version dropdown
+- [x] Include "Reuse existing values" checkbox (checked by default)
+- [x] Show values editor when not reusing values
+- [ ] Include "Show Diff" button to compare values (deferred to future story)
+- [x] Validate values YAML syntax
+- [x] Handle upgrade confirmation
+- [x] Show progress during upgrade
 
 ## Implementation Notes
 

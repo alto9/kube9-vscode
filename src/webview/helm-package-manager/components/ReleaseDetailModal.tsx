@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmRelease, ReleaseDetails, VSCodeAPI, ExtensionToWebviewMessage } from '../types';
+import { HelmRelease, ReleaseDetails, VSCodeAPI, ExtensionToWebviewMessage, UpgradeParams } from '../types';
 import { ReleaseInfoTab } from './ReleaseInfoTab';
 import { ManifestViewer } from './ManifestViewer';
 import { ValuesViewer } from './ValuesViewer';
 import { HistoryTab } from './HistoryTab';
+import { UpgradeReleaseModal } from './UpgradeReleaseModal';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -373,7 +374,7 @@ export const ReleaseDetailModal: React.FC<ReleaseDetailModalProps> = ({
                                     ? { ...primaryButtonStyle, ...primaryButtonHoverStyle }
                                     : primaryButtonStyle
                             }
-                            onClick={() => onUpgrade(release)}
+                            onClick={() => setUpgradeModalOpen(true)}
                             onMouseEnter={() => setUpgradeHovered(true)}
                             onMouseLeave={() => setUpgradeHovered(false)}
                             disabled={loading}
@@ -473,6 +474,31 @@ export const ReleaseDetailModal: React.FC<ReleaseDetailModalProps> = ({
                     )}
                 </div>
             </div>
+
+            {/* Upgrade Release Modal */}
+            {release && (
+                <UpgradeReleaseModal
+                    release={release}
+                    open={upgradeModalOpen}
+                    onClose={() => {
+                        setUpgradeModalOpen(false);
+                        // Refresh release details after upgrade
+                        if (release) {
+                            fetchReleaseDetails(release);
+                        }
+                    }}
+                    onUpgrade={async (params: UpgradeParams) => {
+                        // Send upgrade command via vscode API
+                        if (vscode) {
+                            vscode.postMessage({
+                                command: 'upgradeRelease',
+                                params
+                            });
+                        }
+                        // Wait for operationComplete message (handled in modal)
+                    }}
+                />
+            )}
         </div>
     );
 };

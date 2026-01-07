@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus } from '../webview/helm-package-manager/types';
+import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus, UpgradeInfo } from '../webview/helm-package-manager/types';
 
 /**
  * Options for executing Helm commands.
@@ -588,6 +588,83 @@ export class HelmService {
             appVersion: h.app_version,
             description: h.description
         }));
+    }
+
+    /**
+     * Gets upgrade information for a Helm release.
+     * Fetches current values and available chart versions.
+     * 
+     * @param releaseName Release name
+     * @param namespace Release namespace
+     * @param chart Chart name (e.g., "bitnami/postgresql" or "postgresql-12.1.0")
+     * @returns Promise resolving to upgrade information
+     * @throws Error if release not found or command fails
+     */
+    public async getUpgradeInfo(releaseName: string, namespace: string, chart: string): Promise<UpgradeInfo> {
+        // Fetch current values
+        const currentValues = await this.executeCommand([
+            'get', 'values',
+            releaseName,
+            '--namespace', namespace,
+            '--all'
+        ]).catch(() => ''); // Return empty string if no values
+
+        // Extract chart name from chart string
+        // Chart format can be: "repo/chart-name-version" or "chart-name-version" or "repo/chart-name"
+        let chartName = chart;
+        let repository: string | undefined;
+
+        // Remove version suffix if present (format: "chart-name-version")
+        const versionMatch = chart.match(/^(.+)-(\d+\.\d+\.\d+.*)$/);
+        if (versionMatch) {
+            chartName = versionMatch[1];
+        }
+
+        // Check if chart includes repository (format: "repo/chart-name")
+        const parts = chartName.split('/');
+        if (parts.length > 1) {
+            repository = parts[0];
+            chartName = parts[1];
+        }
+
+        // Search for available versions
+        let availableVersions: string[] = [];
+        try {
+            const searchQuery = repository ? `${repository}/${chartName}` : chartName;
+            const searchResults = await this.searchCharts(searchQuery, repository);
+            
+            // Extract unique versions from search results
+            const versions = new Set<string>();
+            searchResults.forEach(result => {
+                if (result.version) {
+                    versions.add(result.version);
+                }
+            });
+            
+            // Sort versions (newest first) - simple semantic version sorting
+            availableVersions = Array.from(versions).sort((a, b) => {
+                // Simple version comparison - split by dots and compare numerically
+                const aParts = a.split('.').map(Number);
+                const bParts = b.split('.').map(Number);
+                for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+                    const aPart = aParts[i] || 0;
+                    const bPart = bParts[i] || 0;
+                    if (aPart !== bPart) {
+                        return bPart - aPart; // Descending order
+                    }
+                }
+                return 0;
+            });
+        } catch (error) {
+            // If search fails, return empty versions array
+            // This is not a critical error - user can still upgrade without version selection
+            console.warn('Failed to fetch available versions:', error);
+        }
+
+        return {
+            currentValues: currentValues.trim(),
+            availableVersions
+        };
     }
 
     /**
