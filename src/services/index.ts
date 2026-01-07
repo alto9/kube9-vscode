@@ -12,3 +12,8 @@ export {
     PortForwardStatus
 } from './PortForwardManager';
 
+export {
+    HelmService,
+    ExecuteCommandOptions
+} from './HelmService';
+

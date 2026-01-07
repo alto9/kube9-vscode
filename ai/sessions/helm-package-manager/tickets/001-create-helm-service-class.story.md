@@ -8,7 +8,7 @@ feature_id:
   - helm-release-management
 spec_id:
   - helm-cli-integration
-status: pending
+status: completed
 ---
 
 # Story: Create Helm Service Class with CLI Integration
