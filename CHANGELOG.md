@@ -1,3 +1,19 @@
+# [1.19.0](https://github.com/alto9/kube9-vscode/compare/v1.18.3...v1.19.0) (2026-01-07)
+
+
+### Features
+
+* add context menu help commands for pods, deployments, and services ([4210d92](https://github.com/alto9/kube9-vscode/commit/4210d92c97cdcce8c87fce60b521102ad249d167))
+* add context menu help items for pods, deployments, and services ([2db7cc8](https://github.com/alto9/kube9-vscode/commit/2db7cc8116bc84d88189ff0645bb51cc3d744d7c))
+* add help button to webview templates ([8fd0bc1](https://github.com/alto9/kube9-vscode/commit/8fd0bc105f02d63a82c052b0f7ef18ecba23950d))
+* add HelpController class for centralized help functionality ([89cb39f](https://github.com/alto9/kube9-vscode/commit/89cb39fc11eaba72a363ba128221ce882792a68f))
+* add reusable help button component for webviews ([f6097ba](https://github.com/alto9/kube9-vscode/commit/f6097ba98e1b5595e0877379c5489e9d4893043b))
+* add showErrorWithHelp static method to ErrorHandler ([f54ea08](https://github.com/alto9/kube9-vscode/commit/f54ea0861ec9773cfda73fa4c7195cd567d0703c))
+* add webview help message handler for contextual documentation ([7bfdb06](https://github.com/alto9/kube9-vscode/commit/7bfdb06a36e316f4f5dde16c4959792844dde2d2))
+* create help status bar item ([af44759](https://github.com/alto9/kube9-vscode/commit/af44759366b706637de4d75dd0910af30bb2181e))
+* integrate HelpController in extension activation ([0e02341](https://github.com/alto9/kube9-vscode/commit/0e02341649ec538a2ac139bccb79df9c7e9a003a))
+* register help commands in package.json ([19c5868](https://github.com/alto9/kube9-vscode/commit/19c5868a33b2308d1a92e591f69d2f2bbe652cb7))
+
 ## [1.18.3](https://github.com/alto9/kube9-vscode/compare/v1.18.2...v1.18.3) (2026-01-06)
 
 
