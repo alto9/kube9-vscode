@@ -49,6 +49,7 @@ import { viewPortForwardPodCommand } from './commands/viewPortForwardPod';
 import { restartPortForwardCommand } from './commands/restartPortForward';
 import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { ErrorCommands } from './commands/errorCommands';
+import { openPackageManager } from './commands/helmCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
 import { HelpController, registerHelpMenuCommand, registerContextMenuHelpCommands } from './help/HelpController';
@@ -1357,8 +1358,7 @@ function registerCommands(): void {
     const openHelmPackageManagerCmd = vscode.commands.registerCommand(
         'kube9.helm.openPackageManager',
         async () => {
-            // Placeholder: webview will be implemented in story 003
-            vscode.window.showInformationMessage('Helm Package Manager coming soon');
+            await openPackageManager();
         }
     );
     context.subscriptions.push(openHelmPackageManagerCmd);
