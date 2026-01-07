@@ -99,6 +99,17 @@ export interface ReleaseFilters {
 }
 
 /**
+ * Chart installation parameters.
+ */
+export interface InstallParams {
+    chart: string;
+    releaseName: string;
+    namespace: string;
+    createNamespace: boolean;
+    values?: string;
+}
+
+/**
  * Operator installation status information.
  */
 export interface OperatorInstallationStatus {
@@ -132,7 +143,7 @@ export interface HelmState {
  */
 export interface ExtensionToWebviewMessage {
     /** Message type */
-    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError';
+    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded';
     /** Message data */
     data?: unknown;
     /** Operation name (for progress/complete/error messages) */
@@ -152,7 +163,7 @@ export interface ExtensionToWebviewMessage {
  */
 export interface WebviewToExtensionMessage {
     /** Command type */
-    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready';
+    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces';
     /** Optional data payload */
     name?: string;
     url?: string;

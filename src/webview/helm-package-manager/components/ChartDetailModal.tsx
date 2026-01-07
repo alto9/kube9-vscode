@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChartSearchResult, ChartDetails, VSCodeAPI, ExtensionToWebviewMessage } from '../types';
+import { ChartSearchResult, ChartDetails, VSCodeAPI, ExtensionToWebviewMessage, InstallParams } from '../types';
 import { ReadmeViewer } from './ReadmeViewer';
 import { ValuesViewer } from './ValuesViewer';
 import { VersionsList } from './VersionsList';
+import { InstallChartModal } from './InstallChartModal';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -41,6 +42,8 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
+    const [installModalOpen, setInstallModalOpen] = useState(false);
+    const [namespaces, setNamespaces] = useState<string[]>(['default']);
 
     /**
      * Fetch chart details from extension.
@@ -80,6 +83,9 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
                 setDetails(message.data as ChartDetails);
                 setLoading(false);
                 setError(null);
+            } else if (message.type === 'namespacesLoaded') {
+                const namespaceList = message.data as string[];
+                setNamespaces(namespaceList.length > 0 ? namespaceList : ['default']);
             } else if (message.type === 'operationError') {
                 setError(message.error || 'Failed to load chart details');
                 setLoading(false);
@@ -156,6 +162,42 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
             fetchChartDetails(chart, selectedVersion || undefined);
         }
     }, [chart, selectedVersion, fetchChartDetails]);
+
+    /**
+     * Handle install button click - open install modal and fetch namespaces.
+     */
+    const handleInstallClick = useCallback(() => {
+        if (!vscode || !chart) {
+            return;
+        }
+
+        // Fetch namespaces from extension
+        vscode.postMessage({ command: 'getNamespaces' });
+        
+        // Open install modal
+        setInstallModalOpen(true);
+    }, [chart]);
+
+    /**
+     * Handle install modal close.
+     */
+    const handleInstallModalClose = useCallback(() => {
+        setInstallModalOpen(false);
+    }, []);
+
+    /**
+     * Handle install from modal - forward to parent's onInstall.
+     * Note: The parent's onInstall currently expects ChartSearchResult, but
+     * the actual installation with params will be implemented in story 012.
+     * For now, we call the parent handler with the chart to maintain compatibility.
+     */
+    const handleInstall = useCallback(async (params: InstallParams) => {
+        // The actual installation with params will be handled in story 012
+        // For now, call parent's onInstall with the chart to maintain compatibility
+        if (onInstall && chart) {
+            await onInstall(chart);
+        }
+    }, [chart, onInstall]);
 
     if (!open || !chart) return null;
 
@@ -347,7 +389,7 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
                                       ? { ...installButtonStyle, ...installButtonHoverStyle }
                                       : installButtonStyle
                             }
-                            onClick={() => onInstall(chart)}
+                            onClick={handleInstallClick}
                             onMouseEnter={() => setInstallHovered(true)}
                             onMouseLeave={() => setInstallHovered(false)}
                             disabled={isInstallDisabled}
@@ -427,6 +469,15 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
                     )}
                 </div>
             </div>
+
+            {/* Install Chart Modal */}
+            <InstallChartModal
+                chart={chart}
+                open={installModalOpen}
+                namespaces={namespaces}
+                onClose={handleInstallModalClose}
+                onInstall={handleInstall}
+            />
         </div>
     );
 };

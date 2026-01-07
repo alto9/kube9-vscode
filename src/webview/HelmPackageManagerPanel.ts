@@ -6,6 +6,8 @@ import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { HelmService } from '../services/HelmService';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewToExtensionMessage, ExtensionToWebviewMessage } from './helm-package-manager/types';
+import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
+import { getContextInfo } from '../utils/kubectlContext';
 
 /**
  * HelmPackageManagerPanel manages a webview panel for the Helm Package Manager.
@@ -160,6 +162,10 @@ export class HelmPackageManagerPanel {
                             } else {
                                 this.sendError('Chart name is required');
                             }
+                            break;
+
+                        case 'getNamespaces':
+                            await this.handleGetNamespaces();
                             break;
 
                         case 'ready':
@@ -345,6 +351,42 @@ export class HelmPackageManagerPanel {
             } else {
                 this.sendError(`Failed to get chart details: ${errorMessage}`);
             }
+        }
+    }
+
+    /**
+     * Handle getNamespaces command.
+     * Fetches available namespaces from the current Kubernetes context.
+     */
+    private async handleGetNamespaces(): Promise<void> {
+        try {
+            // Get current context information
+            const contextInfo = await getContextInfo();
+            const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+            
+            // Fetch namespaces using ClusterConnectivity
+            const result = await ClusterConnectivity.getNamespaces(
+                kubeconfigPath,
+                contextInfo.contextName
+            );
+            
+            // Extract namespace names
+            const namespaceNames = result.namespaces;
+            
+            // Send namespaces to webview
+            this.sendMessage({
+                type: 'namespacesLoaded',
+                data: namespaceNames
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to get namespaces:', errorMessage);
+            
+            // Send empty array on error (webview will show default)
+            this.sendMessage({
+                type: 'namespacesLoaded',
+                data: []
+            });
         }
     }
 

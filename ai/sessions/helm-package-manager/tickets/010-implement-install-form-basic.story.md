@@ -5,7 +5,7 @@ feature_id:
   - helm-chart-installation
 spec_id:
   - helm-chart-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Basic Chart Installation Form
