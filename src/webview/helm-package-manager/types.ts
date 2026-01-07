@@ -220,7 +220,7 @@ export interface ExtensionToWebviewMessage {
  */
 export interface WebviewToExtensionMessage {
     /** Command type */
-    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces';
+    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue';
     /** Optional data payload */
     name?: string;
     url?: string;
@@ -232,4 +232,8 @@ export interface WebviewToExtensionMessage {
     params?: unknown;
     apiKey?: string;
     data?: unknown;
+    /** Value to copy (for copyValue command) */
+    value?: string;
+    /** Content to copy (alternative to value for copyValue command) */
+    content?: string;
 }

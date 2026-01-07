@@ -212,6 +212,14 @@ export class HelmPackageManagerPanel {
                             }
                             break;
 
+                        case 'copyValue': {
+                            const copyValue = message.value || message.content;
+                            if (copyValue) {
+                                await this.handleCopyValue(copyValue);
+                            }
+                            break;
+                        }
+
                         case 'ready':
                             // Webview is ready, load initial repository list
                             await this.handleListRepositories();
@@ -531,6 +539,22 @@ export class HelmPackageManagerPanel {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.sendError(`Failed to get release details: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle copyValue command.
+     * 
+     * @param value Value to copy to clipboard
+     */
+    private async handleCopyValue(value: string): Promise<void> {
+        try {
+            await vscode.env.clipboard.writeText(value);
+            vscode.window.showInformationMessage('Copied to clipboard');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to copy to clipboard:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to copy: ${errorMessage}`);
         }
     }
 

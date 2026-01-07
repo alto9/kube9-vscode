@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
 
 /**
- * Props for ValuesViewer component.
+ * Props for ManifestViewer component.
  */
-interface ValuesViewerProps {
-    /** YAML content to display */
-    yaml: string;
+interface ManifestViewerProps {
+    /** YAML manifest content to display */
+    manifest: string;
     /** Callback when copy button is clicked */
     onCopy?: (content: string) => void;
 }
 
 /**
- * ValuesViewer component for displaying chart default values in YAML format.
- * Uses monospace font and preserves formatting (syntax highlighting can be added later).
+ * ManifestViewer component for displaying YAML manifests.
+ * Uses monospace font and preserves formatting with copy functionality.
  */
-export const ValuesViewer: React.FC<ValuesViewerProps> = ({ yaml, onCopy }) => {
+export const ManifestViewer: React.FC<ManifestViewerProps> = ({ manifest, onCopy }) => {
     const [copyHovered, setCopyHovered] = useState(false);
 
-    if (!yaml || yaml.trim() === '') {
+    if (!manifest || manifest.trim() === '') {
         return (
             <div style={{
                 color: 'var(--vscode-descriptionForeground)',
@@ -25,7 +25,7 @@ export const ValuesViewer: React.FC<ValuesViewerProps> = ({ yaml, onCopy }) => {
                 fontSize: '13px',
                 fontStyle: 'italic'
             }}>
-                No default values available for this chart.
+                No manifest available for this release.
             </div>
         );
     }
@@ -86,21 +86,21 @@ export const ValuesViewer: React.FC<ValuesViewerProps> = ({ yaml, onCopy }) => {
 
     const handleCopy = () => {
         if (onCopy) {
-            onCopy(yaml);
+            onCopy(manifest);
         }
     };
 
     return (
         <div style={containerStyle}>
             <div style={headerStyle}>
-                <label style={labelStyle}>Values (YAML)</label>
+                <label style={labelStyle}>Manifest (YAML)</label>
                 {onCopy && (
                     <button
                         style={copyHovered ? { ...copyButtonStyle, ...copyButtonHoverStyle } : copyButtonStyle}
                         onClick={handleCopy}
                         onMouseEnter={() => setCopyHovered(true)}
                         onMouseLeave={() => setCopyHovered(false)}
-                        title="Copy values to clipboard"
+                        title="Copy manifest to clipboard"
                     >
                         <span className="codicon codicon-copy"></span>
                         Copy
@@ -108,7 +108,7 @@ export const ValuesViewer: React.FC<ValuesViewerProps> = ({ yaml, onCopy }) => {
                 )}
             </div>
             <pre style={contentStyle}>
-                <code>{yaml}</code>
+                <code>{manifest}</code>
             </pre>
         </div>
     );

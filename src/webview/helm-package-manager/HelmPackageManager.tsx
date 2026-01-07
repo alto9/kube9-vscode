@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease } from './types';
+import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails } from './types';
 import { InstalledReleasesSection } from './components/InstalledReleasesSection';
 import { RepositoriesSection } from './components/RepositoriesSection';
+import { ReleaseDetailModal } from './components/ReleaseDetailModal';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -26,6 +27,10 @@ export const HelmPackageManager: React.FC = () => {
         status: 'all',
         searchQuery: ''
     });
+
+    const [selectedRelease, setSelectedRelease] = useState<HelmRelease | null>(null);
+    const [releaseDetails, setReleaseDetails] = useState<ReleaseDetails | null>(null);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
 
     // Send message to extension
     const sendMessage = useCallback((message: WebviewToExtensionMessage) => {
@@ -60,6 +65,10 @@ export const HelmPackageManager: React.FC = () => {
                 case 'chartDetails':
                     // Chart details are handled by ChartDetailModal component
                     // This message type is already handled in the modal's message listener
+                    break;
+
+                case 'releaseDetailsLoaded':
+                    setReleaseDetails(message.data as ReleaseDetails);
                     break;
 
                 case 'operationComplete':
@@ -187,6 +196,8 @@ export const HelmPackageManager: React.FC = () => {
                     });
                 }}
                 onViewDetails={(release: HelmRelease) => {
+                    setSelectedRelease(release);
+                    setDetailModalOpen(true);
                     sendMessage({
                         command: 'getReleaseDetails',
                         name: release.name,
@@ -209,6 +220,41 @@ export const HelmPackageManager: React.FC = () => {
                     Chart discovery will be displayed here
                 </div>
             </section>
+
+            {/* Release Detail Modal */}
+            <ReleaseDetailModal
+                release={selectedRelease}
+                open={detailModalOpen}
+                onClose={() => {
+                    setDetailModalOpen(false);
+                    setSelectedRelease(null);
+                    setReleaseDetails(null);
+                }}
+                onUpgrade={(release: HelmRelease) => {
+                    sendMessage({
+                        command: 'upgradeRelease',
+                        name: release.name,
+                        namespace: release.namespace,
+                        chart: release.chart,
+                        params: { version: release.upgradeAvailable }
+                    });
+                }}
+                onRollback={(release: HelmRelease, revision: number) => {
+                    sendMessage({
+                        command: 'rollbackRelease',
+                        name: release.name,
+                        namespace: release.namespace,
+                        revision
+                    });
+                }}
+                onUninstall={(release: HelmRelease) => {
+                    sendMessage({
+                        command: 'uninstallRelease',
+                        name: release.name,
+                        namespace: release.namespace
+                    });
+                }}
+            />
         </div>
     );
 };

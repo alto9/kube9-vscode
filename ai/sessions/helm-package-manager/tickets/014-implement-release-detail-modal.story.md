@@ -5,7 +5,7 @@ feature_id:
   - helm-release-management
 spec_id:
   - helm-release-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Release Detail Modal
@@ -20,15 +20,15 @@ The release detail modal shows all information about an installed release, inclu
 
 ## Acceptance Criteria
 
-- [ ] Create `ReleaseDetailModal.tsx` component
-- [ ] Implement tabbed interface (Info, Manifest, Values, History)
-- [ ] Create `ReleaseInfoTab.tsx` showing release metadata
-- [ ] Create `ManifestViewer.tsx` showing YAML manifests
-- [ ] Create `ValuesViewer.tsx` showing deployed values
-- [ ] Create `HistoryTab.tsx` showing revision history with rollback buttons
-- [ ] Handle loading state while fetching details
-- [ ] Include action buttons in header (Upgrade, Uninstall)
-- [ ] Support copying manifest and values
+- [x] Create `ReleaseDetailModal.tsx` component
+- [x] Implement tabbed interface (Info, Manifest, Values, History)
+- [x] Create `ReleaseInfoTab.tsx` showing release metadata
+- [x] Create `ManifestViewer.tsx` showing YAML manifests
+- [x] Create `ValuesViewer.tsx` showing deployed values
+- [x] Create `HistoryTab.tsx` showing revision history with rollback buttons
+- [x] Handle loading state while fetching details
+- [x] Include action buttons in header (Upgrade, Uninstall)
+- [x] Support copying manifest and values
 
 ## Implementation Notes
 
