@@ -60,6 +60,16 @@ export class HelmPackageManagerPanel {
     private currentContextName: string | undefined;
 
     /**
+     * The active polling interval, or null if not running.
+     */
+    private pollingInterval: NodeJS.Timeout | null = null;
+
+    /**
+     * Polling interval in milliseconds (30 seconds).
+     */
+    private readonly POLL_INTERVAL_MS = 30000;
+
+    /**
      * Create or show the Helm Package Manager webview panel.
      * If a panel already exists, reveals it. Otherwise creates a new one.
      * 
@@ -120,9 +130,29 @@ export class HelmPackageManagerPanel {
         const helpHandler = new WebviewHelpHandler(getHelpController());
         helpHandler.setupHelpMessageHandler(this.panel.webview);
 
+        // Set up polling based on webview visibility
+        const viewStateDisposable = this.panel.onDidChangeViewState(
+            (e) => {
+                if (e.webviewPanel.visible) {
+                    this.startPolling();
+                } else {
+                    this.stopPolling();
+                }
+            },
+            null,
+            context.subscriptions
+        );
+        this.disposables.push(viewStateDisposable);
+
+        // Start initial polling if panel is visible
+        if (this.panel.visible) {
+            this.startPolling();
+        }
+
         // Handle panel disposal - clear shared state
         this.panel.onDidDispose(
             () => {
+                this.stopPolling();
                 HelmPackageManagerPanel.currentPanel = undefined;
                 // Dispose all resources
                 vscode.Disposable.from(...this.disposables).dispose();
@@ -748,6 +778,67 @@ export class HelmPackageManagerPanel {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.sendError(`Failed to list releases: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Start automatic polling for release status updates.
+     * Polls every 30 seconds when the webview is visible.
+     */
+    private startPolling(): void {
+        // Don't start if already polling
+        if (this.pollingInterval) {
+            return;
+        }
+
+        this.pollingInterval = setInterval(async () => {
+            try {
+                await this.refreshReleases();
+            } catch (error) {
+                console.error('Polling error:', error);
+                // Continue polling even on errors
+            }
+        }, this.POLL_INTERVAL_MS);
+    }
+
+    /**
+     * Stop automatic polling for release status updates.
+     */
+    private stopPolling(): void {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+    }
+
+    /**
+     * Refresh releases data by invalidating cache and fetching fresh data.
+     * Used by polling to get up-to-date release status.
+     */
+    private async refreshReleases(): Promise<void> {
+        try {
+            // Invalidate releases cache to get fresh data
+            this.invalidateCache('releases');
+
+            // Fetch fresh releases data
+            const listParams: ListReleasesParams = {
+                allNamespaces: true
+            };
+
+            const releases = await this.helmService.listReleases(listParams);
+
+            this.sendMessage({
+                type: 'releasesLoaded',
+                data: releases
+            });
+
+            // Invalidate operator status cache and refresh status when releases change
+            await this.helmService.invalidateOperatorStatusCache();
+            await this.handleGetOperatorStatus();
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to refresh releases during polling:', errorMessage);
+            // Don't send error to webview during polling - just log it
         }
     }
 

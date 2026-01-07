@@ -5,7 +5,7 @@ feature_id:
   - helm-release-management
 spec_id:
   - helm-release-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement Release Status Polling
@@ -20,13 +20,13 @@ Release status can change (pending → deployed, deployed → failed) and should
 
 ## Acceptance Criteria
 
-- [ ] Poll release status every 30 seconds when webview is visible
-- [ ] Stop polling when webview is hidden
-- [ ] Resume polling when webview becomes visible again
-- [ ] Update release cards with new status
-- [ ] Show visual transitions when status changes
-- [ ] Handle polling errors gracefully (don't spam)
-- [ ] Allow manual refresh button as well
+- [x] Poll release status every 30 seconds when webview is visible
+- [x] Stop polling when webview is hidden
+- [x] Resume polling when webview becomes visible again
+- [x] Update release cards with new status
+- [x] Show visual transitions when status changes (handled by existing releasesLoaded handler)
+- [x] Handle polling errors gracefully (don't spam)
+- [x] Allow manual refresh button as well (existing listReleases command)
 
 ## Implementation Notes
 
