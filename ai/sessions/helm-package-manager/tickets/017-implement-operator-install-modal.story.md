@@ -5,7 +5,7 @@ feature_id:
   - helm-operator-quick-install
 spec_id:
   - helm-operator-installation
-status: pending
+status: completed
 ---
 
 # Story: Implement Kube9 Operator Installation Modal
@@ -20,16 +20,16 @@ The operator install modal streamlines installation with optimal defaults and pr
 
 ## Acceptance Criteria
 
-- [ ] Create `OperatorInstallModal.tsx` component
-- [ ] Pre-fill release name as "kube9-operator" (read-only)
-- [ ] Pre-fill namespace as "kube9-system" (editable)
-- [ ] Check "Create namespace" by default
-- [ ] Include collapsible "Pro Tier" section with API key input
-- [ ] Show benefits of Pro tier
-- [ ] Include link to get API key (portal.kube9.dev)
-- [ ] Show installation progress with detailed steps
-- [ ] Handle installation success with tier-specific messaging
-- [ ] Suggest adding API key for free tier installations
+- [x] Create `OperatorInstallModal.tsx` component
+- [x] Pre-fill release name as "kube9-operator" (read-only)
+- [x] Pre-fill namespace as "kube9-system" (editable)
+- [x] Check "Create namespace" by default
+- [x] Include collapsible "Pro Tier" section with API key input
+- [x] Show benefits of Pro tier
+- [x] Include link to get API key (portal.kube9.dev)
+- [x] Show installation progress with detailed steps
+- [x] Handle installation success with tier-specific messaging
+- [x] Suggest adding API key for free tier installations
 
 ## Implementation Notes
 

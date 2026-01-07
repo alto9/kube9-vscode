@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams } from './types';
+import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus } from './types';
 import { InstalledReleasesSection } from './components/InstalledReleasesSection';
 import { RepositoriesSection } from './components/RepositoriesSection';
 import { ReleaseDetailModal } from './components/ReleaseDetailModal';
 import { UpgradeReleaseModal } from './components/UpgradeReleaseModal';
+import { FeaturedChartsSection } from './components/FeaturedChartsSection';
+import { OperatorInstallModal } from './components/OperatorInstallModal';
 
 // Acquire VS Code API
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -33,6 +35,11 @@ export const HelmPackageManager: React.FC = () => {
     const [releaseDetails, setReleaseDetails] = useState<ReleaseDetails | null>(null);
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [upgradeModalRelease, setUpgradeModalRelease] = useState<HelmRelease | null>(null);
+    const [operatorStatus, setOperatorStatus] = useState<OperatorInstallationStatus>({
+        installed: false,
+        upgradeAvailable: false
+    });
+    const [operatorInstallModalOpen, setOperatorInstallModalOpen] = useState(false);
 
     // Send message to extension
     const sendMessage = useCallback((message: WebviewToExtensionMessage) => {
@@ -91,6 +98,10 @@ export const HelmPackageManager: React.FC = () => {
                     setState(prev => ({ ...prev, loading: true }));
                     break;
 
+                case 'operatorStatusUpdated':
+                    setOperatorStatus(message.data as OperatorInstallationStatus);
+                    break;
+
                 default:
                     console.log('Unknown message type:', (message as any).type);
             }
@@ -138,12 +149,20 @@ export const HelmPackageManager: React.FC = () => {
             <h1>Helm Package Manager</h1>
             
             {/* Featured Charts Section */}
-            <section className="featured-charts-section">
-                <h2>Featured Charts</h2>
-                <div className="section-placeholder">
-                    Featured charts will be displayed here
-                </div>
-            </section>
+            <FeaturedChartsSection
+                operatorStatus={operatorStatus}
+                onInstall={() => {
+                    setOperatorInstallModalOpen(true);
+                }}
+                onUpgrade={() => {
+                    // TODO: Implement upgrade modal for operator
+                    console.log('Upgrade operator clicked');
+                }}
+                onConfigure={() => {
+                    // TODO: Implement configure modal for operator
+                    console.log('Configure operator clicked');
+                }}
+            />
 
             {/* Repositories Section */}
             <RepositoriesSection
@@ -271,6 +290,25 @@ export const HelmPackageManager: React.FC = () => {
                         params
                     });
                     // Wait for operationComplete message (handled in modal)
+                }}
+            />
+
+            {/* Operator Install Modal */}
+            <OperatorInstallModal
+                open={operatorInstallModalOpen}
+                onClose={() => {
+                    setOperatorInstallModalOpen(false);
+                }}
+                onInstalled={() => {
+                    // Refresh operator status after installation
+                    sendMessage({
+                        command: 'getOperatorStatus'
+                    });
+                    // Refresh releases list
+                    sendMessage({
+                        command: 'listReleases',
+                        params: { allNamespaces: true }
+                    });
                 }}
             />
         </div>

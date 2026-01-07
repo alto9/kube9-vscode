@@ -232,7 +232,7 @@ export interface ExtensionToWebviewMessage {
  */
 export interface WebviewToExtensionMessage {
     /** Command type */
-    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo' | 'getOperatorStatus';
+    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo' | 'getOperatorStatus' | 'openExternalLink' | 'ensureKube9Repository';
     /** Optional data payload */
     name?: string;
     url?: string;

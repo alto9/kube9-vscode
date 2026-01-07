@@ -238,6 +238,26 @@ export class HelmPackageManagerPanel {
                             await this.handleGetOperatorStatus();
                             break;
 
+                        case 'installOperator':
+                            if (message.params) {
+                                await this.handleInstallOperator(message.params as InstallParams);
+                            } else {
+                                this.sendError('Installation parameters are required');
+                            }
+                            break;
+
+                        case 'openExternalLink':
+                            if (message.url) {
+                                await this.handleOpenExternalLink(message.url);
+                            } else {
+                                this.sendError('URL is required');
+                            }
+                            break;
+
+                        case 'ensureKube9Repository':
+                            await this.handleEnsureKube9Repository();
+                            break;
+
                         default:
                             console.log('Helm Package Manager received unknown message:', message);
                     }
@@ -562,6 +582,130 @@ export class HelmPackageManagerPanel {
                     upgradeAvailable: false
                 }
             });
+        }
+    }
+
+    /**
+     * Handle installOperator command.
+     * Installs the Kube9 Operator with progress feedback and error handling.
+     * 
+     * @param params Installation parameters
+     */
+    private async handleInstallOperator(params: InstallParams): Promise<void> {
+        try {
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Installing Kube9 Operator...',
+                    cancellable: false
+                },
+                async (progress) => {
+                    // Step 1: Ensure repository (10%)
+                    progress.report({ increment: 10, message: 'Ensuring kube9 repository...' });
+                    this.sendMessage({
+                        type: 'operationProgress',
+                        operation: 'installOperator',
+                        progress: 10
+                    });
+                    await this.helmService.ensureKube9Repository();
+
+                    // Step 2: Update repository (20%)
+                    progress.report({ increment: 10, message: 'Updating repository...' });
+                    this.sendMessage({
+                        type: 'operationProgress',
+                        operation: 'installOperator',
+                        progress: 20
+                    });
+                    await this.helmService.updateRepository('kube9');
+
+                    // Step 3: Install chart (30-80%)
+                    progress.report({ increment: 10, message: 'Installing operator...' });
+                    this.sendMessage({
+                        type: 'operationProgress',
+                        operation: 'installOperator',
+                        progress: 30
+                    });
+
+                    try {
+                        await this.helmService.installChart(params);
+                        
+                        // Step 4: Installation complete (100%)
+                        progress.report({ increment: 70, message: 'Installation complete!' });
+                        this.sendMessage({
+                            type: 'operationProgress',
+                            operation: 'installOperator',
+                            progress: 100
+                        });
+
+                        // Determine success message based on API key presence
+                        const hasApiKey = params.values && params.values.includes('apiKey:');
+                        const successMessage = hasApiKey
+                            ? 'Kube9 Operator installed successfully! Pro features enabled!'
+                            : 'Kube9 Operator installed successfully! Add an API key to enable Pro features.';
+
+                        vscode.window.showInformationMessage(successMessage);
+
+                        // Refresh releases list and operator status
+                        const releases = await this.helmService.listReleases({ allNamespaces: true });
+                        this.sendMessage({
+                            type: 'releasesLoaded',
+                            data: releases
+                        });
+                        await this.handleGetOperatorStatus();
+
+                        this.sendMessage({
+                            type: 'operationComplete',
+                            operation: 'installOperator',
+                            success: true,
+                            message: successMessage
+                        });
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        vscode.window.showErrorMessage(`Operator installation failed: ${errorMessage}`);
+                        this.sendMessage({
+                            type: 'operationError',
+                            operation: 'installOperator',
+                            error: errorMessage
+                        });
+                        throw error; // Re-throw to trigger outer catch
+                    }
+                }
+            );
+        } catch (error) {
+            // Error already handled in withProgress callback
+            // This catch ensures the error doesn't propagate further
+        }
+    }
+
+    /**
+     * Handle openExternalLink command.
+     * Opens a URL in the default browser.
+     * 
+     * @param url URL to open
+     */
+    private async handleOpenExternalLink(url: string): Promise<void> {
+        try {
+            await vscode.env.openExternal(vscode.Uri.parse(url));
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open external link:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open link: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle ensureKube9Repository command.
+     * Ensures the kube9 repository exists and is up to date.
+     */
+    private async handleEnsureKube9Repository(): Promise<void> {
+        try {
+            await this.helmService.ensureKube9Repository();
+            // Optionally update the repository list
+            await this.handleListRepositories();
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to ensure kube9 repository:', errorMessage);
+            this.sendError(`Failed to ensure kube9 repository: ${errorMessage}`);
         }
     }
 
