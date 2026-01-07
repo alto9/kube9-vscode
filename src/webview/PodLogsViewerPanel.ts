@@ -1,7 +1,11 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { LogsProvider } from '../providers/LogsProvider';
 import { PreferencesManager } from '../utils/PreferencesManager';
 import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InitialState, PodInfo } from '../types/messages';
+import { WebviewHelpHandler } from './WebviewHelpHandler';
+import { getHelpController } from '../extension';
 
 /**
  * Interface for storing panel information.
@@ -207,6 +211,10 @@ export class PodLogsViewerPanel {
 
         // Set up message handling
         PodLogsViewerPanel.setupMessageHandling(panel, contextName, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
 
         // NOTE: Do NOT start streaming here - wait for webview 'ready' message
         // to avoid race conditions. Streaming will be started via sendInitialState()
@@ -1357,6 +1365,28 @@ export class PodLogsViewerPanel {
         const stylesUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'media', 'pod-logs', 'styles.css')
         );
+
+        // Get help button resource URIs
+        const helpButtonCssUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'styles', 'help-button.css')
+        );
+        const helpButtonJsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
+        );
+
+        // Read help button HTML template
+        let helpButtonHtml = '';
+        if (PodLogsViewerPanel.extensionContext) {
+            const helpButtonHtmlPath = path.join(
+                PodLogsViewerPanel.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'templates',
+                'help-button.html'
+            );
+            helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
+        }
+
         const nonce = getNonce();
         const cspSource = webview.cspSource;
 
@@ -1367,11 +1397,14 @@ export class PodLogsViewerPanel {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource};">
     <link href="${stylesUri}" rel="stylesheet">
+    <link href="${helpButtonCssUri}" rel="stylesheet">
     <title>Pod Logs Viewer</title>
 </head>
-<body>
+<body data-help-context="pod-logs">
+    ${helpButtonHtml}
     <div id="root"></div>
     <script nonce="${nonce}" src="${scriptUri}"></script>
+    <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
     }

@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ClusterCustomizationService, ClusterCustomizationConfig } from '../services/ClusterCustomizationService';
 import { KubeconfigParser, ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
+import { getHelpController } from '../extension';
 
 /**
  * Message sent from webview to extension requesting cluster list.
@@ -91,6 +94,14 @@ interface ImportConfigurationMessage {
 }
 
 /**
+ * Message sent from webview to extension to open contextual help.
+ */
+interface OpenHelpMessage {
+    type: 'openHelp';
+    context?: string;
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -159,7 +170,7 @@ interface ReorderClusterMessage {
 /**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage | ReorderFolderMessage | ReorderClusterMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage | OpenHelpMessage | ReorderFolderMessage | ReorderClusterMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
@@ -264,7 +275,8 @@ export class ClusterManagerWebview {
         // Set HTML content
         this.panel.webview.html = ClusterManagerWebview.getWebviewContent(
             this.panel.webview,
-            extensionUri
+            extensionUri,
+            extensionContext
         );
 
         // Set up message handler
@@ -324,7 +336,9 @@ export class ClusterManagerWebview {
      */
     private async handleMessage(message: WebviewMessage): Promise<void> {
         try {
-            if (message.type === 'getClusters') {
+            if (message.type === 'openHelp') {
+                await getHelpController().openContextualHelp(message.context || 'cluster-manager');
+            } else if (message.type === 'getClusters') {
                 await this.handleGetClusters();
             } else if (message.type === 'setAlias') {
                 await this.handleSetAlias(message.data.contextName, message.data.alias);
@@ -761,7 +775,7 @@ export class ClusterManagerWebview {
      * @param extensionUri - The extension URI for loading resources
      * @returns HTML content string
      */
-    private static getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+    private static getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri, extensionContext: vscode.ExtensionContext): string {
         // Get the URI for the React bundle
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'cluster-manager', 'index.js')
@@ -772,20 +786,55 @@ export class ClusterManagerWebview {
             vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
         );
 
+        // Get help button resource URIs
+        const helpButtonCssUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'styles', 'help-button.css')
+        );
+        const helpButtonJsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
+        );
+
+        // Read help button HTML template
+        const helpButtonHtmlPath = path.join(
+            extensionContext.extensionPath,
+            'src',
+            'webview',
+            'templates',
+            'help-button.html'
+        );
+        const helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
+
+        const nonce = getNonce();
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval'; font-src ${webview.cspSource};">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-inline' 'unsafe-eval'; font-src ${webview.cspSource};">
     <link rel="stylesheet" href="${codiconsUri}">
+    <link rel="stylesheet" href="${helpButtonCssUri}">
     <title>Cluster Organizer</title>
 </head>
-<body>
+<body data-help-context="cluster-manager">
+    ${helpButtonHtml}
     <div id="root"></div>
     <script src="${scriptUri}"></script>
+    <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
     }
+}
+
+/**
+ * Generate a random nonce for Content Security Policy.
+ */
+function getNonce(): string {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
 }
 

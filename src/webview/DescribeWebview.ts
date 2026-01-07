@@ -1,10 +1,14 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { extractKindFromContextValue } from '../extension';
 import { PodDescribeProvider } from '../providers/PodDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
+import { WebviewHelpHandler } from './WebviewHelpHandler';
+import { getHelpController } from '../extension';
 
 /**
  * Resource information for the Describe webview.
@@ -90,7 +94,7 @@ export class DescribeWebview {
         DescribeWebview.currentPanel = panel;
 
         // Set the webview's HTML content
-        panel.webview.html = DescribeWebview.getWebviewContent(resourceInfo);
+        panel.webview.html = DescribeWebview.getWebviewContent(resourceInfo, panel.webview);
 
         // Handle panel disposal - clear shared state
         panel.onDidDispose(
@@ -117,7 +121,7 @@ export class DescribeWebview {
         DescribeWebview.currentPanel.title = title;
 
         // Update panel content
-        DescribeWebview.currentPanel.webview.html = DescribeWebview.getWebviewContent(resourceInfo);
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getWebviewContent(resourceInfo, DescribeWebview.currentPanel.webview);
     }
 
     /**
@@ -147,17 +151,49 @@ export class DescribeWebview {
      * @param resourceInfo Information about the resource being described
      * @returns HTML content string
      */
-    private static getWebviewContent(resourceInfo: DescribeResourceInfo): string {
+    private static getWebviewContent(resourceInfo: DescribeResourceInfo, webview: vscode.Webview): string {
         const resourceDisplay = resourceInfo.namespace
             ? `${resourceInfo.kind} "${resourceInfo.name}" in namespace "${resourceInfo.namespace}"`
             : `${resourceInfo.kind} "${resourceInfo.name}"`;
+
+        // Get help button resources if extension context is available
+        let helpButtonCssUri = '';
+        let helpButtonJsUri = '';
+        let helpButtonHtml = '';
+        let nonce = '';
+        const cspSource = webview.cspSource;
+
+        if (DescribeWebview.extensionContext) {
+            helpButtonCssUri = webview.asWebviewUri(
+                vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'src', 'webview', 'styles', 'help-button.css')
+            ).toString();
+            helpButtonJsUri = webview.asWebviewUri(
+                vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
+            ).toString();
+            
+            const helpButtonHtmlPath = path.join(
+                DescribeWebview.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'templates',
+                'help-button.html'
+            );
+            helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
+            
+            nonce = getNonce();
+        }
+
+        const helpButtonCssLink = helpButtonCssUri ? `<link href="${helpButtonCssUri}" rel="stylesheet">` : '';
+        const helpButtonScript = helpButtonJsUri ? `<script nonce="${nonce}" src="${helpButtonJsUri}"></script>` : '';
+        const cspScriptSrc = nonce ? `script-src 'nonce-${nonce}';` : '';
 
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' ${cspSource}; ${cspScriptSrc}">
+    ${helpButtonCssLink}
     <title>Describe: ${DescribeWebview.escapeHtml(resourceInfo.kind)} / ${DescribeWebview.escapeHtml(resourceInfo.name)}</title>
     <style>
         body {
@@ -192,12 +228,14 @@ export class DescribeWebview {
         }
     </style>
 </head>
-<body>
+<body data-help-context="describe-webview">
+    ${helpButtonHtml}
     <h1>${DescribeWebview.escapeHtml(resourceInfo.kind)} / ${DescribeWebview.escapeHtml(resourceInfo.name)}</h1>
     <div class="coming-soon">
         <div class="coming-soon-message">Coming soon</div>
         <div class="resource-info">Resource: ${DescribeWebview.escapeHtml(resourceDisplay)}</div>
     </div>
+    ${helpButtonScript}
 </body>
 </html>`;
     }
@@ -326,6 +364,10 @@ export class DescribeWebview {
 
         // Set up message handling
         DescribeWebview.setupMessageHandling(panel, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
 
         // Fetch and send Pod data
         await DescribeWebview.loadPodData(podConfig, panel);
@@ -470,6 +512,24 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pod-describe', 'index.js')
         );
 
+        // Get help button resource URIs
+        const helpButtonCssUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'src', 'webview', 'styles', 'help-button.css')
+        );
+        const helpButtonJsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
+        );
+
+        // Read help button HTML template
+        const helpButtonHtmlPath = path.join(
+            DescribeWebview.extensionContext.extensionPath,
+            'src',
+            'webview',
+            'templates',
+            'help-button.html'
+        );
+        const helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
+
         const nonce = getNonce();
 
         return `<!DOCTYPE html>
@@ -478,11 +538,14 @@ export class DescribeWebview {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <link href="${helpButtonCssUri}" rel="stylesheet">
     <title>Pod / ${escapedPodName}</title>
 </head>
-<body>
+<body data-help-context="describe-webview">
+    ${helpButtonHtml}
     <div id="root"></div>
     <script nonce="${nonce}" src="${scriptUri}"></script>
+    <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
     }

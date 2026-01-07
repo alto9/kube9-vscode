@@ -50,6 +50,8 @@ import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
+import { HelpController, registerHelpMenuCommand, registerContextMenuHelpCommands } from './help/HelpController';
+import { HelpStatusBar } from './help/HelpStatusBar';
 
 
 /**
@@ -88,6 +90,12 @@ let yamlEditorManager: YAMLEditorManager | undefined;
 let clusterCustomizationService: ClusterCustomizationService | undefined;
 
 /**
+ * Global help controller instance.
+ * Manages help-related functionality and contextual documentation.
+ */
+let helpController: HelpController | undefined;
+
+/**
  * Get the extension context.
  * @returns The extension context
  * @throws Error if context has not been initialized
@@ -121,6 +129,18 @@ export function getYAMLEditorManager(): YAMLEditorManager {
         throw new Error('YAMLEditorManager not initialized');
     }
     return yamlEditorManager;
+}
+
+/**
+ * Get the help controller instance.
+ * @returns The help controller
+ * @throws Error if help controller has not been initialized
+ */
+export function getHelpController(): HelpController {
+    if (!helpController) {
+        throw new Error('HelpController not initialized');
+    }
+    return helpController;
 }
 
 /**
@@ -188,6 +208,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Register commands first before populating the tree
         // This ensures commands are available when tree items are clicked
         registerCommands();
+        
+        // Initialize help system
+        helpController = new HelpController(context);
+        helpController.registerCommands();
+        registerHelpMenuCommand(context, helpController);
+        registerContextMenuHelpCommands(context);
+        
+        // Create and register help status bar
+        const helpStatusBar = new HelpStatusBar(helpController);
+        context.subscriptions.push(helpStatusBar);
         
         // Initialize cluster customization service
         // This service manages aliases, folders, and visibility customizations
