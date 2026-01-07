@@ -14,6 +14,8 @@ export {
 
 export {
     HelmService,
-    ExecuteCommandOptions
+    ExecuteCommandOptions,
+    HelmRepository,
+    ValidationResult
 } from './HelmService';
 

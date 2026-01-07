@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - helm-repository-operations
   - helm-cli-integration
-status: pending
+status: completed
 ---
 
 # Story: Implement Repository Management Commands

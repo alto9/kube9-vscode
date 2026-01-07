@@ -17,6 +17,24 @@ export interface ExecuteCommandOptions {
 }
 
 /**
+ * Helm repository information.
+ */
+export interface HelmRepository {
+    name: string;
+    url: string;
+    chartCount: number;
+    lastUpdated: Date;
+}
+
+/**
+ * Validation result for repository input.
+ */
+export interface ValidationResult {
+    valid: boolean;
+    errors: string[];
+}
+
+/**
  * Service for executing Helm CLI commands.
  * Wraps Helm 3.x command-line tool execution using Node.js child_process.spawn.
  */
@@ -131,6 +149,110 @@ export class HelmService {
             return match[0];
         }
         return output.trim();
+    }
+
+    /**
+     * Validates repository input (name and URL).
+     * 
+     * @param name Repository name
+     * @param url Repository URL
+     * @returns Validation result with errors array
+     */
+    public validateRepositoryInput(name: string, url: string): ValidationResult {
+        const errors: string[] = [];
+
+        // Validate name
+        if (!name || name.trim().length === 0) {
+            errors.push('Repository name is required');
+        } else if (!/^[a-zA-Z0-9-_]+$/.test(name)) {
+            errors.push('Repository name must contain only letters, numbers, hyphens, and underscores');
+        }
+
+        // Validate URL
+        if (!url || url.trim().length === 0) {
+            errors.push('Repository URL is required');
+        } else {
+            try {
+                const urlObj = new URL(url);
+                if (!['http:', 'https:'].includes(urlObj.protocol)) {
+                    errors.push('Repository URL must use HTTP or HTTPS protocol');
+                }
+            } catch {
+                errors.push('Repository URL is invalid');
+            }
+        }
+
+        return {
+            valid: errors.length === 0,
+            errors
+        };
+    }
+
+    /**
+     * Lists all configured Helm repositories.
+     * 
+     * @returns Promise resolving to array of repository information
+     * @throws Error if command fails
+     */
+    public async listRepositories(): Promise<HelmRepository[]> {
+        const output = await this.executeCommand(['repo', 'list', '--output', 'json']);
+        
+        // Parse JSON output
+        const repos = JSON.parse(output) as Array<{
+            name: string;
+            url: string;
+        }>;
+
+        // Map to HelmRepository interface
+        // Note: chartCount and lastUpdated are not available from helm repo list
+        // These would need to be fetched separately or cached
+        return repos.map(repo => ({
+            name: repo.name,
+            url: repo.url,
+            chartCount: 0, // Fetched separately or cached
+            lastUpdated: new Date() // Would need to be tracked separately
+        }));
+    }
+
+    /**
+     * Adds a new Helm repository.
+     * 
+     * @param name Repository name
+     * @param url Repository URL
+     * @returns Promise that resolves when repository is added
+     * @throws Error if validation fails or command fails
+     */
+    public async addRepository(name: string, url: string): Promise<void> {
+        // Validate input
+        const validation = this.validateRepositoryInput(name, url);
+        if (!validation.valid) {
+            throw new Error(validation.errors.join(', '));
+        }
+
+        // Execute helm repo add command
+        await this.executeCommand(['repo', 'add', name, url]);
+    }
+
+    /**
+     * Updates a Helm repository index.
+     * 
+     * @param name Repository name to update
+     * @returns Promise that resolves when repository is updated
+     * @throws Error if command fails
+     */
+    public async updateRepository(name: string): Promise<void> {
+        await this.executeCommand(['repo', 'update', name]);
+    }
+
+    /**
+     * Removes a Helm repository.
+     * 
+     * @param name Repository name to remove
+     * @returns Promise that resolves when repository is removed
+     * @throws Error if command fails
+     */
+    public async removeRepository(name: string): Promise<void> {
+        await this.executeCommand(['repo', 'remove', name]);
     }
 
     /**

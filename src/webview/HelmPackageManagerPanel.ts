@@ -3,6 +3,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getHelpController } from '../extension';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
+import { HelmService } from '../services/HelmService';
+import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
+import { WebviewToExtensionMessage, ExtensionToWebviewMessage } from './helm-package-manager/types';
 
 /**
  * HelmPackageManagerPanel manages a webview panel for the Helm Package Manager.
@@ -19,6 +22,11 @@ export class HelmPackageManagerPanel {
      * Extension context stored for later use.
      */
     private static extensionContext: vscode.ExtensionContext | undefined;
+
+    /**
+     * HelmService instance for executing Helm commands.
+     */
+    private readonly helmService: HelmService;
 
     /**
      * The VS Code webview panel instance.
@@ -74,6 +82,10 @@ export class HelmPackageManagerPanel {
     private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
         this.panel = panel;
 
+        // Initialize HelmService with kubeconfig path
+        const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+        this.helmService = new HelmService(kubeconfigPath);
+
         // Set the webview's HTML content
         this.panel.webview.html = HelmPackageManagerPanel.getWebviewContent(this.panel.webview, context);
 
@@ -103,14 +115,196 @@ export class HelmPackageManagerPanel {
      */
     private setWebviewMessageListeners(context: vscode.ExtensionContext): void {
         const messageDisposable = this.panel.webview.onDidReceiveMessage(
-            async (message) => {
-                // Message handlers will be implemented in later stories
-                console.log('Helm Package Manager received message:', message);
+            async (message: WebviewToExtensionMessage) => {
+                try {
+                    switch (message.command) {
+                        case 'listRepositories':
+                            await this.handleListRepositories();
+                            break;
+
+                        case 'addRepository':
+                            if (message.name && message.url) {
+                                await this.handleAddRepository(message.name, message.url);
+                            } else {
+                                this.sendError('Repository name and URL are required');
+                            }
+                            break;
+
+                        case 'updateRepository':
+                            if (message.name) {
+                                await this.handleUpdateRepository(message.name);
+                            } else {
+                                this.sendError('Repository name is required');
+                            }
+                            break;
+
+                        case 'removeRepository':
+                            if (message.name) {
+                                await this.handleRemoveRepository(message.name);
+                            } else {
+                                this.sendError('Repository name is required');
+                            }
+                            break;
+
+                        case 'ready':
+                            // Webview is ready, load initial repository list
+                            await this.handleListRepositories();
+                            break;
+
+                        default:
+                            console.log('Helm Package Manager received unknown message:', message);
+                    }
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error('Error handling message:', errorMessage);
+                    this.sendError(errorMessage);
+                }
             },
             null,
             context.subscriptions
         );
         this.disposables.push(messageDisposable);
+    }
+
+    /**
+     * Handle listRepositories command.
+     */
+    private async handleListRepositories(): Promise<void> {
+        try {
+            const repositories = await this.helmService.listRepositories();
+            this.sendMessage({
+                type: 'repositoriesLoaded',
+                data: repositories
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.sendError(`Failed to list repositories: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle addRepository command.
+     * 
+     * @param name Repository name
+     * @param url Repository URL
+     */
+    private async handleAddRepository(name: string, url: string): Promise<void> {
+        try {
+            // Validate input
+            const validation = this.helmService.validateRepositoryInput(name, url);
+            if (!validation.valid) {
+                this.sendError(validation.errors.join(', '));
+                return;
+            }
+
+            // Check if repository already exists
+            const existing = await this.helmService.listRepositories();
+            if (existing.some(r => r.name === name)) {
+                this.sendError(`Repository '${name}' already exists`);
+                return;
+            }
+
+            // Add repository
+            await this.helmService.addRepository(name, url);
+
+            // Refresh repository list
+            const updated = await this.helmService.listRepositories();
+            this.sendMessage({
+                type: 'repositoriesLoaded',
+                data: updated
+            });
+
+            // Show success notification
+            vscode.window.showInformationMessage(`Repository '${name}' added successfully`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // Check for duplicate repository error
+            if (errorMessage.includes('already exists')) {
+                this.sendError(`Repository '${name}' already exists`);
+            } else {
+                this.sendError(`Failed to add repository: ${errorMessage}`);
+            }
+        }
+    }
+
+    /**
+     * Handle updateRepository command.
+     * 
+     * @param name Repository name
+     */
+    private async handleUpdateRepository(name: string): Promise<void> {
+        try {
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Updating repository '${name}'...`,
+                    cancellable: false
+                },
+                async () => {
+                    await this.helmService.updateRepository(name);
+                }
+            );
+
+            // Refresh repository list
+            const updated = await this.helmService.listRepositories();
+            this.sendMessage({
+                type: 'repositoriesLoaded',
+                data: updated
+            });
+
+            // Show success notification
+            vscode.window.showInformationMessage(`Repository '${name}' updated successfully`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.sendError(`Failed to update repository: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle removeRepository command.
+     * 
+     * @param name Repository name
+     */
+    private async handleRemoveRepository(name: string): Promise<void> {
+        try {
+            await this.helmService.removeRepository(name);
+
+            // Refresh repository list
+            const updated = await this.helmService.listRepositories();
+            this.sendMessage({
+                type: 'repositoriesLoaded',
+                data: updated
+            });
+
+            // Show success notification
+            vscode.window.showInformationMessage(`Repository '${name}' removed successfully`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            this.sendError(`Failed to remove repository: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Send a message to the webview.
+     * 
+     * @param message Message to send
+     */
+    private sendMessage(message: ExtensionToWebviewMessage): void {
+        this.panel.webview.postMessage(message);
+    }
+
+    /**
+     * Send an error message to the webview.
+     * 
+     * @param errorMessage Error message
+     */
+    private sendError(errorMessage: string): void {
+        this.sendMessage({
+            type: 'operationError',
+            error: errorMessage
+        });
+        vscode.window.showErrorMessage(errorMessage);
     }
 
     /**
