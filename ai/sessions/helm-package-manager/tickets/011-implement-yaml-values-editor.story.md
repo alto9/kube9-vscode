@@ -5,7 +5,7 @@ feature_id:
   - helm-chart-installation
 spec_id:
   - helm-chart-operations
-status: pending
+status: completed
 ---
 
 # Story: Implement YAML Values Editor for Installation
@@ -20,14 +20,14 @@ Users need to modify chart values during installation. The YAML editor provides 
 
 ## Acceptance Criteria
 
-- [ ] Create `YAMLEditor.tsx` component with syntax highlighting
-- [ ] Load default chart values into editor
-- [ ] Implement YAML syntax validation
-- [ ] Show inline syntax errors with line numbers
-- [ ] Disable Install button when YAML is invalid
-- [ ] Add "Reset to Defaults" button
-- [ ] Handle large values files efficiently
-- [ ] Support copy/paste functionality
+- [x] Create `YAMLEditor.tsx` component with syntax highlighting
+- [x] Load default chart values into editor
+- [x] Implement YAML syntax validation
+- [x] Show inline syntax errors with line numbers
+- [x] Disable Install button when YAML is invalid
+- [x] Add "Reset to Defaults" button
+- [x] Handle large values files efficiently
+- [x] Support copy/paste functionality
 
 ## Implementation Notes
 

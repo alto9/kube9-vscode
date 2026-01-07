@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChartSearchResult, InstallParams } from '../types';
+import { YAMLEditor } from './YAMLEditor';
 
 /**
  * Props for InstallChartModal component.
@@ -11,6 +12,8 @@ interface InstallChartModalProps {
     open: boolean;
     /** Array of available namespace names */
     namespaces: string[];
+    /** Default YAML values for the chart */
+    defaultValues?: string;
     /** Callback when modal is closed */
     onClose: () => void;
     /** Callback when install is triggered with parameters */
@@ -25,12 +28,15 @@ export const InstallChartModal: React.FC<InstallChartModalProps> = ({
     chart,
     open,
     namespaces,
+    defaultValues = '',
     onClose,
     onInstall
 }) => {
     const [releaseName, setReleaseName] = useState('');
     const [namespace, setNamespace] = useState('default');
     const [createNamespace, setCreateNamespace] = useState(false);
+    const [values, setValues] = useState('');
+    const [valuesValid, setValuesValid] = useState(true);
     const [installing, setInstalling] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -40,10 +46,12 @@ export const InstallChartModal: React.FC<InstallChartModalProps> = ({
             setReleaseName('');
             setNamespace('default');
             setCreateNamespace(false);
+            setValues(defaultValues || '');
+            setValuesValid(true);
             setInstalling(false);
             setError(null);
         }
-    }, [open]);
+    }, [open, defaultValues]);
 
     // Auto-generate release name when modal opens with a chart
     useEffect(() => {
@@ -51,8 +59,11 @@ export const InstallChartModal: React.FC<InstallChartModalProps> = ({
             // Generate release name from chart name
             const generated = chart.chart.toLowerCase().replace(/[^a-z0-9-]/g, '-');
             setReleaseName(generated);
+            // Initialize values with defaults
+            setValues(defaultValues || '');
+            setValuesValid(true);
         }
-    }, [open, chart]);
+    }, [open, chart, defaultValues]);
 
     /**
      * Validate release name format.
@@ -91,7 +102,8 @@ export const InstallChartModal: React.FC<InstallChartModalProps> = ({
                 chart: chart.repository ? `${chart.repository}/${chart.chart}` : chart.chart,
                 releaseName: releaseName.trim(),
                 namespace: namespace.trim(),
-                createNamespace
+                createNamespace,
+                values: values.trim() || undefined
             });
             onClose();
         } catch (err) {
@@ -155,7 +167,15 @@ export const InstallChartModal: React.FC<InstallChartModalProps> = ({
     if (!open || !chart) return null;
 
     const chartName = chart.chart || chart.name || 'Unknown Chart';
-    const isFormValid = releaseName.trim() && !validateReleaseName(releaseName);
+    const isFormValid = releaseName.trim() && !validateReleaseName(releaseName) && valuesValid;
+
+    /**
+     * Handle YAML editor value change.
+     */
+    const handleValuesChange = (newValues: string, valid: boolean) => {
+        setValues(newValues);
+        setValuesValid(valid);
+    };
 
     // Modal overlay styles
     const overlayStyle: React.CSSProperties = {
@@ -374,6 +394,11 @@ export const InstallChartModal: React.FC<InstallChartModalProps> = ({
                         </label>
                     </div>
                 </div>
+
+                <YAMLEditor
+                    defaultValues={defaultValues || ''}
+                    onChange={handleValuesChange}
+                />
 
                 {error && (
                     <div style={errorMessageStyle}>

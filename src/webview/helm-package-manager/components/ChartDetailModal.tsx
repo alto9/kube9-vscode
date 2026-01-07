@@ -475,6 +475,7 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
                 chart={chart}
                 open={installModalOpen}
                 namespaces={namespaces}
+                defaultValues={details?.values || ''}
                 onClose={handleInstallModalClose}
                 onInstall={handleInstall}
             />
