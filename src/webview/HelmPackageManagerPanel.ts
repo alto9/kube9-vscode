@@ -229,8 +229,13 @@ export class HelmPackageManagerPanel {
                         }
 
                         case 'ready':
-                            // Webview is ready, load initial repository list
+                            // Webview is ready, load initial repository list and operator status
                             await this.handleListRepositories();
+                            await this.handleGetOperatorStatus();
+                            break;
+
+                        case 'getOperatorStatus':
+                            await this.handleGetOperatorStatus();
                             break;
 
                         default:
@@ -525,9 +530,38 @@ export class HelmPackageManagerPanel {
                 type: 'releasesLoaded',
                 data: releases
             });
+            
+            // Invalidate operator status cache and refresh status when releases change
+            await this.helmService.invalidateOperatorStatusCache();
+            await this.handleGetOperatorStatus();
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             this.sendError(`Failed to list releases: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Handle getOperatorStatus command.
+     * Fetches operator installation status and sends it to the webview.
+     */
+    private async handleGetOperatorStatus(): Promise<void> {
+        try {
+            const status = await this.helmService.getOperatorStatus();
+            this.sendMessage({
+                type: 'operatorStatusUpdated',
+                data: status
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to get operator status:', errorMessage);
+            // Send default status on error
+            this.sendMessage({
+                type: 'operatorStatusUpdated',
+                data: {
+                    installed: false,
+                    upgradeAvailable: false
+                }
+            });
         }
     }
 

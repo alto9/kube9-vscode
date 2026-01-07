@@ -190,6 +190,8 @@ export interface OperatorInstallationStatus {
     upgradeAvailable: boolean;
     /** Latest available version (if upgrade available) */
     latestVersion?: string;
+    /** Operator tier (free or pro) */
+    tier?: 'free' | 'pro';
 }
 
 /**
@@ -210,7 +212,7 @@ export interface HelmState {
  */
 export interface ExtensionToWebviewMessage {
     /** Message type */
-    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded' | 'upgradeInfoLoaded';
+    type: 'repositoriesLoaded' | 'releasesLoaded' | 'chartSearchResults' | 'chartDetails' | 'operationProgress' | 'operationComplete' | 'operationError' | 'namespacesLoaded' | 'releaseDetailsLoaded' | 'upgradeInfoLoaded' | 'operatorStatusUpdated';
     /** Message data */
     data?: unknown;
     /** Operation name (for progress/complete/error messages) */
@@ -230,7 +232,7 @@ export interface ExtensionToWebviewMessage {
  */
 export interface WebviewToExtensionMessage {
     /** Command type */
-    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo';
+    command: 'listRepositories' | 'addRepository' | 'updateRepository' | 'removeRepository' | 'searchCharts' | 'getChartDetails' | 'installChart' | 'listReleases' | 'getReleaseDetails' | 'upgradeRelease' | 'rollbackRelease' | 'uninstallRelease' | 'installOperator' | 'ready' | 'getNamespaces' | 'copyValue' | 'getUpgradeInfo' | 'getOperatorStatus';
     /** Optional data payload */
     name?: string;
     url?: string;

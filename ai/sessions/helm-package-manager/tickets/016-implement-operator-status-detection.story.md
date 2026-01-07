@@ -5,7 +5,7 @@ feature_id:
   - helm-operator-quick-install
 spec_id:
   - helm-operator-installation
-status: pending
+status: completed
 ---
 
 # Story: Implement Kube9 Operator Status Detection
@@ -20,14 +20,14 @@ The Featured Charts section needs to know operator installation status to show a
 
 ## Acceptance Criteria
 
-- [ ] Implement `getOperatorStatus()` method in Helm Service
-- [ ] Check for `kube9-operator` release in all namespaces
-- [ ] Query available versions from `kube9` repository
-- [ ] Compare installed version with latest version
-- [ ] Return status object with installation details
-- [ ] Add `kube9` repository if not present
-- [ ] Cache status with 5-minute TTL
-- [ ] Update status when releases list changes
+- [x] Implement `getOperatorStatus()` method in Helm Service
+- [x] Check for `kube9-operator` release in all namespaces
+- [x] Query available versions from `kube9` repository
+- [x] Compare installed version with latest version
+- [x] Return status object with installation details
+- [x] Add `kube9` repository if not present
+- [x] Cache status with 5-minute TTL
+- [x] Update status when releases list changes
 
 ## Implementation Notes
 

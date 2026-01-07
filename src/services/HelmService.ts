@@ -2,7 +2,8 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus, UpgradeInfo } from '../webview/helm-package-manager/types';
+import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus, UpgradeInfo, OperatorInstallationStatus } from '../webview/helm-package-manager/types';
+import { getContextInfo } from '../utils/kubectlContext';
 
 /**
  * Options for executing Helm commands.
@@ -47,6 +48,16 @@ export class HelmService {
      * Default timeout for Helm commands in milliseconds (30 seconds).
      */
     private static readonly DEFAULT_TIMEOUT_MS = 30000;
+
+    /**
+     * Cache time-to-live in milliseconds for operator status (5 minutes).
+     */
+    private readonly OPERATOR_STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
+
+    /**
+     * Cache storage for operator status, keyed by context name.
+     */
+    private operatorStatusCache: Map<string, { data: OperatorInstallationStatus; timestamp: number }> = new Map();
 
     /**
      * Creates a new HelmService instance.
@@ -754,6 +765,149 @@ export class HelmService {
             name,
             '--namespace', namespace
         ]);
+    }
+
+    /**
+     * Gets the installation status of the Kube9 Operator.
+     * Checks if the operator is installed and whether upgrades are available.
+     * Results are cached for 5 minutes.
+     * 
+     * @returns Promise resolving to operator installation status
+     */
+    public async getOperatorStatus(): Promise<OperatorInstallationStatus> {
+        try {
+            // Get current context name for cache key
+            const contextInfo = await getContextInfo();
+            const contextName = contextInfo.contextName;
+            const cacheKey = `operator-status-${contextName}`;
+
+            // Check cache first
+            const cached = this.operatorStatusCache.get(cacheKey);
+            if (cached) {
+                const cacheAge = Date.now() - cached.timestamp;
+                if (cacheAge < this.OPERATOR_STATUS_CACHE_TTL_MS) {
+                    return cached.data;
+                }
+                // Cache expired, remove it
+                this.operatorStatusCache.delete(cacheKey);
+            }
+
+            // Check installed releases
+            const releases = await this.listReleases({ allNamespaces: true });
+            const operatorRelease = releases.find(r => 
+                r.name === 'kube9-operator' || 
+                r.chart.includes('kube9-operator')
+            );
+
+            if (!operatorRelease) {
+                const status: OperatorInstallationStatus = {
+                    installed: false,
+                    upgradeAvailable: false
+                };
+                // Cache the result
+                this.operatorStatusCache.set(cacheKey, {
+                    data: status,
+                    timestamp: Date.now()
+                });
+                return status;
+            }
+
+            // Ensure kube9 repository is added
+            await this.ensureKube9Repository();
+
+            // Check for updates
+            let latestVersion: string | undefined;
+            let upgradeAvailable = false;
+            try {
+                const searchResults = await this.searchCharts('kube9-operator', 'kube9');
+                if (searchResults.length > 0) {
+                    latestVersion = searchResults[0].version;
+                    const currentVersion = operatorRelease.version;
+                    upgradeAvailable = latestVersion !== currentVersion;
+                }
+            } catch (error) {
+                // If search fails, log warning but continue
+                console.warn('Failed to search for operator chart versions:', error);
+            }
+
+            // Determine tier
+            const tier = await this.detectOperatorTier(operatorRelease);
+
+            const status: OperatorInstallationStatus = {
+                installed: true,
+                version: operatorRelease.version,
+                namespace: operatorRelease.namespace,
+                upgradeAvailable,
+                latestVersion,
+                tier
+            };
+
+            // Cache the result
+            this.operatorStatusCache.set(cacheKey, {
+                data: status,
+                timestamp: Date.now()
+            });
+
+            return status;
+        } catch (error) {
+            // If any error occurs, return not installed status
+            console.warn('Failed to get operator status:', error);
+            return {
+                installed: false,
+                upgradeAvailable: false
+            };
+        }
+    }
+
+    /**
+     * Ensures the kube9 repository is added and updated.
+     * Adds the repository if it doesn't exist.
+     * 
+     * @returns Promise that resolves when repository is ensured
+     */
+    public async ensureKube9Repository(): Promise<void> {
+        try {
+            const repos = await this.listRepositories();
+            const kube9Repo = repos.find(r => r.name === 'kube9');
+
+            if (!kube9Repo) {
+                await this.addRepository('kube9', 'https://charts.kube9.io');
+                await this.updateRepository('kube9');
+            }
+        } catch (error) {
+            // Log warning but don't throw - repository operations shouldn't block status check
+            console.warn('Failed to ensure kube9 repository:', error);
+        }
+    }
+
+    /**
+     * Detects the operator tier (free or pro) from release information.
+     * This is a placeholder implementation that can be enhanced later.
+     * 
+     * @param _release The operator release information (unused in current implementation)
+     * @returns Operator tier or undefined if unable to determine
+     */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    private async detectOperatorTier(_release: HelmRelease): Promise<'free' | 'pro' | undefined> {
+        // TODO: Implement tier detection by checking release values or ConfigMap
+        // For now, return undefined
+        return undefined;
+    }
+
+    /**
+     * Invalidates the operator status cache for the current context.
+     * Call this when releases change to force a refresh.
+     */
+    public async invalidateOperatorStatusCache(): Promise<void> {
+        try {
+            const contextInfo = await getContextInfo();
+            const contextName = contextInfo.contextName;
+            const cacheKey = `operator-status-${contextName}`;
+            this.operatorStatusCache.delete(cacheKey);
+        } catch (error) {
+            // If we can't get context info, clear all cache entries
+            this.operatorStatusCache.clear();
+        }
     }
 
     /**
