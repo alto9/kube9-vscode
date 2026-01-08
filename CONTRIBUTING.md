@@ -133,7 +133,29 @@ We welcome feature suggestions! Use the [feature request template](.github/ISSUE
    ```
    Then create a PR on GitHub using the [pull request template](.github/pull_request_template.md).
 
+   **Note:** A pre-push hook will automatically run `npm test` and `npm run build` before allowing the push. If either fails, the push will be blocked. This ensures code quality and prevents broken builds from being pushed. To bypass the hook in emergency situations (not recommended), you can use `git push --no-verify`.
+
 ## Development Workflow
+
+### Git Hooks
+
+This project uses [Husky](https://typicode.github.io/husky/) to enforce code quality through git hooks:
+
+**Pre-push Hook:**
+- Automatically runs before every `git push`
+- Executes `npm test` to ensure all tests pass
+- Executes `npm run build` to ensure the project builds successfully
+- Blocks the push if either command fails
+
+**Setup:**
+Git hooks are automatically installed when you run `npm install` (via the `prepare` script).
+
+**Bypassing Hooks:**
+In emergency situations, you can bypass the hooks with:
+```bash
+git push --no-verify
+```
+⚠️ **Warning:** This is strongly discouraged as it can introduce broken code into the repository.
 
 ### Project Structure
 
