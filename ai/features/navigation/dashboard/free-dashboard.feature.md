@@ -68,6 +68,32 @@ Scenario: Dashboard displays loading state during initial load
   Then the dashboard should display a loading spinner
   And the dashboard should show "Loading cluster statistics..." message
 
+Scenario: Webview message handler registers before HTML is set
+  Given a user clicks the Dashboard menu item
+  When the extension creates the webview panel
+  Then the extension should register the message handler FIRST
+  And the extension should attach the handler to panel.webview.onDidReceiveMessage
+  And ONLY AFTER the handler is registered should the extension set panel.webview.html
+  And this order prevents the race condition where early messages are lost
+
+Scenario: Dashboard receives initial data without manual request
+  Given the webview panel has been created
+  And the message handler has been registered
+  And the HTML has been set
+  When the webview loads and becomes ready
+  Then the extension should proactively send initial dashboard data
+  And the webview should receive the data via the 'updateData' message
+  And the dashboard should display actual cluster statistics
+  And no manual refresh should be required
+
+Scenario: Dashboard initialization completes within timeout
+  Given a user opens the Free Dashboard
+  When the initialization sequence begins
+  Then the message handler should register within 100ms
+  And the HTML should be set within 200ms
+  And initial data should be sent within 5 seconds
+  And the dashboard should display data without requiring user interaction
+
 Scenario: Dashboard handles query errors gracefully
   Given the Free Dashboard is attempting to query cluster data
   When a kubectl query fails
