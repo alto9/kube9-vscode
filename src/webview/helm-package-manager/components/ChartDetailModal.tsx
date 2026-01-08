@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ChartSearchResult, ChartDetails, VSCodeAPI, ExtensionToWebviewMessage, InstallParams } from '../types';
+import { ChartSearchResult, ChartDetails, ExtensionToWebviewMessage, InstallParams } from '../types';
 import { ReadmeViewer } from './ReadmeViewer';
 import { ValuesViewer } from './ValuesViewer';
 import { VersionsList } from './VersionsList';
 import { InstallChartModal } from './InstallChartModal';
+import { getVSCodeAPI } from '../vscodeApi';
 
-// Acquire VS Code API
-const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
+// Get shared VS Code API instance
+const vscode = getVSCodeAPI();
 
 /**
  * Tab type for Chart Detail Modal.

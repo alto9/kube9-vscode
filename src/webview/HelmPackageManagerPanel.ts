@@ -75,13 +75,23 @@ export class HelmPackageManagerPanel {
      * If a panel already exists, reveals it. Otherwise creates a new one.
      * 
      * @param context The VS Code extension context
+     * @param clusterContextName Optional cluster context name to display in the panel title
      */
-    public static createOrShow(context: vscode.ExtensionContext): void {
+    public static createOrShow(context: vscode.ExtensionContext, clusterContextName?: string): void {
         // Store the extension context for later use
         HelmPackageManagerPanel.extensionContext = context;
 
-        // If we already have a panel, reuse it and reveal it
+        // Build panel title with cluster context if provided
+        const panelTitle = clusterContextName 
+            ? `Helm Package Manager - ${clusterContextName}`
+            : 'Helm Package Manager';
+
+        // If we already have a panel, update its title if context changed and reveal it
         if (HelmPackageManagerPanel.currentPanel) {
+            // Update title if context name is provided and different
+            if (clusterContextName && HelmPackageManagerPanel.currentPanel.panel.title !== panelTitle) {
+                HelmPackageManagerPanel.currentPanel.panel.title = panelTitle;
+            }
             HelmPackageManagerPanel.currentPanel.panel.reveal(vscode.ViewColumn.One);
             return;
         }
@@ -89,7 +99,7 @@ export class HelmPackageManagerPanel {
         // Create a new webview panel
         const panel = vscode.window.createWebviewPanel(
             'helmPackageManager',
-            'Helm Package Manager',
+            panelTitle,
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -939,8 +949,34 @@ export class HelmPackageManagerPanel {
                     });
                     await this.helmService.updateRepository('kube9');
 
+                    // Step 2.5: Check for existing release (25%)
+                    progress.report({ increment: 5, message: 'Checking for existing release...' });
+                    this.sendMessage({
+                        type: 'operationProgress',
+                        operation: 'installOperator',
+                        progress: 25
+                    });
+                    const existingReleases = await this.helmService.listReleases({ 
+                        allNamespaces: true 
+                    });
+                    const existingRelease = existingReleases.find(r => 
+                        r.name === params.releaseName && 
+                        r.namespace === params.namespace
+                    );
+
+                    if (existingRelease) {
+                        const errorMessage = `A release named '${params.releaseName}' already exists in namespace '${params.namespace}' with status '${existingRelease.status}'. Please uninstall it first before installing a new one.`;
+                        vscode.window.showErrorMessage(errorMessage);
+                        this.sendMessage({
+                            type: 'operationError',
+                            operation: 'installOperator',
+                            error: errorMessage
+                        });
+                        throw new Error(errorMessage);
+                    }
+
                     // Step 3: Install chart (30-80%)
-                    progress.report({ increment: 10, message: 'Installing operator...' });
+                    progress.report({ increment: 5, message: 'Installing operator...' });
                     this.sendMessage({
                         type: 'operationProgress',
                         operation: 'installOperator',
@@ -950,28 +986,76 @@ export class HelmPackageManagerPanel {
                     try {
                         await this.helmService.installChart(params);
                         
-                        // Step 4: Installation complete (100%)
-                        progress.report({ increment: 70, message: 'Installation complete!' });
+                        // Step 4: Verify installation status (80-90%)
+                        progress.report({ increment: 10, message: 'Verifying installation...' });
+                        this.sendMessage({
+                            type: 'operationProgress',
+                            operation: 'installOperator',
+                            progress: 80
+                        });
+
+                        // Wait a moment for Helm to update release status
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+
+                        // Refresh releases list to check actual status
+                        const releases = await this.helmService.listReleases({ allNamespaces: true });
+                        this.sendMessage({
+                            type: 'releasesLoaded',
+                            data: releases
+                        });
+
+                        // Find the installed release and check its status
+                        const installedRelease = releases.find(r => 
+                            r.name === params.releaseName && 
+                            r.namespace === params.namespace
+                        );
+
+                        // Step 5: Installation verification complete (100%)
+                        progress.report({ increment: 10, message: 'Installation complete!' });
                         this.sendMessage({
                             type: 'operationProgress',
                             operation: 'installOperator',
                             progress: 100
                         });
 
-                        // Determine success message based on API key presence
+                        // Check if release actually succeeded
+                        if (!installedRelease) {
+                            throw new Error('Release not found after installation');
+                        }
+
+                        if (installedRelease.status === 'failed') {
+                            // Get release details to show the actual error
+                            let errorDetails = 'Installation failed';
+                            try {
+                                const releaseDetails = await this.helmService.getReleaseDetails(
+                                    params.releaseName,
+                                    params.namespace
+                                );
+                                if (releaseDetails.description) {
+                                    errorDetails = releaseDetails.description;
+                                }
+                            } catch {
+                                // If we can't get details, use the status
+                                errorDetails = `Release status: ${installedRelease.status}`;
+                            }
+
+                            vscode.window.showErrorMessage(`Operator installation failed: ${errorDetails}`);
+                            this.sendMessage({
+                                type: 'operationComplete',
+                                operation: 'installOperator',
+                                success: false,
+                                message: errorDetails
+                            });
+                            throw new Error(errorDetails);
+                        }
+
+                        // Release is deployed successfully
                         const hasApiKey = params.values && params.values.includes('apiKey:');
                         const successMessage = hasApiKey
                             ? 'Kube9 Operator installed successfully! Pro features enabled!'
                             : 'Kube9 Operator installed successfully! Add an API key to enable Pro features.';
 
                         vscode.window.showInformationMessage(successMessage);
-
-                        // Refresh releases list and operator status
-                        const releases = await this.helmService.listReleases({ allNamespaces: true });
-                        this.sendMessage({
-                            type: 'releasesLoaded',
-                            data: releases
-                        });
                         await this.handleGetOperatorStatus();
 
                         this.sendMessage({
@@ -981,13 +1065,32 @@ export class HelmPackageManagerPanel {
                             message: successMessage
                         });
                     } catch (error) {
-                        const errorMessage = error instanceof Error ? error.message : String(error);
-                        vscode.window.showErrorMessage(`Operator installation failed: ${errorMessage}`);
-                        this.sendMessage({
-                            type: 'operationError',
-                            operation: 'installOperator',
-                            error: errorMessage
-                        });
+                        // Handle HelmError with structured error info
+                        if (error instanceof HelmError) {
+                            const errorMessage = error.suggestion 
+                                ? `${error.message}. ${error.suggestion}`
+                                : error.message;
+                            vscode.window.showErrorMessage(`Operator installation failed: ${errorMessage}`);
+                            this.sendMessage({
+                                type: 'operationError',
+                                operation: 'installOperator',
+                                error: errorMessage,
+                                errorInfo: {
+                                    message: error.message,
+                                    type: error.type,
+                                    suggestion: error.suggestion,
+                                    retryable: error.retryable
+                                }
+                            });
+                        } else {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            vscode.window.showErrorMessage(`Operator installation failed: ${errorMessage}`);
+                            this.sendMessage({
+                                type: 'operationError',
+                                operation: 'installOperator',
+                                error: errorMessage
+                            });
+                        }
                         throw error; // Re-throw to trigger outer catch
                     }
                 }
@@ -1360,7 +1463,7 @@ export class HelmPackageManagerPanel {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource} 'nonce-${nonce}'; connect-src ${cspSource}; font-src ${cspSource}; img-src ${cspSource} data:;">
     <link href="${helpButtonCssUri}" rel="stylesheet">
     <title>Helm Package Manager</title>
     <style>

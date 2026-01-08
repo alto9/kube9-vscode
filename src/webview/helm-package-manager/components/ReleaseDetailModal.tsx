@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmRelease, ReleaseDetails, VSCodeAPI, ExtensionToWebviewMessage, UpgradeParams } from '../types';
+import { HelmRelease, ReleaseDetails, ExtensionToWebviewMessage, UpgradeParams } from '../types';
 import { ReleaseInfoTab } from './ReleaseInfoTab';
 import { ManifestViewer } from './ManifestViewer';
 import { ValuesViewer } from './ValuesViewer';
 import { HistoryTab } from './HistoryTab';
 import { UpgradeReleaseModal } from './UpgradeReleaseModal';
+import { getVSCodeAPI } from '../vscodeApi';
 
-// Acquire VS Code API
-const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
+// Get shared VS Code API instance
+const vscode = getVSCodeAPI();
 
 /**
  * Tab type for Release Detail Modal.
@@ -48,6 +49,11 @@ export const ReleaseDetailModal: React.FC<ReleaseDetailModalProps> = ({
     const [activeTab, setActiveTab] = useState<ReleaseDetailTab>('info');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+    const [upgradeHovered, setUpgradeHovered] = useState(false);
+    const [uninstallHovered, setUninstallHovered] = useState(false);
+    const [closeHovered, setCloseHovered] = useState(false);
+    const [retryHovered, setRetryHovered] = useState(false);
 
     /**
      * Fetch release details from extension.
@@ -352,11 +358,6 @@ export const ReleaseDetailModal: React.FC<ReleaseDetailModalProps> = ({
     const retryButtonHoverStyle: React.CSSProperties = {
         backgroundColor: 'var(--vscode-button-hoverBackground)'
     };
-
-    const [upgradeHovered, setUpgradeHovered] = useState(false);
-    const [uninstallHovered, setUninstallHovered] = useState(false);
-    const [closeHovered, setCloseHovered] = useState(false);
-    const [retryHovered, setRetryHovered] = useState(false);
 
     return (
         <div style={overlayStyle} onClick={handleOverlayClick}>

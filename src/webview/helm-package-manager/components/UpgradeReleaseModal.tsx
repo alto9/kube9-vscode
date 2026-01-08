@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmRelease, UpgradeParams, VSCodeAPI, ExtensionToWebviewMessage } from '../types';
+import { HelmRelease, UpgradeParams, ExtensionToWebviewMessage } from '../types';
 import { YAMLEditor } from './YAMLEditor';
+import { getVSCodeAPI } from '../vscodeApi';
 
-// Acquire VS Code API
-const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
+// Get shared VS Code API instance
+const vscode = getVSCodeAPI();
 
 /**
  * Props for UpgradeReleaseModal component.

@@ -27,7 +27,6 @@ import { PortForwardingSubcategory } from './categories/networking/PortForwardin
 import { ConfigurationCategory } from './categories/ConfigurationCategory';
 import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubcategory';
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
-import { HelmCategory } from './categories/HelmCategory';
 import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
 import { ArgoCDCategory } from './categories/ArgoCDCategory';
 import { ReportsCategory } from './categories/ReportsCategory';
@@ -752,14 +751,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 );
                 break;
             
-            case 'helm':
-                items = await HelmCategory.getHelmReleaseItems(
-                    categoryElement.resourceData,
-                    this.kubeconfig.filePath,
-                    (error, clusterName) => this.handleKubectlError(error, clusterName)
-                );
-                break;
-            
             case 'argocd': {
                 const argoCDService = this.getArgoCDService();
                 if (argoCDService) {
@@ -1200,21 +1191,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         const rootFolders = await this.buildFolderItems(null);
         const ungroupedClusters = this.buildClustersWithoutFolder();
 
-        // Create Helm Package Manager tree item
-        const helmItem = new ClusterTreeItem(
-            'Helm Package Manager',
-            'helmPackageManager',
-            vscode.TreeItemCollapsibleState.None
-        );
-        helmItem.command = {
-            command: 'kube9.helm.openPackageManager',
-            title: 'Open Helm Package Manager'
-        };
-        helmItem.iconPath = new vscode.ThemeIcon('package');
-        helmItem.tooltip = 'Manage Helm charts and releases';
-
-        // Return folders first, then clusters, then Helm item
-        return [...rootFolders, ...ungroupedClusters, helmItem];
+        // Return folders first, then clusters
+        return [...rootFolders, ...ungroupedClusters];
     }
 
     /**

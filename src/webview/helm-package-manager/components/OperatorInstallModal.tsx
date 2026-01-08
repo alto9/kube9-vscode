@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { InstallParams } from '../types';
+import { getVSCodeAPI } from '../vscodeApi';
 
-// Declare vscode for TypeScript
-declare const vscode: {
-    postMessage: (message: any) => void;
-} | undefined;
+// Acquire VS Code API - use shared singleton to prevent multiple acquisitions
+const vscode = getVSCodeAPI();
 
 /**
  * Props for OperatorInstallModal component.
@@ -34,6 +33,9 @@ export const OperatorInstallModal: React.FC<OperatorInstallModalProps> = ({
     const [installing, setInstalling] = useState(false);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
+    const [cancelHovered, setCancelHovered] = useState(false);
+    const [installHovered, setInstallHovered] = useState(false);
+    const [expandHovered, setExpandHovered] = useState(false);
 
     // Reset form when modal closes
     useEffect(() => {
@@ -434,10 +436,6 @@ export const OperatorInstallModal: React.FC<OperatorInstallModalProps> = ({
         opacity: 0.5,
         cursor: 'not-allowed'
     };
-
-    const [cancelHovered, setCancelHovered] = useState(false);
-    const [installHovered, setInstallHovered] = useState(false);
-    const [expandHovered, setExpandHovered] = useState(false);
 
     return (
         <div style={overlayStyle} onClick={handleOverlayClick}>

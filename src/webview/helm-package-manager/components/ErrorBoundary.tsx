@@ -1,16 +1,10 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { getVSCodeAPI } from '../vscodeApi';
 
 /**
- * VS Code Webview API interface.
+ * Get shared VS Code API instance.
  */
-interface VSCodeAPI {
-    postMessage(message: { command: string; error?: string; stack?: string }): void;
-}
-
-/**
- * Acquire VS Code API if available.
- */
-const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
+const vscode = getVSCodeAPI();
 
 /**
  * Props for ErrorBoundary component.

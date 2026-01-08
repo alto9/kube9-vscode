@@ -1393,8 +1393,8 @@ function registerCommands(): void {
     // Register Helm Package Manager command
     const openHelmPackageManagerCmd = vscode.commands.registerCommand(
         'kube9.helm.openPackageManager',
-        async () => {
-            await openPackageManager();
+        async (item?: ClusterTreeItem) => {
+            await openPackageManager(item);
         }
     );
     context.subscriptions.push(openHelmPackageManagerCmd);

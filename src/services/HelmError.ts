@@ -79,11 +79,15 @@ export function parseHelmError(stderr: string, stdout?: string): HelmError {
     }
 
     // Check for release already exists
-    if (errorText.includes('already exists') || errorText.includes('release.*already exists')) {
+    if (errorText.includes('already exists') || 
+        errorText.includes('release.*already exists') ||
+        errorText.includes('cannot re-use a name') ||
+        errorText.includes('re-use a name that is still in use') ||
+        errorText.includes('name that is still in use')) {
         return new HelmError(
             HelmErrorType.RELEASE_EXISTS,
             'A release with this name already exists',
-            'Choose a different name or uninstall the existing release',
+            'Uninstall the existing release first, or choose a different name',
             false
         );
     }

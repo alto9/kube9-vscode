@@ -95,14 +95,12 @@ suite('ClusterTreeProvider Test Suite', () => {
             
             const items = await provider.getChildren();
             
-            // Should have 2 clusters + 1 Helm Package Manager item
-            assert.strictEqual(items.length, 3);
+            // Should have 2 clusters (no root-level Helm Package Manager)
+            assert.strictEqual(items.length, 2);
             assert.strictEqual(items[0].type, 'cluster');
             assert.strictEqual(items[0].label, 'context-1');
             assert.strictEqual(items[1].type, 'cluster');
             assert.strictEqual(items[1].label, 'context-2');
-            assert.strictEqual(items[2].type, 'helmPackageManager');
-            assert.strictEqual(items[2].label, 'Helm Package Manager');
         });
 
         test('Should return categories for cluster level', async () => {
@@ -510,11 +508,9 @@ suite('ClusterTreeProvider Test Suite', () => {
             
             const items = await provider.getChildren();
             
-            // Should have 1 valid cluster + 1 Helm Package Manager item
-            assert.strictEqual(items.length, 2);
+            // Should have 1 valid cluster (no root-level Helm Package Manager)
+            assert.strictEqual(items.length, 1);
             assert.strictEqual(items[0].label, 'valid-context');
-            assert.strictEqual(items[1].type, 'helmPackageManager');
-            assert.strictEqual(items[1].label, 'Helm Package Manager');
         });
 
         test('Should return empty array when cluster has no resourceData', async () => {

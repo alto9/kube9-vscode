@@ -207,6 +207,19 @@ export const ReleaseInfoTab: React.FC<ReleaseInfoTabProps> = ({ details, release
             {details.notes && (
                 <div style={sectionStyle}>
                     <h3 style={sectionTitleStyle}>Notes</h3>
+                    {details.status === 'failed' && (
+                        <div style={{
+                            ...notesStyle,
+                            backgroundColor: 'var(--vscode-inputValidation-errorBackground)',
+                            border: '1px solid var(--vscode-inputValidation-errorBorder)',
+                            color: 'var(--vscode-errorForeground)',
+                            marginBottom: '12px',
+                            padding: '8px 12px',
+                            fontSize: '12px'
+                        }}>
+                            ⚠️ <strong>Warning:</strong> These notes are from the Helm chart template and may not reflect the current failed state of this release.
+                        </div>
+                    )}
                     <div style={notesStyle}>{details.notes}</div>
                 </div>
             )}

@@ -51,6 +51,32 @@ export class HelmService {
     private static readonly DEFAULT_TIMEOUT_MS = 30000;
 
     /**
+     * Parses a Helm timeout string (e.g., "5m", "10m", "1h") into milliseconds.
+     * Adds a 10% buffer to account for overhead.
+     * 
+     * @param timeoutStr Helm timeout string (e.g., "5m", "10m30s", "1h")
+     * @returns Timeout in milliseconds, or undefined if parsing fails
+     */
+    private static parseHelmTimeout(timeoutStr: string): number | undefined {
+        // Helm timeout format: [number][s|m|h] (e.g., "5m", "10m30s", "1h")
+        const regex = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/;
+        const match = timeoutStr.trim().match(regex);
+        
+        if (!match) {
+            return undefined;
+        }
+
+        const hours = parseInt(match[1] || '0', 10);
+        const minutes = parseInt(match[2] || '0', 10);
+        const seconds = parseInt(match[3] || '0', 10);
+
+        const totalMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
+        
+        // Add 10% buffer plus 30 seconds minimum overhead
+        return totalMs + Math.max(totalMs * 0.1, 30000);
+    }
+
+    /**
      * Cache time-to-live in milliseconds for operator status (5 minutes).
      */
     private readonly OPERATOR_STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -469,8 +495,22 @@ export class HelmService {
         }
 
         try {
-            // Execute the install command
-            await this.executeCommand(args);
+            // Calculate Node.js timeout based on Helm timeout
+            // Add buffer to allow Helm to complete its work
+            let nodeTimeout: number | undefined;
+            if (params.timeout) {
+                const helmTimeoutMs = HelmService.parseHelmTimeout(params.timeout);
+                if (helmTimeoutMs) {
+                    nodeTimeout = helmTimeoutMs;
+                }
+            }
+            // If wait is enabled but no timeout specified, use a longer default
+            if (!nodeTimeout && params.wait) {
+                nodeTimeout = 10 * 60 * 1000; // 10 minutes for wait operations
+            }
+
+            // Execute the install command with appropriate timeout
+            await this.executeCommand(args, { timeout: nodeTimeout });
         } finally {
             // Clean up temporary file if it was created
             if (valuesFile) {
@@ -754,8 +794,22 @@ export class HelmService {
         }
 
         try {
-            // Execute the upgrade command
-            await this.executeCommand(args);
+            // Calculate Node.js timeout based on Helm timeout
+            // Add buffer to allow Helm to complete its work
+            let nodeTimeout: number | undefined;
+            if (params.timeout) {
+                const helmTimeoutMs = HelmService.parseHelmTimeout(params.timeout);
+                if (helmTimeoutMs) {
+                    nodeTimeout = helmTimeoutMs;
+                }
+            }
+            // If wait is enabled but no timeout specified, use a longer default
+            if (!nodeTimeout && params.wait) {
+                nodeTimeout = 10 * 60 * 1000; // 10 minutes for wait operations
+            }
+
+            // Execute the upgrade command with appropriate timeout
+            await this.executeCommand(args, { timeout: nodeTimeout });
         } finally {
             // Clean up temporary file if it was created
             if (valuesFile) {

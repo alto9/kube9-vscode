@@ -131,21 +131,26 @@ export class TreeItemFactory {
     }
 
     /**
-     * Creates the Helm category tree item.
-     * Displays all Helm releases in the cluster.
+     * Creates the Helm Package Manager tree item.
+     * Opens the Helm Package Manager webview for the cluster.
      * 
      * @param resourceData Cluster context and cluster information
-     * @returns Configured Helm category tree item
+     * @returns Configured Helm Package Manager tree item
      */
     static createHelmCategory(resourceData: TreeItemData): ClusterTreeItem {
         const item = new ClusterTreeItem(
-            'Helm',
+            'Helm Package Manager',
             'helm',
-            vscode.TreeItemCollapsibleState.Collapsed,
+            vscode.TreeItemCollapsibleState.None,
             resourceData
         );
+        item.command = {
+            command: 'kube9.helm.openPackageManager',
+            title: 'Open Helm Package Manager',
+            arguments: [item]
+        };
         item.iconPath = new vscode.ThemeIcon('package');
-        item.tooltip = 'View Helm releases';
+        item.tooltip = 'Manage Helm charts and releases';
         return item;
     }
 

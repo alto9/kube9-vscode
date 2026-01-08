@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus, UIState, HelmErrorInfo } from './types';
+import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus, UIState, HelmErrorInfo } from './types';
 import { InstalledReleasesSection } from './components/InstalledReleasesSection';
 import { RepositoriesSection } from './components/RepositoriesSection';
 import { ReleaseDetailModal } from './components/ReleaseDetailModal';
@@ -9,9 +9,10 @@ import { OperatorInstallModal } from './components/OperatorInstallModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ErrorMessage } from './components/ErrorMessage';
 import { HelmErrorType } from '../../services/HelmError';
+import { getVSCodeAPI } from './vscodeApi';
 
-// Acquire VS Code API
-const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
+// Acquire VS Code API - use shared singleton to prevent multiple acquisitions
+const vscode = getVSCodeAPI();
 
 /**
  * Root component for Helm Package Manager webview.
@@ -323,14 +324,6 @@ export const HelmPackageManager: React.FC = () => {
                     });
                 }}
             />
-
-            {/* Discovery Section */}
-            <section className="discovery-section">
-                <h2>Discover Charts</h2>
-                <div className="section-placeholder">
-                    Chart discovery will be displayed here
-                </div>
-            </section>
 
             {/* Release Detail Modal */}
             <ReleaseDetailModal
