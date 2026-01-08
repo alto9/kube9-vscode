@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from '@kubernetes/client-node';
 import { ClusterTreeItem } from '../ClusterTreeItem';
 import { TreeItemData } from '../TreeItemTypes';
-import { NamespaceCommands, NamespaceInfo } from '../../kubectl/NamespaceCommands';
+import { NamespaceCommands } from '../../kubectl/NamespaceCommands';
 import { KubectlError } from '../../kubernetes/KubectlError';
 import { getNamespaceForContext } from '../../utils/kubectlContext';
 
@@ -143,7 +143,6 @@ export class NamespacesCategory {
         _errorHandler: ErrorHandler // eslint-disable-line @typescript-eslint/no-unused-vars
     ): Promise<ClusterTreeItem[]> {
         const contextName = resourceData.context.name;
-        const clusterName = resourceData.cluster?.name || contextName;
 
         // If no namespaces found (empty cluster), return empty array
         if (v1Namespaces.length === 0) {

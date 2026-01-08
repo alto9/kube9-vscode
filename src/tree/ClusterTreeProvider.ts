@@ -900,8 +900,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 title: 'Describe Namespace',
                 arguments: [{
                     name: namespaceName,
-                    status: { phase: 'Active' } as any,
-                    metadata: { name: namespaceName } as any,
+                    status: { phase: 'Active' } as k8s.V1NamespaceStatus,
+                    metadata: { name: namespaceName } as k8s.V1ObjectMeta,
                     context: clusterElement.resourceData!.context.name
                 }]
             };
