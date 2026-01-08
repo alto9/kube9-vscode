@@ -1,3 +1,29 @@
+# [1.20.0](https://github.com/alto9/kube9-vscode/compare/v1.19.0...v1.20.0) (2026-01-08)
+
+
+### Bug Fixes
+
+* align health column in namespace workloads table ([c55d057](https://github.com/alto9/kube9-vscode/commit/c55d057a60b4511a4c25490daf3e4ac03abb3710))
+* debug config and namespace describe webview ([494e7ec](https://github.com/alto9/kube9-vscode/commit/494e7ecb18ff973989d96f98c1da7943fde98bdb))
+* use shared describe webview for namespace tree items ([9fbf8e4](https://github.com/alto9/kube9-vscode/commit/9fbf8e4d4ca7080c64a817cdaf025ba877e2802a))
+
+
+### Features
+
+* add Events tab to namespace describe webview ([cad366d](https://github.com/alto9/kube9-vscode/commit/cad366d6ced08a32b8339785ad7c4da85cb39917))
+* add limit ranges tab component ([7a3671a](https://github.com/alto9/kube9-vscode/commit/7a3671aef7b1da855ed7049f2f18197cb92a3732))
+* add namespace describe webview integration ([cc5e25d](https://github.com/alto9/kube9-vscode/commit/cc5e25d55c7f7e7fdcb44a65e55b6baa08efc2f3))
+* add NamespaceDescribeProvider foundation ([a29f8ad](https://github.com/alto9/kube9-vscode/commit/a29f8adad2d2f8a15c824a58abaadcb4245a00fe))
+* add NamespaceTreeItem with describe command ([e5b477e](https://github.com/alto9/kube9-vscode/commit/e5b477edb3e283c1daa27e8d17a26b2bf6460086))
+* add overview tab to namespace describe webview ([e5fc1e8](https://github.com/alto9/kube9-vscode/commit/e5fc1e89a4114fb6d293ed21484eca9540eaf1a2))
+* add Quotas tab component for namespace describe webview ([234fdb7](https://github.com/alto9/kube9-vscode/commit/234fdb7a81023a208024321447a683374f6bc5b8))
+* add Resources tab to Namespace Describe webview ([38aed90](https://github.com/alto9/kube9-vscode/commit/38aed907ded8d24da7b8c2f4eccfec30cbf07d04))
+* implement namespace events fetching and formatting ([8ef9776](https://github.com/alto9/kube9-vscode/commit/8ef97763bae6a80d06a9bb59c1a1355c608e1f28))
+* implement namespace message handlers in describe webview ([ea6c463](https://github.com/alto9/kube9-vscode/commit/ea6c463572ad66462e84512d7898ca31929cd41a))
+* implement resource counting for namespace describe webview ([fdad876](https://github.com/alto9/kube9-vscode/commit/fdad876d897e741124002edff842800bbabf2b9b))
+* implement resource quota and limit range fetching for namespace describe ([97d92ef](https://github.com/alto9/kube9-vscode/commit/97d92ef03ffac9c2d1c83d693df1f1c916863d86))
+* **namespace-describe:** create React app base component for namespace describe webview ([e206a09](https://github.com/alto9/kube9-vscode/commit/e206a09567635055266716e0395f00ecf077dcba))
+
 # [1.19.0](https://github.com/alto9/kube9-vscode/compare/v1.18.3...v1.19.0) (2026-01-07)
 
 
