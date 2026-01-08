@@ -49,12 +49,144 @@ async function openDashboard(clusterElement: ClusterTreeItem) {
   
   // Load appropriate dashboard
   if (operatorStatus === OperatorStatusMode.Basic) {
-    loadFreeNonOperatedDashboard(panel, clusterContext);
+    await loadFreeNonOperatedDashboard(panel, clusterContext);
   } else {
-    loadFreeOperatedDashboard(panel, clusterContext, operatorStatus);
+    await loadFreeOperatedDashboard(panel, clusterContext, operatorStatus);
   }
 }
 ```
+
+## Webview Initialization Sequence
+
+### Critical: Handler Registration BEFORE HTML
+
+**IMPORTANT**: To prevent race conditions, the message handler MUST be registered BEFORE setting the webview HTML.
+
+#### Problem: Race Condition
+
+If HTML is set before the message handler is registered:
+
+```typescript
+// ❌ INCORRECT - Race condition exists
+panel.webview.html = getDashboardHtml(...); // HTML loads immediately
+panel.webview.onDidReceiveMessage(...);     // Handler registers AFTER
+
+// Result: Initial requestData message from webview is lost
+```
+
+When the webview HTML loads, it immediately executes JavaScript that sends a `requestData` message. If the handler isn't registered yet, this message is lost, causing the dashboard to show zeros.
+
+#### Solution: Register Handler First
+
+```typescript
+// ✅ CORRECT - Handler ready before HTML loads
+panel.webview.onDidReceiveMessage(
+  async (message) => {
+    await handleWebviewMessage(message, panel, clusterContext);
+  },
+  undefined,
+  context.subscriptions
+);
+
+// ONLY THEN set the HTML
+panel.webview.html = getDashboardHtml(panel.webview, clusterName);
+
+// THEN proactively send initial data
+await sendInitialDashboardData(panel, clusterContext);
+```
+
+### Initialization Sequence Steps
+
+1. **Create webview panel** - Configure panel options
+2. **Register message handler** - Attach to `panel.webview.onDidReceiveMessage`
+3. **Set webview HTML** - Load dashboard UI
+4. **Proactively send initial data** - Don't wait for webview to request
+5. **Start auto-refresh timer** - Begin 30-second refresh cycle
+
+### Complete Initialization Example
+
+```typescript
+async function loadFreeNonOperatedDashboard(
+  panel: vscode.WebviewPanel,
+  clusterContext: string
+): Promise<void> {
+  // Step 1: Already done (panel created)
+  
+  // Step 2: Register message handler FIRST
+  const messageHandler = panel.webview.onDidReceiveMessage(
+    async (message) => {
+      switch (message.type) {
+        case 'requestData':
+          await sendDashboardData(panel, clusterContext);
+          break;
+        case 'refresh':
+          await sendDashboardData(panel, clusterContext, true);
+          break;
+      }
+    },
+    undefined,
+    context.subscriptions
+  );
+  
+  // Step 3: Set HTML AFTER handler is registered
+  panel.webview.html = getDashboardHtml(
+    panel.webview,
+    getClusterName(clusterContext)
+  );
+  
+  // Step 4: Proactively send initial data (don't wait for request)
+  await sendDashboardData(panel, clusterContext, true);
+  
+  // Step 5: Start auto-refresh
+  const refreshManager = new DashboardRefreshManager();
+  refreshManager.startAutoRefresh(panel, clusterContext);
+  
+  // Cleanup on dispose
+  panel.onDidDispose(() => {
+    refreshManager.stopAutoRefresh();
+    messageHandler.dispose();
+  });
+}
+```
+
+### Proactive Data Sending
+
+Instead of waiting for the webview to send `requestData`, proactively send initial data:
+
+```typescript
+async function sendDashboardData(
+  panel: vscode.WebviewPanel,
+  clusterContext: string,
+  isInitialLoad: boolean = false
+): Promise<void> {
+  try {
+    // Show loading state
+    panel.webview.postMessage({ type: 'loading' });
+    
+    // Fetch data
+    const data = await fetchDashboardData(clusterContext);
+    
+    // Send data to webview
+    panel.webview.postMessage({ 
+      type: 'updateData', 
+      data,
+      isInitialLoad 
+    });
+  } catch (error) {
+    panel.webview.postMessage({ 
+      type: 'error', 
+      error: error.message 
+    });
+  }
+}
+```
+
+### Timing Guarantees
+
+- Message handler registration: < 100ms
+- HTML set: < 200ms after handler registration
+- Initial data sent: < 5 seconds after HTML set
+- Dashboard displays data: Immediately upon receiving updateData message
 
 ## Dashboard Type Resolution
 

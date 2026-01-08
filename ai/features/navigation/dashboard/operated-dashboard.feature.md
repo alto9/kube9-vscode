@@ -112,6 +112,35 @@ Scenario: User manually refreshes dashboard
   And the dashboard should display a loading indicator during refresh
   And the dashboard should update all displayed content within 5 seconds
 
+Scenario: Webview message handler registers before HTML is set
+  Given a user clicks the Dashboard menu item
+  And the operator is detected in the cluster
+  When the extension creates the webview panel
+  Then the extension should register the message handler FIRST
+  And the extension should attach the handler to panel.webview.onDidReceiveMessage
+  And ONLY AFTER the handler is registered should the extension set panel.webview.html
+  And this order prevents the race condition where early messages are lost
+
+Scenario: Dashboard receives initial data without manual request
+  Given the webview panel has been created
+  And the message handler has been registered
+  And the HTML has been set
+  When the webview loads and becomes ready
+  Then the extension should proactively send initial dashboard data
+  And the extension should proactively send operator status
+  And the webview should receive the data via the 'updateData' message
+  And the dashboard should display actual cluster statistics and operator information
+  And no manual refresh should be required
+
+Scenario: Dashboard initialization completes within timeout
+  Given a user opens the Operated Dashboard
+  When the initialization sequence begins
+  Then the message handler should register within 100ms
+  And the HTML should be set within 200ms
+  And initial data should be sent within 5 seconds
+  And conditional content should be determined and rendered
+  And the dashboard should display data without requiring user interaction
+
 Scenario: Dashboard switches conditional content when operator status changes
   Given the Operated Dashboard is open
   And the dashboard is displaying upsell CTA (free tier)

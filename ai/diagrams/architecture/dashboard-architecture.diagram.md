@@ -1,7 +1,7 @@
 ---
 diagram_id: dashboard-architecture
 feature_id: [free-dashboard, operated-dashboard]
-spec_id: [dashboard-webview-spec, free-nonoperated-dashboard-spec, free-operated-dashboard-spec]
+spec_id: [dashboard-webview-spec, free-nonoperated-dashboard-spec, free-operated-dashboard-spec, webview-initialization-pattern]
 ---
 
 # Dashboard Architecture Diagram
@@ -9,6 +9,8 @@ spec_id: [dashboard-webview-spec, free-nonoperated-dashboard-spec, free-operated
 ## Overview
 
 This diagram visualizes the dashboard architecture, showing how the extension determines which dashboard type to display based on operator status, and the data flow for each dashboard implementation.
+
+**Note**: For detailed webview initialization sequence and race condition prevention, see [dashboard-initialization-flow](../webview/dashboard-initialization-flow.diagram.md).
 
 ## Architecture
 
