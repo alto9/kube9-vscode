@@ -259,7 +259,7 @@ suite('ClusterTreeProvider Test Suite', () => {
             assert.strictEqual(namespaceItems[1].type, 'namespace');
         });
 
-        test('Should have kube9.openNamespace command', async () => {
+        test('Should have kube9.describeNamespace command', async () => {
             NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
                 return { namespaces: [{ name: 'default', status: 'Active' }] };
             };
@@ -273,7 +273,7 @@ suite('ClusterTreeProvider Test Suite', () => {
             const namespaceItem = namespaceItems[0];
             
             assert.ok(namespaceItem.command);
-            assert.strictEqual(namespaceItem.command.command, 'kube9.openNamespace');
+            assert.strictEqual(namespaceItem.command.command, 'kube9.describeNamespace');
         });
 
         test('Should have symbol-namespace icon', async () => {
