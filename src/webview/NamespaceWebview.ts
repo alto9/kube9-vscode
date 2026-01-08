@@ -24,16 +24,6 @@ export interface NamespaceContext {
 }
 
 /**
- * Information stored with each webview panel.
- */
-interface PanelInfo {
-    /** The webview panel */
-    panel: vscode.WebviewPanel;
-    /** The namespace context for this panel */
-    namespaceContext: NamespaceContext;
-}
-
-/**
  * Maps lowercase workload type values from HTML to TypeScript WorkloadType.
  * 
  * @param type - The lowercase workload type from HTML data attribute
@@ -51,21 +41,25 @@ function mapWorkloadType(type: string): WorkloadType | null {
 
 /**
  * NamespaceWebview manages webview panels for namespace navigation.
- * Each panel shows resources and details for a specific namespace or cluster-wide view.
+ * Uses a single shared panel that refreshes when switching namespaces.
  */
 export class NamespaceWebview {
     /**
-     * Map of open webview panels keyed by "contextName:namespace".
-     * Allows reusing existing panels when the same namespace is clicked again.
-     * Stores both the panel and its namespace context.
+     * The single shared webview panel instance.
+     * Reused for all namespace views, refreshing content when switching namespaces.
      */
-    private static openPanels: Map<string, PanelInfo> = new Map();
+    private static currentPanel: vscode.WebviewPanel | undefined;
+    
+    /**
+     * Current namespace context being displayed.
+     */
+    private static currentNamespaceContext: NamespaceContext | undefined;
     
     private static extensionContext: vscode.ExtensionContext | undefined;
 
     /**
      * Show a namespace webview panel.
-     * Creates a new panel or reveals an existing one for the given namespace.
+     * Creates a new panel or refreshes the existing one for the given namespace.
      * 
      * @param context - The VS Code extension context
      * @param namespaceContext - The namespace and cluster context information
@@ -73,14 +67,29 @@ export class NamespaceWebview {
     public static show(context: vscode.ExtensionContext, namespaceContext: NamespaceContext): void {
         // Store the extension context for later use
         NamespaceWebview.extensionContext = context;
+        NamespaceWebview.currentNamespaceContext = namespaceContext;
 
-        // Create a unique key for this namespace panel
-        const panelKey = NamespaceWebview.getPanelKey(namespaceContext);
+        // If we already have a panel, refresh it with the new namespace context
+        if (NamespaceWebview.currentPanel) {
+            // Update title
+            const title = namespaceContext.namespace 
+                ? `${namespaceContext.namespace} - ${namespaceContext.clusterName}`
+                : `All Namespaces - ${namespaceContext.clusterName}`;
+            NamespaceWebview.currentPanel.title = title;
 
-        // If we already have a panel for this namespace, reveal it
-        const existingPanelInfo = NamespaceWebview.openPanels.get(panelKey);
-        if (existingPanelInfo) {
-            existingPanelInfo.panel.reveal(vscode.ViewColumn.One);
+            // Update HTML content with new namespace context
+            NamespaceWebview.currentPanel.webview.html = NamespaceWebview.getWebviewContent(
+                NamespaceWebview.currentPanel.webview, 
+                context, 
+                namespaceContext
+            );
+
+            // Send namespace data and refresh workload data
+            NamespaceWebview.sendNamespaceData(NamespaceWebview.currentPanel);
+            NamespaceWebview.sendInitialWorkloadData(NamespaceWebview.currentPanel, namespaceContext);
+
+            // Reveal the panel
+            NamespaceWebview.currentPanel.reveal(vscode.ViewColumn.One);
             return;
         }
 
@@ -103,11 +112,8 @@ export class NamespaceWebview {
             }
         );
 
-        // Store the panel and its context in our map
-        NamespaceWebview.openPanels.set(panelKey, {
-            panel,
-            namespaceContext
-        });
+        // Store the panel reference
+        NamespaceWebview.currentPanel = panel;
 
         // Set the webview's HTML content
         panel.webview.html = NamespaceWebview.getWebviewContent(
@@ -125,13 +131,16 @@ export class NamespaceWebview {
         // Handle messages from the webview
         panel.webview.onDidReceiveMessage(
             async (message: WebviewMessage) => {
-                // Get panel info for namespace context
-                const panelInfo = NamespaceWebview.openPanels.get(panelKey);
+                // Use current namespace context
+                const namespaceContext = NamespaceWebview.currentNamespaceContext;
                 
                 switch (message.command) {
                     case 'refresh':
-                        // TODO: Refresh namespace data
-                        console.log('Refresh requested for namespace webview');
+                        // Refresh namespace data
+                        if (namespaceContext && NamespaceWebview.currentPanel) {
+                            NamespaceWebview.sendNamespaceData(NamespaceWebview.currentPanel);
+                            NamespaceWebview.sendInitialWorkloadData(NamespaceWebview.currentPanel, namespaceContext);
+                        }
                         break;
                     
                     case 'openResource':
@@ -141,9 +150,9 @@ export class NamespaceWebview {
                     
                     case 'setActiveNamespace':
                         // Set the active namespace in kubectl context
-                        if (message.data?.namespace && panelInfo) {
+                        if (message.data?.namespace && namespaceContext) {
                             // Get context name from message or fall back to panel's context
-                            const contextName = message.data.contextName || panelInfo.namespaceContext.contextName;
+                            const contextName = message.data.contextName || namespaceContext.contextName;
                             
                             const success = await setNamespace(message.data.namespace, contextName);
                             if (success) {
@@ -158,11 +167,14 @@ export class NamespaceWebview {
                                     console.error('Failed to refresh tree view:', error);
                                 }
                                 
-                                // Notify all webview panels of the context change
-                                await NamespaceWebview.notifyAllPanelsOfContextChange(
-                                    message.data.namespace,
-                                    'extension'
-                                );
+                                // Notify the webview panel of the context change
+                                if (NamespaceWebview.currentPanel && namespaceContext) {
+                                    await NamespaceWebview.sendNamespaceContextChanged(
+                                        NamespaceWebview.currentPanel,
+                                        namespaceContext,
+                                        'extension'
+                                    );
+                                }
                             } else {
                                 vscode.window.showErrorMessage(
                                     `Failed to set namespace to: ${message.data.namespace} on context: ${contextName}`
@@ -173,8 +185,8 @@ export class NamespaceWebview {
                     
                     case 'openYAML':
                         // Open YAML editor for the namespace resource
-                        if (!panelInfo) {
-                            console.error('Panel info not found for openYAML');
+                        if (!namespaceContext) {
+                            console.error('Namespace context not found for openYAML');
                             break;
                         }
                         
@@ -191,7 +203,7 @@ export class NamespaceWebview {
                                 name: resourceData.name,
                                 namespace: resourceData.namespace,
                                 apiVersion: resourceData.apiVersion || 'v1',
-                                cluster: panelInfo.namespaceContext.contextName
+                                cluster: namespaceContext.contextName
                             };
                             
                             console.log('Opening YAML editor for namespace resource:', resource);
@@ -209,8 +221,8 @@ export class NamespaceWebview {
                     
                     case 'fetchWorkloads':
                         // Fetch workloads for the selected type
-                        if (!panelInfo) {
-                            console.error('Panel info not found for fetchWorkloads');
+                        if (!namespaceContext) {
+                            console.error('Namespace context not found for fetchWorkloads');
                             break;
                         }
                         
@@ -230,18 +242,20 @@ export class NamespaceWebview {
                             // Fetch workloads with health data using extracted method
                             const workloadsWithHealth = await NamespaceWebview.fetchWorkloadsData(
                                 workloadType,
-                                panelInfo.namespaceContext
+                                namespaceContext
                             );
                             
                             // Send response to webview
-                            panel.webview.postMessage({
-                                command: 'workloadsData',
-                                data: {
-                                    workloads: workloadsWithHealth,
-                                    lastUpdated: new Date(),
-                                    namespace: panelInfo.namespaceContext.namespace || null
-                                }
-                            });
+                            if (NamespaceWebview.currentPanel) {
+                                NamespaceWebview.currentPanel.webview.postMessage({
+                                    command: 'workloadsData',
+                                    data: {
+                                        workloads: workloadsWithHealth,
+                                        lastUpdated: new Date(),
+                                        namespace: namespaceContext.namespace || null
+                                    }
+                                });
+                            }
                             
                             console.log(`Sent ${workloadsWithHealth.length} workloads with health data to webview`);
                             
@@ -251,15 +265,17 @@ export class NamespaceWebview {
                             console.error(`Failed to fetch workloads:`, errorMessage);
                             
                             // Send error response to webview
-                            panel.webview.postMessage({
-                                command: 'workloadsData',
-                                data: {
-                                    workloads: [],
-                                    lastUpdated: new Date(),
-                                    namespace: panelInfo.namespaceContext.namespace || null,
-                                    error: errorMessage
-                                }
-                            });
+                            if (NamespaceWebview.currentPanel && namespaceContext) {
+                                NamespaceWebview.currentPanel.webview.postMessage({
+                                    command: 'workloadsData',
+                                    data: {
+                                        workloads: [],
+                                        lastUpdated: new Date(),
+                                        namespace: namespaceContext.namespace || null,
+                                        error: errorMessage
+                                    }
+                                });
+                            }
                         }
                         break;
                 }
@@ -271,23 +287,13 @@ export class NamespaceWebview {
         // Handle panel disposal
         panel.onDidDispose(
             () => {
-                // Remove the panel from our map
-                NamespaceWebview.openPanels.delete(panelKey);
+                // Clear the panel reference
+                NamespaceWebview.currentPanel = undefined;
+                NamespaceWebview.currentNamespaceContext = undefined;
             },
             null,
             context.subscriptions
         );
-    }
-
-    /**
-     * Generate a unique key for a namespace panel.
-     * 
-     * @param namespaceContext - The namespace context
-     * @returns A unique string key
-     */
-    private static getPanelKey(namespaceContext: NamespaceContext): string {
-        const namespacePart = namespaceContext.namespace || '__all__';
-        return `${namespaceContext.contextName}:${namespacePart}`;
     }
 
     /**
@@ -647,7 +653,7 @@ export class NamespaceWebview {
     }
 
     /**
-     * Send namespace context changed notification to all open webview panels.
+     * Send namespace context changed notification to the current webview panel.
      * This is useful when the context changes externally or from another component.
      * 
      * @param namespace - The new namespace (null for "All Namespaces")
@@ -657,38 +663,36 @@ export class NamespaceWebview {
         namespace: string | null,
         source: 'extension' | 'external'
     ): Promise<void> {
-        for (const panelInfo of NamespaceWebview.openPanels.values()) {
-            // Skip panels without proper namespaceContext (e.g., from incomplete test mocks)
-            if (!panelInfo || !panelInfo.namespaceContext) {
-                console.warn('Skipping panel with missing namespaceContext in notifyAllPanelsOfContextChange');
-                continue;
-            }
-            await NamespaceWebview.sendNamespaceContextChanged(panelInfo.panel, panelInfo.namespaceContext, source);
+        if (NamespaceWebview.currentPanel && NamespaceWebview.currentNamespaceContext) {
+            await NamespaceWebview.sendNamespaceContextChanged(
+                NamespaceWebview.currentPanel,
+                NamespaceWebview.currentNamespaceContext,
+                source
+            );
         }
     }
 
     /**
-     * Sends a resource updated message to webviews displaying the affected namespace.
-     * This triggers webviews to refresh their resource lists.
+     * Sends a resource updated message to the webview if it's displaying the affected namespace.
+     * This triggers the webview to refresh its resource lists.
      * 
      * @param namespace - The namespace where the resource was updated (undefined for cluster-scoped resources)
      */
     public static async sendResourceUpdated(namespace?: string): Promise<void> {
-        console.log(`Sending resource updated message to webviews for namespace: ${namespace || 'cluster-scoped'}`);
+        console.log(`Sending resource updated message to webview for namespace: ${namespace || 'cluster-scoped'}`);
         
-        for (const panelInfo of NamespaceWebview.openPanels.values()) {
-            // Only send to webviews that match the namespace
-            // For cluster-scoped resources (namespace undefined), we could skip or send to all
-            // For simplicity, we'll send to matching namespace webviews only
-            if (namespace && panelInfo.namespaceContext.namespace === namespace) {
+        if (NamespaceWebview.currentPanel && NamespaceWebview.currentNamespaceContext) {
+            // Only send to webview if it matches the namespace
+            // For cluster-scoped resources (namespace undefined), send to all namespace webviews
+            if (!namespace || NamespaceWebview.currentNamespaceContext.namespace === namespace) {
                 try {
-                    panelInfo.panel.webview.postMessage({
+                    NamespaceWebview.currentPanel.webview.postMessage({
                         command: 'resourceUpdated',
                         data: {
                             namespace: namespace
                         }
                     });
-                    console.log(`Sent resourceUpdated message to webview for namespace: ${namespace}`);
+                    console.log(`Sent resourceUpdated message to webview for namespace: ${namespace || 'all'}`);
                 } catch (error) {
                     const errorMessage = error instanceof Error ? error.message : String(error);
                     console.error(`Failed to send resourceUpdated message to webview: ${errorMessage}`);

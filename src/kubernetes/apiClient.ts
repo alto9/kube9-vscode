@@ -22,6 +22,7 @@ export class KubernetesApiClient {
     private authorizationApi: k8s.AuthorizationV1Api;
     private apiextensionsApi: k8s.ApiextensionsV1Api;
     private versionApi: k8s.VersionApi;
+    private rbacApi: k8s.RbacAuthorizationV1Api;
 
     /**
      * Creates a new KubernetesApiClient instance.
@@ -40,6 +41,7 @@ export class KubernetesApiClient {
         this.authorizationApi = this.kubeConfig.makeApiClient(k8s.AuthorizationV1Api);
         this.apiextensionsApi = this.kubeConfig.makeApiClient(k8s.ApiextensionsV1Api);
         this.versionApi = this.kubeConfig.makeApiClient(k8s.VersionApi);
+        this.rbacApi = this.kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api);
     }
 
     /**
@@ -59,6 +61,7 @@ export class KubernetesApiClient {
         this.authorizationApi = this.kubeConfig.makeApiClient(k8s.AuthorizationV1Api);
         this.apiextensionsApi = this.kubeConfig.makeApiClient(k8s.ApiextensionsV1Api);
         this.versionApi = this.kubeConfig.makeApiClient(k8s.VersionApi);
+        this.rbacApi = this.kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api);
     }
 
     /**
@@ -157,6 +160,16 @@ export class KubernetesApiClient {
      */
     public get version(): k8s.VersionApi {
         return this.versionApi;
+    }
+
+    /**
+     * Gets the RBAC Authorization V1 API client for RBAC resources.
+     * Provides access to roles, role bindings, cluster roles, etc.
+     * 
+     * @returns RbacAuthorizationV1Api client instance
+     */
+    public get rbac(): k8s.RbacAuthorizationV1Api {
+        return this.rbacApi;
     }
 
     /**

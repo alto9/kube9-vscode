@@ -310,12 +310,15 @@
             color: var(--vscode-foreground);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            vertical-align: middle;
         }
 
         .workloads-table td {
             padding: 12px;
             border-bottom: 1px solid var(--vscode-panel-border);
             font-size: 0.95em;
+            vertical-align: middle;
+            line-height: 1.5;
         }
 
         .workload-row {
@@ -330,6 +333,9 @@
         .health-indicator {
             font-size: 1.2em;
             margin-right: 6px;
+            line-height: 1.5;
+            display: inline-block;
+            vertical-align: middle;
         }
 
         .health-indicator.healthy {
@@ -349,8 +355,12 @@
         }
 
         .workload-health {
-            display: flex;
-            align-items: center;
+            white-space: nowrap;
+        }
+
+        .health-text {
+            display: inline-block;
+            vertical-align: baseline;
         }
 
         /* Table Note Styling */

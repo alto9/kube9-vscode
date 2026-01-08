@@ -344,15 +344,15 @@ suite('ClusterTreeItem Test Suite', () => {
             );
 
             const command = {
-                command: 'kube9.openNamespace',
-                title: 'Open Namespace',
+                command: 'kube9.describeNamespace',
+                title: 'Describe Namespace',
                 arguments: [item]
             };
 
             item.command = command;
             assert.ok(item.command);
-            assert.strictEqual(item.command.command, 'kube9.openNamespace');
-            assert.strictEqual(item.command.title, 'Open Namespace');
+            assert.strictEqual(item.command.command, 'kube9.describeNamespace');
+            assert.strictEqual(item.command.title, 'Describe Namespace');
             assert.strictEqual(item.command.arguments?.[0], item);
         });
     });

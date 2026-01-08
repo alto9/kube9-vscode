@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as k8s from '@kubernetes/client-node';
 import { ClusterTreeItem } from '../ClusterTreeItem';
 import { TreeItemData } from '../TreeItemTypes';
-import { NamespaceCommands, NamespaceInfo } from '../../kubectl/NamespaceCommands';
+import { NamespaceCommands } from '../../kubectl/NamespaceCommands';
 import { KubectlError } from '../../kubernetes/KubectlError';
 import { getNamespaceForContext } from '../../utils/kubectlContext';
 
@@ -107,15 +107,16 @@ export class NamespacesCategory {
             const activeText = isActive ? ' (Active in kubectl context)' : '';
             item.tooltip = `Namespace: ${namespaceInfo.name}${activeText}\nStatus: ${namespaceInfo.status}`;
 
-            // Make namespace clickable to open webview
+            // Make namespace clickable to open describe webview (shared panel)
             item.command = {
-                command: 'kube9.openNamespace',
-                title: 'Open Namespace',
-                arguments: [
-                    contextName,
-                    clusterName,
-                    namespaceInfo.name
-                ]
+                command: 'kube9.describeNamespace',
+                title: 'Describe Namespace',
+                arguments: [{
+                    name: namespaceInfo.name,
+                    status: { phase: namespaceInfo.status } as k8s.V1NamespaceStatus,
+                    metadata: { name: namespaceInfo.name } as k8s.V1ObjectMeta,
+                    context: contextName
+                }]
             };
             
             return item;
@@ -142,21 +143,16 @@ export class NamespacesCategory {
         _errorHandler: ErrorHandler // eslint-disable-line @typescript-eslint/no-unused-vars
     ): Promise<ClusterTreeItem[]> {
         const contextName = resourceData.context.name;
-        const clusterName = resourceData.cluster?.name || contextName;
 
         // If no namespaces found (empty cluster), return empty array
         if (v1Namespaces.length === 0) {
             return [];
         }
 
-        // Transform V1Namespace[] to NamespaceInfo[] format
-        const namespaces: NamespaceInfo[] = v1Namespaces.map(ns => ({
-            name: ns.metadata?.name || 'Unknown',
-            status: ns.status?.phase || 'Unknown'
-        }));
-
         // Sort namespaces alphabetically by name
-        namespaces.sort((a, b) => a.name.localeCompare(b.name));
+        const sortedNamespaces = [...v1Namespaces].sort((a, b) => 
+            (a.metadata?.name || '').localeCompare(b.metadata?.name || '')
+        );
 
         // Get the active namespace for this specific context (not necessarily the current context)
         let activeNamespace: string | null = null;
@@ -168,16 +164,18 @@ export class NamespacesCategory {
         }
 
         // Create tree items for each namespace
-        const namespaceItems = namespaces.map(namespaceInfo => {
+        const namespaceItems = sortedNamespaces.map(ns => {
+            const namespaceName = ns.metadata?.name || 'Unknown';
+            const namespaceStatus = ns.status?.phase || 'Unknown';
             const item = new ClusterTreeItem(
-                namespaceInfo.name,
+                namespaceName,
                 'namespace',
                 vscode.TreeItemCollapsibleState.None,
                 resourceData
             );
 
             // Check if this namespace is the active namespace
-            const isActive = activeNamespace === namespaceInfo.name;
+            const isActive = activeNamespace === namespaceName;
             item.isActiveNamespace = isActive;
 
             // Set contextValue based on active state for menu conditions
@@ -192,7 +190,7 @@ export class NamespacesCategory {
                 );
             } else {
                 // Inactive namespaces use icon based on namespace status
-                switch (namespaceInfo.status) {
+                switch (namespaceStatus) {
                     case 'Active':
                         item.iconPath = new vscode.ThemeIcon(
                             'symbol-namespace',
@@ -213,17 +211,18 @@ export class NamespacesCategory {
 
             // Set tooltip with detailed information
             const activeText = isActive ? ' (Active in kubectl context)' : '';
-            item.tooltip = `Namespace: ${namespaceInfo.name}${activeText}\nStatus: ${namespaceInfo.status}`;
+            item.tooltip = `Namespace: ${namespaceName}${activeText}\nStatus: ${namespaceStatus}`;
 
-            // Make namespace clickable to open webview
+            // Make namespace clickable to open describe webview (shared panel)
             item.command = {
-                command: 'kube9.openNamespace',
-                title: 'Open Namespace',
-                arguments: [
-                    contextName,
-                    clusterName,
-                    namespaceInfo.name
-                ]
+                command: 'kube9.describeNamespace',
+                title: 'Describe Namespace',
+                arguments: [{
+                    name: namespaceName,
+                    status: ns.status || { phase: 'Unknown' } as k8s.V1NamespaceStatus,
+                    metadata: ns.metadata || { name: namespaceName } as k8s.V1ObjectMeta,
+                    context: contextName
+                }]
             };
             
             return item;
