@@ -862,7 +862,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         allNamespacesItem.iconPath = new vscode.ThemeIcon('globe');
         allNamespacesItem.tooltip = `View all namespaces in ${clusterName}`;
         
-        // Make "All Namespaces" clickable to open webview
+        // Note: "All Namespaces" view is not compatible with the describe webview
+        // which is designed for individual resources. Keep using the old command.
         allNamespacesItem.command = {
             command: 'kube9.openNamespace',
             title: 'Open All Namespaces',
@@ -892,15 +893,17 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             item.iconPath = new vscode.ThemeIcon('symbol-namespace');
             item.tooltip = `Namespace: ${namespaceName}`;
             
-            // Make namespace clickable to open webview
+            // Make namespace clickable to open describe webview (shared panel)
+            // We provide minimal status/metadata here; the webview will fetch full details
             item.command = {
-                command: 'kube9.openNamespace',
-                title: 'Open Namespace',
-                arguments: [
-                    clusterElement.resourceData!.context.name,
-                    clusterElement.resourceData!.cluster.name,
-                    namespaceName
-                ]
+                command: 'kube9.describeNamespace',
+                title: 'Describe Namespace',
+                arguments: [{
+                    name: namespaceName,
+                    status: { phase: 'Active' } as any,
+                    metadata: { name: namespaceName } as any,
+                    context: clusterElement.resourceData!.context.name
+                }]
             };
             
             return item;
