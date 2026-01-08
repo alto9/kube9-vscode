@@ -1,18 +1,8 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { ResourceIdentifier } from './YAMLEditorManager';
-import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { logError } from './ErrorHandler';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import * as k8s from '@kubernetes/client-node';
 
-/**
- * Timeout for kubectl commands in milliseconds.
- */
-const KUBECTL_TIMEOUT_MS = 5000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
 
 /**
  * Permission levels for Kubernetes resources.
@@ -29,7 +19,7 @@ export enum PermissionLevel {
 }
 
 /**
- * Checks user permissions for Kubernetes resources using kubectl auth can-i.
+ * Checks user permissions for Kubernetes resources using the SelfSubjectAccessReview API.
  * Determines whether users can view, edit, or have no access to resources.
  */
 export class PermissionChecker {
@@ -94,74 +84,93 @@ export class PermissionChecker {
     
     /**
      * Checks if a user can perform a specific verb on a resource.
-     * Uses kubectl auth can-i command.
+     * Uses the SelfSubjectAccessReview API.
      * 
      * @param resource - The resource to check permissions for
      * @param verb - The verb to check (e.g., 'get', 'update', 'delete')
      * @returns Promise resolving to true if permitted, false if denied, null if check failed
      */
     private async checkPermission(resource: ResourceIdentifier, verb: string): Promise<boolean | null> {
-        // Get kubeconfig path
-        const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
-        
-        // Build kubectl auth can-i command
-        // Format: kubectl auth can-i <verb> <resource-type>/<resource-name>
-        // The resource kind needs to be pluralized for kubectl (e.g., "pod" -> "pods")
-        const pluralizedKind = this.pluralizeKind(resource.kind.toLowerCase());
-        const resourceSpec = `${pluralizedKind}/${resource.name}`;
-        
-        const args = [
-            'auth', 'can-i', verb,
-            resourceSpec
-        ];
-        
-        // Add namespace flag for namespaced resources
-        if (resource.namespace) {
-            args.push('-n', resource.namespace);
-        }
-        
-        // Add kubeconfig and context flags
-        args.push(
-            `--kubeconfig=${kubeconfigPath}`,
-            `--context=${resource.cluster}`
-        );
-        
         try {
-            // Execute kubectl auth can-i command
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                args,
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    env: { ...process.env }
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(resource.cluster);
+            
+            // Pluralize the resource kind for the API
+            const pluralizedKind = this.pluralizeKind(resource.kind.toLowerCase());
+            
+            // Create SelfSubjectAccessReview request
+            const review: k8s.V1SelfSubjectAccessReview = {
+                apiVersion: 'authorization.k8s.io/v1',
+                kind: 'SelfSubjectAccessReview',
+                spec: {
+                    resourceAttributes: {
+                        verb: verb,
+                        group: this.getResourceGroup(resource.kind),
+                        resource: pluralizedKind,
+                        name: resource.name,
+                        namespace: resource.namespace
+                    }
                 }
-            );
+            };
             
-            // kubectl auth can-i returns "yes" or "no" in stdout
-            const response = stdout.trim().toLowerCase();
-            const permitted = response === 'yes';
+            // Execute the access review
+            const response = await apiClient.authorization.createSelfSubjectAccessReview({
+                body: review
+            });
             
-            console.log(`kubectl auth can-i ${verb} ${resource.kind}/${resource.name}: ${response}`);
+            // Check the result
+            const allowed = response.status?.allowed || false;
             
-            return permitted;
+            console.log(`SelfSubjectAccessReview ${verb} ${resource.kind}/${resource.name}: ${allowed ? 'allowed' : 'denied'}`);
+            
+            return allowed;
             
         } catch (error: unknown) {
-            // kubectl auth can-i may fail due to various reasons:
+            // API call may fail due to various reasons:
             // - Connection issues
             // - Invalid cluster/context
             // - Authentication problems
             // - Invalid resource type
             // Return null to indicate we couldn't determine permissions
-            console.warn(`kubectl auth can-i ${verb} failed`);
+            console.warn(`SelfSubjectAccessReview ${verb} failed`);
             
             // Log error to output channel for debugging
             logError(
-                `kubectl auth can-i ${verb} for ${resource.kind}/${resource.name}`,
+                `SelfSubjectAccessReview ${verb} for ${resource.kind}/${resource.name}`,
                 error instanceof Error ? error : String(error)
             );
             
             return null;
         }
+    }
+    
+    /**
+     * Gets the API group for a Kubernetes resource kind.
+     * 
+     * @param kind - The resource kind (e.g., "Deployment", "Pod")
+     * @returns The API group (e.g., "apps", "" for core)
+     */
+    private getResourceGroup(kind: string): string {
+        const kindLower = kind.toLowerCase();
+        
+        // Apps API group
+        if (['deployment', 'statefulset', 'daemonset', 'replicaset'].includes(kindLower)) {
+            return 'apps';
+        }
+        
+        // Batch API group
+        if (['job', 'cronjob'].includes(kindLower)) {
+            return 'batch';
+        }
+        
+        // Storage API group
+        if (['storageclass'].includes(kindLower)) {
+            return 'storage.k8s.io';
+        }
+        
+        // Core API group (empty string)
+        return '';
     }
     
     /**

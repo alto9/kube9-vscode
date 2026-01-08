@@ -15,6 +15,10 @@ interface ClusterItemProps {
     onToggleVisibility: (contextName: string, hidden: boolean) => void;
     /** Optional search term for highlighting matching text */
     searchTerm?: string;
+    /** Callback function to handle reordering cluster */
+    onReorderCluster?: (contextName: string, newOrder: number) => void;
+    /** Folder ID this cluster belongs to (null for root) */
+    folderId: string | null;
 }
 
 /**
@@ -45,11 +49,17 @@ function highlightText(text: string, searchTerm: string): JSX.Element {
 /**
  * ClusterItem component displays a single cluster in the list
  */
-export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibility, searchTerm }: ClusterItemProps): JSX.Element {
+export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibility, searchTerm, onReorderCluster, folderId }: ClusterItemProps): JSX.Element {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState('');
     const [isDragging, setIsDragging] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
+    const [isContextMenuOpen, setIsContextMenuOpen] = useState(false);
+    const [contextMenuPosition, setContextMenuPosition] = useState({ x: 0, y: 0 });
     const inputRef = useRef<HTMLInputElement>(null);
+    const contextMenuRef = useRef<HTMLDivElement>(null);
+    const itemRef = useRef<HTMLDivElement>(null);
 
     // Get display name (alias if exists, otherwise context name)
     const displayName = customization?.alias ?? cluster.contextName;
@@ -66,6 +76,22 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
             inputRef.current.select();
         }
     }, [isEditing, displayName]);
+
+    // Close context menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent): void => {
+            if (isContextMenuOpen && contextMenuRef.current && !contextMenuRef.current.contains(event.target as Node)) {
+                setIsContextMenuOpen(false);
+            }
+        };
+
+        if (isContextMenuOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+            };
+        }
+    }, [isContextMenuOpen]);
 
     const handleEditClick = (): void => {
         setIsEditing(true);
@@ -105,6 +131,7 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
         if (e.dataTransfer) {
             e.dataTransfer.setData('cluster', cluster.contextName);
+            e.dataTransfer.setData('folderId', folderId || '');
             e.dataTransfer.effectAllowed = 'move';
         }
         setIsDragging(true);
@@ -112,17 +139,97 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
 
     const handleDragEnd = (): void => {
         setIsDragging(false);
+        setIsDragOver(false);
+        setDropPosition(null);
+    };
+
+    const handleDragOver = (e: React.DragEvent<HTMLDivElement>): void => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const draggedCluster = e.dataTransfer.getData('cluster');
+        const draggedFolderId = e.dataTransfer.getData('folderId') || null;
+        
+        // Only allow reordering within same folder
+        if (draggedCluster && draggedCluster !== cluster.contextName && draggedFolderId === (folderId || '')) {
+            setIsDragOver(true);
+            
+            // Determine drop position based on mouse position
+            if (itemRef.current) {
+                const rect = itemRef.current.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                setDropPosition(e.clientY < midpoint ? 'before' : 'after');
+            }
+            
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+        } else {
+            setIsDragOver(false);
+            setDropPosition(null);
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = 'none';
+            }
+        }
+    };
+
+    const handleDragLeave = (e: React.DragEvent<HTMLDivElement>): void => {
+        e.preventDefault();
+        if (e.currentTarget === e.target) {
+            setIsDragOver(false);
+            setDropPosition(null);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLDivElement>): void => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const draggedCluster = e.dataTransfer.getData('cluster');
+        const draggedFolderId = e.dataTransfer.getData('folderId') || null;
+        
+        setIsDragOver(false);
+        setDropPosition(null);
+        
+        // Only handle reordering within same folder
+        if (draggedCluster && draggedCluster !== cluster.contextName && draggedFolderId === (folderId || '') && onReorderCluster) {
+            const currentOrder = customization?.order ?? 0;
+            const newOrder = dropPosition === 'before' ? currentOrder : currentOrder + 1;
+            onReorderCluster(draggedCluster, newOrder);
+        }
+    };
+
+    const handleContextMenu = (e: React.MouseEvent): void => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenuPosition({ x: e.clientX, y: e.clientY });
+        setIsContextMenuOpen(true);
+    };
+
+    const handleRenameFromMenu = (): void => {
+        setIsContextMenuOpen(false);
+        handleEditClick();
+    };
+
+    const handleToggleVisibilityFromMenu = (): void => {
+        setIsContextMenuOpen(false);
+        handleToggleVisibility();
     };
 
     const ariaLabel = `${displayName} cluster${isHidden ? ', hidden' : ''}${cluster.isActive ? ', active' : ''}`;
 
     return (
         <div
-            className={`cluster-item ${isHidden ? 'hidden' : ''} ${isDragging ? 'dragging' : ''}`}
+            ref={itemRef}
+            className={`cluster-item ${isHidden ? 'hidden' : ''} ${isDragging ? 'dragging' : ''} ${isDragOver && dropPosition === 'before' ? 'drop-before' : ''} ${isDragOver && dropPosition === 'after' ? 'drop-after' : ''}`}
             title={tooltipText}
             draggable={true}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onContextMenu={handleContextMenu}
             role="treeitem"
             tabIndex={0}
             aria-label={ariaLabel}
@@ -158,15 +265,15 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
                         title={isHidden ? 'Click to show cluster' : 'Click to hide cluster'}
                         aria-label={isHidden ? 'Show cluster' : 'Hide cluster'}
                     >
-                        {isHidden ? '👁️‍🗨️ Show' : '👁️ Hide'}
+                        {isHidden ? 'Show' : 'Hide'}
                     </button>
                     <button
                         className="cluster-item-edit-button"
                         onClick={handleEditClick}
-                        title="Click to edit alias"
-                        aria-label="Edit alias"
+                        title="Rename cluster"
+                        aria-label="Rename cluster"
                     >
-                        ✏️
+                        Rename
                     </button>
                 </>
             )}
@@ -175,6 +282,32 @@ export function ClusterItem({ cluster, customization, onSetAlias, onToggleVisibi
             )}
             {cluster.isActive && (
                 <span className="cluster-item-active-badge">Active</span>
+            )}
+            {isContextMenuOpen && (
+                <div
+                    ref={contextMenuRef}
+                    className="cluster-context-menu"
+                    style={{
+                        position: 'fixed',
+                        left: `${contextMenuPosition.x}px`,
+                        top: `${contextMenuPosition.y}px`
+                    }}
+                >
+                    <button
+                        className="cluster-context-menu-item"
+                        onClick={handleRenameFromMenu}
+                        type="button"
+                    >
+                        Rename
+                    </button>
+                    <button
+                        className="cluster-context-menu-item"
+                        onClick={handleToggleVisibilityFromMenu}
+                        type="button"
+                    >
+                        {isHidden ? 'Show' : 'Hide'}
+                    </button>
+                </div>
             )}
         </div>
     );

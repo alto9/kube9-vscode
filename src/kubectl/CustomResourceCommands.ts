@@ -1,16 +1,7 @@
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import * as k8s from '@kubernetes/client-node';
 
-/**
- * Timeout for kubectl commands in milliseconds.
- */
-const KUBECTL_TIMEOUT_MS = 5000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
 
 /**
  * Information about a Custom Resource Definition (CRD).
@@ -41,41 +32,15 @@ export interface CRDsResult {
     error?: KubectlError;
 }
 
-/**
- * Interface for kubectl CRD response items.
- */
-interface CRDItem {
-    metadata?: {
-        name?: string;
-    };
-    spec?: {
-        group?: string;
-        versions?: Array<{
-            name?: string;
-            storage?: boolean;
-        }>;
-        names?: {
-            kind?: string;
-        };
-    };
-}
 
 /**
- * Interface for kubectl CRD list response.
- */
-interface CRDListResponse {
-    items?: CRDItem[];
-}
-
-/**
- * Utility class for kubectl custom resource operations.
+ * Utility class for custom resource operations using the Kubernetes API client.
  */
 export class CustomResourceCommands {
     /**
-     * Retrieves the list of Custom Resource Definitions (CRDs) from a cluster using kubectl.
-     * Uses kubectl get crds command with JSON output for parsing.
+     * Retrieves the list of Custom Resource Definitions (CRDs) from a cluster using the Kubernetes API client.
      * 
-     * @param kubeconfigPath Path to the kubeconfig file
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
      * @returns CRDsResult with crds array and optional error information
      */
@@ -84,28 +49,17 @@ export class CustomResourceCommands {
         contextName: string
     ): Promise<CRDsResult> {
         try {
-            // Execute kubectl get crds with JSON output
-            const { stdout } = await execFileAsync(
-                'kubectl',
-                [
-                    'get',
-                    'crds',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
-                {
-                    timeout: KUBECTL_TIMEOUT_MS,
-                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
-                    env: { ...process.env }
-                }
-            );
-
-            // Parse the JSON response
-            const response: CRDListResponse = JSON.parse(stdout);
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch CRDs from API
+            const response = await apiClient.apiextensions.listCustomResourceDefinition({
+                timeoutSeconds: 10
+            });
             
             // Extract CRD information from the items array
-            const crds: CRDInfo[] = response.items?.map((item: CRDItem) => {
+            const crds: CRDInfo[] = (response.items || []).map((item: k8s.V1CustomResourceDefinition) => {
                 const name = item.metadata?.name || 'Unknown';
                 const group = item.spec?.group || '';
                 const kind = item.spec?.names?.kind || 'Unknown';
@@ -124,14 +78,14 @@ export class CustomResourceCommands {
                     version,
                     kind
                 };
-            }) || [];
+            });
             
             // Sort CRDs alphabetically by kind
             crds.sort((a, b) => a.kind.localeCompare(b.kind));
             
             return { crds };
         } catch (error: unknown) {
-            // kubectl failed - create structured error for detailed handling
+            // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
             
             // Log error details for debugging

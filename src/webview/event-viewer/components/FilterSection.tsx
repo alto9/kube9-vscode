@@ -22,7 +22,8 @@ export const FilterSection: React.FC<FilterSectionProps> = ({ title, children })
         alignItems: 'center',
         borderBottom: '1px solid var(--vscode-panel-border)',
         cursor: 'pointer',
-        userSelect: 'none'
+        userSelect: 'none',
+        flexShrink: 0 // Prevent header from shrinking
     };
 
     const toggleButtonStyle: React.CSSProperties = {
@@ -37,11 +38,19 @@ export const FilterSection: React.FC<FilterSectionProps> = ({ title, children })
 
     const contentStyle: React.CSSProperties = {
         padding: '8px 12px',
-        overflow: 'hidden'
+        overflow: 'visible',
+        display: 'block',
+        minHeight: '60px' // Ensure content has minimum height
+    };
+
+    const sectionStyle: React.CSSProperties = {
+        display: 'block',
+        borderBottom: '1px solid var(--vscode-panel-border)',
+        minHeight: '100px' // Ensure section has minimum height
     };
 
     return (
-        <div className="filter-section">
+        <div className="filter-section" style={sectionStyle}>
             <div
                 className="filter-section-header"
                 style={headerStyle}

@@ -5,7 +5,7 @@ feature_id:
   - namespace-describe-webview
 spec_id:
   - namespace-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Implement Resource Quota and Limit Range Fetching

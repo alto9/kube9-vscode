@@ -579,5 +579,278 @@ suite('ErrorHandler Test Suite', () => {
             assert.strictEqual(warningMessages.length, 0, 'Second error should be throttled');
         });
     });
+
+    suite('showErrorWithHelp() - Static Method', () => {
+        test('Should display error message with error code format', async () => {
+            await ErrorHandler.showErrorWithHelp('Test error message', 'TEST_ERROR');
+            
+            const errorMessages = vscode.window._getErrorMessages();
+            assert.strictEqual(errorMessages.length, 1, 'Should show one error message');
+            assert.ok(errorMessages[0].includes('Test error message'), 'Should include error message');
+            assert.ok(errorMessages[0].includes('(Error: TEST_ERROR)'), 'Should include error code');
+        });
+
+        test('Should open correct URL for KUBECONFIG_NOT_FOUND error code', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            
+            // Mock showErrorMessage to return 'Learn More' (first button)
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[0]); // Return 'Learn More'
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Kubeconfig not found', 'KUBECONFIG_NOT_FOUND');
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 1, 'Should open one URL');
+                assert.strictEqual(
+                    openedUris[0].path,
+                    'https://alto9.github.io/kube9/troubleshooting/kubeconfig/',
+                    'Should open kubeconfig troubleshooting URL'
+                );
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should open correct URL for CLUSTER_UNREACHABLE error code', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[0]); // Return 'Learn More'
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Cluster unreachable', 'CLUSTER_UNREACHABLE');
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 1, 'Should open one URL');
+                assert.strictEqual(
+                    openedUris[0].path,
+                    'https://alto9.github.io/kube9/troubleshooting/connection/',
+                    'Should open connection troubleshooting URL'
+                );
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should open correct URL for RBAC_PERMISSION_DENIED error code', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[0]); // Return 'Learn More'
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Permission denied', 'RBAC_PERMISSION_DENIED');
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 1, 'Should open one URL');
+                assert.strictEqual(
+                    openedUris[0].path,
+                    'https://alto9.github.io/kube9/troubleshooting/permissions/',
+                    'Should open permissions troubleshooting URL'
+                );
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should open correct URL for RESOURCE_NOT_FOUND error code', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[0]); // Return 'Learn More'
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Resource not found', 'RESOURCE_NOT_FOUND');
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 1, 'Should open one URL');
+                assert.strictEqual(
+                    openedUris[0].path,
+                    'https://alto9.github.io/kube9/troubleshooting/resources/',
+                    'Should open resources troubleshooting URL'
+                );
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should open correct URL for OPERATOR_NOT_FOUND error code', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[0]); // Return 'Learn More'
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Operator not found', 'OPERATOR_NOT_FOUND');
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 1, 'Should open one URL');
+                assert.strictEqual(
+                    openedUris[0].path,
+                    'https://alto9.github.io/kube9/troubleshooting/operator/',
+                    'Should open operator troubleshooting URL'
+                );
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should open correct URL for TIMEOUT error code', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[0]); // Return 'Learn More'
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Operation timed out', 'TIMEOUT');
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 1, 'Should open one URL');
+                assert.strictEqual(
+                    openedUris[0].path,
+                    'https://alto9.github.io/kube9/troubleshooting/timeout/',
+                    'Should open timeout troubleshooting URL'
+                );
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should open general troubleshooting URL for unknown error code', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[0]); // Return 'Learn More'
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Unknown error', 'UNKNOWN_ERROR_CODE');
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 1, 'Should open one URL');
+                assert.strictEqual(
+                    openedUris[0].path,
+                    'https://alto9.github.io/kube9/troubleshooting/',
+                    'Should open general troubleshooting URL'
+                );
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should use custom helpUrl parameter when provided', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            
+            const customUrl = 'https://custom-docs.example.com/help';
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[0]); // Return 'Learn More'
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Custom error', 'KUBECONFIG_NOT_FOUND', customUrl);
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 1, 'Should open one URL');
+                assert.strictEqual(
+                    openedUris[0].path,
+                    customUrl,
+                    'Should use custom URL instead of default mapping'
+                );
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should execute kube9.reportIssue command when Report Issue is clicked', async () => {
+            vscode.window._clearMessages();
+            let reportIssueCalled = false;
+            
+            // Register the kube9.reportIssue command handler
+            vscode.commands.registerCommand('kube9.reportIssue', async () => {
+                reportIssueCalled = true;
+            });
+            
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(items[1]); // Return 'Report Issue' (second button)
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Test error', 'TEST_ERROR');
+                
+                assert.strictEqual(reportIssueCalled, true, 'Should call kube9.reportIssue command');
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+
+        test('Should not open URL or execute command when dialog is dismissed', async () => {
+            vscode.env._clearOpenedUris();
+            vscode.window._clearMessages();
+            let reportIssueCalled = false;
+            
+            vscode.commands.registerCommand('kube9.reportIssue', async () => {
+                reportIssueCalled = true;
+            });
+            
+            const originalShowError = vscode.window.showErrorMessage;
+            vscode.window.showErrorMessage = async (message: string, ...items: string[]) => {
+                // Call original to track message
+                await originalShowError(message, ...items);
+                return Promise.resolve(undefined as unknown as string); // User dismissed dialog
+            };
+            
+            try {
+                await ErrorHandler.showErrorWithHelp('Test error', 'TEST_ERROR');
+                
+                const openedUris = vscode.env._getOpenedUris();
+                assert.strictEqual(openedUris.length, 0, 'Should not open any URL');
+                assert.strictEqual(reportIssueCalled, false, 'Should not call reportIssue command');
+            } finally {
+                vscode.window.showErrorMessage = originalShowError;
+            }
+        });
+    });
 });
 

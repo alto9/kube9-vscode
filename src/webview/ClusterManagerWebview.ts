@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { ClusterCustomizationService, ClusterCustomizationConfig } from '../services/ClusterCustomizationService';
 import { KubeconfigParser, ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
+import { getHelpController } from '../extension';
 
 /**
  * Message sent from webview to extension requesting cluster list.
@@ -91,6 +94,14 @@ interface ImportConfigurationMessage {
 }
 
 /**
+ * Message sent from webview to extension to open contextual help.
+ */
+interface OpenHelpMessage {
+    type: 'openHelp';
+    context?: string;
+}
+
+/**
  * Message sent from extension to webview with initialization data.
  */
 interface InitializeMessage {
@@ -134,9 +145,32 @@ interface ThemeChangedMessage {
 }
 
 /**
+ * Message sent from webview to extension to reorder a folder.
+ */
+interface ReorderFolderMessage {
+    type: 'reorderFolder';
+    data: {
+        folderId: string;
+        newParentId: string | null;
+        newOrder: number;
+    };
+}
+
+/**
+ * Message sent from webview to extension to reorder a cluster.
+ */
+interface ReorderClusterMessage {
+    type: 'reorderCluster';
+    data: {
+        contextName: string;
+        newOrder: number;
+    };
+}
+
+/**
  * Union type for all webview messages from webview to extension.
  */
-type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage;
+type WebviewToExtensionMessage = GetClustersMessage | SetAliasMessage | ToggleVisibilityMessage | CreateFolderMessage | MoveClusterMessage | RenameFolderMessage | DeleteFolderMessage | ExportConfigurationMessage | ImportConfigurationMessage | OpenHelpMessage | ReorderFolderMessage | ReorderClusterMessage;
 
 /**
  * Union type for all webview messages from extension to webview.
@@ -241,7 +275,8 @@ export class ClusterManagerWebview {
         // Set HTML content
         this.panel.webview.html = ClusterManagerWebview.getWebviewContent(
             this.panel.webview,
-            extensionUri
+            extensionUri,
+            extensionContext
         );
 
         // Set up message handler
@@ -301,7 +336,9 @@ export class ClusterManagerWebview {
      */
     private async handleMessage(message: WebviewMessage): Promise<void> {
         try {
-            if (message.type === 'getClusters') {
+            if (message.type === 'openHelp') {
+                await getHelpController().openContextualHelp(message.context || 'cluster-manager');
+            } else if (message.type === 'getClusters') {
                 await this.handleGetClusters();
             } else if (message.type === 'setAlias') {
                 await this.handleSetAlias(message.data.contextName, message.data.alias);
@@ -319,6 +356,10 @@ export class ClusterManagerWebview {
                 await this.handleExportConfiguration();
             } else if (message.type === 'importConfiguration') {
                 await this.handleImportConfiguration();
+            } else if (message.type === 'reorderFolder') {
+                await this.handleReorderFolder(message.data.folderId, message.data.newParentId, message.data.newOrder);
+            } else if (message.type === 'reorderCluster') {
+                await this.handleReorderCluster(message.data.contextName, message.data.newOrder);
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -583,6 +624,114 @@ export class ClusterManagerWebview {
     }
 
     /**
+     * Handle reorderFolder message by reordering a folder.
+     * 
+     * @param folderId - The folder ID to reorder
+     * @param newParentId - The new parent folder ID, or null for root level
+     * @param newOrder - The new display order
+     */
+    private async handleReorderFolder(folderId: string, newParentId: string | null, newOrder: number): Promise<void> {
+        try {
+            const config = await this.customizationService.getConfiguration();
+            
+            // Find the folder to reorder
+            const folderIndex = config.folders.findIndex(f => f.id === folderId);
+            if (folderIndex === -1) {
+                throw new Error(`Folder ${folderId} not found`);
+            }
+            
+            const folder = config.folders[folderIndex];
+            const oldParentId = folder.parentId;
+            
+            // Update folder's parentId and order
+            folder.parentId = newParentId;
+            folder.order = newOrder;
+            
+            // Renumber siblings in old parent
+            if (oldParentId !== newParentId) {
+                const oldSiblings = config.folders.filter(f => f.parentId === oldParentId && f.id !== folderId);
+                oldSiblings.sort((a, b) => a.order - b.order);
+                oldSiblings.forEach((f, index) => {
+                    f.order = index;
+                });
+            }
+            
+            // Renumber siblings in new parent
+            const newSiblings = config.folders.filter(f => f.parentId === newParentId && f.id !== folderId);
+            newSiblings.sort((a, b) => a.order - b.order);
+            
+            // Insert at new position and renumber
+            newSiblings.splice(newOrder, 0, folder);
+            newSiblings.forEach((f, index) => {
+                f.order = index;
+            });
+            
+            await this.customizationService.updateConfiguration(config);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error reordering folder:', errorMessage);
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
+        }
+    }
+
+    /**
+     * Handle reorderCluster message by reordering a cluster within its current folder.
+     * 
+     * @param contextName - The kubeconfig context name of the cluster
+     * @param newOrder - The new display order
+     */
+    private async handleReorderCluster(contextName: string, newOrder: number): Promise<void> {
+        try {
+            const config = await this.customizationService.getConfiguration();
+            
+            // Get or create cluster config
+            if (!config.clusters[contextName]) {
+                config.clusters[contextName] = {
+                    alias: null,
+                    hidden: false,
+                    folderId: null,
+                    order: 0
+                };
+            }
+            
+            const clusterConfig = config.clusters[contextName];
+            const folderId = clusterConfig.folderId;
+            
+            // Update cluster's order
+            clusterConfig.order = newOrder;
+            
+            // Renumber siblings in same folder
+            const siblings = Object.entries(config.clusters)
+                .filter(([name, cfg]) => cfg.folderId === folderId && name !== contextName)
+                .map(([name, cfg]) => ({ name, config: cfg }));
+            
+            siblings.sort((a, b) => a.config.order - b.config.order);
+            
+            // Insert at new position and renumber
+            siblings.splice(newOrder, 0, { name: contextName, config: clusterConfig });
+            siblings.forEach(({ name }, index) => {
+                config.clusters[name].order = index;
+            });
+            
+            await this.customizationService.updateConfiguration(config);
+            // The event listener will automatically send customizationsUpdated message
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error reordering cluster:', errorMessage);
+            const errorMsg: ErrorMessage = {
+                type: 'error',
+                message: errorMessage
+            };
+            this.panel.webview.postMessage(errorMsg);
+        }
+    }
+
+    /**
      * Format clusters from ParsedKubeconfig to the required format.
      * 
      * @param kubeconfig - The parsed kubeconfig
@@ -626,7 +775,7 @@ export class ClusterManagerWebview {
      * @param extensionUri - The extension URI for loading resources
      * @returns HTML content string
      */
-    private static getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+    private static getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri, extensionContext: vscode.ExtensionContext): string {
         // Get the URI for the React bundle
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'cluster-manager', 'index.js')
@@ -637,20 +786,55 @@ export class ClusterManagerWebview {
             vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
         );
 
+        // Get help button resource URIs
+        const helpButtonCssUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'styles', 'help-button.css')
+        );
+        const helpButtonJsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
+        );
+
+        // Read help button HTML template
+        const helpButtonHtmlPath = path.join(
+            extensionContext.extensionPath,
+            'src',
+            'webview',
+            'templates',
+            'help-button.html'
+        );
+        const helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
+
+        const nonce = getNonce();
+
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline' 'unsafe-eval'; font-src ${webview.cspSource};">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-inline' 'unsafe-eval'; font-src ${webview.cspSource};">
     <link rel="stylesheet" href="${codiconsUri}">
+    <link rel="stylesheet" href="${helpButtonCssUri}">
     <title>Cluster Organizer</title>
 </head>
-<body>
+<body data-help-context="cluster-manager">
+    ${helpButtonHtml}
     <div id="root"></div>
     <script src="${scriptUri}"></script>
+    <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
     }
+}
+
+/**
+ * Generate a random nonce for Content Security Policy.
+ */
+function getNonce(): string {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
 }
 

@@ -67,7 +67,7 @@ Scenario: Expanding and collapsing folders
 
 Scenario: Renaming a folder
   Given a folder "Prod" exists
-  When the user double-clicks on the folder name
+  When the user clicks the "Rename" button on the folder
   Then the folder name becomes editable
   When they change the name to "Production"
   And press Enter
@@ -210,8 +210,6 @@ Scenario: Folder context menu options
     | Rename Folder      |
     | New Subfolder      |
     | Delete Folder      |
-    | Expand All         |
-    | Collapse All       |
 
 Scenario: Expand all subfolders
   Given a folder "Production" has 2 subfolders, each with their own subfolders
@@ -242,6 +240,8 @@ Scenario: Tree view displays folders with clusters
   Then "eks-1" and "eks-2" appear under the folder
   And clicking on clusters opens their details as usual
 ```
+
+
 
 
 

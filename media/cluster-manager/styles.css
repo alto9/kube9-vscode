@@ -238,6 +238,7 @@ body {
     border-radius: 4px;
     transition: background-color 0.15s ease, opacity 0.15s ease;
     cursor: grab;
+    position: relative;
 }
 
 .cluster-item:active {
@@ -253,6 +254,10 @@ body {
     font-size: 14px;
     color: var(--vscode-foreground);
     font-family: var(--vscode-font-family);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .cluster-item-name mark {
@@ -263,35 +268,30 @@ body {
 }
 
 .cluster-item-edit-button {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
-    padding: 0;
-    margin: 0;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: var(--vscode-icon-foreground);
-    opacity: 0.7;
-    transition: opacity 0.15s ease, color 0.15s ease;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--vscode-font-family);
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border);
     border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .cluster-item-edit-button:hover {
-    opacity: 1;
-    background-color: var(--vscode-toolbar-hoverBackground);
-    color: var(--vscode-icon-foreground);
+    background-color: var(--vscode-button-secondaryHoverBackground);
 }
 
 .cluster-item-edit-button:focus {
     outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
-}
-
-.cluster-item-edit-button .codicon {
-    font-size: 14px;
 }
 
 .cluster-item-input {
@@ -351,15 +351,21 @@ body {
 }
 
 .cluster-item-visibility-toggle {
-    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
     font-size: 12px;
     font-weight: 500;
+    font-family: var(--vscode-font-family);
     background-color: var(--vscode-button-secondaryBackground);
     color: var(--vscode-button-secondaryForeground);
     border: 1px solid var(--vscode-button-border);
     border-radius: 3px;
     cursor: pointer;
     transition: background-color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .cluster-item-visibility-toggle:hover {
@@ -369,6 +375,68 @@ body {
 .cluster-item-visibility-toggle:focus {
     outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
+}
+
+/* Cluster Context Menu */
+.cluster-context-menu {
+    background-color: var(--vscode-menu-background);
+    border: 1px solid var(--vscode-menu-border);
+    border-radius: 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    padding: 4px 0;
+    min-width: 180px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.cluster-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-menu-foreground);
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s ease;
+    width: 100%;
+}
+
+.cluster-context-menu-item:hover {
+    background-color: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
+}
+
+.cluster-context-menu-item:focus {
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+/* Drop Indicator Line for Clusters */
+.drop-indicator-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--vscode-focusBorder);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Drag Over Styling for Clusters */
+.cluster-item.drag-over {
+    border-color: var(--vscode-focusBorder);
+    border-width: 2px;
+}
+
+.cluster-item.drag-over-invalid {
+    border-color: var(--vscode-errorForeground);
+    border-width: 2px;
+    cursor: not-allowed;
 }
 
 /* Folder Item */
@@ -446,6 +514,10 @@ body {
     color: var(--vscode-foreground);
     font-family: var(--vscode-font-family);
     font-weight: 500;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .folder-item-name-input {
@@ -462,6 +534,33 @@ body {
 
 .folder-item-name-input:focus {
     border-color: var(--vscode-focusBorder);
+    outline: 2px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.folder-item-rename-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--vscode-font-family);
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.folder-item-rename-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.folder-item-rename-button:focus {
     outline: 2px solid var(--vscode-focusBorder);
     outline-offset: 2px;
 }

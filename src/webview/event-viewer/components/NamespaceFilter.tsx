@@ -90,11 +90,11 @@ export const NamespaceFilter: React.FC<NamespaceFilterProps> = ({ selected = 'al
         border: '1px solid var(--vscode-dropdown-border)',
         borderRadius: '3px',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-        zIndex: 1000,
+        zIndex: 10000, // Much higher z-index
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        maxHeight: '300px',
+        maxHeight: '250px',
         overflowY: 'auto'
     };
 

@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
+import * as fs from 'fs/promises';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { getContextInfo } from '../utils/kubectlContext';
+import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import * as yaml from 'js-yaml';
+import * as k8s from '@kubernetes/client-node';
 
 export type ApplyMode = 'apply' | 'dry-run-server' | 'dry-run-client';
 
@@ -13,15 +15,340 @@ export interface ApplyYAMLResult {
 }
 
 /**
- * Timeout for kubectl apply commands in milliseconds.
- * Longer timeout than standard kubectl commands due to apply operations potentially taking more time.
+ * Applies a single Kubernetes resource using server-side apply.
+ * Handles create and update operations.
+ * Supports dry-run modes for validation without persisting changes.
  */
-const KUBECTL_TIMEOUT_MS = 10000;
-
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
+async function applyResource(
+    resource: Record<string, unknown>,
+    contextName: string,
+    mode: ApplyMode
+): Promise<string> {
+    const apiClient = getKubernetesApiClient();
+    apiClient.setContext(contextName);
+    
+    const kind = (resource.kind as string)?.toLowerCase() || '';
+    const name = ((resource.metadata as Record<string, unknown>)?.name as string) || '';
+    const namespaceFromManifest = (resource.metadata as Record<string, unknown>)?.namespace as string | undefined;
+    
+    // Set dry-run parameter based on mode
+    // - undefined: actual apply (persist changes)
+    // - 'All': server-side dry-run (validate with API, admission webhooks, RBAC but don't persist)
+    // Note: client-side dry-run is not supported by the API - we treat it same as server-side
+    const dryRun = mode !== 'apply' ? 'All' : undefined;
+    
+    // Define cluster-scoped resource types
+    const clusterScopedTypes = ['node', 'namespace', 'persistentvolume', 'storageclass', 'customresourcedefinition', 'crd'];
+    const isClusterScoped = clusterScopedTypes.includes(kind);
+    
+    // Route to appropriate API based on resource type
+    // Note: Using strategic merge patch for updates (true server-side apply requires additional setup)
+    if (!isClusterScoped) {
+        // Namespaced resource - namespace defaults to 'default' if not provided
+        const namespace = namespaceFromManifest || 'default';
+        switch (kind) {
+            case 'pod':
+                try {
+                    await apiClient.core.createNamespacedPod({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        // Resource exists, use strategic merge patch
+                        await apiClient.core.patchNamespacedPod({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'service':
+                try {
+                    await apiClient.core.createNamespacedService({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.core.patchNamespacedService({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'configmap':
+                try {
+                    await apiClient.core.createNamespacedConfigMap({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.core.patchNamespacedConfigMap({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'secret':
+                try {
+                    await apiClient.core.createNamespacedSecret({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.core.patchNamespacedSecret({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'deployment':
+                try {
+                    await apiClient.apps.createNamespacedDeployment({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.apps.patchNamespacedDeployment({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'statefulset':
+                try {
+                    await apiClient.apps.createNamespacedStatefulSet({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.apps.patchNamespacedStatefulSet({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'daemonset':
+                try {
+                    await apiClient.apps.createNamespacedDaemonSet({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.apps.patchNamespacedDaemonSet({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'replicaset':
+                try {
+                    await apiClient.apps.createNamespacedReplicaSet({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.apps.patchNamespacedReplicaSet({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'job':
+                try {
+                    await apiClient.batch.createNamespacedJob({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.batch.patchNamespacedJob({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'cronjob':
+                try {
+                    await apiClient.batch.createNamespacedCronJob({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.batch.patchNamespacedCronJob({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'persistentvolumeclaim':
+                try {
+                    await apiClient.core.createNamespacedPersistentVolumeClaim({
+                        namespace,
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.core.patchNamespacedPersistentVolumeClaim({
+                            name,
+                            namespace,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            default:
+                throw new Error(`Unsupported namespaced resource type: ${kind}`);
+        }
+    } else {
+        // Cluster-scoped resource
+        switch (kind) {
+            case 'node':
+                throw new Error('Cannot apply Node resources - they are managed by the cluster');
+            case 'namespace':
+                try {
+                    await apiClient.core.createNamespace({
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.core.patchNamespace({
+                            name,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'persistentvolume':
+                try {
+                    await apiClient.core.createPersistentVolume({
+                        body: resource,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.core.patchPersistentVolume({
+                            name,
+                            body: resource,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            case 'storageclass':
+                try {
+                    await apiClient.storage.createStorageClass({
+                        body: resource as unknown as k8s.V1StorageClass,
+                        dryRun
+                    });
+                    return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} created`;
+                } catch (error: unknown) {
+                    const apiError = error as { statusCode?: number };
+                    if (apiError.statusCode === 409) {
+                        await apiClient.storage.patchStorageClass({
+                            name,
+                            body: resource as unknown as k8s.V1StorageClass,
+                            dryRun
+                        });
+                        return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
+                    }
+                    throw error;
+                }
+            default:
+                throw new Error(`Unsupported cluster-scoped resource type: ${kind}`);
+        }
+    }
+}
 
 /**
  * OutputChannel for apply YAML operation logging.
@@ -113,18 +440,6 @@ async function selectApplyMode(): Promise<ApplyMode | undefined> {
   return selected?.mode;
 }
 
-/**
- * Parses kubectl apply output to extract resource information.
- * Each line typically contains a resource type, name, and action (e.g., "deployment.apps/my-app created").
- * 
- * @param output - The stdout output from kubectl apply command
- * @returns Array of resource strings, one per line
- */
-function parseApplyOutput(output: string): string[] {
-  // Parse lines like "deployment.apps/my-app created"
-  const lines = output.trim().split('\n');
-  return lines.filter(line => line.length > 0);
-}
 
 /**
  * Logs the kubectl command being executed.
@@ -241,13 +556,13 @@ async function showApplyError(error: KubectlError): Promise<void> {
 }
 
 /**
- * Executes kubectl apply command with the specified file and mode.
- * Supports regular apply and dry-run modes (server and client).
+ * Executes apply operation using the Kubernetes API client.
+ * Supports regular apply and dry-run modes.
  * 
  * @param filePath - The file system path to the YAML manifest file
  * @param mode - The apply mode (apply, dry-run-server, or dry-run-client)
  * @returns Promise resolving to ApplyYAMLResult with success status and parsed output
- * @throws {KubectlError} If kubectl command fails
+ * @throws {KubectlError} If API call fails
  */
 async function executeKubectlApply(
   filePath: string,
@@ -264,30 +579,55 @@ async function executeKubectlApply(
     console.warn('Failed to get context info for error reporting:', error);
   }
   
-  // Build command arguments
-  const args = ['apply', '-f', filePath];
-  
-  // Add dry-run flags when appropriate
-  if (mode === 'dry-run-server') {
-    args.push('--dry-run=server');
-  } else if (mode === 'dry-run-client') {
-    args.push('--dry-run=client');
-  }
-  
   try {
-    // Execute kubectl command
-    const { stdout } = await execFileAsync('kubectl', args, {
-      timeout: KUBECTL_TIMEOUT_MS,
-      maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large manifests
-      env: { ...process.env }
-    });
+    // Read YAML file
+    const fileContent = await fs.readFile(filePath, 'utf-8');
     
-    // Parse resources from output
-    const resourcesAffected = parseApplyOutput(stdout);
+    // Parse YAML - handle both single and multiple resources
+    // Always use loadAll() to support multi-document YAML files (e.g., Helm charts, kustomize)
+    const resources: Record<string, unknown>[] = [];
+    const parsedDocuments = yaml.loadAll(fileContent);
+    
+    for (const doc of parsedDocuments) {
+      if (doc && typeof doc === 'object') {
+        const resource = doc as Record<string, unknown>;
+        // Check if it's a List kind (which contains multiple items)
+        if (resource.kind === 'List' && Array.isArray(resource.items)) {
+          resources.push(...(resource.items as Record<string, unknown>[]));
+        } else {
+          resources.push(resource);
+        }
+      }
+    }
+    
+    if (resources.length === 0) {
+      throw new Error('No valid Kubernetes resources found in YAML file');
+    }
+    
+    // Apply each resource
+    const resourcesAffected: string[] = [];
+    const outputLines: string[] = [];
+    
+    for (const resource of resources) {
+      try {
+        const result = await applyResource(resource, contextName, mode);
+        resourcesAffected.push(result);
+        outputLines.push(result);
+      } catch (error: unknown) {
+        const resourceName = ((resource.metadata as Record<string, unknown>)?.name as string) || 'unknown';
+        const resourceKind = (resource.kind as string) || 'unknown';
+        const errorObj = error as { message?: string };
+        const errorMsg = `Failed to apply ${resourceKind}/${resourceName}: ${errorObj.message || String(error)}`;
+        outputLines.push(errorMsg);
+        throw new Error(errorMsg);
+      }
+    }
+    
+    const output = outputLines.join('\n');
     
     return {
       success: true,
-      output: stdout,
+      output,
       resourcesAffected
     };
   } catch (error) {

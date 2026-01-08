@@ -5,7 +5,7 @@ feature_id:
   - namespace-describe-webview
 spec_id:
   - namespace-describe-webview-spec
-status: pending
+status: completed
 ---
 
 # Create Events Tab Component

@@ -197,9 +197,10 @@ body {
     flex-shrink: 0;
     background-color: var(--vscode-sideBar-background);
     border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     position: relative;
+    height: 100% !important;
 }
 
 .filter-pane-header {
@@ -212,13 +213,17 @@ body {
 }
 
 .filter-sections {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    display: block !important;
+    min-height: 300px !important;
 }
 
 .filter-section {
     border-bottom: 1px solid var(--border);
+    display: block !important;
+    min-height: 100px !important;
 }
 
 .filter-section:last-child {
@@ -249,7 +254,10 @@ body {
 
 .filter-section-content {
     padding: var(--spacing-sm) var(--spacing-md);
-    overflow: hidden;
+    overflow: visible !important;
+    display: block !important;
+    min-height: 60px !important;
+    visibility: visible !important;
 }
 
 /* ==========================================================================

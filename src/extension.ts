@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
 import { GlobalState } from './state/GlobalState';
 import { TutorialWebview } from './webview/TutorialWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
@@ -25,6 +23,7 @@ import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
 import { Kube9YAMLFileSystemProvider } from './yaml/Kube9YAMLFileSystemProvider';
 import { ClusterTreeItem } from './tree/ClusterTreeItem';
+import { NamespaceTreeItemConfig } from './tree/items/NamespaceTreeItem';
 import { OperatorStatusClient } from './services/OperatorStatusClient';
 import { OperatorStatusMode } from './kubernetes/OperatorStatusTypes';
 import { FreeDashboardPanel } from './dashboard/FreeDashboardPanel';
@@ -52,11 +51,9 @@ import { PodLogsViewerPanel } from './webview/PodLogsViewerPanel';
 import { ErrorCommands } from './commands/errorCommands';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
+import { HelpController, registerHelpMenuCommand, registerContextMenuHelpCommands } from './help/HelpController';
+import { HelpStatusBar } from './help/HelpStatusBar';
 
-/**
- * Promisified version of execFile for async/await usage.
- */
-const execFileAsync = promisify(execFile);
 
 /**
  * Global extension context accessible to all components.
@@ -94,6 +91,12 @@ let yamlEditorManager: YAMLEditorManager | undefined;
 let clusterCustomizationService: ClusterCustomizationService | undefined;
 
 /**
+ * Global help controller instance.
+ * Manages help-related functionality and contextual documentation.
+ */
+let helpController: HelpController | undefined;
+
+/**
  * Get the extension context.
  * @returns The extension context
  * @throws Error if context has not been initialized
@@ -127,6 +130,18 @@ export function getYAMLEditorManager(): YAMLEditorManager {
         throw new Error('YAMLEditorManager not initialized');
     }
     return yamlEditorManager;
+}
+
+/**
+ * Get the help controller instance.
+ * @returns The help controller
+ * @throws Error if help controller has not been initialized
+ */
+export function getHelpController(): HelpController {
+    if (!helpController) {
+        throw new Error('HelpController not initialized');
+    }
+    return helpController;
 }
 
 /**
@@ -194,6 +209,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Register commands first before populating the tree
         // This ensures commands are available when tree items are clicked
         registerCommands();
+        
+        // Initialize help system
+        helpController = new HelpController(context);
+        helpController.registerCommands();
+        registerHelpMenuCommand(context, helpController);
+        registerContextMenuHelpCommands(context);
+        
+        // Create and register help status bar
+        const helpStatusBar = new HelpStatusBar(helpController);
+        context.subscriptions.push(helpStatusBar);
         
         // Initialize cluster customization service
         // This service manages aliases, folders, and visibility customizations
@@ -501,7 +526,7 @@ function registerCommands(): void {
     // Register open Operator Health report command
     const openOperatorHealthReportCommand = vscode.commands.registerCommand(
         'kube9.openOperatorHealthReport',
-        async () => {
+        async (contextName?: string) => {
             try {
                 console.log('Opening Operator Health report webview...');
                 
@@ -514,9 +539,11 @@ function registerCommands(): void {
                     return;
                 }
                 
-                // Get current context name
-                const contextInfo = await getContextInfo();
-                const contextName = contextInfo.contextName;
+                // If no context name provided (e.g., called from command palette), use current context
+                if (!contextName) {
+                    const contextInfo = await getContextInfo();
+                    contextName = contextInfo.contextName;
+                }
                 
                 if (!contextName) {
                     vscode.window.showWarningMessage('No cluster context available');
@@ -534,7 +561,7 @@ function registerCommands(): void {
                     contextName
                 );
                 
-                console.log('Opened Operator Health report webview');
+                console.log(`Opened Operator Health report webview for context: ${contextName}`);
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error('Failed to open Operator Health report webview:', errorMessage);
@@ -625,6 +652,26 @@ function registerCommands(): void {
     );
     context.subscriptions.push(describePodCmd);
     disposables.push(describePodCmd);
+    
+    // Register describe Namespace command
+    const describeNamespaceCmd = vscode.commands.registerCommand(
+        'kube9.describeNamespace',
+        async (namespaceConfig: NamespaceTreeItemConfig) => {
+            try {
+                if (!namespaceConfig || !namespaceConfig.name || !namespaceConfig.context) {
+                    throw new Error('Invalid Namespace configuration');
+                }
+                
+                await DescribeWebview.showNamespaceDescribe(context, namespaceConfig);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to describe Namespace:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe Namespace: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describeNamespaceCmd);
+    disposables.push(describeNamespaceCmd);
     
     // Register describe resource (raw) command
     const describeRawCmd = vscode.commands.registerCommand(
@@ -1444,29 +1491,25 @@ function registerCommands(): void {
                 const nodeName = treeItem.resourceData.resourceName || (treeItem.label as string);
                 const contextName = treeItem.resourceData.context.name;
                 
-                // Get kubeconfig path
-                const treeProvider = getClusterTreeProvider();
-                const kubeconfigPath = treeProvider.getKubeconfigPath();
-                if (!kubeconfigPath) {
-                    vscode.window.showErrorMessage('Kubeconfig path not available');
-                    return;
-                }
-                
-                // Execute kubectl describe node
+                // Fetch node using API client and convert to YAML
                 let describeOutput: string;
                 try {
-                    const { stdout } = await execFileAsync(
-                        'kubectl',
-                        ['describe', 'node', nodeName, `--kubeconfig=${kubeconfigPath}`, `--context=${contextName}`],
-                        {
-                            timeout: 30000,
-                            maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large describe output
-                            env: { ...process.env }
-                        }
-                    );
-                    describeOutput = stdout;
+                    const { getKubernetesApiClient } = await import('./kubernetes/apiClient');
+                    const { default: yaml } = await import('js-yaml');
+                    
+                    const apiClient = getKubernetesApiClient();
+                    apiClient.setContext(contextName);
+                    
+                    const node = await apiClient.core.readNode({ name: nodeName });
+                    
+                    // Convert to YAML format
+                    describeOutput = yaml.dump(node, {
+                        indent: 2,
+                        lineWidth: -1,
+                        noRefs: true
+                    });
                 } catch (error: unknown) {
-                    // kubectl failed - create structured error for detailed handling
+                    // API call failed - create structured error for detailed handling
                     const kubectlError = KubectlError.fromExecError(error, contextName);
                     
                     // Log error details for debugging

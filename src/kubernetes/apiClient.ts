@@ -18,6 +18,11 @@ export class KubernetesApiClient {
     private appsApi: k8s.AppsV1Api;
     private batchApi: k8s.BatchV1Api;
     private networkingApi: k8s.NetworkingV1Api;
+    private storageApi: k8s.StorageV1Api;
+    private authorizationApi: k8s.AuthorizationV1Api;
+    private apiextensionsApi: k8s.ApiextensionsV1Api;
+    private versionApi: k8s.VersionApi;
+    private rbacApi: k8s.RbacAuthorizationV1Api;
 
     /**
      * Creates a new KubernetesApiClient instance.
@@ -32,6 +37,11 @@ export class KubernetesApiClient {
         this.appsApi = this.kubeConfig.makeApiClient(k8s.AppsV1Api);
         this.batchApi = this.kubeConfig.makeApiClient(k8s.BatchV1Api);
         this.networkingApi = this.kubeConfig.makeApiClient(k8s.NetworkingV1Api);
+        this.storageApi = this.kubeConfig.makeApiClient(k8s.StorageV1Api);
+        this.authorizationApi = this.kubeConfig.makeApiClient(k8s.AuthorizationV1Api);
+        this.apiextensionsApi = this.kubeConfig.makeApiClient(k8s.ApiextensionsV1Api);
+        this.versionApi = this.kubeConfig.makeApiClient(k8s.VersionApi);
+        this.rbacApi = this.kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api);
     }
 
     /**
@@ -47,6 +57,11 @@ export class KubernetesApiClient {
         this.appsApi = this.kubeConfig.makeApiClient(k8s.AppsV1Api);
         this.batchApi = this.kubeConfig.makeApiClient(k8s.BatchV1Api);
         this.networkingApi = this.kubeConfig.makeApiClient(k8s.NetworkingV1Api);
+        this.storageApi = this.kubeConfig.makeApiClient(k8s.StorageV1Api);
+        this.authorizationApi = this.kubeConfig.makeApiClient(k8s.AuthorizationV1Api);
+        this.apiextensionsApi = this.kubeConfig.makeApiClient(k8s.ApiextensionsV1Api);
+        this.versionApi = this.kubeConfig.makeApiClient(k8s.VersionApi);
+        this.rbacApi = this.kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api);
     }
 
     /**
@@ -105,6 +120,56 @@ export class KubernetesApiClient {
      */
     public get networking(): k8s.NetworkingV1Api {
         return this.networkingApi;
+    }
+
+    /**
+     * Gets the Storage V1 API client for storage resources.
+     * Provides access to storage classes, persistent volumes, etc.
+     * 
+     * @returns StorageV1Api client instance
+     */
+    public get storage(): k8s.StorageV1Api {
+        return this.storageApi;
+    }
+
+    /**
+     * Gets the Authorization V1 API client for RBAC operations.
+     * Provides access to self-subject access reviews, etc.
+     * 
+     * @returns AuthorizationV1Api client instance
+     */
+    public get authorization(): k8s.AuthorizationV1Api {
+        return this.authorizationApi;
+    }
+
+    /**
+     * Gets the Apiextensions V1 API client for custom resource definitions.
+     * Provides access to CRD operations.
+     * 
+     * @returns ApiextensionsV1Api client instance
+     */
+    public get apiextensions(): k8s.ApiextensionsV1Api {
+        return this.apiextensionsApi;
+    }
+
+    /**
+     * Gets the Version API client for cluster version information.
+     * Provides access to cluster version details.
+     * 
+     * @returns VersionApi client instance
+     */
+    public get version(): k8s.VersionApi {
+        return this.versionApi;
+    }
+
+    /**
+     * Gets the RBAC Authorization V1 API client for RBAC resources.
+     * Provides access to roles, role bindings, cluster roles, etc.
+     * 
+     * @returns RbacAuthorizationV1Api client instance
+     */
+    public get rbac(): k8s.RbacAuthorizationV1Api {
+        return this.rbacApi;
     }
 
     /**

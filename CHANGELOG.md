@@ -1,3 +1,47 @@
+# [1.19.0](https://github.com/alto9/kube9-vscode/compare/v1.18.3...v1.19.0) (2026-01-07)
+
+
+### Features
+
+* add context menu help commands for pods, deployments, and services ([4210d92](https://github.com/alto9/kube9-vscode/commit/4210d92c97cdcce8c87fce60b521102ad249d167))
+* add context menu help items for pods, deployments, and services ([2db7cc8](https://github.com/alto9/kube9-vscode/commit/2db7cc8116bc84d88189ff0645bb51cc3d744d7c))
+* add help button to webview templates ([8fd0bc1](https://github.com/alto9/kube9-vscode/commit/8fd0bc105f02d63a82c052b0f7ef18ecba23950d))
+* add HelpController class for centralized help functionality ([89cb39f](https://github.com/alto9/kube9-vscode/commit/89cb39fc11eaba72a363ba128221ce882792a68f))
+* add reusable help button component for webviews ([f6097ba](https://github.com/alto9/kube9-vscode/commit/f6097ba98e1b5595e0877379c5489e9d4893043b))
+* add showErrorWithHelp static method to ErrorHandler ([f54ea08](https://github.com/alto9/kube9-vscode/commit/f54ea0861ec9773cfda73fa4c7195cd567d0703c))
+* add webview help message handler for contextual documentation ([7bfdb06](https://github.com/alto9/kube9-vscode/commit/7bfdb06a36e316f4f5dde16c4959792844dde2d2))
+* create help status bar item ([af44759](https://github.com/alto9/kube9-vscode/commit/af44759366b706637de4d75dd0910af30bb2181e))
+* integrate HelpController in extension activation ([0e02341](https://github.com/alto9/kube9-vscode/commit/0e02341649ec538a2ac139bccb79df9c7e9a003a))
+* register help commands in package.json ([19c5868](https://github.com/alto9/kube9-vscode/commit/19c5868a33b2308d1a92e591f69d2f2bbe652cb7))
+
+## [1.18.3](https://github.com/alto9/kube9-vscode/compare/v1.18.2...v1.18.3) (2026-01-06)
+
+
+### Bug Fixes
+
+* apply all resources from multi-document YAML files ([d72f92b](https://github.com/alto9/kube9-vscode/commit/d72f92be5717f39785669c1c5ff3cf1f9ecd6157))
+* default missing namespace to 'default' for namespaced resources ([1b77f4b](https://github.com/alto9/kube9-vscode/commit/1b77f4bdfc7bab896b5c28c7d2f9ab06ac2715bc))
+* implement proper dry-run validation for apply operations ([8b30d34](https://github.com/alto9/kube9-vscode/commit/8b30d345e3a8abe5c3ee172704e942896d97a403))
+* update tutorial webview ([063d950](https://github.com/alto9/kube9-vscode/commit/063d95010f279ffbdcb6714372297171d1ca1bb8))
+
+## [1.18.2](https://github.com/alto9/kube9-vscode/compare/v1.18.1...v1.18.2) (2026-01-04)
+
+
+### Bug Fixes
+
+* **cluster-manager:** improve usability with rename buttons, context menus, and drag-drop reordering ([ef62963](https://github.com/alto9/kube9-vscode/commit/ef62963afcbb7f6b2bb36578ce2f4f3535456d91))
+* remove unused variable in clusterManagerReorder test ([532614c](https://github.com/alto9/kube9-vscode/commit/532614c9ae7f8d178fd6d2740d5e3828c76736c9))
+
+## [1.18.1](https://github.com/alto9/kube9-vscode/compare/v1.18.0...v1.18.1) (2026-01-04)
+
+
+### Bug Fixes
+
+* **event-viewer:** prevent Kubernetes event types from being sent to operator CLI ([e2c714d](https://github.com/alto9/kube9-vscode/commit/e2c714d197d70bcffb5ad17cea21ed5ba3563522))
+* **event-viewer:** remove Go to Resource and View YAML buttons ([a02000c](https://github.com/alto9/kube9-vscode/commit/a02000c5c7ab644df33983f1c94397a6acaa7b85))
+* **event-viewer:** resolve filters panel, row overlap, and resize scrolling issues ([6f7697e](https://github.com/alto9/kube9-vscode/commit/6f7697e91e4c448a0ef3814199ccac00795d8bbd))
+* **event-viewer:** resolve UI issues - filters panel, row overlap, and resize scrolling ([0e9e92d](https://github.com/alto9/kube9-vscode/commit/0e9e92da2761032e095cfc066af3d257f57c4909))
+
 # [1.18.0](https://github.com/alto9/kube9-vscode/compare/v1.17.0...v1.18.0) (2026-01-04)
 
 
