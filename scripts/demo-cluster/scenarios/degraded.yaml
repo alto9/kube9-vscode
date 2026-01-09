@@ -1,0 +1,195 @@
+---
+# Degraded Scenario - Various error states for testing troubleshooting features
+# This scenario intentionally creates error conditions to test the extension's
+# ability to display and handle degraded cluster states.
+
+# Namespace for all broken/degraded resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: broken-apps
+  labels:
+    scenario: degraded
+---
+# CrashLoopBackOff Deployment
+# This deployment intentionally crashes immediately to demonstrate CrashLoopBackOff state
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crashloop-deployment
+  namespace: broken-apps
+  labels:
+    app: crashloop-app
+    scenario: degraded
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: crashloop-app
+  template:
+    metadata:
+      labels:
+        app: crashloop-app
+    spec:
+      containers:
+      - name: app
+        image: busybox:latest
+        command: ["sh", "-c", "exit 1"]  # Immediately exits with error
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+---
+# ImagePullBackOff Deployment
+# This deployment uses a nonexistent image to demonstrate ImagePullBackOff state
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imagepull-deployment
+  namespace: broken-apps
+  labels:
+    app: imagepull-app
+    scenario: degraded
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: imagepull-app
+  template:
+    metadata:
+      labels:
+        app: imagepull-app
+    spec:
+      containers:
+      - name: app
+        image: nonexistent-registry.io/fake-image:latest  # Image doesn't exist
+        ports:
+        - containerPort: 80
+---
+# Pending Deployment (Insufficient Resources)
+# This deployment requests more resources than the cluster has available
+# to demonstrate Pending state due to insufficient resources
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pending-deployment
+  namespace: broken-apps
+  labels:
+    app: pending-app
+    scenario: degraded
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pending-app
+  template:
+    metadata:
+      labels:
+        app: pending-app
+    spec:
+      containers:
+      - name: app
+        image: nginx:latest
+        resources:
+          requests:
+            memory: "10Gi"  # More than cluster has available
+            cpu: "8"
+---
+# Failed Readiness Probe Deployment
+# This deployment has a readiness probe that checks a nonexistent endpoint
+# causing pods to never become ready
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: readiness-fail-deployment
+  namespace: broken-apps
+  labels:
+    app: readiness-fail-app
+    scenario: degraded
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: readiness-fail-app
+  template:
+    metadata:
+      labels:
+        app: readiness-fail-app
+    spec:
+      containers:
+      - name: app
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /nonexistent-endpoint  # Endpoint doesn't exist
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+# Insufficient Replicas Deployment (Partial Availability)
+# This deployment requests more replicas than can fit in the cluster
+# due to resource constraints, demonstrating partial availability
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: partial-deployment
+  namespace: broken-apps
+  labels:
+    app: partial-app
+    scenario: degraded
+spec:
+  replicas: 5  # Request 5 replicas
+  selector:
+    matchLabels:
+      app: partial-app
+  template:
+    metadata:
+      labels:
+        app: partial-app
+    spec:
+      containers:
+      - name: app
+        image: nginx:latest
+        resources:
+          requests:
+            memory: "2Gi"  # Only 1-2 can fit in cluster
+            cpu: "1"
+---
+# Service with No Endpoints
+# This service has a selector that matches no pods, demonstrating
+# a service with no endpoints
+apiVersion: v1
+kind: Service
+metadata:
+  name: no-endpoints-service
+  namespace: broken-apps
+  labels:
+    scenario: degraded
+spec:
+  selector:
+    app: nonexistent-app  # No pods match this selector
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+---
+# Failed Job
+# This job intentionally fails to demonstrate failed job state
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: failed-job
+  namespace: broken-apps
+  labels:
+    scenario: degraded
+spec:
+  template:
+    spec:
+      containers:
+      - name: job
+        image: busybox:latest
+        command: ["sh", "-c", "exit 1"]  # Job fails
+      restartPolicy: Never
+  backoffLimit: 3

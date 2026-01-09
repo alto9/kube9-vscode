@@ -5,7 +5,7 @@ feature_id:
   - demo-cluster-management
 spec_id:
   - demo-cluster-scenarios
-status: pending
+status: completed
 ---
 
 # Create degraded.yaml Scenario

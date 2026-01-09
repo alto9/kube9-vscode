@@ -1,0 +1,223 @@
+---
+# Healthy scenario: All resources in healthy, running states
+# Used for testing normal operations when everything is working correctly
+# All pods reach Running state, all probes pass, and replica counts match desired state
+
+# Namespace: app-1
+# Contains healthy deployments for testing normal operations
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-1
+  labels:
+    scenario: healthy
+---
+# Namespace: app-2
+# Contains healthy deployments and StatefulSet for testing various workload types
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: app-2
+  labels:
+    scenario: healthy
+---
+# Deployment: healthy-deployment-1
+# Healthy deployment in app-1 namespace with working readiness and liveness probes
+# All pods reach Running state and probes pass successfully
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthy-deployment-1
+  namespace: app-1
+  labels:
+    app: healthy-app-1
+    scenario: healthy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: healthy-app-1
+  template:
+    metadata:
+      labels:
+        app: healthy-app-1
+    spec:
+      containers:
+      - name: app
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+# Service: healthy-service-1
+# ClusterIP service for healthy-deployment-1
+# Selector matches healthy-app-1 pods, providing stable endpoint
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthy-service-1
+  namespace: app-1
+  labels:
+    app: healthy-app-1
+    scenario: healthy
+spec:
+  selector:
+    app: healthy-app-1
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+# Deployment: healthy-deployment-2
+# Healthy deployment in app-2 namespace with working probes
+# Demonstrates multiple healthy workloads in same namespace
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: healthy-deployment-2
+  namespace: app-2
+  labels:
+    app: healthy-app-2
+    scenario: healthy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: healthy-app-2
+  template:
+    metadata:
+      labels:
+        app: healthy-app-2
+    spec:
+      containers:
+      - name: app
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+# Service: healthy-service-2
+# ClusterIP service for healthy-deployment-2
+# Provides stable endpoint for healthy-app-2 pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthy-service-2
+  namespace: app-2
+  labels:
+    app: healthy-app-2
+    scenario: healthy
+spec:
+  selector:
+    app: healthy-app-2
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+# Service: healthy-stateful
+# Headless service for StatefulSet
+# Required for StatefulSet to provide stable network identity for each pod
+apiVersion: v1
+kind: Service
+metadata:
+  name: healthy-stateful
+  namespace: app-2
+  labels:
+    app: healthy-stateful
+    scenario: healthy
+spec:
+  selector:
+    app: healthy-stateful
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  clusterIP: None
+  type: ClusterIP
+---
+# StatefulSet: healthy-statefulset
+# Healthy StatefulSet in app-2 namespace with working probes
+# Demonstrates stateful workloads in healthy state
+# Pods have stable network identity via headless service
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: healthy-statefulset
+  namespace: app-2
+  labels:
+    app: healthy-stateful
+    scenario: healthy
+spec:
+  serviceName: healthy-stateful
+  replicas: 2
+  selector:
+    matchLabels:
+      app: healthy-stateful
+  template:
+    metadata:
+      labels:
+        app: healthy-stateful
+    spec:
+      containers:
+      - name: stateful
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
