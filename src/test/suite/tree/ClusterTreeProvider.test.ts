@@ -95,7 +95,7 @@ suite('ClusterTreeProvider Test Suite', () => {
             
             const items = await provider.getChildren();
             
-            // Should have 2 clusters
+            // Should have 2 clusters (no root-level Helm Package Manager)
             assert.strictEqual(items.length, 2);
             assert.strictEqual(items[0].type, 'cluster');
             assert.strictEqual(items[0].label, 'context-1');
@@ -508,7 +508,7 @@ suite('ClusterTreeProvider Test Suite', () => {
             
             const items = await provider.getChildren();
             
-            // Should have 1 valid cluster
+            // Should have 1 valid cluster (no root-level Helm Package Manager)
             assert.strictEqual(items.length, 1);
             assert.strictEqual(items[0].label, 'valid-context');
         });

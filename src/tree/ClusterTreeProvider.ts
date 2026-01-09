@@ -27,7 +27,6 @@ import { PortForwardingSubcategory } from './categories/networking/PortForwardin
 import { ConfigurationCategory } from './categories/ConfigurationCategory';
 import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubcategory';
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
-import { HelmCategory } from './categories/HelmCategory';
 import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
 import { ArgoCDCategory } from './categories/ArgoCDCategory';
 import { ReportsCategory } from './categories/ReportsCategory';
@@ -752,14 +751,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 );
                 break;
             
-            case 'helm':
-                items = await HelmCategory.getHelmReleaseItems(
-                    categoryElement.resourceData,
-                    this.kubeconfig.filePath,
-                    (error, clusterName) => this.handleKubectlError(error, clusterName)
-                );
-                break;
-            
             case 'argocd': {
                 const argoCDService = this.getArgoCDService();
                 if (argoCDService) {
@@ -1200,7 +1191,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         const rootFolders = await this.buildFolderItems(null);
         const ungroupedClusters = this.buildClustersWithoutFolder();
 
-        // Return folders first, then clusters (maintains order within each group)
+        // Return folders first, then clusters
         return [...rootFolders, ...ungroupedClusters];
     }
 
