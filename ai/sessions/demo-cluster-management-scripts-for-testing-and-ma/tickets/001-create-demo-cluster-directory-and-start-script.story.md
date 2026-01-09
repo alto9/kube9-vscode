@@ -5,7 +5,7 @@ feature_id:
   - demo-cluster-management
 spec_id:
   - demo-cluster-scripts
-status: pending
+status: completed
 ---
 
 # Create Demo Cluster Directory and start.sh Script
