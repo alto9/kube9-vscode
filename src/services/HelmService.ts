@@ -3,7 +3,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import * as yaml from 'js-yaml';
 import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus, UpgradeInfo, OperatorInstallationStatus } from '../webview/helm-package-manager/types';
 import { getContextInfo } from '../utils/kubectlContext';
 import { HelmError, parseHelmError } from './HelmError';
@@ -973,23 +972,15 @@ export class HelmService {
                 const errorTimestamp = new Date().toISOString();
                 outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Helm list failed: ${helmError.message}`);
                 
-                // If it's a kubeconfig/exec plugin error, provide specific guidance
+                // If it's a kubeconfig/exec plugin error, log guidance
                 if (helmError instanceof HelmError && helmError.type === 'KUBECONFIG_ERROR') {
-                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] KUBECONFIG ERROR DETECTED`);
-                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] This is likely due to deprecated exec plugin API version`);
-                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Falling back to deployment check (this will still work)`);
+                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Falling back to deployment check`);
                 }
-                
-                if (helmError.stack) {
-                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Stack: ${helmError.stack}`);
-                }
-                outputChannel.show(true); // Show on error
-                console.warn(`[getOperatorStatus] Helm list failed, will check deployment:`, helmError.message);
             }
             
             // Look for operator release by name or chart name
             // Chart names from Helm list are in format: "kube9-operator-1.2.3" or "kube9/kube9-operator-1.2.3"
-            let operatorRelease = releases.find(r => {
+            const operatorRelease = releases.find(r => {
                 // Match by release name (most reliable) - this is what installOperator uses
                 if (r.name === 'kube9-operator') {
                     return true;
