@@ -32,7 +32,6 @@ jobs:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           repositories: |
-            # List the repository where the action runs
             alto9/kube9-vscode
       
       - name: Use Node.js 22.x
