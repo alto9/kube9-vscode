@@ -1,3 +1,34 @@
+# [1.21.0](https://github.com/alto9/kube9-vscode/compare/v1.20.1...v1.21.0) (2026-01-09)
+
+
+### Bug Fixes
+
+* improve Helm installation error handling ([ecfab9e](https://github.com/alto9/kube9-vscode/commit/ecfab9e60feef0719f615626955ebabab8859252))
+
+
+### Features
+
+* add automatic polling for Helm release status updates ([cb74d79](https://github.com/alto9/kube9-vscode/commit/cb74d79b66ab9ff18cd49d9e81daece5eb954686))
+* add Helm Package Manager tree item ([d747f32](https://github.com/alto9/kube9-vscode/commit/d747f32304a0085e65b8d671920c3836268be119))
+* add YAML values editor to Helm chart installation form ([a2ee4d9](https://github.com/alto9/kube9-vscode/commit/a2ee4d920e7984ee053a2a2025e04b5e0c2a48d5))
+* create Helm Package Manager webview panel infrastructure ([335b4e9](https://github.com/alto9/kube9-vscode/commit/335b4e9e7e6749ea7126dcf18a8c571690faa6d5))
+* create HelmService class with CLI integration ([ac9b0ea](https://github.com/alto9/kube9-vscode/commit/ac9b0ead365ae693f256b141f80660af5b72fe8f))
+* create React app structure for Helm Package Manager webview ([6119802](https://github.com/alto9/kube9-vscode/commit/6119802fac9ecbce80fffe7ad8ffb966b62fd6f4))
+* **helm:** implement package manager UI sections (005) ([02ad6ed](https://github.com/alto9/kube9-vscode/commit/02ad6ed9e4986ca09ef5288d3092b2a74232f342))
+* implement basic chart installation form modal ([36d2e87](https://github.com/alto9/kube9-vscode/commit/36d2e87e6d9fd066c34a20c24c299d4342988e95))
+* implement chart detail modal ([4a6ae6e](https://github.com/alto9/kube9-vscode/commit/4a6ae6e019d7063d5d45949ceba2e212fa328c2d))
+* implement chart discovery commands for Helm Package Manager ([558d79b](https://github.com/alto9/kube9-vscode/commit/558d79bc4993dc6ffe185db7b3f3a0d690c7dfe0))
+* implement comprehensive error handling for Helm Package Manager ([09e8293](https://github.com/alto9/kube9-vscode/commit/09e8293bfbb84695dbb65be495ac1b56d9b0d9b1))
+* implement Helm chart installation command ([c5ae660](https://github.com/alto9/kube9-vscode/commit/c5ae660a1a9acd6c82afada5cfef855163a2324a))
+* implement Helm release management commands ([84b7862](https://github.com/alto9/kube9-vscode/commit/84b786250a97a3b81c54b5ae41661cec9993d44c))
+* implement operator install modal with Pro tier support ([b79423c](https://github.com/alto9/kube9-vscode/commit/b79423c7bbf7a0e416131b7bd18df8562575de5f))
+* implement operator status detection for Helm Package Manager ([528e667](https://github.com/alto9/kube9-vscode/commit/528e6678b67d69f10bfc43cf6e05f17b832efb44))
+* implement release detail modal with tabbed interface ([13811a6](https://github.com/alto9/kube9-vscode/commit/13811a60e54a08e21006276fa0e108a53f0d0ae5))
+* implement repository add and confirm modals ([e6e80e3](https://github.com/alto9/kube9-vscode/commit/e6e80e3d6fc2d0b3394aefe4aba9f260a2f45420))
+* implement repository management commands for Helm Package Manager ([c9e8759](https://github.com/alto9/kube9-vscode/commit/c9e8759bdf85b57fa616b37c1e85ff4e93c35546))
+* implement state persistence and caching for Helm Package Manager ([387721e](https://github.com/alto9/kube9-vscode/commit/387721e42cdfbfcfcedfb8b95eb37ebbff5ea8a2))
+* implement upgrade release modal ([c5f8504](https://github.com/alto9/kube9-vscode/commit/c5f8504bbab8dff45c0aa18e5e16221987e1a007))
+
 ## [1.20.1](https://github.com/alto9/kube9-vscode/compare/v1.20.0...v1.20.1) (2026-01-08)
 
 # [1.20.0](https://github.com/alto9/kube9-vscode/compare/v1.19.0...v1.20.0) (2026-01-08)
