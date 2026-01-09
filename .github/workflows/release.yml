@@ -31,8 +31,9 @@ jobs:
         with:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: alto9
           repositories: |
-            alto9/kube9-vscode
+            kube9-vscode
       
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
