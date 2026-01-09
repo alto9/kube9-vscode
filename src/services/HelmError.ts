@@ -8,6 +8,7 @@ export enum HelmErrorType {
     RELEASE_EXISTS = 'RELEASE_EXISTS',
     RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
     TIMEOUT = 'TIMEOUT',
+    KUBECONFIG_ERROR = 'KUBECONFIG_ERROR',
     UNKNOWN = 'UNKNOWN'
 }
 
@@ -109,6 +110,39 @@ export function parseHelmError(stderr: string, stdout?: string): HelmError {
             'Operation timed out',
             'The operation took too long to complete. Try again or increase the timeout',
             true
+        );
+    }
+
+    // Check for kubeconfig/exec plugin errors
+    if (errorText.includes('exec plugin') || 
+        errorText.includes('client.authentication.k8s.io') ||
+        errorText.includes('v1alpha1') ||
+        errorText.includes('invalid apiversion') ||
+        errorText.includes('kubernetes cluster unreachable') ||
+        errorText.includes('decoding stdout') ||
+        errorText.includes('execcredential')) {
+        const isV1Alpha1Error = errorText.includes('v1alpha1') || errorText.includes('execcredential');
+        const isDecodingError = errorText.includes('decoding stdout');
+        
+        let suggestion = '';
+        if (isV1Alpha1Error || isDecodingError) {
+            suggestion = 'The exec plugin binary (e.g., aws-iam-authenticator or aws CLI) may be returning v1alpha1 format. ';
+            suggestion += 'Even if your kubeconfig specifies v1beta1, the plugin binary must support it. ';
+            suggestion += 'Try updating: 1) AWS CLI: `brew upgrade awscli` or `pip install --upgrade awscli`, ';
+            suggestion += '2) aws-iam-authenticator: `brew upgrade aws-iam-authenticator`, ';
+            suggestion += '3) Or use `aws eks get-token` instead of aws-iam-authenticator. ';
+            suggestion += 'The extension will fall back to checking deployments directly.';
+        } else {
+            suggestion = 'Check your kubeconfig file and ensure exec plugins are configured correctly. The extension will fall back to checking deployments directly.';
+        }
+        
+        return new HelmError(
+            HelmErrorType.KUBECONFIG_ERROR,
+            isV1Alpha1Error || isDecodingError
+                ? 'Exec plugin authentication failed - plugin may be returning deprecated v1alpha1 format'
+                : 'Kubernetes cluster unreachable - exec plugin authentication failed',
+            suggestion,
+            false
         );
     }
 

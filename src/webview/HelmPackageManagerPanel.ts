@@ -464,9 +464,85 @@ export class HelmPackageManagerPanel {
     }
 
     /**
+     * Check if Helm is available and can connect to the cluster.
+     * 
+     * @returns Object with availability status and optional error message
+     */
+    private async checkHelmAvailability(): Promise<{ available: boolean; error?: string; errorInfo?: { type: string; suggestion?: string; retryable: boolean } }> {
+        try {
+            // Try a simple Helm command that doesn't require cluster access
+            await this.helmService.executeCommand(['version', '--short'], { timeout: 5000 });
+            
+            // Try a command that requires cluster access to verify connectivity
+            try {
+                await this.helmService.listReleases({ allNamespaces: false, namespace: 'default' });
+                return { available: true };
+            } catch (clusterError) {
+                // If it's a kubeconfig/connectivity error, Helm is installed but can't connect
+                if (clusterError instanceof HelmError && clusterError.type === 'KUBECONFIG_ERROR') {
+                    return { 
+                        available: false, 
+                        error: 'Helm is installed but cannot connect to the Kubernetes cluster.',
+                        errorInfo: {
+                            type: 'KUBECONFIG_ERROR',
+                            suggestion: clusterError.suggestion || 'Check your kubeconfig and cluster connectivity. The extension cannot function without Helm connectivity.',
+                            retryable: true
+                        }
+                    };
+                }
+                // Other errors might be transient, assume Helm is available
+                return { available: true };
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (errorMessage.includes('not found') || errorMessage.includes('CLI_NOT_FOUND')) {
+                return { 
+                    available: false, 
+                    error: 'Helm CLI is not installed or not found in PATH.',
+                    errorInfo: {
+                        type: 'CLI_NOT_FOUND',
+                        suggestion: 'Please install Helm 3.x from https://helm.sh/docs/intro/install/. The Helm Package Manager requires Helm to function.',
+                        retryable: false
+                    }
+                };
+            }
+            return { 
+                available: false, 
+                error: `Helm is not available: ${errorMessage}`,
+                errorInfo: {
+                    type: 'UNKNOWN',
+                    suggestion: 'Please ensure Helm 3.x is installed and can connect to your Kubernetes cluster.',
+                    retryable: true
+                }
+            };
+        }
+    }
+
+    /**
      * Handle ready command - restore UI state and load initial data.
      */
     private async handleReady(): Promise<void> {
+        // Check if Helm is available first
+        const helmCheck = await this.checkHelmAvailability();
+        if (!helmCheck.available) {
+            this.sendMessage({
+                type: 'error',
+                error: helmCheck.error || 'Helm is not available',
+                errorInfo: helmCheck.errorInfo ? {
+                    type: helmCheck.errorInfo.type,
+                    message: helmCheck.error || 'Helm is not available',
+                    suggestion: helmCheck.errorInfo.suggestion,
+                    retryable: helmCheck.errorInfo.retryable
+                } : {
+                    type: 'UNKNOWN',
+                    message: helmCheck.error || 'Helm is not available',
+                    suggestion: 'Please ensure Helm 3.x is installed and can connect to your Kubernetes cluster.',
+                    retryable: true
+                }
+            });
+            return;
+        }
+
         // Check for context changes
         await this.checkContextChange();
 
@@ -904,7 +980,7 @@ export class HelmPackageManagerPanel {
             });
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error('Failed to get operator status:', errorMessage);
+            console.error('[HelmPackageManagerPanel] Failed to get operator status:', errorMessage);
             // Send default status on error
             this.sendMessage({
                 type: 'operatorStatusUpdated',

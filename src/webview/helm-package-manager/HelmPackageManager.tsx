@@ -188,18 +188,17 @@ export const HelmPackageManager: React.FC = () => {
                     break;
 
                 default:
-                    console.log('Unknown message type:', (message as any).type);
+                    // Unknown message type - ignore
+                    break;
             }
         };
 
         window.addEventListener('message', handleMessage);
 
         // Notify extension that webview is ready
-        console.log('[HelmPackageManager] Sending ready message');
         sendMessage({ command: 'ready' });
 
         return () => {
-            console.log('[HelmPackageManager] Cleaning up message listener');
             window.removeEventListener('message', handleMessage);
         };
     }, [sendMessage]);
@@ -216,25 +215,44 @@ export const HelmPackageManager: React.FC = () => {
         );
     }
 
-    // Render error state
+    // Render error state - if Helm is unavailable, don't render main UI
     if (state.error) {
+        // For critical errors (Helm unavailable), don't allow dismissing
+        const isCriticalError = errorInfo?.type === 'CLI_NOT_FOUND' || 
+                               errorInfo?.type === 'KUBECONFIG_ERROR' ||
+                               state.error.includes('Helm is not available') ||
+                               state.error.includes('cannot connect');
+        
         return (
             <div className="helm-package-manager">
-                <ErrorMessage
-                    error={state.error}
-                    type={errorInfo?.type as HelmErrorType}
-                    suggestion={errorInfo?.suggestion}
-                    retryable={errorInfo?.retryable || false}
-                    onRetry={errorInfo?.retryable ? () => {
-                        setState(prev => ({ ...prev, error: null, loading: true }));
-                        setErrorInfo(null);
-                        sendMessage({ command: 'ready' });
-                    } : undefined}
-                    onDismiss={() => {
-                        setState(prev => ({ ...prev, error: null }));
-                        setErrorInfo(null);
-                    }}
-                />
+                <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+                    <h1 style={{ marginBottom: '16px' }}>Helm Package Manager</h1>
+                    <ErrorMessage
+                        error={state.error}
+                        type={errorInfo?.type as HelmErrorType}
+                        suggestion={errorInfo?.suggestion}
+                        retryable={errorInfo?.retryable || false}
+                        onRetry={errorInfo?.retryable ? () => {
+                            setState(prev => ({ ...prev, error: null, loading: true }));
+                            setErrorInfo(null);
+                            sendMessage({ command: 'ready' });
+                        } : undefined}
+                        onDismiss={isCriticalError ? undefined : () => {
+                            setState(prev => ({ ...prev, error: null }));
+                            setErrorInfo(null);
+                        }}
+                    />
+                    {isCriticalError && (
+                        <p style={{ 
+                            marginTop: '16px', 
+                            fontSize: '12px', 
+                            color: 'var(--vscode-descriptionForeground)',
+                            fontStyle: 'italic'
+                        }}>
+                            The Helm Package Manager cannot function without Helm connectivity. Please resolve the issue above and retry.
+                        </p>
+                    )}
+                </div>
             </div>
         );
     }

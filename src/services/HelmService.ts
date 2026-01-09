@@ -2,9 +2,30 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as vscode from 'vscode';
+import * as yaml from 'js-yaml';
 import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus, UpgradeInfo, OperatorInstallationStatus } from '../webview/helm-package-manager/types';
 import { getContextInfo } from '../utils/kubectlContext';
 import { HelmError, parseHelmError } from './HelmError';
+import { WorkloadCommands } from '../kubectl/WorkloadCommands';
+
+/**
+ * OutputChannel for Helm service logging.
+ * Created lazily on first use.
+ */
+let helmOutputChannel: vscode.OutputChannel | undefined;
+
+/**
+ * Gets or creates the OutputChannel for Helm service logging.
+ * 
+ * @returns The OutputChannel instance
+ */
+function getHelmOutputChannel(): vscode.OutputChannel {
+    if (!helmOutputChannel) {
+        helmOutputChannel = vscode.window.createOutputChannel('kube9 Helm Service');
+    }
+    return helmOutputChannel;
+}
 
 /**
  * Options for executing Helm commands.
@@ -45,6 +66,13 @@ export interface ValidationResult {
  * Wraps Helm 3.x command-line tool execution using Node.js child_process.spawn.
  */
 export class HelmService {
+    /**
+     * Gets the Helm service output channel for debugging.
+     * Useful for showing logs to users or debugging connectivity issues.
+     */
+    public static getOutputChannel(): vscode.OutputChannel {
+        return getHelmOutputChannel();
+    }
     /**
      * Default timeout for Helm commands in milliseconds (30 seconds).
      */
@@ -105,21 +133,39 @@ export class HelmService {
         args: string[],
         options?: ExecuteCommandOptions
     ): Promise<string> {
+        const outputChannel = getHelmOutputChannel();
+        const commandStr = `helm ${args.join(' ')}`;
+        
         return new Promise((resolve, reject) => {
+            // Use the same environment as the terminal - preserve all env vars including PATH
+            // This ensures exec plugins (like AWS EKS authentication) can be found
+            // If KUBECONFIG env var is set, use it (Helm will use the current context from that file)
+            // If not set, set it to the kubeconfig path so Helm can find it
+            const env = { ...process.env };
+            if (!env.KUBECONFIG) {
+                env.KUBECONFIG = this.kubeconfigPath;
+            }
+            
+            // Log command execution (minimal logging for normal operations)
+            const timestamp = new Date().toISOString();
+            outputChannel.appendLine(`[${timestamp}] Executing: ${commandStr}`);
+            
+            // Helm will automatically use the current context from the kubeconfig file
+            // No need to pass --kubeconfig or --kube-context flags
             const helm = spawn('helm', args, {
-                env: { ...process.env, KUBECONFIG: this.kubeconfigPath },
+                env,
                 stdio: ['pipe', 'pipe', 'pipe']
             });
-
+            
             let stdout = '';
             let stderr = '';
 
-            // Collect stdout
+            // Collect stdout (only log on error)
             helm.stdout.on('data', (data: Buffer) => {
                 stdout += data.toString();
             });
 
-            // Collect stderr
+            // Collect stderr (only log on error)
             helm.stderr.on('data', (data: Buffer) => {
                 stderr += data.toString();
             });
@@ -158,7 +204,18 @@ export class HelmService {
                     // Parse error and create structured HelmError
                     const helmError = parseHelmError(stderr, stdout);
                     
-                    // Log detailed error for debugging
+                    // Log error details to output channel (only on error)
+                    const closeTimestamp = new Date().toISOString();
+                    outputChannel.appendLine(`[${closeTimestamp}] ERROR: ${helmError.message}`);
+                    outputChannel.appendLine(`[${closeTimestamp}] Command: ${commandStr}`);
+                    outputChannel.appendLine(`[${closeTimestamp}] Exit code: ${code}`);
+                    if (helmError.suggestion) {
+                        outputChannel.appendLine(`[${closeTimestamp}] Suggestion: ${helmError.suggestion}`);
+                    }
+                    outputChannel.appendLine(`[${closeTimestamp}] Stderr: ${stderr || '(empty)'}`);
+                    outputChannel.show(true); // Show the output channel on error
+                    
+                    // Also log to console for Extension Host output
                     console.error('[Helm CLI Error]', {
                         args,
                         type: helmError.type,
@@ -181,6 +238,7 @@ export class HelmService {
                 }
 
                 const errnoError = error as NodeJS.ErrnoException;
+                const errorTimestamp = new Date().toISOString();
                 let helmError: HelmError;
                 
                 if (errnoError.code === 'ENOENT') {
@@ -188,12 +246,16 @@ export class HelmService {
                         'Helm CLI not found. Please install Helm 3.x',
                         ''
                     );
+                    outputChannel.appendLine(`[${errorTimestamp}] ERROR: Helm binary not found`);
                 } else {
                     helmError = parseHelmError(
                         `Failed to spawn helm: ${error.message}`,
                         ''
                     );
+                    outputChannel.appendLine(`[${errorTimestamp}] ERROR: Failed to spawn helm: ${error.message}`);
                 }
+                
+                outputChannel.show(true); // Show the output channel on error
                 
                 // Log detailed error for debugging
                 console.error('[Helm CLI Error]', {
@@ -531,6 +593,9 @@ export class HelmService {
      * @throws Error if command fails
      */
     public async listReleases(params: ListReleasesParams): Promise<HelmRelease[]> {
+        // Use Helm's default behavior - it will use the current context from KUBECONFIG
+        // The KUBECONFIG env var is set in executeCommand, so Helm will use whatever
+        // context is currently selected in that kubeconfig file
         const args = ['list', '--output', 'json'];
 
         if (params.allNamespaces) {
@@ -542,6 +607,9 @@ export class HelmService {
         if (params.status) {
             args.push('--filter', params.status);
         }
+
+        // Debug: log what we're about to execute
+        // Minimal logging - only log errors
 
         const output = await this.executeCommand(args);
         
@@ -581,6 +649,9 @@ export class HelmService {
      * @throws Error if release not found or command fails
      */
     public async getReleaseDetails(name: string, namespace: string): Promise<ReleaseDetails> {
+        // Use Helm's default behavior - it will use the current context from KUBECONFIG
+        // The KUBECONFIG env var is set in executeCommand, so Helm will use whatever
+        // context is currently selected in that kubeconfig file
         const [statusOutput, manifest, values, historyOutput] = await Promise.all([
             this.executeCommand(['status', name, '--namespace', namespace, '--output', 'json']),
             this.executeCommand(['get', 'manifest', name, '--namespace', namespace]),
@@ -881,27 +952,184 @@ export class HelmService {
                 this.operatorStatusCache.delete(cacheKey);
             }
 
-            // Check installed releases
-            const releases = await this.listReleases({ allNamespaces: true });
-            const operatorRelease = releases.find(r => 
-                r.name === 'kube9-operator' || 
-                r.chart.includes('kube9-operator')
-            );
+            // Check installed releases first
+            // Note: If Helm can't connect (e.g., exec plugin issues), we'll fall back to deployment check
+            const outputChannel = getHelmOutputChannel();
+            let releases: HelmRelease[] = [];
+            let helmError: Error | undefined;
+            try {
+                // Log basic info for debugging (keep minimal)
+                const logTimestamp = new Date().toISOString();
+                outputChannel.appendLine(`[${logTimestamp}] [getOperatorStatus] Checking releases in context: ${contextName}`);
+                
+                console.log(`[getOperatorStatus] Checking releases in context: ${contextName}, kubeconfig: ${this.kubeconfigPath}`);
+                releases = await this.listReleases({ allNamespaces: true });
+                outputChannel.appendLine(`[${logTimestamp}] [getOperatorStatus] Found ${releases.length} Helm releases`);
+                console.log(`[getOperatorStatus] Found ${releases.length} Helm releases:`, 
+                    releases.map(r => ({ name: r.name, namespace: r.namespace, chart: r.chart, status: r.status })));
+            } catch (error) {
+                // Helm failed - log but continue to deployment check
+                helmError = error instanceof Error ? error : new Error(String(error));
+                const errorTimestamp = new Date().toISOString();
+                outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Helm list failed: ${helmError.message}`);
+                
+                // If it's a kubeconfig/exec plugin error, provide specific guidance
+                if (helmError instanceof HelmError && helmError.type === 'KUBECONFIG_ERROR') {
+                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] KUBECONFIG ERROR DETECTED`);
+                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] This is likely due to deprecated exec plugin API version`);
+                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Falling back to deployment check (this will still work)`);
+                }
+                
+                if (helmError.stack) {
+                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Stack: ${helmError.stack}`);
+                }
+                outputChannel.show(true); // Show on error
+                console.warn(`[getOperatorStatus] Helm list failed, will check deployment:`, helmError.message);
+            }
+            
+            // Look for operator release by name or chart name
+            // Chart names from Helm list are in format: "kube9-operator-1.2.3" or "kube9/kube9-operator-1.2.3"
+            let operatorRelease = releases.find(r => {
+                // Match by release name (most reliable) - this is what installOperator uses
+                if (r.name === 'kube9-operator') {
+                    return true;
+                }
+                // Fallback: match by chart name containing "kube9-operator"
+                // Chart format from helm list is typically "kube9-operator-1.2.3" or "kube9/kube9-operator-1.2.3"
+                if (r.chart.toLowerCase().includes('kube9-operator')) {
+                    return true;
+                }
+                return false;
+            });
 
-            if (!operatorRelease) {
-                const status: OperatorInstallationStatus = {
-                    installed: false,
-                    upgradeAvailable: false
-                };
-                // Cache the result
-                this.operatorStatusCache.set(cacheKey, {
-                    data: status,
-                    timestamp: Date.now()
-                });
-                return status;
+            let operatorNamespace: string | undefined;
+            let operatorVersion: string | undefined;
+            let tier: 'free' | 'pro' | undefined;
+
+            if (operatorRelease) {
+                // Found via Helm release
+                operatorNamespace = operatorRelease.namespace;
+                operatorVersion = operatorRelease.version;
+                tier = await this.detectOperatorTier(operatorRelease);
+            } else {
+                // Not found in Helm releases - check for deployment directly
+                // This handles cases where operator was installed via kubectl apply or other methods
+                // OR when Helm can't connect but the deployment exists
+                let deploymentsResult;
+                try {
+                    deploymentsResult = await WorkloadCommands.getDeployments(
+                        this.kubeconfigPath,
+                        contextName
+                    );
+                } catch (deploymentError) {
+                    const outputChannel = getHelmOutputChannel();
+                    const errorTimestamp = new Date().toISOString();
+                    const errorMsg = deploymentError instanceof Error ? deploymentError.message : String(deploymentError);
+                    outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Failed to get deployments: ${errorMsg}`);
+                    outputChannel.show(true);
+                    // If we can't get deployments either, return not installed
+                    const status: OperatorInstallationStatus = {
+                        installed: false,
+                        upgradeAvailable: false
+                    };
+                    // Don't cache on error
+                    return status;
+                }
+                
+                const operatorDeployment = deploymentsResult.deployments.find(
+                    d => d.name === 'kube9-operator'
+                );
+
+                if (operatorDeployment) {
+                    // Deployment exists - operator is installed
+                    operatorNamespace = operatorDeployment.namespace;
+                    
+                    // Try to get deployment details to extract version and check for Helm annotations
+                    try {
+                        const deploymentDetails = await WorkloadCommands.getDeploymentDetails(
+                            'kube9-operator',
+                            operatorDeployment.namespace,
+                            this.kubeconfigPath,
+                            contextName
+                        );
+                        
+                        if (deploymentDetails.deployment) {
+                            const annotations = deploymentDetails.deployment.metadata?.annotations || {};
+                            
+                            // Check if this was installed via Helm (has Helm annotations)
+                            const helmReleaseName = annotations['meta.helm.sh/release-name'];
+                            const helmReleaseNamespace = annotations['meta.helm.sh/release-namespace'] || operatorDeployment.namespace;
+                            
+                            if (helmReleaseName) {
+                                // This was installed via Helm - try to get release details directly
+                                try {
+                                    const releaseDetails = await this.getReleaseDetails(helmReleaseName, helmReleaseNamespace);
+                                    operatorVersion = releaseDetails.version;
+                                    tier = await this.detectOperatorTier({
+                                        name: helmReleaseName,
+                                        namespace: helmReleaseNamespace,
+                                        chart: releaseDetails.chart,
+                                        version: releaseDetails.version,
+                                        status: releaseDetails.status,
+                                        revision: releaseDetails.revision,
+                                        updated: releaseDetails.updated
+                                    });
+                                } catch (helmError) {
+                                    // Fall through to deployment inspection
+                                }
+                            }
+                            
+                            // If we don't have version from Helm release, extract from image tag
+                            if (!operatorVersion) {
+                                // Extract version from image tag (e.g., kube9-operator:v1.2.3)
+                                // Containers are in spec.template.spec.containers, not spec.containers
+                                const containers = deploymentDetails.deployment.spec?.template?.spec?.containers || [];
+                                const operatorContainer = containers.find(c => 
+                                    c.image?.includes('kube9-operator')
+                                );
+                                
+                                if (operatorContainer?.image) {
+                                    const imageTagMatch = operatorContainer.image.match(/[:]v?(\d+\.\d+\.\d+)/);
+                                    if (imageTagMatch) {
+                                        operatorVersion = imageTagMatch[1];
+                                    }
+                                }
+                            }
+                            
+                            // Try to get tier from labels or annotations if not already set
+                            if (!tier) {
+                                const labels = deploymentDetails.deployment.metadata?.labels || {};
+                                
+                                if (labels['kube9.io/tier'] === 'pro' || annotations['kube9.io/tier'] === 'pro') {
+                                    tier = 'pro';
+                                } else if (labels['kube9.io/tier'] === 'free' || annotations['kube9.io/tier'] === 'free') {
+                                    tier = 'free';
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        // If we can't get details, that's okay - we know it's installed
+                        console.warn('Failed to get deployment details for version detection:', error);
+                    }
+                } else {
+                    // Not found in Helm releases or as deployment
+                    const status: OperatorInstallationStatus = {
+                        installed: false,
+                        upgradeAvailable: false
+                    };
+                    // Only cache if Helm worked and deployment doesn't exist
+                    // Don't cache if Helm failed - might be a transient connectivity issue
+                    if (!helmError) {
+                        this.operatorStatusCache.set(cacheKey, {
+                            data: status,
+                            timestamp: Date.now()
+                        });
+                    }
+                    return status;
+                }
             }
 
-            // Ensure kube9 repository is added
+            // Ensure kube9 repository is added for version checking
             await this.ensureKube9Repository();
 
             // Check for updates
@@ -911,21 +1139,19 @@ export class HelmService {
                 const searchResults = await this.searchCharts('kube9-operator', 'kube9');
                 if (searchResults.length > 0) {
                     latestVersion = searchResults[0].version;
-                    const currentVersion = operatorRelease.version;
-                    upgradeAvailable = latestVersion !== currentVersion;
+                    if (operatorVersion) {
+                        upgradeAvailable = latestVersion !== operatorVersion;
+                    }
                 }
             } catch (error) {
                 // If search fails, log warning but continue
                 console.warn('Failed to search for operator chart versions:', error);
             }
 
-            // Determine tier
-            const tier = await this.detectOperatorTier(operatorRelease);
-
             const status: OperatorInstallationStatus = {
                 installed: true,
-                version: operatorRelease.version,
-                namespace: operatorRelease.namespace,
+                version: operatorVersion,
+                namespace: operatorNamespace,
                 upgradeAvailable,
                 latestVersion,
                 tier
