@@ -1,3 +1,11 @@
+## [1.21.1](https://github.com/alto9/kube9-vscode/compare/v1.21.0...v1.21.1) (2026-01-09)
+
+
+### Bug Fixes
+
+* explicitly set owner parameter in GitHub App token step ([3b20767](https://github.com/alto9/kube9-vscode/commit/3b20767b4e2aebe5bce9b696a0aafff963b13e0c))
+* remove comment from repositories list in GitHub App token step ([6858fc9](https://github.com/alto9/kube9-vscode/commit/6858fc972d4bfcc0599ecd6ed0d7392edc3b0f46))
+
 # [1.21.0](https://github.com/alto9/kube9-vscode/compare/v1.20.1...v1.21.0) (2026-01-09)
 
 
