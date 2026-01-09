@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - demo-cluster-scripts
   - demo-cluster-scenarios
-status: pending
+status: completed
 ---
 
 # Implement populate.sh Script
