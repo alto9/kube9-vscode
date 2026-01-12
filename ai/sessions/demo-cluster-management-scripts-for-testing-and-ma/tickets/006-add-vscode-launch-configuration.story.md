@@ -5,7 +5,7 @@ feature_id:
   - demo-cluster-management
 spec_id:
   - demo-cluster-vscode-integration
-status: pending
+status: completed
 ---
 
 # Add VSCode Launch Configuration for Demo Cluster
