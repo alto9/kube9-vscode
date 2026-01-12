@@ -7,7 +7,7 @@ spec_id:
   - demo-cluster-scripts
   - demo-cluster-scenarios
   - demo-cluster-vscode-integration
-status: pending
+status: completed
 ---
 
 # Create Demo Cluster README Documentation
