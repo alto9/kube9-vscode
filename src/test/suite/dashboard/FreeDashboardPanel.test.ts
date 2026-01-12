@@ -27,7 +27,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels.size, 1, 'Should have exactly one open panel');
@@ -46,12 +46,12 @@ suite('FreeDashboardPanel Test Suite', () => {
         const clusterName = 'test-cluster';
 
         // Open panel first time
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
         const openPanels1 = FreeDashboardPanel.getOpenPanels();
         const firstPanel = openPanels1.get(contextName)?.panel;
 
         // Open panel second time with same context
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
         const openPanels2 = FreeDashboardPanel.getOpenPanels();
         const secondPanel = openPanels2.get(contextName)?.panel;
 
@@ -63,13 +63,13 @@ suite('FreeDashboardPanel Test Suite', () => {
         const kubeconfigPath = '/mock/kubeconfig';
 
         // Open panel for first cluster
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-1', 'cluster-1');
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-1', 'cluster-1');
 
         // Open panel for second cluster
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-2', 'cluster-2');
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-2', 'cluster-2');
 
         // Open panel for third cluster
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-3', 'cluster-3');
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-3', 'cluster-3');
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels.size, 3, 'Should have three open panels');
@@ -88,7 +88,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
         
         const openPanels1 = FreeDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels1.size, 1, 'Should have one open panel');
@@ -110,9 +110,9 @@ suite('FreeDashboardPanel Test Suite', () => {
         const kubeconfigPath = '/mock/kubeconfig';
 
         // Open multiple panels
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-1', 'cluster-1');
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-2', 'cluster-2');
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-3', 'cluster-3');
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-1', 'cluster-1');
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-2', 'cluster-2');
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, 'context-3', 'cluster-3');
 
         const openPanels1 = FreeDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels1.size, 3, 'Should have three open panels');
@@ -129,7 +129,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'production-cluster';
         const clusterName = 'Production Kubernetes';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -145,7 +145,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -165,7 +165,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -190,7 +190,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -207,7 +207,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -224,7 +224,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -243,7 +243,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -262,7 +262,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'My Production Cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -279,7 +279,7 @@ suite('FreeDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
 
         const openPanels = FreeDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);

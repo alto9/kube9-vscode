@@ -40,12 +40,12 @@ export class FreeDashboardPanel {
      * @param contextName - The kubectl context name
      * @param clusterName - The display name of the cluster
      */
-    public static show(
+    public static async show(
         context: vscode.ExtensionContext,
         kubeconfigPath: string,
         contextName: string,
         clusterName: string
-    ): void {
+    ): Promise<void> {
         // Store the extension context for later use
         FreeDashboardPanel.extensionContext = context;
 
@@ -85,18 +85,7 @@ export class FreeDashboardPanel {
             refreshManager
         });
 
-        // Set the webview's HTML content
-        panel.webview.html = getDashboardHtml(panel.webview, clusterName);
-
-        // Start auto-refresh
-        refreshManager.startAutoRefresh(
-            panel,
-            kubeconfigPath,
-            contextName,
-            FreeDashboardPanel.sendDashboardData.bind(FreeDashboardPanel)
-        );
-
-        // Handle messages from the webview
+        // Handle messages from the webview (register BEFORE setting HTML to prevent race condition)
         panel.webview.onDidReceiveMessage(
             async (message) => {
                 await FreeDashboardPanel.handleWebviewMessage(
@@ -108,6 +97,25 @@ export class FreeDashboardPanel {
             },
             undefined,
             context.subscriptions
+        );
+
+        // Set the webview's HTML content
+        panel.webview.html = getDashboardHtml(panel.webview, clusterName);
+
+        // Proactively send initial data instead of waiting for webview request
+        await FreeDashboardPanel.sendDashboardData(
+            panel,
+            kubeconfigPath,
+            contextName,
+            true  // isInitialLoad = true
+        );
+
+        // Start auto-refresh
+        refreshManager.startAutoRefresh(
+            panel,
+            kubeconfigPath,
+            contextName,
+            FreeDashboardPanel.sendDashboardData.bind(FreeDashboardPanel)
         );
 
         // Handle panel disposal

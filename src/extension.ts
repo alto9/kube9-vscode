@@ -1057,7 +1057,7 @@ function registerCommands(): void {
                 // Open appropriate dashboard based on operator status
                 if (cachedStatus.mode === OperatorStatusMode.Basic) {
                     // Open Free (Non-Operated) Dashboard
-                    FreeDashboardPanel.show(
+                    await FreeDashboardPanel.show(
                         context,
                         kubeconfigPath,
                         contextName,
