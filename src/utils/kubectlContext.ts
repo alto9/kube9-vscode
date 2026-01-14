@@ -316,6 +316,76 @@ export async function setNamespace(namespace: string, contextName?: string): Pro
 }
 
 /**
+ * Switches the current kubectl context.
+ * 
+ * This function changes the active kubectl context by modifying the current-context
+ * field in the kubeconfig file. The change persists across VS Code reloads.
+ * 
+ * @param contextName - The context name to switch to
+ * @returns Promise<boolean> - true if successful, false if failed
+ */
+export async function switchContext(contextName: string): Promise<boolean> {
+    // Validate context name parameter
+    if (!contextName || contextName.trim().length === 0) {
+        console.error('Failed to switch context: context name parameter must be a non-empty string');
+        return false;
+    }
+
+    try {
+        // Execute kubectl config use-context to switch context
+        await execFileAsync(
+            'kubectl',
+            ['config', 'use-context', contextName],
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                env: { ...process.env }
+            }
+        );
+
+        // Invalidate cache since context was modified
+        namespaceCache.invalidateCache();
+
+        // Command succeeded
+        return true;
+    } catch (error: unknown) {
+        // Extract stderr for specific error pattern detection
+        const err = error as {
+            stderr?: Buffer | string;
+            stdout?: Buffer | string;
+            code?: string | number;
+            message?: string;
+            killed?: boolean;
+            signal?: string;
+        };
+        
+        const stderr = err.stderr
+            ? (Buffer.isBuffer(err.stderr) ? err.stderr.toString() : err.stderr).trim()
+            : '';
+        
+        // Check for context not found error
+        if (stderr.includes('not found') || stderr.includes('does not exist')) {
+            console.error(`Context '${contextName}' not found in kubeconfig`);
+            return false;
+        }
+        
+        // Check for permission denied error
+        if (stderr.includes('unable to write') || stderr.includes('permission denied')) {
+            console.error('Permission denied to modify kubeconfig');
+            return false;
+        }
+        
+        // Fall back to structured error handling for other errors
+        const kubectlError = KubectlError.fromExecError(error, contextName);
+        
+        // Log error details for debugging
+        console.error(`Failed to switch context to '${contextName}': ${kubectlError.getDetails()}`);
+        
+        // Return failure status
+        return false;
+    }
+}
+
+/**
  * Clears the active namespace from the kubectl context.
  * 
  * This function removes the namespace setting from the kubectl context, returning to

@@ -95,5 +95,15 @@ Scenario: Error handling for non-existent context
   Then kubectl should return an error "context 'old-cluster' not found"
   And the extension should display error: "Failed to set namespace: context 'old-cluster' not found"
   And the tree view should not update to show a checkmark
+
+Scenario: Namespace selection integrates with context switching
+  Given the user has "default" namespace set on "minikube" context
+  And kubectl's current context is "minikube"
+  When the user switches context to "prod-cluster"
+  Then the namespace status bar should immediately update to show the namespace for "prod-cluster"
+  And if "prod-cluster" has no namespace set, it should show "Namespace: All"
+  And the namespace watcher should detect the context change immediately
+  And the context status bar should update to show "kube9: prod-cluster"
+  And both status bars should reflect the new context's state synchronously
 ```
 

@@ -20,6 +20,8 @@ import { openTerminalCommand } from './commands/openTerminal';
 import { KubectlError, KubectlErrorType } from './kubernetes/KubectlError';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
+import { ContextStatusBar } from './ui/contextStatusBar';
+import { switchContextCommand } from './commands/contextCommands';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
 import { Kube9YAMLFileSystemProvider } from './yaml/Kube9YAMLFileSystemProvider';
 import { ClusterTreeItem } from './tree/ClusterTreeItem';
@@ -80,6 +82,12 @@ let clusterTreeProvider: ClusterTreeProvider | undefined;
  * Displays the active namespace or "All" if no namespace is set.
  */
 let namespaceStatusBar: NamespaceStatusBar | undefined;
+
+/**
+ * Status bar item showing current kubectl context.
+ * Displays the active context name.
+ */
+let contextStatusBar: ContextStatusBar | undefined;
 
 /**
  * Global YAML editor manager instance.
@@ -324,8 +332,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Pass parsed kubeconfig to tree provider to populate clusters
         clusterTreeProvider.setKubeconfig(kubeconfig);
         
-        // Create and show status bar item for namespace context
+        // Create and show status bar items for namespace and context
         await createNamespaceStatusBarItem();
+        await createContextStatusBarItem();
         
         // Initialize YAML editor manager
         yamlEditorManager = new YAMLEditorManager(context);
@@ -474,6 +483,26 @@ async function createNamespaceStatusBarItem(): Promise<void> {
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Failed to create namespace status bar:', errorMessage);
+        // Don't throw - status bar is a non-critical feature
+    }
+}
+
+/**
+ * Create and initialize the context status bar item.
+ * Shows current kubectl context with automatic updates on context changes.
+ */
+async function createContextStatusBarItem(): Promise<void> {
+    try {
+        const context = getExtensionContext();
+        
+        // Create and initialize the context status bar
+        contextStatusBar = new ContextStatusBar(context);
+        await contextStatusBar.initialize();
+        
+        console.log('Context status bar created successfully.');
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('Failed to create context status bar:', errorMessage);
         // Don't throw - status bar is a non-critical feature
     }
 }
@@ -719,6 +748,16 @@ function registerCommands(): void {
     );
     context.subscriptions.push(describeRawCmd);
     disposables.push(describeRawCmd);
+    
+    // Register switch context command
+    const switchContextCmd = vscode.commands.registerCommand(
+        'kube9.switchContext',
+        async (item?: ClusterTreeItem) => {
+            await switchContextCommand(item);
+        }
+    );
+    context.subscriptions.push(switchContextCmd);
+    disposables.push(switchContextCmd);
     
     // Register set active namespace command
     const setActiveNamespaceCmd = vscode.commands.registerCommand(
@@ -1814,11 +1853,16 @@ export async function deactivate(): Promise<void> {
             namespaceStatusBar.dispose();
         }
         
+        if (contextStatusBar) {
+            contextStatusBar.dispose();
+        }
+        
         // Clear tree provider reference
         clusterTreeProvider = undefined;
         
-        // Clear status bar item reference
+        // Clear status bar item references
         namespaceStatusBar = undefined;
+        contextStatusBar = undefined;
         
         // Clear manager references
         yamlEditorManager = undefined;
