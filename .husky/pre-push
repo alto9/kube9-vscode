@@ -1,10 +1,13 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-echo "Running tests before push..."
-npm test || exit 1
+echo "Running lint before push..."
+npm run lint || exit 1
 
 echo "Running build before push..."
 npm run build || exit 1
 
-echo "✓ Tests and build passed. Proceeding with push."
+echo "Running unit tests before push..."
+npm run test:unit || exit 1
+
+echo "✓ Lint, build, and tests passed. Proceeding with push."

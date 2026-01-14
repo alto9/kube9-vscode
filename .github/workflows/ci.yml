@@ -36,6 +36,8 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
         continue-on-error: false
+        env:
+          NODE_OPTIONS: --experimental-require-module
 
   build:
     name: Build Extension
