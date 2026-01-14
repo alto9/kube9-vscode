@@ -1,3 +1,20 @@
+# [1.22.0](https://github.com/alto9/kube9-vscode/compare/v1.21.1...v1.22.0) (2026-01-14)
+
+
+### Bug Fixes
+
+* close all webviews unconditionally when switching contexts ([dbf4cb2](https://github.com/alto9/kube9-vscode/commit/dbf4cb20193a10e59b36b0fc81172b3152df31ba))
+* enable ESM imports in tests and align pre-push hook with GitHub Actions ([9cfd4dc](https://github.com/alto9/kube9-vscode/commit/9cfd4dcc0b9d3af10d307fcf92b3c76ae1f9ed95))
+* improve context switching UX and namespace integration ([b5d82f7](https://github.com/alto9/kube9-vscode/commit/b5d82f78992dce1cf695765f503209993b5169cb))
+* properly close all webview panels when switching contexts ([5d61176](https://github.com/alto9/kube9-vscode/commit/5d61176a168e5cf54c8bcd50bce1cc1874370c25))
+* re-parse kubeconfig after context switch to update tree view ([5ad9b84](https://github.com/alto9/kube9-vscode/commit/5ad9b8413a6f513ae2888fcab3ae26246ea7554e))
+* update contextValue when restoring cached cluster status ([00d60fa](https://github.com/alto9/kube9-vscode/commit/00d60fae33809db8235fd531a2758092cc3e523b))
+
+
+### Features
+
+* add kubectl context switching from VS Code ([1eb8711](https://github.com/alto9/kube9-vscode/commit/1eb8711e93215f354b37e254ac566fb9ad442b0b)), closes [#8](https://github.com/alto9/kube9-vscode/issues/8)
+
 ## [1.21.1](https://github.com/alto9/kube9-vscode/compare/v1.21.0...v1.21.1) (2026-01-09)
 
 
