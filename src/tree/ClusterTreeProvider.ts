@@ -1014,6 +1014,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 const cachedStatus = this.clusterStatusCache.get(contextName);
                 const cachedOperatorStatus = this.operatorStatusCache.get(contextName);
                 
+                // Update contextValue based on whether this is the current context
+                const isCurrentContext = contextName === this.kubeconfig!.currentContext;
+                item.contextValue = isCurrentContext ? 'cluster:active' : 'cluster:inactive';
+                
                 // Restore cached operator status
                 if (cachedOperatorStatus !== undefined) {
                     item.operatorStatus = cachedOperatorStatus;
@@ -1022,7 +1026,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 if (cachedStatus !== undefined) {
                     // Use cached status if available
                     item.status = cachedStatus;
-                    const isCurrentContext = contextName === this.kubeconfig!.currentContext;
                     this.updateTreeItemAppearance(item, isCurrentContext, cachedStatus, item.operatorStatus);
                 }
             }
@@ -1098,6 +1101,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 const cachedStatus = this.clusterStatusCache.get(contextName);
                 const cachedOperatorStatus = this.operatorStatusCache.get(contextName);
                 
+                // Update contextValue based on whether this is the current context
+                const isCurrentContext = contextName === this.kubeconfig!.currentContext;
+                item.contextValue = isCurrentContext ? 'cluster:active' : 'cluster:inactive';
+                
                 // Restore cached operator status
                 if (cachedOperatorStatus !== undefined) {
                     item.operatorStatus = cachedOperatorStatus;
@@ -1106,7 +1113,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 if (cachedStatus !== undefined) {
                     // Use cached status if available
                     item.status = cachedStatus;
-                    const isCurrentContext = contextName === this.kubeconfig!.currentContext;
                     this.updateTreeItemAppearance(item, isCurrentContext, cachedStatus, item.operatorStatus);
                 }
             }
