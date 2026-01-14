@@ -7,40 +7,64 @@ import { HealthReportPanel } from '../webview/HealthReportPanel';
 import { HelmPackageManagerPanel } from '../webview/HelmPackageManagerPanel';
 import { NodeDescribeWebview } from '../webview/NodeDescribeWebview';
 import { DeploymentDescribeWebview } from '../webview/DeploymentDescribeWebview';
+import { TutorialWebview } from '../webview/TutorialWebview';
+import { ClusterManagerWebview } from '../webview/ClusterManagerWebview';
+import { ArgoCDApplicationWebviewProvider } from '../webview/ArgoCDApplicationWebviewProvider';
 import { FreeDashboardPanel } from '../dashboard/FreeDashboardPanel';
 import { OperatedDashboardPanel } from '../dashboard/OperatedDashboardPanel';
 
 /**
- * Closes all webview panels associated with a specific kubectl context.
+ * Closes all webview panels when switching kubectl contexts.
  * 
- * This function identifies and closes webviews that are displaying resources
- * from the specified context. This is useful when switching contexts to
- * prevent showing stale data from the previous context.
+ * This function closes ALL webview panels unconditionally when switching contexts
+ * to prevent showing stale data from the previous context. All webviews are
+ * context-specific and should be closed when the context changes.
  * 
- * @param contextName - The context name whose webviews should be closed
+ * @param contextName - The context name being switched from (for logging purposes)
  */
 export async function closeWebviewsForContext(contextName: string): Promise<void> {
     try {
-        // Close webviews that match the context
-        // Note: We check panel titles and content to identify context-specific webviews
+        // Close ALL webview panels unconditionally when switching contexts
+        // All webviews display cluster-specific data and should be closed
         
-        // Close Describe webview if it matches the context
-        // DescribeWebview uses a static currentPanel, so we check if it exists
-        // and if the resource belongs to the context being switched from
-        // Since we can't easily check the context from the panel, we'll close it
-        // if it exists (it will be recreated with the new context when needed)
+        let closedCount = 0;
+
+        // Close Describe webview
         try {
-            // Access the private static currentPanel through type assertion
-            // This is a workaround since we can't access private static members directly
             const describePanel = (DescribeWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel;
             if (describePanel) {
                 describePanel.dispose();
+                closedCount++;
             }
         } catch (e) {
             // Ignore errors when closing describe webview
         }
 
-        // Close other webview panels that might be context-specific
+        // Close ALL ArgoCD application panels
+        // ArgoCDApplicationWebviewProvider uses a Map keyed by "context:namespace:name"
+        // We close all panels unconditionally when switching contexts
+        try {
+            const openPanels = (ArgoCDApplicationWebviewProvider as unknown as { openPanels?: Map<string, { panel: vscode.WebviewPanel; context: string }> }).openPanels;
+            if (openPanels) {
+                const panelsToClose: vscode.WebviewPanel[] = [];
+                for (const [, panelInfo] of openPanels.entries()) {
+                    // Close ALL panels - they all display cluster-specific data
+                    panelsToClose.push(panelInfo.panel);
+                }
+                for (const panel of panelsToClose) {
+                    try {
+                        panel.dispose();
+                        closedCount++;
+                    } catch (e) {
+                        console.debug('Failed to close ArgoCD panel:', e);
+                    }
+                }
+            }
+        } catch (e) {
+            console.debug('Failed to close ArgoCD panels:', e);
+        }
+
+        // Close all other webview panels
         // These panels are managed statically, so we need to check each one
         const panelsToCheck = [
             { name: 'NamespaceWebview', getPanel: () => (NamespaceWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
@@ -50,32 +74,26 @@ export async function closeWebviewsForContext(contextName: string): Promise<void
             { name: 'HelmPackageManagerPanel', getPanel: () => (HelmPackageManagerPanel as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
             { name: 'NodeDescribeWebview', getPanel: () => (NodeDescribeWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
             { name: 'DeploymentDescribeWebview', getPanel: () => (DeploymentDescribeWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
+            { name: 'TutorialWebview', getPanel: () => (TutorialWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
+            { name: 'ClusterManagerWebview', getPanel: () => (ClusterManagerWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
             { name: 'FreeDashboardPanel', getPanel: () => (FreeDashboardPanel as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
             { name: 'OperatedDashboardPanel', getPanel: () => (OperatedDashboardPanel as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel }
         ];
-
         for (const { name, getPanel } of panelsToCheck) {
             try {
                 const panel = getPanel();
                 if (panel) {
-                    // Check if panel title or content indicates it's for the old context
-                    // For now, we'll close all panels to be safe, as context switching
-                    // should refresh all views anyway
-                    const panelTitle = panel.title.toLowerCase();
-                    const contextLower = contextName.toLowerCase();
-                    
-                    // If panel title contains the context name, close it
-                    if (panelTitle.includes(contextLower)) {
-                        panel.dispose();
-                    }
+                    // Close ALL panels unconditionally - they all display cluster-specific data
+                    panel.dispose();
+                    closedCount++;
                 }
             } catch (e) {
                 // Ignore errors for individual panels
-                console.debug(`Failed to check/close ${name}:`, e);
+                console.debug(`Failed to close ${name}:`, e);
             }
         }
 
-        console.log(`Closed webviews for context: ${contextName}`);
+        console.log(`Closed ${closedCount} webview(s) when switching from context: ${contextName}`);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`Failed to close webviews for context ${contextName}:`, errorMessage);
