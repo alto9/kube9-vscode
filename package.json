@@ -498,7 +498,7 @@
       "view/item/context": [
         {
           "command": "kube9.switchContext",
-          "when": "view == kube9ClusterView && viewItem == cluster",
+          "when": "view == kube9ClusterView && viewItem == cluster:inactive",
           "group": "cluster@1"
         },
         {

@@ -178,6 +178,17 @@ export class NamespaceContextWatcher {
     }
 
     /**
+     * Manually triggers an immediate check for context changes.
+     * 
+     * This method can be called to immediately check for context changes
+     * instead of waiting for the next polling interval. Useful when the
+     * extension makes context changes and wants immediate status bar updates.
+     */
+    async triggerCheck(): Promise<void> {
+        await this.checkForChanges();
+    }
+
+    /**
      * Checks for context changes by querying kubectl.
      * 
      * Compares current context with last known state. If differences are detected,

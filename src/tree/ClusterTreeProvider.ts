@@ -1169,6 +1169,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             ? `${displayName} (current context)` 
             : displayName;
 
+        // Set contextValue to enable menu filtering (active vs inactive clusters)
+        // This allows the menu to show "Switch Context" only for inactive clusters
+        item.contextValue = isCurrentContext ? 'cluster:active' : 'cluster:inactive';
+
         return item;
     }
 

@@ -88,6 +88,12 @@ export async function switchContextCommand(item?: ClusterTreeItem): Promise<void
             try {
                 await getContextInfo(); // Updates cache with new state
                 
+                // Manually trigger namespace watcher to fire event for immediate status bar updates
+                // This ensures namespace status bar and context status bar update immediately
+                // instead of waiting for next poll (30 seconds)
+                const { namespaceWatcher } = await import('../services/namespaceCache');
+                await namespaceWatcher.triggerCheck();
+                
                 // Refresh tree view to reflect the change
                 getClusterTreeProvider().refresh();
             } catch (refreshError) {
