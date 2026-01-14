@@ -330,12 +330,21 @@
         "command": "kube9.helpForServices",
         "title": "Help: Working with Services",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.switchContext",
+        "title": "Switch Context",
+        "category": "Kube9",
+        "icon": "$(arrow-swap)"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "kube9.refreshClusters"
+        },
+        {
+          "command": "kube9.switchContext"
         },
         {
           "command": "kube9.openClusterManager"
@@ -487,6 +496,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "kube9.switchContext",
+          "when": "view == kube9ClusterView && viewItem == cluster",
+          "group": "cluster@1"
+        },
         {
           "command": "kube9.setActiveNamespace",
           "when": "view == kube9ClusterView && viewItem == namespace:inactive",

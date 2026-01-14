@@ -317,8 +317,18 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             }
 
             // If element is a cluster, return the categories
+            // Only allow expanding if this is the active cluster
             if (element.type === 'cluster' && element.resourceData) {
-                return await this.getCategories(element);
+                const contextName = element.resourceData.context.name;
+                const isCurrentContext = contextName === this.kubeconfig?.currentContext;
+                
+                // Only return categories for the active cluster
+                if (isCurrentContext) {
+                    return await this.getCategories(element);
+                } else {
+                    // Return empty array for non-active clusters (they shouldn't be expandable)
+                    return [];
+                }
             }
 
             // If element is a category, return its children (placeholder for now)
@@ -1123,11 +1133,19 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     ): ClusterTreeItem {
         const displayName = customization?.alias || context.name;
         
+        // Determine if this is the current/active context
+        const isCurrentContext = context.name === this.kubeconfig!.currentContext;
+        
+        // Only allow expanding the active cluster - others are non-collapsible
+        const collapsibleState = isCurrentContext 
+            ? vscode.TreeItemCollapsibleState.Collapsed 
+            : vscode.TreeItemCollapsibleState.None;
+        
         // Create the tree item with alias or context name as the label
         const item = new ClusterTreeItem(
             displayName,
             'cluster',
-            vscode.TreeItemCollapsibleState.Collapsed,
+            collapsibleState,
             {
                 context: context,
                 cluster: cluster
@@ -1146,7 +1164,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
         // Set default icon (neutral, non-spinning) - will be updated when status is known
         // Use circle-outline as a neutral default that doesn't indicate loading or connectivity status
-        const isCurrentContext = context.name === this.kubeconfig!.currentContext;
         item.iconPath = new vscode.ThemeIcon('circle-outline');
         item.tooltip = isCurrentContext 
             ? `${displayName} (current context)` 
