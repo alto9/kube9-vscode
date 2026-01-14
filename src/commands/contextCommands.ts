@@ -84,26 +84,33 @@ export async function switchContextCommand(item?: ClusterTreeItem): Promise<void
         );
 
         if (success) {
-            // Immediately fetch the updated context state
+            // Immediately fetch the updated context state and refresh tree
             try {
                 await getContextInfo(); // Updates cache with new state
+                
+                // Re-parse kubeconfig to get updated currentContext value
+                // This is critical - the tree provider needs fresh kubeconfig data
+                const updatedKubeconfig = await KubeconfigParser.parseKubeconfig();
+                const treeProvider = getClusterTreeProvider();
+                
+                // Update tree provider with fresh kubeconfig data (includes new currentContext)
+                treeProvider.setKubeconfig(updatedKubeconfig);
                 
                 // Manually trigger namespace watcher to fire event for immediate status bar updates
                 // This ensures namespace status bar and context status bar update immediately
                 // instead of waiting for next poll (30 seconds)
                 const { namespaceWatcher } = await import('../services/namespaceCache');
                 await namespaceWatcher.triggerCheck();
-                
-                // Refresh tree view to reflect the change
-                getClusterTreeProvider().refresh();
             } catch (refreshError) {
                 // Log error but don't fail the operation
                 console.error('Failed to refresh tree after context switch:', refreshError);
-                // Fallback: trigger refresh anyway
+                // Fallback: try to refresh anyway
                 try {
-                    getClusterTreeProvider().refresh();
+                    const updatedKubeconfig = await KubeconfigParser.parseKubeconfig();
+                    getClusterTreeProvider().setKubeconfig(updatedKubeconfig);
                 } catch (e) {
-                    // Ignore refresh errors
+                    // Ignore refresh errors - user can manually refresh if needed
+                    console.error('Failed to update kubeconfig after context switch:', e);
                 }
             }
 
