@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { EventsProvider } from '../services/EventsProvider';
 import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from '../types/Events';
 import { WebviewHelpHandler } from './WebviewHelpHandler';

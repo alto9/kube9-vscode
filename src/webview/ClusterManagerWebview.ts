@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { ClusterCustomizationService, ClusterCustomizationConfig } from '../services/ClusterCustomizationService';
 import { KubeconfigParser, ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
 import { getHelpController } from '../extension';
@@ -275,8 +273,7 @@ export class ClusterManagerWebview {
         // Set HTML content
         this.panel.webview.html = ClusterManagerWebview.getWebviewContent(
             this.panel.webview,
-            extensionUri,
-            extensionContext
+            extensionUri
         );
 
         // Set up message handler
@@ -775,7 +772,7 @@ export class ClusterManagerWebview {
      * @param extensionUri - The extension URI for loading resources
      * @returns HTML content string
      */
-    private static getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri, extensionContext: vscode.ExtensionContext): string {
+    private static getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
         // Get the URI for the React bundle
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'dist', 'media', 'cluster-manager', 'index.js')
