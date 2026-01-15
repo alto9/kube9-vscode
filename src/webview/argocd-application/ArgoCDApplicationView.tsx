@@ -1,4 +1,5 @@
 import React from 'react';
+import { WebviewHeader, WebviewHeaderAction } from '../components/WebviewHeader';
 import { TabBar, TabType } from './components/TabBar';
 import { LoadingState } from './components/LoadingState';
 import { ErrorState } from './components/ErrorState';
@@ -51,28 +52,49 @@ export function ArgoCDApplicationView({
 
     // Show content when application data is loaded
     if (application) {
+        const headerActions: WebviewHeaderAction[] = [
+            {
+                label: syncing ? 'Syncing...' : 'Sync',
+                icon: 'codicon-sync',
+                onClick: onSync,
+                disabled: syncing || refreshing
+            },
+            {
+                label: refreshing ? 'Refreshing...' : 'Refresh',
+                icon: 'codicon-refresh',
+                onClick: onRefresh,
+                disabled: syncing || refreshing
+            },
+            {
+                label: 'Hard Refresh',
+                icon: 'codicon-clear-all',
+                onClick: onHardRefresh,
+                disabled: syncing || refreshing
+            },
+            {
+                label: 'View in Tree',
+                icon: 'codicon-list-tree',
+                onClick: onViewInTree,
+                disabled: syncing || refreshing
+            }
+        ];
+
         return (
             <div style={{
                 fontFamily: 'var(--vscode-font-family)',
                 color: 'var(--vscode-foreground)',
                 backgroundColor: 'var(--vscode-editor-background)',
-                padding: '20px',
+                padding: 0,
                 margin: 0,
                 minHeight: '100vh'
             }}>
-                <h1 style={{
-                    marginTop: 0,
-                    fontSize: '1.5em',
-                    fontWeight: 600,
-                    color: 'var(--vscode-foreground)',
-                    borderBottom: '2px solid var(--vscode-panel-border)',
-                    paddingBottom: '10px',
-                    marginBottom: '20px'
-                }}>
-                    ArgoCD: {application.name}
-                </h1>
-
-                <TabBar activeTab={activeTab} onTabChange={onTabChange} />
+                <WebviewHeader
+                    title={`ArgoCD: ${application.name}`}
+                    actions={headerActions}
+                    helpContext="argocd-application"
+                />
+                <div style={{ padding: '0 20px' }}>
+                    <TabBar activeTab={activeTab} onTabChange={onTabChange} />
 
                 {activeTab === 'overview' && application && (
                     <OverviewTab
@@ -92,6 +114,7 @@ export function ArgoCDApplicationView({
                         onNavigate={onNavigateToResource}
                     />
                 )}
+                </div>
             </div>
         );
     }

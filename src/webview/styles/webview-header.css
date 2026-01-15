@@ -1,0 +1,149 @@
+/**
+ * Standardized webview header styles.
+ * Provides consistent styling across all webviews with VSCode theme integration.
+ */
+
+/* Global reset to remove default browser margins/padding */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: var(--vscode-font-family);
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-editor-background);
+}
+
+/* Ensure root container takes full height without extra spacing */
+#root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Reset common container classes to prevent extra spacing */
+.pod-describe-container,
+.event-viewer-app,
+.helm-package-manager,
+.argocd-application-view,
+.pod-logs-container {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure nested containers don't add top padding/margin */
+.pod-describe-container > .container,
+.event-viewer-app > *:first-child,
+.helm-package-manager > *:first-child {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.webview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background-color: var(--vscode-editor-background);
+    min-height: 48px;
+    gap: 16px;
+}
+
+.webview-header-title {
+    flex: 1;
+    min-width: 0; /* Allows text truncation */
+}
+
+.webview-header-title h1 {
+    margin: 0;
+    padding: 0;
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.webview-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.webview-header-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    font-weight: 500;
+    transition: background-color 0.1s ease, opacity 0.1s ease;
+    white-space: nowrap;
+}
+
+.webview-header-action-btn:hover:not(:disabled) {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.webview-header-action-btn:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.webview-header-action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.webview-header-action-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.webview-header-action-label {
+    line-height: 1;
+}
+
+.webview-header-help-btn {
+    /* Help button uses same styling as other action buttons */
+}
+
+.webview-header-help-btn .codicon {
+    font-size: 16px;
+}
+
+/* Responsive behavior for smaller panels */
+@media (max-width: 600px) {
+    .webview-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .webview-header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}

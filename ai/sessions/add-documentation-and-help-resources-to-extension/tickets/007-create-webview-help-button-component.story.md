@@ -5,9 +5,11 @@ feature_id:
   - help-ui-elements
 spec_id:
   - help-ui-integration
-status: completed
+status: superseded
 estimated_minutes: 20
 ---
+
+**Note**: This implementation has been superseded by the standardized WebviewHeader component approach. Help buttons are now integrated into the header component rather than being injected separately. See `ai/features/webview/webview-header-standardization.feature.md` for the current implementation.
 
 # Create Webview Help Button Component
 

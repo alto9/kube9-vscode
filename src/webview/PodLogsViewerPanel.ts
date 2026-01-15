@@ -1365,27 +1365,9 @@ export class PodLogsViewerPanel {
         const stylesUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'media', 'pod-logs', 'styles.css')
         );
-
-        // Get help button resource URIs
-        const helpButtonCssUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'styles', 'help-button.css')
+        const headerStyleUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'styles', 'webview-header.css')
         );
-        const helpButtonJsUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
-        );
-
-        // Read help button HTML template
-        let helpButtonHtml = '';
-        if (PodLogsViewerPanel.extensionContext) {
-            const helpButtonHtmlPath = path.join(
-                PodLogsViewerPanel.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'templates',
-                'help-button.html'
-            );
-            helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
-        }
 
         const nonce = getNonce();
         const cspSource = webview.cspSource;
@@ -1397,14 +1379,12 @@ export class PodLogsViewerPanel {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource};">
     <link href="${stylesUri}" rel="stylesheet">
-    <link href="${helpButtonCssUri}" rel="stylesheet">
+    <link href="${headerStyleUri}" rel="stylesheet">
     <title>Pod Logs Viewer</title>
 </head>
-<body data-help-context="pod-logs">
-    ${helpButtonHtml}
+<body>
     <div id="root"></div>
     <script nonce="${nonce}" src="${scriptUri}"></script>
-    <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
     }

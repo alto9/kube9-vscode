@@ -27,14 +27,16 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     onConfigure
 }) => {
     const cardStyle: React.CSSProperties = {
-        padding: '20px',
+        padding: '16px',
         backgroundColor: 'var(--vscode-editor-background)',
         border: '1px solid var(--vscode-panel-border)',
         borderRadius: '6px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+        gap: '12px',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        height: 'auto',
+        overflow: 'hidden'
     };
 
     const headerStyle: React.CSSProperties = {
@@ -44,7 +46,7 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     };
 
     const logoStyle: React.CSSProperties = {
-        fontSize: '32px',
+        fontSize: '28px',
         lineHeight: '1',
         flexShrink: 0
     };
@@ -57,7 +59,7 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     };
 
     const titleStyle: React.CSSProperties = {
-        fontSize: '18px',
+        fontSize: '16px',
         fontWeight: 600,
         color: 'var(--vscode-foreground)',
         fontFamily: 'var(--vscode-font-family)',
@@ -65,23 +67,26 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     };
 
     const descriptionStyle: React.CSSProperties = {
-        fontSize: '13px',
+        fontSize: '12px',
         color: 'var(--vscode-descriptionForeground)',
         fontFamily: 'var(--vscode-font-family)',
-        lineHeight: '1.5',
+        lineHeight: '1.4',
         margin: 0
     };
 
     const actionsStyle: React.CSSProperties = {
         display: 'flex',
         flexWrap: 'wrap',
-        gap: '8px',
-        alignItems: 'center'
+        gap: '6px',
+        alignItems: 'center',
+        marginTop: 'auto',
+        paddingTop: '8px',
+        borderTop: '1px solid var(--vscode-panel-border)'
     };
 
     const primaryButtonStyle: React.CSSProperties = {
-        padding: '8px 16px',
-        fontSize: '13px',
+        padding: '6px 12px',
+        fontSize: '12px',
         fontFamily: 'var(--vscode-font-family)',
         fontWeight: 500,
         backgroundColor: 'var(--vscode-button-background)',
@@ -97,8 +102,8 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     };
 
     const secondaryButtonStyle: React.CSSProperties = {
-        padding: '8px 16px',
-        fontSize: '13px',
+        padding: '6px 12px',
+        fontSize: '12px',
         fontFamily: 'var(--vscode-font-family)',
         fontWeight: 500,
         backgroundColor: 'var(--vscode-button-secondaryBackground)',
@@ -110,8 +115,8 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     };
 
     const disabledButtonStyle: React.CSSProperties = {
-        padding: '8px 16px',
-        fontSize: '13px',
+        padding: '6px 12px',
+        fontSize: '12px',
         fontFamily: 'var(--vscode-font-family)',
         fontWeight: 500,
         backgroundColor: 'var(--vscode-editor-inactiveSelectionBackground)',
@@ -123,7 +128,7 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     };
 
     const linkStyle: React.CSSProperties = {
-        fontSize: '13px',
+        fontSize: '11px',
         fontFamily: 'var(--vscode-font-family)',
         color: 'var(--vscode-textLink-foreground)',
         textDecoration: 'none',

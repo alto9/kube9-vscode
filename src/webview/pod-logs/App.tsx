@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ExtensionToWebviewMessage, WebviewToExtensionMessage, InitialState } from '../../types/messages';
+import { WebviewHeader, WebviewHeaderAction } from '../components/WebviewHeader';
 import { Footer } from './components/Footer';
 import { Toolbar } from './components/Toolbar';
 import { LogDisplay } from './components/LogDisplay';
@@ -368,8 +369,49 @@ export const App: React.FC = () => {
         };
     }, [handleSearchOpen, handleRefresh, handleCopy]);
 
+    // Build header actions
+    const headerActions: WebviewHeaderAction[] = [];
+    if (initialState && preferences) {
+        headerActions.push(
+            {
+                label: 'Refresh',
+                icon: 'codicon-refresh',
+                onClick: handleRefresh
+            },
+            {
+                label: 'Clear',
+                icon: 'codicon-clear-all',
+                onClick: handleClear
+            },
+            {
+                label: 'Copy',
+                icon: 'codicon-copy',
+                onClick: handleCopy
+            },
+            {
+                label: 'Export',
+                icon: 'codicon-save',
+                onClick: handleExport
+            },
+            {
+                label: 'Search',
+                icon: 'codicon-search',
+                onClick: handleSearchOpen
+            }
+        );
+    }
+
+    const podTitle = initialState?.pod 
+        ? `Pod Logs: ${initialState.pod.name}${initialState.pod.container && initialState.pod.container !== 'all' ? ` (${initialState.pod.container})` : ''}`
+        : 'Pod Logs';
+
     return (
         <div className="pod-logs-viewer">
+            <WebviewHeader
+                title={podTitle}
+                actions={headerActions}
+                helpContext="pod-logs"
+            />
             {initialState && preferences ? (
                 <Toolbar
                     pod={initialState.pod}

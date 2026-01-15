@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { PodDescribeData, ExtensionToWebviewMessage, WebviewToExtensionMessage, VSCodeAPI } from './types';
+import { WebviewHeader, WebviewHeaderAction } from '../components/WebviewHeader';
 import { OverviewTab } from './components/OverviewTab';
 import { EventsTab } from './components/EventsTab';
 import { ContainersTab } from './components/ContainersTab';
 import { ConditionsTab } from './components/ConditionsTab';
 
-// Acquire VS Code API
+// Acquire VS Code API and expose on window for shared use
 const vscode: VSCodeAPI | undefined = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
+if (vscode && typeof window !== 'undefined') {
+    (window as any).vscodeApi = vscode;
+}
 
 /**
  * Tab type for Pod Describe webview.
@@ -143,23 +147,28 @@ export const PodDescribeApp: React.FC = () => {
 
     const healthStatus = podData.overview.status.health || 'Unknown';
 
+    const headerActions: WebviewHeaderAction[] = [
+        {
+            label: 'Refresh',
+            icon: 'codicon-refresh',
+            onClick: handleRefresh
+        },
+        {
+            label: 'View YAML',
+            icon: 'codicon-file-code',
+            onClick: handleViewYaml
+        }
+    ];
+
     return (
         <div className="pod-describe-container">
             <div className="container">
                 {/* Header */}
-                <div className="node-header">
-                    <h1 className="node-title">Pod / <span className="node-name">{podData.overview.name}</span></h1>
-                    <div className="header-actions">
-                        <button className="action-btn" onClick={handleRefresh}>
-                            <span className="btn-icon">🔄</span>
-                            <span className="btn-text">Refresh</span>
-                        </button>
-                        <button className="action-btn" onClick={handleViewYaml}>
-                            <span className="btn-icon">📄</span>
-                            <span className="btn-text">View YAML</span>
-                        </button>
-                    </div>
-                </div>
+                <WebviewHeader
+                    title={`Pod / ${podData.overview.name}`}
+                    actions={headerActions}
+                    helpContext="describe-webview"
+                />
 
                 {/* Status Banner */}
                 <div className={getStatusBannerClass(healthStatus)}>

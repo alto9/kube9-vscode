@@ -786,23 +786,7 @@ export class ClusterManagerWebview {
             vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
         );
 
-        // Get help button resource URIs
-        const helpButtonCssUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'styles', 'help-button.css')
-        );
-        const helpButtonJsUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
-        );
-
-        // Read help button HTML template
-        const helpButtonHtmlPath = path.join(
-            extensionContext.extensionPath,
-            'src',
-            'webview',
-            'templates',
-            'help-button.html'
-        );
-        const helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
+        // Help button functionality is now integrated into the React components via WebviewHeader
 
         const nonce = getNonce();
 
@@ -813,14 +797,11 @@ export class ClusterManagerWebview {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}' ${webview.cspSource} 'unsafe-inline' 'unsafe-eval'; font-src ${webview.cspSource};">
     <link rel="stylesheet" href="${codiconsUri}">
-    <link rel="stylesheet" href="${helpButtonCssUri}">
     <title>Cluster Organizer</title>
 </head>
 <body data-help-context="cluster-manager">
-    ${helpButtonHtml}
     <div id="root"></div>
     <script src="${scriptUri}"></script>
-    <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
     }

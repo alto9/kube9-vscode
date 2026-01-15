@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from '../../types/Events';
-import { Toolbar } from './components/Toolbar';
+import { WebviewHeader, WebviewHeaderAction } from '../components/WebviewHeader';
+import { ExportButton } from './components/ExportButton';
 import { ThreePaneLayout } from './components/ThreePaneLayout';
 import { StatusBar } from './components/StatusBar';
+import { SearchBox } from './components/SearchBox';
 
 // Acquire VS Code API
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -151,16 +153,56 @@ export const EventViewerApp: React.FC = () => {
         setState(prev => ({ ...prev, selectedEvent: event }));
     }, []);
 
+    // Check if any filters are active
+    const hasActiveFilters = Object.keys(state.filters).length > 0 && 
+        Object.values(state.filters).some(value => value !== undefined && value !== '' && value !== 'all');
+
+    // Build header actions
+    const headerActions: WebviewHeaderAction[] = [
+        {
+            label: 'Refresh',
+            icon: 'codicon-refresh',
+            onClick: handleRefresh
+        },
+        {
+            label: `Auto-refresh: ${state.autoRefreshEnabled ? 'On' : 'Off'}`,
+            icon: state.autoRefreshEnabled ? 'codicon-debug-pause' : 'codicon-debug-start',
+            onClick: handleToggleAutoRefresh
+        },
+        {
+            label: 'Clear Filters',
+            icon: 'codicon-clear-all',
+            onClick: () => handleFilterChange({}),
+            disabled: !hasActiveFilters
+        }
+    ];
+
     return (
         <div className="event-viewer-app">
-            <Toolbar
-                onRefresh={handleRefresh}
-                onExport={handleExport}
-                onToggleAutoRefresh={handleToggleAutoRefresh}
-                autoRefreshEnabled={state.autoRefreshEnabled}
-                onFilterChange={handleFilterChange}
-                filters={state.filters}
+            <WebviewHeader
+                title="Events Viewer"
+                actions={headerActions}
+                helpContext="events-viewer"
             />
+            <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                padding: '8px 16px',
+                borderBottom: '1px solid var(--vscode-panel-border)',
+                backgroundColor: 'var(--vscode-editor-background)',
+                gap: '8px'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ExportButton onExport={handleExport} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <SearchBox 
+                        value={state.filters.searchText || ''}
+                        onChange={(text) => handleFilterChange({ ...state.filters, searchText: text })}
+                    />
+                </div>
+            </div>
             <ThreePaneLayout
                 events={state.filteredEvents}
                 selectedEvent={state.selectedEvent}

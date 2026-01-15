@@ -106,7 +106,9 @@ export class HelmPackageManagerPanel {
                 retainContextWhenHidden: true,
                 localResourceRoots: [
                     vscode.Uri.joinPath(context.extensionUri, 'media'),
-                    vscode.Uri.joinPath(context.extensionUri, 'dist')
+                    vscode.Uri.joinPath(context.extensionUri, 'dist'),
+                    vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'styles'),
+                    vscode.Uri.joinPath(context.extensionUri, 'node_modules', '@vscode', 'codicons')
                 ]
             }
         );
@@ -1514,23 +1516,19 @@ export class HelmPackageManagerPanel {
             vscode.Uri.joinPath(context.extensionUri, 'media', 'helm-package-manager', 'main.js')
         );
 
-        // Get help button resource URIs
-        const helpButtonCssUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'styles', 'help-button.css')
-        );
-        const helpButtonJsUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'scripts', 'help-button.js')
-        );
+        // Read and inline webview-header.css
+        const headerCssPath = path.join(context.extensionPath, 'src', 'webview', 'styles', 'webview-header.css');
+        let headerCss = '';
+        if (fs.existsSync(headerCssPath)) {
+            headerCss = fs.readFileSync(headerCssPath, 'utf8');
+            // Remove only block comments (preserve CSS rules)
+            headerCss = headerCss.replace(/\/\*[\s\S]*?\*\//g, '');
+        }
 
-        // Read help button HTML template
-        const helpButtonHtmlPath = path.join(
-            context.extensionPath,
-            'src',
-            'webview',
-            'templates',
-            'help-button.html'
+        // Get codicons CSS URI
+        const codiconsUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(context.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
         );
-        const helpButtonHtml = fs.readFileSync(helpButtonHtmlPath, 'utf8');
 
         const nonce = getNonce();
 
@@ -1540,27 +1538,91 @@ export class HelmPackageManagerPanel {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource} 'nonce-${nonce}'; connect-src ${cspSource}; font-src ${cspSource}; img-src ${cspSource} data:;">
-    <link href="${helpButtonCssUri}" rel="stylesheet">
+    <link href="${codiconsUri}" rel="stylesheet">
     <title>Helm Package Manager</title>
     <style>
+        ${headerCss}
+        /* Ensure webview-header styles are applied */
+        .helm-package-manager .webview-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            padding: 12px 16px !important;
+            border-bottom: 1px solid var(--vscode-panel-border) !important;
+            background-color: var(--vscode-editor-background) !important;
+            min-height: 48px !important;
+            gap: 16px !important;
+        }
+        .helm-package-manager .webview-header-title h1 {
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 1.5em !important;
+            font-weight: 600 !important;
+        }
+        .helm-package-manager .webview-header-actions {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            flex-shrink: 0 !important;
+        }
+        .helm-package-manager .webview-header-action-btn {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            padding: 6px 12px !important;
+            background-color: var(--vscode-button-background) !important;
+            color: var(--vscode-button-foreground) !important;
+            border: none !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+            font-size: 13px !important;
+            font-family: var(--vscode-font-family) !important;
+            font-weight: 500 !important;
+            white-space: nowrap !important;
+        }
+        .helm-package-manager .webview-header-action-btn:hover {
+            background-color: var(--vscode-button-hoverBackground) !important;
+        }
+        .helm-package-manager .webview-header-action-label {
+            line-height: 1 !important;
+        }
+        .helm-package-manager .webview-header-help-btn .codicon {
+            font-size: 16px !important;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
         body {
             font-family: var(--vscode-font-family);
             color: var(--vscode-foreground);
             background-color: var(--vscode-editor-background);
-            padding: 0;
-            margin: 0;
         }
         #root {
+            margin: 0;
+            padding: 0;
             width: 100%;
-            height: 100vh;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .helm-package-manager {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
         }
     </style>
 </head>
-<body data-help-context="helm-package-manager">
-    ${helpButtonHtml}
+<body>
     <div id="root"></div>
     <script nonce="${nonce}" src="${scriptUri}"></script>
-    <script nonce="${nonce}" src="${helpButtonJsUri}"></script>
 </body>
 </html>`;
     }

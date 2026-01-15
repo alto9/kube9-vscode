@@ -146,49 +146,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 )}
             </div>
 
-            {/* Actions Section */}
-            <div className="toolbar-section actions">
-                <button
-                    className="btn-icon"
-                    onClick={onRefresh}
-                    title="Refresh logs"
-                    aria-label="Refresh logs"
-                >
-                    <span className="codicon codicon-refresh"></span>
-                </button>
-                <button
-                    className="btn-icon"
-                    onClick={onClear}
-                    title="Clear display"
-                    aria-label="Clear display"
-                >
-                    <span className="codicon codicon-clear-all"></span>
-                </button>
-                <button
-                    className="btn-icon"
-                    onClick={onCopy}
-                    title="Copy logs"
-                    aria-label="Copy logs"
-                >
-                    <span className="codicon codicon-copy"></span>
-                </button>
-                <button
-                    className="btn-icon"
-                    onClick={onExport}
-                    title="Export logs"
-                    aria-label="Export logs"
-                >
-                    <span className="codicon codicon-save"></span>
-                </button>
-                <button
-                    className="btn-icon"
-                    onClick={onSearch}
-                    title="Search logs"
-                    aria-label="Search logs"
-                >
-                    <span className="codicon codicon-search"></span>
-                </button>
-            </div>
         </div>
     );
 };

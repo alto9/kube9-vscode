@@ -18,7 +18,7 @@ let vscodeInstance: VSCodeAPI | undefined;
 /**
  * Get the VS Code API instance.
  * Acquires it on first call, then returns the same instance on subsequent calls.
- * Also exposes it on window.vscodeApi for use by standalone scripts like help-button.js
+ * Also exposes it on window.vscodeApi for use by components that need shared access (e.g., WebviewHeader)
  */
 export function getVSCodeAPI(): VSCodeAPI | undefined {
     if (vscodeInstance) {
