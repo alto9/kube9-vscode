@@ -102,15 +102,6 @@ export function getOperatedDashboardHtml(
         '        .workload-table td:first-child { color: var(--vscode-descriptionForeground); }\n' +
         '        .workload-table td:last-child { text-align: right; font-weight: 600; }\n' +
         '        .hidden { display: none; }\n' +
-        '        .conditional-content.upsell-cta { border-left: 4px solid var(--vscode-charts-yellow); background: linear-gradient(135deg, var(--vscode-editor-background) 0%, var(--vscode-list-hoverBackground) 100%); }\n' +
-        '        .upsell-content { padding: 8px 0; }\n' +
-        '        .upsell-headline { margin: 0 0 20px 0; font-size: 20px; font-weight: 600; }\n' +
-        '        .benefits-list { list-style: none; padding: 0; margin: 0 0 24px 0; }\n' +
-        '        .benefits-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; font-size: 14px; }\n' +
-        '        .benefit-icon { font-size: 16px; color: var(--vscode-charts-green); font-weight: bold; min-width: 20px; }\n' +
-        '        .cta-button { background-color: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 12px 24px; font-size: 14px; font-weight: 600; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin: 8px 0; transition: background-color 0.2s; }\n' +
-        '        .cta-button:hover { background-color: var(--vscode-button-hoverBackground); }\n' +
-        '        .cta-subtext { margin: 12px 0 0 0; font-size: 13px; color: var(--vscode-descriptionForeground); font-style: italic; }\n' +
         '    </style>\n' +
         '</head>\n' +
         '<body>\n' +
@@ -188,18 +179,13 @@ export function getOperatedDashboardHtml(
         '            container.className = "conditional-content ai-recommendations";\n' +
         '            container.innerHTML = "<div class=\\"section-header\\"><span class=\\"section-icon\\">&#128161;</span><h2>AI Recommendations</h2></div><div class=\\"recommendations-list\\">" + recommendationsHtml + "</div>";\n' +
         '        }\n' +
-        '        function renderUpsellCTA() {\n' +
-        '            const container = document.getElementById("conditional-content");\n' +
-        '            container.className = "conditional-content upsell-cta";\n' +
-        '            container.innerHTML = "<div class=\\"section-header\\"><span class=\\"section-icon\\">&#11088;</span><h2>Enhance Your Dashboard</h2></div><div class=\\"upsell-content\\"><h3 class=\\"upsell-headline\\">Unlock AI-Powered Cluster Insights</h3><ul class=\\"benefits-list\\"><li><span class=\\"benefit-icon\\">&#10003;</span><span>Get intelligent optimization recommendations</span></li><li><span class=\\"benefit-icon\\">&#10003;</span><span>Receive cost-saving suggestions</span></li><li><span class=\\"benefit-icon\\">&#10003;</span><span>Identify security vulnerabilities proactively</span></li><li><span class=\\"benefit-icon\\">&#10003;</span><span>Access advanced analytics and reporting</span></li></ul><button class=\\"cta-button\\" onclick=\\"handleConfigureApiKey()\\"><span>&#128273;</span>Configure API Key</button><p class=\\"cta-subtext\\">Add your API key to enable AI-powered insights and recommendations.</p></div>";\n' +
-        '        }\n' +
-        '        function handleConfigureApiKey() { vscode.postMessage({ type: "configureApiKey" }); }\n' +
         '        function updateDashboardData(data) {\n' +
         '            if (data.lastUpdated) { const date = new Date(data.lastUpdated); const textSpan = lastUpdatedElement.querySelector("span:first-child"); if (textSpan) { textSpan.textContent = "Last updated: " + date.toLocaleTimeString(); } }\n' +
         '            if (data.namespaceCount !== undefined || data.workloads || data.nodes) { updateStatsCards(data); }\n' +
         '            if (data.workloads) { updateWorkloadTable(data.workloads); }\n' +
         '            if (data.operatorMetrics) { collectorsRunningElement.textContent = data.operatorMetrics.collectorsRunning || 0; dataPointsCollectedElement.textContent = formatNumber(data.operatorMetrics.dataPointsCollected || 0); lastCollectionTimeElement.textContent = data.operatorMetrics.lastCollectionTime ? new Date(data.operatorMetrics.lastCollectionTime).toLocaleTimeString() : "--"; }\n' +
-        '            if (data.conditionalContentType === "ai-recommendations" && data.aiRecommendations) { renderAIRecommendations(data.aiRecommendations); } else if (data.conditionalContentType === "upsell-cta") { renderUpsellCTA(); } else if (data.conditionalContentType === "degraded-warning") { renderUpsellCTA(); }\n' +
+        '            const container = document.getElementById("conditional-content");\n' +
+        '            if (data.conditionalContentType === "ai-recommendations" && data.aiRecommendations) { renderAIRecommendations(data.aiRecommendations); } else if (data.conditionalContentType === "degraded-warning") { if (container) { container.className = "conditional-content-placeholder"; container.innerHTML = "<div class=\\"placeholder-message\\">Operator status: degraded</div>"; } } else if (!data.conditionalContentType && container) { container.className = "conditional-content-placeholder"; container.innerHTML = "<div class=\\"placeholder-message\\"></div>"; }\n' +
         '            showContent();\n' +
         '        }\n' +
         '        function updateStatsCards(data) {\n' +

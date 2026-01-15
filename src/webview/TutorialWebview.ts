@@ -550,7 +550,7 @@ export class TutorialWebview {
             <div class="ecosystem-card">
                 <h3>Kube9 Desktop</h3>
                 <p>Desktop application for Kubernetes management with integrated development tools.</p>
-                <a href="#" onclick="openExternal('https://github.com/alto9/kube9-desktop'); return false;">View on GitHub →</a>
+                <a href="#" onclick="openExternal('https://kube9.io/getting-started'); return false;">Get Started</a>
             </div>
         </div>
 

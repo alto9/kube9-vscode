@@ -375,7 +375,7 @@ Networking (category)
 - Free Non-Operated dashboard data display
 - Free Operated dashboard data display
 - AI recommendations panel display (with API key)
-- Upsell CTA panel display (without API key)
+- No conditional content displayed when no API key (upsell CTA removed)
 - Dashboard auto-refresh behavior
 - Manual refresh behavior
 - Connection failure handling

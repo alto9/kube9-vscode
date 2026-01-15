@@ -177,14 +177,14 @@ export class OperatedDashboardPanel {
      * Implements the logic from the free-operated-dashboard-spec:
      * - degraded health -> degraded-warning
      * - hasApiKey && mode=enabled -> ai-recommendations
-     * - otherwise -> upsell-cta
+     * - otherwise -> no conditional content
      * 
      * @param operatorStatus - The operator status for this cluster
-     * @returns The type of conditional content to display
+     * @returns The type of conditional content to display, or null if none
      */
     private static determineConditionalContentType(
         operatorStatus: OperatorDashboardStatus
-    ): 'ai-recommendations' | 'upsell-cta' | 'degraded-warning' {
+    ): 'ai-recommendations' | 'degraded-warning' | null {
         // Check for degraded health first (highest priority)
         if (operatorStatus.health === 'degraded') {
             return 'degraded-warning';
@@ -195,8 +195,8 @@ export class OperatedDashboardPanel {
             return 'ai-recommendations';
         }
         
-        // Default to upsell CTA
-        return 'upsell-cta';
+        // No conditional content to show
+        return null;
     }
 
     /**
@@ -260,7 +260,7 @@ export class OperatedDashboardPanel {
             // Determine which conditional content to display
             const conditionalContentType = panelInfo 
                 ? OperatedDashboardPanel.determineConditionalContentType(panelInfo.operatorStatus)
-                : 'upsell-cta';
+                : null;
             
             // Fetch operator dashboard data
             const operatorData = await DashboardDataProvider.getOperatorDashboardData(
@@ -293,7 +293,7 @@ export class OperatedDashboardPanel {
                 };
                 lastUpdated: string;
                 hasApiKey: boolean;
-                conditionalContentType: string;
+                conditionalContentType: string | null;
                 aiRecommendations?: Array<{id: string; type: string; severity: string; title: string; description: string}>;
             };
 

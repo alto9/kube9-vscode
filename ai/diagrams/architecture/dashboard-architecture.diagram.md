@@ -66,7 +66,7 @@ This diagram visualizes the dashboard architecture, showing how the extension de
   [Conditional Content] - [<choice>Has API Key?]
   
   [Has API Key?] yes-> [<component>AI Recommendations Panel]
-  [Has API Key?] no-> [<component>Upsell CTA Panel]
+  [Has API Key?] no-> [<component>No Conditional Content]
   
   [AI Recommendations Panel] fetches-> [AI Recommendations ConfigMap]
   [AI Recommendations ConfigMap] synced from-> [<database>kube9-server]
@@ -116,15 +116,15 @@ This diagram visualizes the dashboard architecture, showing how the extension de
 [Query Operator ConfigMaps] -> [Check API Key Status]
 
 [Check API Key Status] hasApiKey: true-> [<state>Fetch AI Recommendations]
-[Check API Key Status] hasApiKey: false-> [<state>Show Upsell CTA]
+[Check API Key Status] hasApiKey: false-> [<state>No Conditional Content]
 
 [Fetch AI Recommendations] -> [Query kube9-ai-recommendations ConfigMap]
 [Query kube9-ai-recommendations ConfigMap] -> [Render AI Panel]
 
-[Show Upsell CTA] -> [Render Upsell Panel]
+[No Conditional Content] -> [Skip Conditional Content Rendering]
 
 [Render AI Panel] -> [Display operator statistics + AI]
-[Render Upsell Panel] -> [Display operator statistics + CTA]
+[Skip Conditional Content Rendering] -> [Display operator statistics only]
 
 [Display operator statistics + AI] -> [Show Dashboard]
 [Display operator statistics + CTA] -> [Show Dashboard]
@@ -209,7 +209,6 @@ This diagram visualizes the dashboard architecture, showing how the extension de
 [FreeOperatedDashboard] contains [<choice>ConditionalContentRenderer]
 
 [ConditionalContentRenderer] - [AIRecommendationsPanel]
-[ConditionalContentRenderer] - [UpsellCTAPanel]
 [ConditionalContentRenderer] - [DegradedWarningPanel]
 
 [<abstract>DashboardFactory |
