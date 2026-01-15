@@ -1,3 +1,14 @@
+# [1.24.0](https://github.com/alto9/kube9-vscode/compare/v1.23.1...v1.24.0) (2026-01-15)
+
+
+### Features
+
+* add demo cluster scenario files for testing and marketing ([3317c1b](https://github.com/alto9/kube9-vscode/commit/3317c1b33efb48c6bf79d307c1b5132e6bbe7078))
+* add demo cluster start script ([3b49bcc](https://github.com/alto9/kube9-vscode/commit/3b49bccf3aac29a559064ca40d273379eac03959))
+* add reset script for demo cluster ([98758ad](https://github.com/alto9/kube9-vscode/commit/98758ad6643c1f984ead1b8f67933b70b11de2ae))
+* add stop.sh script for demo cluster management ([014fec0](https://github.com/alto9/kube9-vscode/commit/014fec0d213102ccabe3e0bd3426095fb74e5392))
+* implement populate.sh script for demo cluster scenarios ([735c63b](https://github.com/alto9/kube9-vscode/commit/735c63badeec682cb89d5231a14ad2cdb824ff72))
+
 ## [1.23.1](https://github.com/alto9/kube9-vscode/compare/v1.23.0...v1.23.1) (2026-01-15)
 
 # [1.23.0](https://github.com/alto9/kube9-vscode/compare/v1.22.1...v1.23.0) (2026-01-15)
