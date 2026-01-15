@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/alto9/kube9-vscode/compare/v1.22.0...v1.22.1) (2026-01-15)
+
+
+### Bug Fixes
+
+* remove upsell CTA section from dashboard and update tutorial link ([a25c4e8](https://github.com/alto9/kube9-vscode/commit/a25c4e849462e55a897ed2773a0369bde0d94762))
+
 # [1.22.0](https://github.com/alto9/kube9-vscode/compare/v1.21.1...v1.22.0) (2026-01-14)
 
 
