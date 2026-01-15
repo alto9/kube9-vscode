@@ -1612,11 +1612,17 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             // Check if ArgoCD is installed (uses caching internally unless forceRefresh=true)
             const installationStatus = await argoCDService.isInstalled(contextName, forceRefresh);
 
-            // Update item with ArgoCD installation status
+            // Only refresh if the status actually changed to avoid duplicate registration errors
+            const previousStatus = item.argoCDInstalled;
             item.argoCDInstalled = installationStatus.installed;
-
-            // Refresh just this tree item to update categories
-            this._onDidChangeTreeData.fire(item);
+            
+            // Only fire refresh if status changed (prevents duplicate registration during concurrent refreshes)
+            if (previousStatus !== installationStatus.installed) {
+                // Use setTimeout to debounce and avoid race conditions with concurrent getChildren calls
+                setTimeout(() => {
+                    this._onDidChangeTreeData.fire(item);
+                }, 100);
+            }
         } catch (error) {
             // Handle unexpected errors gracefully - leave argoCDInstalled undefined
             const errorMessage = error instanceof Error ? error.message : String(error);

@@ -48,9 +48,10 @@ Scenario: Status bar help icon is keyboard accessible
 
 Scenario: Webview includes help button
   Given the user opens a webview (Events Viewer, Pod Logs, Cluster Manager, etc.)
-  Then a help button appears in the top-right corner
+  Then a help button appears in the webview header actions menu
   And displays a question mark icon and "Help" text
   And has appropriate styling matching VSCode theme
+  And is integrated into the standardized header component
 
 Scenario: Events Viewer help button opens specific documentation
   Given the Events Viewer is open
@@ -228,11 +229,12 @@ Scenario: Multiple webviews show independent help buttons
 Scenario: Help buttons are visually consistent
   Given multiple webviews are open
   Then all help buttons:
-    - Are positioned in the top-right corner
+    - Are positioned in the header actions menu (right side of header)
     - Use the same question mark icon
-    - Have the same size and styling
+    - Have the same size and styling as other header action buttons
     - Follow VSCode design patterns
     - Match the active theme
+    - Are part of the standardized WebviewHeader component
 
 Scenario: Error help links are accessible
   Given an error dialog is shown with help links
@@ -256,13 +258,15 @@ Scenario: Error help links are accessible
 
 ### Webview Help Integration
 
-All webviews use a consistent message protocol:
+All webviews use a consistent message protocol through the standardized WebviewHeader component:
 ```javascript
 vscode.postMessage({
   type: 'openHelp',
   context: 'events-viewer' // or 'pod-logs', 'cluster-manager', etc.
 });
 ```
+
+The help button is integrated into the WebviewHeader component and appears in the header actions menu when a help context is provided. It is no longer injected separately via HTML templates.
 
 ### Error Context Mapping
 
@@ -280,7 +284,8 @@ Error codes map to specific documentation URLs:
 All help UI elements:
 - Use VSCode's question mark icon (`$(question)` or `codicon-question`)
 - Follow VSCode theming with CSS variables
-- Maintain consistent positioning (top-right for webviews, far-right for status bar)
+- Maintain consistent positioning (header actions menu for webviews, far-right for status bar)
 - Include appropriate hover and focus states
 - Are keyboard accessible
+- Webview help buttons are integrated into the standardized WebviewHeader component
 

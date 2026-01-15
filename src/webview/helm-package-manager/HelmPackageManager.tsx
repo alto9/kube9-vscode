@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus, UIState, HelmErrorInfo } from './types';
+import { HelmState, ExtensionToWebviewMessage, WebviewToExtensionMessage, ReleaseFilters, HelmRelease, ReleaseDetails, UpgradeParams, OperatorInstallationStatus, UIState, HelmErrorInfo, FeaturedChart, InstallParams } from './types';
+import { WebviewHeader } from '../components/WebviewHeader';
 import { InstalledReleasesSection } from './components/InstalledReleasesSection';
 import { RepositoriesSection } from './components/RepositoriesSection';
 import { ReleaseDetailModal } from './components/ReleaseDetailModal';
@@ -19,10 +20,21 @@ const vscode = getVSCodeAPI();
  * Manages all UI state, message handling, and renders placeholder sections.
  */
 export const HelmPackageManager: React.FC = () => {
+    // Initialize featured charts with Trivy Operator
+    const initialFeaturedCharts: FeaturedChart[] = [
+        {
+            name: 'Trivy Operator',
+            chart: 'aqua/trivy-operator',
+            description: 'Security scanning operator for Kubernetes that scans container images and Kubernetes resources for vulnerabilities and misconfigurations.',
+            version: '0.1.5',
+            installed: false
+        }
+    ];
+
     const [state, setState] = useState<HelmState>({
         repositories: [],
         releases: [],
-        featuredCharts: [],
+        featuredCharts: initialFeaturedCharts,
         searchResults: [],
         loading: true,
         error: null,
@@ -116,11 +128,35 @@ export const HelmPackageManager: React.FC = () => {
 
             switch (message.type) {
                 case 'repositoriesLoaded':
-                    setState(prev => ({ ...prev, repositories: message.data as HelmState['repositories'] }));
+                    setState(prev => {
+                        // Ensure featured charts are preserved when repositories load
+                        const currentFeaturedCharts = prev.featuredCharts.length > 0 
+                            ? prev.featuredCharts 
+                            : initialFeaturedCharts;
+                        return { ...prev, repositories: message.data as HelmState['repositories'], featuredCharts: currentFeaturedCharts };
+                    });
                     break;
 
                 case 'releasesLoaded':
-                    setState(prev => ({ ...prev, releases: message.data as HelmState['releases'] }));
+                    const releases = message.data as HelmState['releases'];
+                    setState(prev => {
+                        // Ensure featured charts are initialized (in case state was cleared)
+                        const currentFeaturedCharts = prev.featuredCharts.length > 0 
+                            ? prev.featuredCharts 
+                            : initialFeaturedCharts;
+                        
+                        // Update featured charts installation status based on releases
+                        const updatedFeaturedCharts = currentFeaturedCharts.map(chart => {
+                            // Check if chart is installed by matching chart name
+                            // For Trivy Operator, check for releases with chart containing 'trivy-operator'
+                            const isInstalled = releases.some(release => 
+                                release.chart.includes('trivy-operator') || 
+                                release.name.toLowerCase().includes('trivy-operator')
+                            );
+                            return { ...chart, installed: isInstalled };
+                        });
+                        return { ...prev, releases, featuredCharts: updatedFeaturedCharts };
+                    });
                     break;
 
                 case 'chartSearchResults':
@@ -225,8 +261,11 @@ export const HelmPackageManager: React.FC = () => {
         
         return (
             <div className="helm-package-manager">
-                <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-                    <h1 style={{ marginBottom: '16px' }}>Helm Package Manager</h1>
+                <WebviewHeader
+                    title="Helm Package Manager"
+                    helpContext="helm-package-manager"
+                />
+                <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
                     <ErrorMessage
                         error={state.error}
                         type={errorInfo?.type as HelmErrorType}
@@ -258,14 +297,27 @@ export const HelmPackageManager: React.FC = () => {
     }
 
     // Render main UI with placeholder sections
+    const containerStyle: React.CSSProperties = {
+        padding: '16px',
+        flex: 1,
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '24px'
+    };
+
     return (
         <ErrorBoundary>
             <div className="helm-package-manager">
-            <h1>Helm Package Manager</h1>
-            
-            {/* Featured Charts Section */}
+                <WebviewHeader
+                    title="Helm Package Manager"
+                    helpContext="helm-package-manager"
+                />
+                <div style={containerStyle}>
+                    {/* Featured Charts Section */}
             <FeaturedChartsSection
                 operatorStatus={operatorStatus}
+                featuredCharts={state.featuredCharts.length > 0 ? state.featuredCharts : initialFeaturedCharts}
                 onInstall={() => {
                     setOperatorInstallModalOpen(true);
                 }}
@@ -276,6 +328,30 @@ export const HelmPackageManager: React.FC = () => {
                 onConfigure={() => {
                     // TODO: Implement configure modal for operator
                     console.log('Configure operator clicked');
+                }}
+                onFeaturedChartInstall={(chart: FeaturedChart) => {
+                    // Ensure the Aqua repository is added first
+                    sendMessage({
+                        command: 'addRepository',
+                        name: 'aqua',
+                        url: 'https://aquasecurity.github.io/helm-charts/'
+                    });
+                    
+                    // Install the chart
+                    // For Trivy Operator, use trivy-system namespace as recommended
+                    const installParams: InstallParams = {
+                        chart: chart.chart,
+                        releaseName: chart.name.toLowerCase().replace(/\s+/g, '-'),
+                        namespace: 'trivy-system',
+                        createNamespace: true,
+                        version: chart.version,
+                        wait: true
+                    };
+                    
+                    sendMessage({
+                        command: 'installChart',
+                        params: installParams
+                    });
                 }}
             />
 
@@ -418,6 +494,7 @@ export const HelmPackageManager: React.FC = () => {
                     });
                 }}
             />
+                </div>
             </div>
         </ErrorBoundary>
     );

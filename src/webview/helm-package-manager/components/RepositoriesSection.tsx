@@ -33,7 +33,8 @@ export const RepositoriesSection: React.FC<RepositoriesSectionProps> = ({
     const [repositoryToRemove, setRepositoryToRemove] = useState<string | null>(null);
 
     const sectionStyle: React.CSSProperties = {
-        marginBottom: '24px'
+        marginBottom: 0,
+        marginTop: 0
     };
 
     const headerStyle: React.CSSProperties = {
