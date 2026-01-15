@@ -585,14 +585,14 @@ export class TutorialWebview {
     <div class="step">
         <div class="step-header">
             <div class="step-number">2</div>
-            <h2 class="step-title">Explore Cluster Manager</h2>
+            <h2 class="step-title">Explore Cluster Organizer</h2>
         </div>
         <div class="step-description">
-            <p>Learn how to customize your tree view organization with the Cluster Manager. Organize clusters to tailor the interface to your workflow.</p>
+            <p>Learn how to customize your tree view organization with the Cluster Organizer. Organize clusters to tailor the interface to your workflow.</p>
             <img src="${getMediaUri('02-cluster-manager.png')}" alt="Cluster Manager UI showing customization options" class="step-image" />
         </div>
         <div class="step-actions">
-            <button onclick="executeCommand('kube9.openClusterManager')">Open Cluster Manager</button>
+            <button onclick="executeCommand('kube9.openClusterManager')">Open Cluster Organizer</button>
         </div>
     </div>
 
@@ -602,9 +602,7 @@ export class TutorialWebview {
             <h2 class="step-title">Navigate Resources</h2>
         </div>
         <div class="step-description">
-            <p>Learn how to expand clusters and namespaces to explore Kubernetes resources organized in a hierarchical tree.</p>
-            <p><strong>With clusters:</strong> Try expanding a namespace in the kube9 view to see its resources.</p>
-            <p><strong>Without clusters yet?</strong> The image shows what you'll see when you connect a cluster.</p>
+            <p>Explore Kubernetes resources organized in a familiar hierarchical tree.</p>
             <img src="${getMediaUri('03-navigation.png')}" alt="Expanded namespace showing resource hierarchy" class="step-image" />
         </div>
     </div>
@@ -616,8 +614,6 @@ export class TutorialWebview {
         </div>
         <div class="step-description">
             <p>View detailed information about any resource by clicking on it. See current status, conditions, events, and more in the describe webview.</p>
-            <p><strong>With resources:</strong> Click any pod in the tree view to see its details.</p>
-            <p><strong>Without resources yet?</strong> The image shows what you'll see.</p>
             <img src="${getMediaUri('04-view-resource.png')}" alt="Resource describe webview showing pod status and details" class="step-image" />
         </div>
     </div>
@@ -639,12 +635,12 @@ export class TutorialWebview {
     <div class="step">
         <div class="step-header">
             <div class="step-number">6</div>
-            <h2 class="step-title">Manage Resources</h2>
+            <h2 class="step-title">View Events</h2>
         </div>
         <div class="step-description">
-            <p>Scale deployments and manage other workload resources. Right-click any workload to see management options like scale and delete.</p>
+            <p>View cluster events in the Events Viewer. Events are displayed in a three-pane layout with filtering, sorting, and search capabilities.</p>
             <div class="info-message">
-                <strong>How to Scale Workloads:</strong> Right-click any Deployment or StatefulSet in the Kube9 tree view and select Scale from the context menu.
+                <strong>Requires Kube9 Operator to be installed:</strong> Kube9 Operator provides advanced event tracking features that power the Events Viewer.
             </div>
             <img src="${getMediaUri('06-management.png')}" alt="Resource management operations including scale and delete" class="step-image" />
         </div>
@@ -658,13 +654,12 @@ export class TutorialWebview {
         <div class="step-description">
             <p>You've learned the essentials! Find more help and resources:</p>
             <ul>
-                <li>Use <strong>Cmd/Ctrl+Shift+P</strong> to access all kube9 commands</li>
+                <li>Use <strong>Cmd/Ctrl+Shift+P</strong> to access all Kube9 commands</li>
                 <li>Right-click resources for context menus</li>
                 <li>Check out <a href="https://alto9.github.io/kube9/" class="command-link" onclick="openExternal('https://alto9.github.io/kube9/')">our documentation</a> for detailed guides</li>
                 <li>Join our <a href="https://github.com/alto9/kube9-vscode" class="command-link" onclick="openExternal('https://github.com/alto9/kube9-vscode')">community</a> for support</li>
             </ul>
             <p>Happy Kubernetes management! 🚀</p>
-            <img src="${getMediaUri('07-documentation.png')}" alt="Documentation and help resources" class="step-image" />
         </div>
     </div>
 
@@ -672,7 +667,6 @@ export class TutorialWebview {
         <button onclick="completeTutorial()" style="background-color: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground);">
             Complete Tutorial
         </button>
-        <button onclick="closeTutorial()">Close</button>
     </div>
 
     <script>
@@ -698,18 +692,6 @@ export class TutorialWebview {
                 command: 'completeTutorial',
                 doNotShowAgain: doNotShowAgain
             });
-        }
-
-        function closeTutorial() {
-            try {
-                const doNotShowAgain = document.getElementById('doNotShowAgain').checked;
-                vscode.postMessage({
-                    command: 'dismiss',
-                    doNotShowAgain: doNotShowAgain
-                });
-            } catch (error) {
-                console.error('Failed to send close message:', error);
-            }
         }
 
         // Handle checkbox change for dismiss
