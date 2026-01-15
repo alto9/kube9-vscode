@@ -9,7 +9,7 @@ context_id: [kubernetes-cluster-management, ai-integration]
 
 ## Overview
 
-The Free Operated Dashboard displays cluster statistics from operator-managed resources. This dashboard is shown when the kube9-operator is installed (operator status: "operated", "enabled", or "degraded"). It queries kubectl for operator-provided data and includes a conditional content section that shows AI recommendations (if API key is configured in the operator) or an upsell CTA (if no API key).
+The Free Operated Dashboard displays cluster statistics from operator-managed resources. This dashboard is shown when the kube9-operator is installed (operator status: "operated", "enabled", or "degraded"). It queries kubectl for operator-provided data and includes a conditional content section that shows AI recommendations (if API key is configured in the operator) or a degraded warning (if operator health is degraded).
 
 ## Data Collection
 
@@ -114,8 +114,8 @@ function hasApiKey(operatorStatus: OperatorStatus): boolean {
 
 ```typescript
 interface ConditionalContentSection {
-  type: 'ai-recommendations' | 'upsell-cta' | 'degraded-warning';
-  content: AIRecommendationsContent | UpsellCTAContent | DegradedWarningContent;
+  type: 'ai-recommendations' | 'degraded-warning' | null;
+  content: AIRecommendationsContent | DegradedWarningContent | null;
 }
 
 function getConditionalContent(operatorStatus: OperatorStatus): ConditionalContentSection {
@@ -134,8 +134,8 @@ function getConditionalContent(operatorStatus: OperatorStatus): ConditionalConte
   }
   
   return {
-    type: 'upsell-cta',
-    content: buildUpsellCTA()
+    type: null,
+    content: null
   };
 }
 ```
@@ -240,66 +240,6 @@ async function fetchAIRecommendations(clusterContext: string): Promise<AIRecomme
 </div>
 ```
 
-## Upsell CTA Panel
-
-### CTA Content Structure
-
-```typescript
-interface UpsellCTAContent {
-  headline: string;
-  benefits: string[];
-  ctaText: string;
-  ctaAction: () => void;
-}
-
-function buildUpsellCTA(): UpsellCTAContent {
-  return {
-    headline: 'Unlock AI-Powered Cluster Insights',
-    benefits: [
-      'Get intelligent optimization recommendations',
-      'Receive cost-saving suggestions',
-      'Identify security vulnerabilities proactively',
-      'Access advanced analytics and reporting'
-    ],
-    ctaText: 'Configure API Key',
-    ctaAction: () => window.open('https://portal.kube9.io')
-  };
-}
-```
-
-### Upsell Panel HTML
-
-```html
-<div class="conditional-content upsell-cta">
-  <div class="section-header">
-    <span class="codicon codicon-star-full"></span>
-    <h2>Enhance Your Dashboard</h2>
-  </div>
-  
-  <div class="upsell-content">
-    <h3 class="upsell-headline">${headline}</h3>
-    
-    <ul class="benefits-list">
-      ${benefits.map(benefit => `
-        <li>
-          <span class="codicon codicon-check"></span>
-          ${benefit}
-        </li>
-      `).join('')}
-    </ul>
-    
-    <button class="cta-button" onclick="handleUpgrade()">
-      <span class="codicon codicon-key"></span>
-      ${ctaText}
-    </button>
-    
-    <p class="cta-subtext">
-      Configure an API key in your operator to enable AI-powered insights and recommendations.
-    </p>
-  </div>
-</div>
-```
-
 ## Degraded Warning Panel
 
 ### Warning Content Structure
@@ -387,7 +327,7 @@ function buildDegradedWarning(operatorStatus: OperatorStatus): DegradedWarningCo
   <!-- Stats cards here -->
 </div>
 
-<!-- Conditional Content Section (AI Recommendations OR Upsell CTA OR Degraded Warning) -->
+<!-- Conditional Content Section (AI Recommendations OR Degraded Warning) -->
 ${renderConditionalContent(operatorStatus)}
 
 <!-- Charts (similar to Free Non-Operated) -->
@@ -437,15 +377,6 @@ ${renderConditionalContent(operatorStatus)}
   border-left: 4px solid var(--vscode-charts-blue);
 }
 
-.conditional-content.upsell-cta {
-  border-left: 4px solid var(--vscode-charts-yellow);
-  background: linear-gradient(
-    135deg,
-    var(--vscode-editor-background) 0%,
-    var(--vscode-list-hoverBackground) 100%
-  );
-}
-
 .conditional-content.degraded-warning {
   border-left: 4px solid var(--vscode-charts-red);
   background-color: var(--vscode-inputValidation-warningBackground);
@@ -468,24 +399,6 @@ ${renderConditionalContent(operatorStatus)}
 
 .recommendation-card.low {
   border-left: 3px solid var(--vscode-charts-blue);
-}
-
-.cta-button {
-  background-color: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
-  border: none;
-  padding: 12px 24px;
-  font-size: 14px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 16px 0;
-}
-
-.cta-button:hover {
-  background-color: var(--vscode-button-hoverBackground);
 }
 
 .operator-badge {
@@ -515,16 +428,6 @@ ${renderConditionalContent(operatorStatus)}
 ```
 
 ## User Actions
-
-### Configure API Key Action
-
-```typescript
-async function handleUpgrade() {
-  // Opens portal with API key setup instructions
-  // User configures API key at the operator level, not in VSCode extension
-  window.open('https://portal.kube9.io');
-}
-```
 
 ### Handle Recommendation Action
 

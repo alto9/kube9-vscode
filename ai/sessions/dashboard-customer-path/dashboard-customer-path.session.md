@@ -30,8 +30,8 @@ changed_files:
       - Dashboard detects API key presence for conditional content
       - Dashboard displays AI recommendations panel when API key present
       - AI recommendations panel displays recommendations
-      - Dashboard displays upsell CTA when no API key present
-      - User clicks Configure API Key button
+      - Dashboard displays upsell CTA when no API key present (REMOVED: upsell CTA section has been removed from the dashboard)
+      - User clicks Configure API Key button (REMOVED: Configure API Key button functionality removed)
       - Dashboard refreshes data automatically
       - User manually refreshes dashboard
       - Dashboard switches conditional content when operator status changes
@@ -49,7 +49,7 @@ Add a 'Dashboard' menu item to the tree view that appears at the top of each clu
 2. **Free Dashboard**: Display basic statistics derived from kubectl (namespace counts, workload counts, basic charts)
 3. **Operated Dashboard**: Display statistics provided by backend operator with conditional elements:
    - **With API Key**: Show AI-powered recommendations
-   - **Without API Key**: Show upsell call-to-action to encourage API key adoption
+   - **Without API Key**: No conditional content displayed (upsell CTA removed)
 4. **Lightweight & Introductory**: Keep dashboards simple and buildable - foundation for future rich features
 
 ## Approach
@@ -74,7 +74,7 @@ Add a 'Dashboard' menu item to the tree view that appears at the top of each clu
 - Display same basic statistics as Free dashboard
 - Conditional content section:
   - **API Key Present**: Display AI recommendations panel (introductory)
-  - **No API Key**: Display upsell CTA panel encouraging API key configuration
+  - **No API Key**: No conditional content displayed (upsell CTA removed)
 - Keep it lightweight - foundation for future rich features
 
 ### Technical Considerations
@@ -90,7 +90,7 @@ Add a 'Dashboard' menu item to the tree view that appears at the top of each clu
 2. **Two Separate Features**: Split into free-dashboard and operated-dashboard features for clear separation of free vs paid experiences
 3. **Lightweight & Introductory**: Removed heavy debugging/troubleshooting scenarios to keep workload manageable
 4. **Operated Dashboard as Foundation**: Intentionally minimal now but architected to support rich features later
-5. **API Key Upsell Strategy**: Use dashboard real estate to encourage API key adoption by showing value proposition where user is already engaged
+5. **API Key Upsell Strategy**: REMOVED - Upsell CTA section has been removed from the dashboard
 6. **Kubectl as Data Source**: Even Operated dashboard uses kubectl to query operator-provided data, maintaining consistent cluster interaction patterns
 7. **AI Recommendations Placement**: For customers with API keys, AI recommendations are prominently featured in dashboard (not hidden or secondary)
 
@@ -98,7 +98,7 @@ Add a 'Dashboard' menu item to the tree view that appears at the top of each clu
 
 - Dashboard detection/routing logic needs to determine customer type early in render cycle
 - AI recommendations panel design should be compelling enough to drive API key adoption
-- Upsell CTA should communicate clear value proposition without being intrusive
+- REMOVED: Upsell CTA section has been removed from the dashboard
 - Future features for Operated dashboard might include: cost analysis, security recommendations, optimization suggestions, compliance reporting
 - Need to ensure dashboard performance is acceptable even with multiple kubectl queries (Free dashboard case)
 - Consider caching strategy for both dashboard types to improve responsiveness
