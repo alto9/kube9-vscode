@@ -1,3 +1,15 @@
+# [1.23.0](https://github.com/alto9/kube9-vscode/compare/v1.22.1...v1.23.0) (2026-01-15)
+
+
+### Bug Fixes
+
+* **lint:** remove unused webview imports ([72ea332](https://github.com/alto9/kube9-vscode/commit/72ea3323385c85437c1930c1960856950c132cd0))
+
+
+### Features
+
+* **webview:** standardize headers and helm tiles ([e6f3277](https://github.com/alto9/kube9-vscode/commit/e6f3277630af95ce674f86d38fd162ff92cce2d2))
+
 ## [1.22.1](https://github.com/alto9/kube9-vscode/compare/v1.22.0...v1.22.1) (2026-01-15)
 
 
