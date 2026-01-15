@@ -1074,7 +1074,7 @@ function registerCommands(): void {
                     };
                     
                     // Open Operated Dashboard with operator status
-                    OperatedDashboardPanel.show(
+                    await OperatedDashboardPanel.show(
                         context,
                         kubeconfigPath,
                         contextName,

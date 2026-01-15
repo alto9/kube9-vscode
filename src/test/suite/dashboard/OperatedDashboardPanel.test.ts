@@ -38,7 +38,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels.size, 1, 'Should have exactly one open panel');
@@ -57,12 +57,12 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const clusterName = 'test-cluster';
 
         // Open panel first time
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
         const openPanels1 = OperatedDashboardPanel.getOpenPanels();
         const firstPanel = openPanels1.get(contextName)?.panel;
 
         // Open panel second time with same context
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
         const openPanels2 = OperatedDashboardPanel.getOpenPanels();
         const secondPanel = openPanels2.get(contextName)?.panel;
 
@@ -74,13 +74,13 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const kubeconfigPath = '/mock/kubeconfig';
 
         // Open panel for first cluster
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-1', 'cluster-1', mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-1', 'cluster-1', mockOperatorStatus);
 
         // Open panel for second cluster
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-2', 'cluster-2', mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-2', 'cluster-2', mockOperatorStatus);
 
         // Open panel for third cluster
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-3', 'cluster-3', mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-3', 'cluster-3', mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels.size, 3, 'Should have three open panels');
@@ -99,7 +99,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
         
         const openPanels1 = OperatedDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels1.size, 1, 'Should have one open panel');
@@ -121,9 +121,9 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const kubeconfigPath = '/mock/kubeconfig';
 
         // Open multiple panels
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-1', 'cluster-1', mockOperatorStatus);
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-2', 'cluster-2', mockOperatorStatus);
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-3', 'cluster-3', mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-1', 'cluster-1', mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-2', 'cluster-2', mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, 'context-3', 'cluster-3', mockOperatorStatus);
 
         const openPanels1 = OperatedDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels1.size, 3, 'Should have three open panels');
@@ -140,7 +140,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'production-cluster';
         const clusterName = 'Production Kubernetes';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -156,7 +156,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -176,7 +176,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -201,7 +201,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -218,7 +218,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -235,7 +235,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -254,7 +254,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -273,7 +273,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'My Production Cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -290,7 +290,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -308,7 +308,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);
@@ -331,7 +331,7 @@ suite('OperatedDashboardPanel Test Suite', () => {
         const contextName = 'test-context';
         const clusterName = 'test-cluster';
 
-        OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
 
         const openPanels = OperatedDashboardPanel.getOpenPanels();
         const panelInfo = openPanels.get(contextName);

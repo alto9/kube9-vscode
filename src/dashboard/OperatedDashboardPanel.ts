@@ -48,13 +48,13 @@ export class OperatedDashboardPanel {
      * @param clusterName - The display name of the cluster
      * @param operatorStatus - The operator status for this cluster
      */
-    public static show(
+    public static async show(
         context: vscode.ExtensionContext,
         kubeconfigPath: string,
         contextName: string,
         clusterName: string,
         operatorStatus: OperatorDashboardStatus
-    ): void {
+    ): Promise<void> {
         // Store the extension context for later use
         OperatedDashboardPanel.extensionContext = context;
 
@@ -95,18 +95,7 @@ export class OperatedDashboardPanel {
             refreshManager
         });
 
-        // Set the webview's HTML content
-        panel.webview.html = getOperatedDashboardHtml(panel.webview, clusterName, operatorStatus);
-
-        // Start auto-refresh
-        refreshManager.startAutoRefresh(
-            panel,
-            kubeconfigPath,
-            contextName,
-            OperatedDashboardPanel.sendDashboardDataWithStatusCheck.bind(OperatedDashboardPanel)
-        );
-
-        // Handle messages from the webview
+        // Handle messages from the webview (register BEFORE setting HTML to prevent race condition)
         panel.webview.onDidReceiveMessage(
             async (message) => {
                 await OperatedDashboardPanel.handleWebviewMessage(
@@ -118,6 +107,25 @@ export class OperatedDashboardPanel {
             },
             undefined,
             context.subscriptions
+        );
+
+        // Set the webview's HTML content
+        panel.webview.html = getOperatedDashboardHtml(panel.webview, clusterName, operatorStatus);
+
+        // Proactively send initial data instead of waiting for webview request
+        await OperatedDashboardPanel.sendDashboardDataWithStatusCheck(
+            panel,
+            kubeconfigPath,
+            contextName,
+            true  // isInitialLoad = true
+        );
+
+        // Start auto-refresh
+        refreshManager.startAutoRefresh(
+            panel,
+            kubeconfigPath,
+            contextName,
+            OperatedDashboardPanel.sendDashboardDataWithStatusCheck.bind(OperatedDashboardPanel)
         );
 
         // Handle panel disposal

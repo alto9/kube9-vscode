@@ -6,7 +6,7 @@ feature_id:
 spec_id:
   - dashboard-webview-spec
   - free-operated-dashboard-spec
-status: pending
+status: completed
 created_at: '2026-01-08T15:45:51.716Z'
 estimated_time: 20 minutes
 ---
