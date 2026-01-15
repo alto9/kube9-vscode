@@ -227,6 +227,29 @@ npm run package
 - Verify enhanced metrics views appear
 - Test operator-provided data display
 
+### Testing with Demo Cluster
+
+For safe testing without affecting real clusters, use the isolated demo cluster system:
+
+```bash
+# Start demo cluster
+./scripts/demo-cluster/start.sh
+
+# Populate with a scenario
+./scripts/demo-cluster/populate.sh with-operator
+
+# Launch Extension (Demo Cluster) in VSCode
+# Press F5 → Select "Extension (Demo Cluster)"
+```
+
+The demo cluster is completely isolated from your real clusters and is safe for:
+- Feature development and testing
+- Marketing screenshots
+- QA regression testing
+- Demo presentations
+
+See [scripts/demo-cluster/README.md](scripts/demo-cluster/README.md) for complete documentation.
+
 ## Technology Stack
 
 - **Framework**: VS Code Extension API
