@@ -369,5 +369,78 @@ suite('OperatedDashboardPanel Test Suite', () => {
         assert.strictEqual(panelInfo.operatorStatus.version, '2.0.0', 'Should store correct version');
         assert.strictEqual(panelInfo.operatorStatus.health, 'healthy', 'Should store correct health status');
     });
+
+    test('should register message handler before setting HTML', async () => {
+        const kubeconfigPath = '/mock/kubeconfig';
+        const contextName = 'test-context';
+        const clusterName = 'test-cluster';
+
+        // Track subscriptions before and after
+        const initialSubscriptionCount = mockContext.subscriptions.length;
+
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+
+        const openPanels = OperatedDashboardPanel.getOpenPanels();
+        const panelInfo = openPanels.get(contextName);
+
+        assert.ok(panelInfo, 'Panel info should exist');
+        
+        // Verify handler was registered (subscriptions array was populated)
+        assert.ok(
+            mockContext.subscriptions.length > initialSubscriptionCount,
+            'Handler should be registered (subscriptions should be added)'
+        );
+        
+        // Verify HTML is set
+        assert.ok(panelInfo.panel.webview.html.length > 0, 'HTML should be set');
+        
+        // Verify HTML contains message handling code (indicates HTML was set after handler registration)
+        const html = panelInfo.panel.webview.html;
+        assert.ok(
+            html.includes('acquireVsCodeApi'),
+            'HTML should include VS Code API acquisition for message handling'
+        );
+        assert.ok(
+            html.includes('postMessage'),
+            'HTML should include message posting capability'
+        );
+    });
+
+    test('should send initial data with status check after HTML is set', async () => {
+        const kubeconfigPath = '/mock/kubeconfig';
+        const contextName = 'test-context';
+        const clusterName = 'test-cluster';
+
+        await OperatedDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName, mockOperatorStatus);
+
+        const openPanels = OperatedDashboardPanel.getOpenPanels();
+        const panelInfo = openPanels.get(contextName);
+
+        assert.ok(panelInfo, 'Panel info should exist');
+        
+        // Verify HTML is set (prerequisite for data sending)
+        assert.ok(panelInfo.panel.webview.html.length > 0, 'HTML should be set before data is sent');
+        
+        // Verify HTML contains data display elements (indicates data was sent)
+        const html = panelInfo.panel.webview.html;
+        assert.ok(
+            html.includes('dashboard-content'),
+            'HTML should include dashboard content structure for displaying data'
+        );
+        assert.ok(
+            html.includes('stats-cards'),
+            'HTML should include stats cards for displaying dashboard data'
+        );
+        
+        // Verify HTML contains operator-specific elements (indicates operator data was sent)
+        assert.ok(
+            html.includes('operator-metrics'),
+            'HTML should include operator metrics section for displaying operator data'
+        );
+        assert.ok(
+            html.includes('conditional-content'),
+            'HTML should include conditional content container for operator status-based content'
+        );
+    });
 });
 

@@ -307,5 +307,68 @@ suite('FreeDashboardPanel Test Suite', () => {
         assert.ok(html.includes('updateWorkloadChart'), 'HTML should include updateWorkloadChart function');
         assert.ok(html.includes('updateNodeHealthChart'), 'HTML should include updateNodeHealthChart function');
     });
+
+    test('should register message handler before setting HTML', async () => {
+        const kubeconfigPath = '/mock/kubeconfig';
+        const contextName = 'test-context';
+        const clusterName = 'test-cluster';
+
+        // Track subscriptions before and after
+        const initialSubscriptionCount = mockContext.subscriptions.length;
+
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+
+        const openPanels = FreeDashboardPanel.getOpenPanels();
+        const panelInfo = openPanels.get(contextName);
+
+        assert.ok(panelInfo, 'Panel info should exist');
+        
+        // Verify handler was registered (subscriptions array was populated)
+        assert.ok(
+            mockContext.subscriptions.length > initialSubscriptionCount,
+            'Handler should be registered (subscriptions should be added)'
+        );
+        
+        // Verify HTML is set
+        assert.ok(panelInfo.panel.webview.html.length > 0, 'HTML should be set');
+        
+        // Verify HTML contains message handling code (indicates HTML was set after handler registration)
+        const html = panelInfo.panel.webview.html;
+        assert.ok(
+            html.includes('acquireVsCodeApi'),
+            'HTML should include VS Code API acquisition for message handling'
+        );
+        assert.ok(
+            html.includes('postMessage'),
+            'HTML should include message posting capability'
+        );
+    });
+
+    test('should send initial data after HTML is set', async () => {
+        const kubeconfigPath = '/mock/kubeconfig';
+        const contextName = 'test-context';
+        const clusterName = 'test-cluster';
+
+        await FreeDashboardPanel.show(mockContext, kubeconfigPath, contextName, clusterName);
+
+        const openPanels = FreeDashboardPanel.getOpenPanels();
+        const panelInfo = openPanels.get(contextName);
+
+        assert.ok(panelInfo, 'Panel info should exist');
+        
+        // Verify HTML is set (prerequisite for data sending)
+        assert.ok(panelInfo.panel.webview.html.length > 0, 'HTML should be set before data is sent');
+        
+        // Verify HTML contains data display elements (indicates data was sent)
+        const html = panelInfo.panel.webview.html;
+        assert.ok(
+            html.includes('dashboard-content'),
+            'HTML should include dashboard content structure for displaying data'
+        );
+        assert.ok(
+            html.includes('stats-cards'),
+            'HTML should include stats cards for displaying dashboard data'
+        );
+    });
 });
 

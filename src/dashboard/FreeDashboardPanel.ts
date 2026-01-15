@@ -86,7 +86,7 @@ export class FreeDashboardPanel {
         });
 
         // Handle messages from the webview (register BEFORE setting HTML to prevent race condition)
-        panel.webview.onDidReceiveMessage(
+        const messageHandlerDisposable = panel.webview.onDidReceiveMessage(
             async (message) => {
                 await FreeDashboardPanel.handleWebviewMessage(
                     message,
@@ -94,10 +94,9 @@ export class FreeDashboardPanel {
                     kubeconfigPath,
                     contextName
                 );
-            },
-            undefined,
-            context.subscriptions
+            }
         );
+        context.subscriptions.push(messageHandlerDisposable);
 
         // Set the webview's HTML content
         panel.webview.html = getDashboardHtml(panel.webview, clusterName);

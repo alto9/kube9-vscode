@@ -96,7 +96,7 @@ export class OperatedDashboardPanel {
         });
 
         // Handle messages from the webview (register BEFORE setting HTML to prevent race condition)
-        panel.webview.onDidReceiveMessage(
+        const messageHandlerDisposable = panel.webview.onDidReceiveMessage(
             async (message) => {
                 await OperatedDashboardPanel.handleWebviewMessage(
                     message,
@@ -104,10 +104,9 @@ export class OperatedDashboardPanel {
                     kubeconfigPath,
                     contextName
                 );
-            },
-            undefined,
-            context.subscriptions
+            }
         );
+        context.subscriptions.push(messageHandlerDisposable);
 
         // Set the webview's HTML content
         panel.webview.html = getOperatedDashboardHtml(panel.webview, clusterName, operatorStatus);
