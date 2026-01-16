@@ -38,8 +38,6 @@ export function transformCronJobData(
     events: k8s.CoreV1Event[]
 ): CronJobDescribeData {
     const metadata = cronJob.metadata || {};
-    const spec = cronJob.spec || {};
-    const status = cronJob.status || {};
 
     return {
         overview: extractOverview(cronJob),
@@ -112,7 +110,7 @@ function parseScheduleToHuman(schedule: string): string {
         return schedule; // Return as-is if not standard format
     }
 
-    const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+    const [minute, hour, dayOfMonth, , dayOfWeek] = parts;
 
     // Handle common patterns
     if (schedule === '* * * * *') {

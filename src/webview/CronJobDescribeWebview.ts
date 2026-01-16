@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { WorkloadCommands, CronJobDetailsResult, CronJobEventsResult, FullJobsResult } from '../kubectl/WorkloadCommands';
+import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { transformCronJobData } from './cronJobDataTransformer';
 import { CronJobDescribeData } from '../providers/CronJobDescribeProvider';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
