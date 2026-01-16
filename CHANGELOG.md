@@ -1,3 +1,16 @@
+# [1.25.0](https://github.com/alto9/kube9-vscode/compare/v1.24.0...v1.25.0) (2026-01-16)
+
+
+### Bug Fixes
+
+* add PATH environment variable to launch configurations ([2cc4e52](https://github.com/alto9/kube9-vscode/commit/2cc4e52f0d1671fc72ae4e372c98101fb5aea3ab))
+* remove unused imports and variables in CronJob webview ([3851021](https://github.com/alto9/kube9-vscode/commit/3851021ef0eea75705cecc37fa71c75e93676d55))
+
+
+### Features
+
+* implement describe webview for CronJob resources ([aa6934d](https://github.com/alto9/kube9-vscode/commit/aa6934dfb2c89239a6a7fff04c92fe05875dcc70)), closes [#50](https://github.com/alto9/kube9-vscode/issues/50)
+
 # [1.24.0](https://github.com/alto9/kube9-vscode/compare/v1.23.1...v1.24.0) (2026-01-15)
 
 
