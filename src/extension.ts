@@ -6,6 +6,7 @@ import { DescribeWebview } from './webview/DescribeWebview';
 import { HealthReportPanel } from './webview/HealthReportPanel';
 import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
 import { NodeDescribeWebview } from './webview/NodeDescribeWebview';
+import { CronJobDescribeWebview } from './webview/CronJobDescribeWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterCustomizationService } from './services/ClusterCustomizationService';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
@@ -738,6 +739,32 @@ function registerCommands(): void {
     );
     context.subscriptions.push(describeNamespaceCmd);
     disposables.push(describeNamespaceCmd);
+    
+    // Register describe CronJob command
+    const describeCronJobCmd = vscode.commands.registerCommand(
+        'kube9.describeCronJob',
+        async (cronJobConfig: { name: string; namespace: string; kubeconfigPath: string; context: string }) => {
+            try {
+                if (!cronJobConfig || !cronJobConfig.name || !cronJobConfig.namespace) {
+                    throw new Error('Invalid CronJob configuration');
+                }
+                
+                await CronJobDescribeWebview.show(
+                    context,
+                    cronJobConfig.name,
+                    cronJobConfig.namespace,
+                    cronJobConfig.kubeconfigPath || KubeconfigParser.getKubeconfigPath(),
+                    cronJobConfig.context
+                );
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to describe CronJob:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe CronJob: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describeCronJobCmd);
+    disposables.push(describeCronJobCmd);
     
     // Register describe resource (raw) command
     const describeRawCmd = vscode.commands.registerCommand(

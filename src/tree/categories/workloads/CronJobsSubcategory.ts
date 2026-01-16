@@ -55,7 +55,7 @@ export class CronJobsSubcategory {
             const item = new ClusterTreeItem(
                 cronjobInfo.name,
                 'cronjob',
-                vscode.TreeItemCollapsibleState.Collapsed,
+                vscode.TreeItemCollapsibleState.None,
                 {
                     ...resourceData,
                     resourceName: cronjobInfo.name,
@@ -90,6 +90,18 @@ export class CronJobsSubcategory {
                 ? `\nLast Schedule: ${cronjobInfo.lastScheduleTime}`
                 : '';
             item.tooltip = `CronJob: ${cronjobInfo.name}\nNamespace: ${cronjobInfo.namespace}\nSchedule: ${cronjobInfo.schedule}\nStatus: ${statusText}${lastSchedule}`;
+
+            // Set command to open Describe webview on left-click
+            item.command = {
+                command: 'kube9.describeCronJob',
+                title: 'Describe CronJob',
+                arguments: [{
+                    name: cronjobInfo.name,
+                    namespace: cronjobInfo.namespace,
+                    kubeconfigPath: kubeconfigPath,
+                    context: contextName
+                }]
+            };
 
             return item;
         });
