@@ -203,6 +203,36 @@ export interface CronJobsResult {
 }
 
 /**
+ * Result of a cronjob details query operation.
+ */
+export interface CronJobDetailsResult {
+    /**
+     * Complete V1CronJob object with full cronjob details, undefined if query failed.
+     */
+    cronjob?: k8s.V1CronJob;
+    
+    /**
+     * Error information if the cronjob query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a cronjob events query operation.
+ */
+export interface CronJobEventsResult {
+    /**
+     * Array of CoreV1Event objects related to the cronjob, empty if query failed or no events found.
+     */
+    events: k8s.CoreV1Event[];
+    
+    /**
+     * Error information if the events query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
  * Result of a job query operation.
  */
 export interface JobsResult {
@@ -210,6 +240,21 @@ export interface JobsResult {
      * Array of job information, empty if query failed.
      */
     jobs: JobInfo[];
+    
+    /**
+     * Error information if the job query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a full jobs query operation (returns V1Job objects).
+ */
+export interface FullJobsResult {
+    /**
+     * Array of V1Job objects, empty if query failed.
+     */
+    jobs: k8s.V1Job[];
     
     /**
      * Error information if the job query failed.
@@ -1040,6 +1085,172 @@ export class WorkloadCommands {
             
             return {
                 cronjobs: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves detailed information for a specific cronjob from a cluster using the Kubernetes API client.
+     * Uses direct API calls to fetch complete V1CronJob details.
+     * 
+     * @param cronjobName Name of the cronjob to retrieve details for
+     * @param namespace Namespace where the cronjob is located
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param contextName Name of the context to query
+     * @returns CronJobDetailsResult with V1CronJob object and optional error information
+     */
+    public static async getCronJobDetails(
+        cronjobName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<CronJobDetailsResult> {
+        try {
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch single cronjob from API
+            const v1CronJob = await apiClient.batch.readNamespacedCronJob({
+                name: cronjobName,
+                namespace: namespace
+            });
+            
+            return {
+                cronjob: v1CronJob,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            // API call failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`CronJob details query failed for cronjob ${cronjobName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                cronjob: undefined,
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves Kubernetes events related to a specific cronjob using the Kubernetes API client.
+     * Filters events by involvedObject.kind='CronJob' and involvedObject.name matching the cronjob name.
+     * 
+     * @param cronjobName Name of the cronjob to retrieve events for
+     * @param namespace Namespace where the cronjob is located
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param contextName Name of the context to query
+     * @returns CronJobEventsResult with events array and optional error information
+     */
+    public static async getCronJobEvents(
+        cronjobName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<CronJobEventsResult> {
+        try {
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch all events in the namespace from API
+            const response = await apiClient.core.listNamespacedEvent({
+                namespace: namespace,
+                timeoutSeconds: 10
+            });
+            
+            const allEvents = response.items || [];
+            
+            // Filter events by involvedObject.kind='CronJob' and involvedObject.name matching cronjob name
+            const filteredEvents = allEvents.filter(event =>
+                event.involvedObject?.kind === 'CronJob' &&
+                event.involvedObject?.name === cronjobName
+            );
+            
+            // Sort events by lastTimestamp (most recent first), fall back to firstTimestamp if lastTimestamp is missing
+            const sortedEvents = filteredEvents.sort((a, b) => {
+                const aTimestamp = a.lastTimestamp || a.firstTimestamp || '';
+                const bTimestamp = b.lastTimestamp || b.firstTimestamp || '';
+                
+                // Compare timestamps (most recent first)
+                if (aTimestamp > bTimestamp) {
+                    return -1;
+                }
+                if (aTimestamp < bTimestamp) {
+                    return 1;
+                }
+                return 0;
+            });
+            
+            return {
+                events: sortedEvents,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            // API call failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`CronJob events query failed for cronjob ${cronjobName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                events: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves full V1Job objects owned by a specific cronjob using the Kubernetes API client.
+     * Used for describe views that need complete job information.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
+     * @param contextName Name of the context to query
+     * @param cronjobName Name of the cronjob
+     * @param namespace Namespace of the cronjob
+     * @returns FullJobsResult with V1Job array and optional error information
+     */
+    public static async getFullJobsForCronJob(
+        kubeconfigPath: string,
+        contextName: string,
+        cronjobName: string,
+        namespace: string
+    ): Promise<FullJobsResult> {
+        try {
+            // Set context on API client
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            
+            // Fetch all jobs in the namespace
+            const response = await apiClient.batch.listNamespacedJob({
+                namespace,
+                timeoutSeconds: 10
+            });
+            
+            // Filter jobs that are owned by this cronjob
+            const jobs = response.items.filter(job => {
+                const ownerRefs = job.metadata?.ownerReferences || [];
+                return ownerRefs.some(ref => 
+                    ref.kind === 'CronJob' && ref.name === cronjobName
+                );
+            });
+            
+            return {
+                jobs,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            // API call failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Full jobs query failed for cronjob ${cronjobName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                jobs: [],
                 error: kubectlError
             };
         }
