@@ -29,6 +29,7 @@
     "src/webview/pod-logs",
     "src/webview/pod-describe",
     "src/webview/pvc-describe",
+    "src/webview/pv-describe",
     "src/webview/operator-health-report",
     "src/webview/helm-package-manager",
     "src/webview/components"

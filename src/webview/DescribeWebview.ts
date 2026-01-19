@@ -6,6 +6,7 @@ import { extractKindFromContextValue, getYAMLEditorManager } from '../extension'
 import { PodDescribeProvider } from '../providers/PodDescribeProvider';
 import { NamespaceDescribeProvider } from '../providers/NamespaceDescribeProvider';
 import { PVCDescribeProvider } from '../providers/PVCDescribeProvider';
+import { PVDescribeProvider } from '../providers/PVDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
@@ -41,6 +42,16 @@ interface PodTreeItemConfig {
 interface PVCTreeItemConfig {
     name: string;
     namespace: string;
+    status?: string;
+    metadata?: Record<string, unknown>;
+    context: string;
+}
+
+/**
+ * PV configuration passed from tree item to describe webview.
+ */
+interface PVTreeItemConfig {
+    name: string;
     status?: string;
     metadata?: Record<string, unknown>;
     context: string;
@@ -94,6 +105,18 @@ export class DescribeWebview {
      * Used for refresh operations.
      */
     private static currentPVCConfig: PVCTreeItemConfig | undefined;
+
+    /**
+     * PV describe provider instance for fetching PV data.
+     * Initialized lazily when first needed.
+     */
+    private static pvProvider: PVDescribeProvider | undefined;
+
+    /**
+     * Current PV configuration being displayed.
+     * Used for refresh operations.
+     */
+    private static currentPVConfig: PVTreeItemConfig | undefined;
 
     /**
      * Show the Describe webview for a resource.
@@ -342,6 +365,16 @@ export class DescribeWebview {
             return;
         }
 
+        if (kind === 'PersistentVolume') {
+            // PVs are cluster-scoped (no namespace)
+            // Call showPVDescribe
+            await DescribeWebview.showPVDescribe(context, {
+                name,
+                context: contextName
+            });
+            return;
+        }
+
         // Show the Describe webview for other resource types
         DescribeWebview.show(context, {
             kind,
@@ -507,11 +540,25 @@ export class DescribeWebview {
                                 DescribeWebview.currentPVCConfig,
                                 panel
                             );
+                        } else if (DescribeWebview.currentPVConfig) {
+                            await DescribeWebview.loadPVData(
+                                DescribeWebview.currentPVConfig,
+                                panel
+                            );
                         }
                         break;
 
                     case 'viewYaml':
-                        await DescribeWebview.openYamlEditor();
+                        // Determine which resource type to open YAML for
+                        if (DescribeWebview.currentPVConfig) {
+                            await DescribeWebview.openPVYamlEditor();
+                        } else if (DescribeWebview.currentNamespaceConfig) {
+                            await DescribeWebview.openYamlEditor();
+                        } else if (DescribeWebview.currentPVCConfig) {
+                            await DescribeWebview.openPVCYamlEditor();
+                        } else if (DescribeWebview.currentPodConfig) {
+                            await DescribeWebview.openPodYamlEditor();
+                        }
                         break;
 
                     case 'setDefaultNamespace':
@@ -551,6 +598,17 @@ export class DescribeWebview {
                             );
                         } else {
                             vscode.window.showErrorMessage('Invalid Pod data in navigateToPod message');
+                        }
+                        break;
+
+                    case 'navigateToPVC':
+                        if (message.data && message.data.name && message.data.namespace) {
+                            await DescribeWebview.navigateToPVC(
+                                message.data.name,
+                                message.data.namespace
+                            );
+                        } else {
+                            vscode.window.showErrorMessage('Invalid PVC data in navigateToPVC message');
                         }
                         break;
 
@@ -692,6 +750,38 @@ export class DescribeWebview {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Failed to navigate to Pod:', errorMessage);
             vscode.window.showErrorMessage(`Failed to navigate to Pod: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Navigate to a specific PVC and open its describe webview.
+     * 
+     * @param pvcName The PVC name
+     * @param namespace The namespace name
+     */
+    private static async navigateToPVC(pvcName: string, namespace: string): Promise<void> {
+        if (!DescribeWebview.currentPVConfig) {
+            vscode.window.showErrorMessage('No PV context available');
+            return;
+        }
+
+        try {
+            const pvConfig = DescribeWebview.currentPVConfig;
+            const contextName = pvConfig.context;
+
+            // Open PVC describe webview
+            await DescribeWebview.showPVCDescribe(
+                DescribeWebview.extensionContext!,
+                {
+                    name: pvcName,
+                    namespace: namespace,
+                    context: contextName
+                }
+            );
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to navigate to PVC:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to navigate to PVC: ${errorMessage}`);
         }
     }
 
@@ -1219,6 +1309,333 @@ export class DescribeWebview {
     </div>
 </body>
 </html>`;
+    }
+
+    /**
+     * Show the Describe webview for a PersistentVolume resource.
+     * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * 
+     * @param context The VS Code extension context
+     * @param pvConfig PV configuration with name and context
+     */
+    public static async showPVDescribe(
+        context: vscode.ExtensionContext,
+        pvConfig: PVTreeItemConfig
+    ): Promise<void> {
+        // Store the extension context for later use
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.currentPVConfig = pvConfig;
+
+        // Initialize PV provider if not already initialized
+        if (!DescribeWebview.pvProvider) {
+            const k8sClient = getKubernetesApiClient();
+            DescribeWebview.pvProvider = new PVDescribeProvider(k8sClient);
+        }
+
+        // If we already have a panel, reuse it and update the content
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updatePVPanel(pvConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create title with PV name
+        const title = `PersistentVolume / ${pvConfig.name}`;
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+
+        // Set the webview's HTML content
+        panel.webview.html = DescribeWebview.getPVWebviewContent(panel.webview, pvConfig);
+
+        // Set up message handling
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
+
+        // Fetch and send PV data
+        await DescribeWebview.loadPVData(pvConfig, panel);
+
+        // Handle panel disposal - clear all describe webview state
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentPVConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Update an existing panel with new PV information.
+     * 
+     * @param pvConfig PV configuration
+     */
+    private static async updatePVPanel(pvConfig: PVTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+
+        // Update panel title
+        const title = `PersistentVolume / ${pvConfig.name}`;
+        DescribeWebview.currentPanel.title = title;
+        DescribeWebview.currentPVConfig = pvConfig;
+
+        // Update panel content
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getPVWebviewContent(DescribeWebview.currentPanel.webview, pvConfig);
+
+        // Reload PV data
+        await DescribeWebview.loadPVData(pvConfig, DescribeWebview.currentPanel);
+    }
+
+    /**
+     * Load PV data and send it to the webview.
+     * 
+     * @param pvConfig PV configuration
+     * @param panel Webview panel to send data to
+     */
+    private static async loadPVData(
+        pvConfig: PVTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.pvProvider) {
+            return;
+        }
+
+        try {
+            const pvData = await DescribeWebview.pvProvider.getPVDetails(
+                pvConfig.name,
+                pvConfig.context
+            );
+
+            panel.webview.postMessage({
+                command: 'updatePVData',
+                data: pvData
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: `Failed to load PV details: ${errorMessage}`
+                }
+            });
+        }
+    }
+
+    /**
+     * Generate the HTML content for the PV Describe webview.
+     * Loads React bundle from webpack build output.
+     * 
+     * @param webview The webview instance
+     * @param pvConfig PV configuration
+     * @returns HTML content string
+     */
+    private static getPVWebviewContent(webview: vscode.Webview, pvConfig: PVTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            // Fallback if extension context is not available
+            return this.getPVFallbackHtml(pvConfig);
+        }
+
+        const cspSource = webview.cspSource;
+        const escapedPVName = DescribeWebview.escapeHtml(pvConfig.name);
+        
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pv-describe', 'index.js')
+        );
+
+        // Read header CSS and inline it
+        let headerCss = '';
+        try {
+            const headerCssPath = path.join(
+                DescribeWebview.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'styles',
+                'webview-header.css'
+            );
+            headerCss = fs.readFileSync(headerCssPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load header CSS:', error);
+        }
+
+        const nonce = getNonce();
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>PersistentVolume / ${escapedPVName}</title>
+    <style>
+        ${headerCss}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
+    }
+
+    /**
+     * Fallback HTML content if template files cannot be loaded.
+     * 
+     * @param pvConfig PV configuration
+     * @returns Fallback HTML content string
+     */
+    private static getPVFallbackHtml(pvConfig: PVTreeItemConfig): string {
+        const escapedPVName = DescribeWebview.escapeHtml(pvConfig.name);
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>PersistentVolume / ${escapedPVName}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            margin: 0;
+        }
+        .error {
+            padding: 20px;
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 4px;
+            color: var(--vscode-errorForeground);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>PersistentVolume / ${escapedPVName}</h1>
+    <div class="error">
+        Failed to load webview template. Please check that dist/media/pv-describe/index.js exists.
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Open YAML editor for the current PV.
+     * Uses the current PV configuration to build a ResourceIdentifier.
+     */
+    private static async openPVYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentPVConfig) {
+            vscode.window.showErrorMessage('No PV is currently being displayed');
+            return;
+        }
+
+        try {
+            const pvConfig = DescribeWebview.currentPVConfig;
+            
+            // Build ResourceIdentifier for PV
+            // PVs are cluster-scoped, so namespace field is undefined
+            const resource = {
+                kind: 'PersistentVolume',
+                name: pvConfig.name,
+                namespace: undefined, // PVs are cluster-scoped
+                apiVersion: 'v1',
+                cluster: pvConfig.context
+            };
+
+            console.log('Opening YAML editor for PV:', resource);
+
+            // Get YAML editor manager and open editor
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for PV:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Open YAML editor for the current PVC.
+     * Uses the current PVC configuration to build a ResourceIdentifier.
+     */
+    private static async openPVCYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentPVCConfig) {
+            vscode.window.showErrorMessage('No PVC is currently being displayed');
+            return;
+        }
+
+        try {
+            const pvcConfig = DescribeWebview.currentPVCConfig;
+            
+            // Build ResourceIdentifier for PVC
+            const resource = {
+                kind: 'PersistentVolumeClaim',
+                name: pvcConfig.name,
+                namespace: pvcConfig.namespace,
+                apiVersion: 'v1',
+                cluster: pvcConfig.context
+            };
+
+            console.log('Opening YAML editor for PVC:', resource);
+
+            // Get YAML editor manager and open editor
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for PVC:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Open YAML editor for the current Pod.
+     * Uses the current Pod configuration to build a ResourceIdentifier.
+     */
+    private static async openPodYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentPodConfig) {
+            vscode.window.showErrorMessage('No Pod is currently being displayed');
+            return;
+        }
+
+        try {
+            const podConfig = DescribeWebview.currentPodConfig;
+            
+            // Build ResourceIdentifier for Pod
+            const resource = {
+                kind: 'Pod',
+                name: podConfig.name,
+                namespace: podConfig.namespace,
+                apiVersion: 'v1',
+                cluster: podConfig.context
+            };
+
+            console.log('Opening YAML editor for Pod:', resource);
+
+            // Get YAML editor manager and open editor
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for Pod:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
     }
 }
 
