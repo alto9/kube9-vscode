@@ -25,7 +25,8 @@ function formatValue(value: string | undefined | null, fallback: string = 'N/A')
  */
 function getServiceTypeBadgeClass(type: string): string {
     const typeLower = type.toLowerCase();
-    return `service-type-badge ${typeLower}`;
+    // Use status-badge styling similar to health status
+    return `status-badge ${typeLower}`;
 }
 
 /**
@@ -45,12 +46,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ data }) => {
         <div className="overview-tab">
             <div className="section">
                 <h2>Overview</h2>
-                <div className="info-grid">
+                <div className="info-grid" style={{ marginBottom: '24px' }}>
                     {/* Service Type */}
                     <div className="info-item">
                         <div className="info-label">Type</div>
                         <div className="info-value">
-                            <span className={getServiceTypeBadgeClass(data.type)}>
+                            <span className={getServiceTypeBadgeClass(data.type)} style={{ marginLeft: 0 }}>
                                 {data.type}
                             </span>
                         </div>
@@ -60,7 +61,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ data }) => {
                     <div className="info-item">
                         <div className="info-label">Health</div>
                         <div className="info-value">
-                            <span className={getStatusBadgeClass(healthDisplay)}>
+                            <span className={getStatusBadgeClass(healthDisplay)} style={{ marginLeft: 0 }}>
                                 {healthDisplay}
                             </span>
                         </div>
@@ -100,8 +101,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ data }) => {
                         <div className="info-value">
                             {formatValue(data.sessionAffinity)}
                             {data.sessionAffinityConfig?.clientIP?.timeoutSeconds && (
-                                <span className="session-affinity-timeout">
-                                    {' '}({data.sessionAffinityConfig.clientIP.timeoutSeconds}s timeout)
+                                <span style={{ color: 'var(--vscode-descriptionForeground)', fontSize: '0.9em', fontStyle: 'italic', marginLeft: '8px' }}>
+                                    ({data.sessionAffinityConfig.clientIP.timeoutSeconds}s timeout)
                                 </span>
                             )}
                         </div>
@@ -127,30 +128,28 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ data }) => {
             {data.ports.length > 0 && (
                 <div className="section">
                     <h2>Ports</h2>
-                    <div className="ports-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Port</th>
-                                    <th>Target Port</th>
-                                    <th>Node Port</th>
-                                    <th>Protocol</th>
+                    <table className="conditions-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Port</th>
+                                <th>Target Port</th>
+                                <th>Node Port</th>
+                                <th>Protocol</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.ports.map((port, index) => (
+                                <tr key={index}>
+                                    <td>{formatValue(port.name, '-')}</td>
+                                    <td>{port.port}</td>
+                                    <td>{typeof port.targetPort === 'number' ? port.targetPort : port.targetPort}</td>
+                                    <td>{port.nodePort ? port.nodePort : '-'}</td>
+                                    <td>{port.protocol}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {data.ports.map((port, index) => (
-                                    <tr key={index}>
-                                        <td>{formatValue(port.name, '-')}</td>
-                                        <td>{port.port}</td>
-                                        <td>{typeof port.targetPort === 'number' ? port.targetPort : port.targetPort}</td>
-                                        <td>{port.nodePort ? port.nodePort : '-'}</td>
-                                        <td>{port.protocol}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
             )}
 

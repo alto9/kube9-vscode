@@ -2137,6 +2137,30 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'service-describe', 'index.js')
         );
 
+        // Read CSS bundle and inline it
+        // Try dist path first (production), then media path (development)
+        let bundleCss = '';
+        const cssPaths = [
+            path.join(DescribeWebview.extensionContext.extensionPath, 'dist', 'media', 'service-describe', 'index.css'),
+            path.join(DescribeWebview.extensionContext.extensionPath, 'media', 'describe', 'podDescribe.css')
+        ];
+        
+        for (const cssPath of cssPaths) {
+            try {
+                if (fs.existsSync(cssPath)) {
+                    bundleCss = fs.readFileSync(cssPath, 'utf8');
+                    break;
+                }
+            } catch (error) {
+                // Try next path
+                continue;
+            }
+        }
+        
+        if (!bundleCss) {
+            console.warn('Failed to load service describe CSS from any path');
+        }
+
         // Read header CSS and inline it
         let headerCss = '';
         try {
@@ -2162,6 +2186,7 @@ export class DescribeWebview {
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
     <title>Service / ${escapedServiceName}</title>
     <style>
+        ${bundleCss}
         ${headerCss}
     </style>
 </head>

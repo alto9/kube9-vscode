@@ -30,9 +30,9 @@ export const EndpointsTab: React.FC<EndpointsTabProps> = ({ data }) => {
                 {data.subsets.map((subset, subsetIndex) => (
                     <div key={subsetIndex} className="endpoint-subset">
                         {subset.addresses.length > 0 && (
-                            <div className="endpoint-addresses">
-                                <h3>Addresses ({subset.addresses.length})</h3>
-                                <table>
+                            <div className="endpoint-addresses" style={{ marginBottom: '24px' }}>
+                                <h3 style={{ marginBottom: '12px', fontSize: '1em', fontWeight: 600, color: 'var(--vscode-foreground)' }}>Addresses ({subset.addresses.length})</h3>
+                                <table className="conditions-table">
                                     <thead>
                                         <tr>
                                             <th>IP Address</th>
@@ -55,8 +55,8 @@ export const EndpointsTab: React.FC<EndpointsTabProps> = ({ data }) => {
 
                         {subset.ports.length > 0 && (
                             <div className="endpoint-ports">
-                                <h3>Ports ({subset.ports.length})</h3>
-                                <table>
+                                <h3 style={{ marginBottom: '12px', fontSize: '1em', fontWeight: 600, color: 'var(--vscode-foreground)' }}>Ports ({subset.ports.length})</h3>
+                                <table className="conditions-table">
                                     <thead>
                                         <tr>
                                             <th>Name</th>
