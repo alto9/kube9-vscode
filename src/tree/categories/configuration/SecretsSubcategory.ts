@@ -74,7 +74,12 @@ export class SecretsSubcategory {
             // Set tooltip with detailed information (no sensitive data)
             item.tooltip = `Secret: ${secretInfo.name}\nNamespace: ${secretInfo.namespace}\nType: ${secretInfo.type}`;
 
-            // No click command (placeholder)
+            // Set command to open Describe webview on left-click
+            item.command = {
+                command: 'kube9.describeResource',
+                title: 'Describe Secret',
+                arguments: [item]
+            };
 
             return item;
         });

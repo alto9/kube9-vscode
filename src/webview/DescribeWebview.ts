@@ -7,6 +7,7 @@ import { PodDescribeProvider } from '../providers/PodDescribeProvider';
 import { NamespaceDescribeProvider } from '../providers/NamespaceDescribeProvider';
 import { PVCDescribeProvider } from '../providers/PVCDescribeProvider';
 import { PVDescribeProvider } from '../providers/PVDescribeProvider';
+import { SecretDescribeProvider } from '../providers/SecretDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
@@ -52,6 +53,17 @@ interface PVCTreeItemConfig {
  */
 interface PVTreeItemConfig {
     name: string;
+    status?: string;
+    metadata?: Record<string, unknown>;
+    context: string;
+}
+
+/**
+ * Secret configuration passed from tree item to describe webview.
+ */
+interface SecretTreeItemConfig {
+    name: string;
+    namespace: string;
     status?: string;
     metadata?: Record<string, unknown>;
     context: string;
@@ -117,6 +129,18 @@ export class DescribeWebview {
      * Used for refresh operations.
      */
     private static currentPVConfig: PVTreeItemConfig | undefined;
+
+    /**
+     * Secret describe provider instance for fetching Secret data.
+     * Initialized lazily when first needed.
+     */
+    private static secretProvider: SecretDescribeProvider | undefined;
+
+    /**
+     * Current Secret configuration being displayed.
+     * Used for refresh operations.
+     */
+    private static currentSecretConfig: SecretTreeItemConfig | undefined;
 
     /**
      * Show the Describe webview for a resource.
@@ -375,6 +399,22 @@ export class DescribeWebview {
             return;
         }
 
+        if (kind === 'Secret') {
+            // Validate namespace (Secrets are always namespaced)
+            if (!namespace) {
+                vscode.window.showErrorMessage('Unable to describe Secret: namespace is required');
+                return;
+            }
+            
+            // Call showSecretDescribe
+            await DescribeWebview.showSecretDescribe(context, {
+                name,
+                namespace,
+                context: contextName
+            });
+            return;
+        }
+
         // Show the Describe webview for other resource types
         DescribeWebview.show(context, {
             kind,
@@ -545,6 +585,11 @@ export class DescribeWebview {
                                 DescribeWebview.currentPVConfig,
                                 panel
                             );
+                        } else if (DescribeWebview.currentSecretConfig) {
+                            await DescribeWebview.loadSecretData(
+                                DescribeWebview.currentSecretConfig,
+                                panel
+                            );
                         }
                         break;
 
@@ -558,6 +603,8 @@ export class DescribeWebview {
                             await DescribeWebview.openPVCYamlEditor();
                         } else if (DescribeWebview.currentPodConfig) {
                             await DescribeWebview.openPodYamlEditor();
+                        } else if (DescribeWebview.currentSecretConfig) {
+                            await DescribeWebview.openSecretYamlEditor();
                         }
                         break;
 
@@ -1634,6 +1681,265 @@ export class DescribeWebview {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Failed to open YAML editor for Pod:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Show the Describe webview for a Secret resource.
+     * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * 
+     * @param context The VS Code extension context
+     * @param secretConfig Secret configuration with name, namespace, and context
+     */
+    public static async showSecretDescribe(
+        context: vscode.ExtensionContext,
+        secretConfig: SecretTreeItemConfig
+    ): Promise<void> {
+        // Store the extension context for later use
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.currentSecretConfig = secretConfig;
+
+        // Initialize Secret provider if not already initialized
+        if (!DescribeWebview.secretProvider) {
+            const k8sClient = getKubernetesApiClient();
+            DescribeWebview.secretProvider = new SecretDescribeProvider(k8sClient);
+        }
+
+        // If we already have a panel, reuse it and update the content
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updateSecretPanel(secretConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create title with Secret name
+        const title = `Secret / ${secretConfig.name}`;
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+
+        // Set the webview's HTML content
+        panel.webview.html = DescribeWebview.getSecretWebviewContent(panel.webview, secretConfig);
+
+        // Set up message handling
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
+
+        // Fetch and send Secret data
+        await DescribeWebview.loadSecretData(secretConfig, panel);
+
+        // Handle panel disposal - clear all describe webview state
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentSecretConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Update an existing panel with new Secret information.
+     * 
+     * @param secretConfig Secret configuration
+     */
+    private static async updateSecretPanel(secretConfig: SecretTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+
+        // Update panel title
+        const title = `Secret / ${secretConfig.name}`;
+        DescribeWebview.currentPanel.title = title;
+        DescribeWebview.currentSecretConfig = secretConfig;
+
+        // Update panel content
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getSecretWebviewContent(DescribeWebview.currentPanel.webview, secretConfig);
+
+        // Reload Secret data
+        await DescribeWebview.loadSecretData(secretConfig, DescribeWebview.currentPanel);
+    }
+
+    /**
+     * Load Secret data and send it to the webview.
+     * 
+     * @param secretConfig Secret configuration
+     * @param panel Webview panel to send data to
+     */
+    private static async loadSecretData(
+        secretConfig: SecretTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.secretProvider) {
+            return;
+        }
+
+        try {
+            const secretData = await DescribeWebview.secretProvider.getSecretDetails(
+                secretConfig.name,
+                secretConfig.namespace,
+                secretConfig.context
+            );
+
+            panel.webview.postMessage({
+                command: 'updateSecretData',
+                data: secretData
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: `Failed to load Secret details: ${errorMessage}`
+                }
+            });
+        }
+    }
+
+    /**
+     * Generate the HTML content for the Secret Describe webview.
+     * Loads React bundle from webpack build output.
+     * 
+     * @param webview The webview instance
+     * @param secretConfig Secret configuration
+     * @returns HTML content string
+     */
+    private static getSecretWebviewContent(webview: vscode.Webview, secretConfig: SecretTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            // Fallback if extension context is not available
+            return this.getSecretFallbackHtml(secretConfig);
+        }
+
+        const cspSource = webview.cspSource;
+        const escapedSecretName = DescribeWebview.escapeHtml(secretConfig.name);
+        
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'secret-describe', 'index.js')
+        );
+
+        // Read header CSS and inline it
+        let headerCss = '';
+        try {
+            const headerCssPath = path.join(
+                DescribeWebview.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'styles',
+                'webview-header.css'
+            );
+            headerCss = fs.readFileSync(headerCssPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load header CSS:', error);
+        }
+
+        const nonce = getNonce();
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>Secret / ${escapedSecretName}</title>
+    <style>
+        ${headerCss}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
+    }
+
+    /**
+     * Fallback HTML content if template files cannot be loaded.
+     * 
+     * @param secretConfig Secret configuration
+     * @returns Fallback HTML content string
+     */
+    private static getSecretFallbackHtml(secretConfig: SecretTreeItemConfig): string {
+        const escapedSecretName = DescribeWebview.escapeHtml(secretConfig.name);
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>Secret / ${escapedSecretName}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            margin: 0;
+        }
+        .error {
+            padding: 20px;
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 4px;
+            color: var(--vscode-errorForeground);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Secret / ${escapedSecretName}</h1>
+    <div class="error">
+        Failed to load webview template. Please check that dist/media/secret-describe/index.js exists.
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Open YAML editor for the current Secret.
+     * Uses the current Secret configuration to build a ResourceIdentifier.
+     */
+    private static async openSecretYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentSecretConfig) {
+            vscode.window.showErrorMessage('No Secret is currently being displayed');
+            return;
+        }
+
+        try {
+            const secretConfig = DescribeWebview.currentSecretConfig;
+            
+            // Build ResourceIdentifier for Secret
+            const resource = {
+                kind: 'Secret',
+                name: secretConfig.name,
+                namespace: secretConfig.namespace,
+                apiVersion: 'v1',
+                cluster: secretConfig.context
+            };
+
+            console.log('Opening YAML editor for Secret:', resource);
+
+            // Get YAML editor manager and open editor
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for Secret:', errorMessage);
             vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
         }
     }

@@ -132,6 +132,7 @@ For detailed setup instructions, usage guide, and troubleshooting, see [ArgoCD I
 ### Resource Management
 - Tree view navigation (clusters → namespaces → resources)
 - Resource detail viewer with form and YAML tabs
+- Graphical `kubectl describe` functionality for Pods, PVCs, PVs, Secrets, and more
 - Edit common fields (replicas, image, labels, etc.)
 - Save changes back to cluster
 - Delete resources with confirmation
