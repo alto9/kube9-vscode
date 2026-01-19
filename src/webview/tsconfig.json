@@ -15,7 +15,8 @@
     "./pod-describe/**/*",
     "./pvc-describe/**/*",
     "./pv-describe/**/*",
-    "./secret-describe/**/*"
+    "./secret-describe/**/*",
+    "./service-describe/**/*"
   ]
 }
 

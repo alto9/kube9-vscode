@@ -8,6 +8,7 @@ import { NamespaceDescribeProvider } from '../providers/NamespaceDescribeProvide
 import { PVCDescribeProvider } from '../providers/PVCDescribeProvider';
 import { PVDescribeProvider } from '../providers/PVDescribeProvider';
 import { SecretDescribeProvider } from '../providers/SecretDescribeProvider';
+import { ServiceDescribeProvider } from '../providers/ServiceDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
@@ -66,6 +67,15 @@ interface SecretTreeItemConfig {
     namespace: string;
     status?: string;
     metadata?: Record<string, unknown>;
+    context: string;
+}
+
+/**
+ * Service configuration passed from tree item to describe webview.
+ */
+interface ServiceTreeItemConfig {
+    name: string;
+    namespace: string;
     context: string;
 }
 
@@ -141,6 +151,18 @@ export class DescribeWebview {
      * Used for refresh operations.
      */
     private static currentSecretConfig: SecretTreeItemConfig | undefined;
+
+    /**
+     * Service describe provider instance for fetching Service data.
+     * Initialized lazily when first needed.
+     */
+    private static serviceProvider: ServiceDescribeProvider | undefined;
+
+    /**
+     * Current Service configuration being displayed.
+     * Used for refresh operations.
+     */
+    private static currentServiceConfig: ServiceTreeItemConfig | undefined;
 
     /**
      * Show the Describe webview for a resource.
@@ -415,6 +437,22 @@ export class DescribeWebview {
             return;
         }
 
+        if (kind === 'Service') {
+            // Validate namespace (services are always namespaced)
+            if (!namespace) {
+                vscode.window.showErrorMessage('Unable to describe Service: namespace is required');
+                return;
+            }
+            
+            // Call showServiceDescribe
+            await DescribeWebview.showServiceDescribe(context, {
+                name,
+                namespace,
+                context: contextName
+            });
+            return;
+        }
+
         // Show the Describe webview for other resource types
         DescribeWebview.show(context, {
             kind,
@@ -590,6 +628,11 @@ export class DescribeWebview {
                                 DescribeWebview.currentSecretConfig,
                                 panel
                             );
+                        } else if (DescribeWebview.currentServiceConfig) {
+                            await DescribeWebview.loadServiceData(
+                                DescribeWebview.currentServiceConfig,
+                                panel
+                            );
                         }
                         break;
 
@@ -605,6 +648,8 @@ export class DescribeWebview {
                             await DescribeWebview.openPodYamlEditor();
                         } else if (DescribeWebview.currentSecretConfig) {
                             await DescribeWebview.openSecretYamlEditor();
+                        } else if (DescribeWebview.currentServiceConfig) {
+                            await DescribeWebview.openServiceYamlEditor();
                         }
                         break;
 
@@ -1940,6 +1985,265 @@ export class DescribeWebview {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Failed to open YAML editor for Secret:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Show the Describe webview for a Service resource.
+     * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * 
+     * @param context The VS Code extension context
+     * @param serviceConfig Service configuration with name, namespace, and context
+     */
+    public static async showServiceDescribe(
+        context: vscode.ExtensionContext,
+        serviceConfig: ServiceTreeItemConfig
+    ): Promise<void> {
+        // Store the extension context for later use
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.currentServiceConfig = serviceConfig;
+
+        // Initialize Service provider if not already initialized
+        if (!DescribeWebview.serviceProvider) {
+            const k8sClient = getKubernetesApiClient();
+            DescribeWebview.serviceProvider = new ServiceDescribeProvider(k8sClient);
+        }
+
+        // If we already have a panel, reuse it and update the content
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updateServicePanel(serviceConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create title with Service name
+        const title = `Service / ${serviceConfig.name}`;
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+
+        // Set the webview's HTML content
+        panel.webview.html = DescribeWebview.getServiceWebviewContent(panel.webview, serviceConfig);
+
+        // Set up message handling
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
+
+        // Fetch and send Service data
+        await DescribeWebview.loadServiceData(serviceConfig, panel);
+
+        // Handle panel disposal - clear all describe webview state
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentServiceConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Update an existing panel with new Service information.
+     * 
+     * @param serviceConfig Service configuration
+     */
+    private static async updateServicePanel(serviceConfig: ServiceTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+
+        // Update panel title
+        const title = `Service / ${serviceConfig.name}`;
+        DescribeWebview.currentPanel.title = title;
+        DescribeWebview.currentServiceConfig = serviceConfig;
+
+        // Update panel content
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getServiceWebviewContent(DescribeWebview.currentPanel.webview, serviceConfig);
+
+        // Reload Service data
+        await DescribeWebview.loadServiceData(serviceConfig, DescribeWebview.currentPanel);
+    }
+
+    /**
+     * Load Service data and send it to the webview.
+     * 
+     * @param serviceConfig Service configuration
+     * @param panel Webview panel to send data to
+     */
+    private static async loadServiceData(
+        serviceConfig: ServiceTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.serviceProvider) {
+            return;
+        }
+
+        try {
+            const serviceData = await DescribeWebview.serviceProvider.getServiceDetails(
+                serviceConfig.name,
+                serviceConfig.namespace,
+                serviceConfig.context
+            );
+
+            panel.webview.postMessage({
+                command: 'updateServiceData',
+                data: serviceData
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: `Failed to load Service details: ${errorMessage}`
+                }
+            });
+        }
+    }
+
+    /**
+     * Generate the HTML content for the Service Describe webview.
+     * Loads React bundle from webpack build output.
+     * 
+     * @param webview The webview instance
+     * @param serviceConfig Service configuration
+     * @returns HTML content string
+     */
+    private static getServiceWebviewContent(webview: vscode.Webview, serviceConfig: ServiceTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            // Fallback if extension context is not available
+            return this.getServiceFallbackHtml(serviceConfig);
+        }
+
+        const cspSource = webview.cspSource;
+        const escapedServiceName = DescribeWebview.escapeHtml(serviceConfig.name);
+        
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'service-describe', 'index.js')
+        );
+
+        // Read header CSS and inline it
+        let headerCss = '';
+        try {
+            const headerCssPath = path.join(
+                DescribeWebview.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'styles',
+                'webview-header.css'
+            );
+            headerCss = fs.readFileSync(headerCssPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load header CSS:', error);
+        }
+
+        const nonce = getNonce();
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>Service / ${escapedServiceName}</title>
+    <style>
+        ${headerCss}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
+    }
+
+    /**
+     * Fallback HTML content if template files cannot be loaded.
+     * 
+     * @param serviceConfig Service configuration
+     * @returns Fallback HTML content string
+     */
+    private static getServiceFallbackHtml(serviceConfig: ServiceTreeItemConfig): string {
+        const escapedServiceName = DescribeWebview.escapeHtml(serviceConfig.name);
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>Service / ${escapedServiceName}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            margin: 0;
+        }
+        .error {
+            padding: 20px;
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 4px;
+            color: var(--vscode-errorForeground);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Service / ${escapedServiceName}</h1>
+    <div class="error">
+        Failed to load webview template. Please check that dist/media/service-describe/index.js exists.
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Open YAML editor for the current Service.
+     * Uses the current Service configuration to build a ResourceIdentifier.
+     */
+    private static async openServiceYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentServiceConfig) {
+            vscode.window.showErrorMessage('No Service is currently being displayed');
+            return;
+        }
+
+        try {
+            const serviceConfig = DescribeWebview.currentServiceConfig;
+            
+            // Build ResourceIdentifier for Service
+            const resource = {
+                kind: 'Service',
+                name: serviceConfig.name,
+                namespace: serviceConfig.namespace,
+                apiVersion: 'v1',
+                cluster: serviceConfig.context
+            };
+
+            console.log('Opening YAML editor for Service:', resource);
+
+            // Get YAML editor manager and open editor
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for Service:', errorMessage);
             vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
         }
     }
