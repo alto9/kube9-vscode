@@ -38,8 +38,25 @@ if ! command -v kubectl &> /dev/null; then
     exit 1
 fi
 
-# Validate scenario exists
-if [ ! -f "${SCENARIO_FILE}" ]; then
+# Check if Helm is installed (required for with-operator scenario)
+if [ "${SCENARIO_NAME}" = "with-operator" ]; then
+    if ! command -v helm &> /dev/null; then
+        echo "Error: Helm not found. Helm is required for with-operator scenario."
+        echo "  macOS: brew install helm"
+        echo "  Linux: https://helm.sh/docs/intro/install/"
+        exit 1
+    fi
+fi
+
+# Validate scenario exists (or handle special cases)
+if [ "${SCENARIO_NAME}" = "with-operator" ]; then
+    # with-operator uses Helm + workloads file
+    WORKLOADS_FILE="${SCENARIOS_DIR}/with-operator-workloads.yaml"
+    if [ ! -f "${WORKLOADS_FILE}" ]; then
+        echo "Error: Workloads file not found: ${WORKLOADS_FILE}"
+        exit 1
+    fi
+elif [ ! -f "${SCENARIO_FILE}" ]; then
     echo "Error: Scenario '${SCENARIO_NAME}' not found"
     echo "File does not exist: ${SCENARIO_FILE}"
     echo ""
@@ -80,6 +97,23 @@ if [ "${RESOURCE_COUNT}" -gt 0 ]; then
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "Cleaning up existing resources..."
         
+        # Uninstall Helm releases if any exist
+        if command -v helm &> /dev/null; then
+            HELM_RELEASES=$(helm list --all-namespaces -q 2>/dev/null || true)
+            if [ -n "${HELM_RELEASES}" ]; then
+                echo "Uninstalling Helm releases..."
+                while IFS= read -r release; do
+                    if [ -n "${release}" ]; then
+                        RELEASE_NAMESPACE=$(helm list --all-namespaces -f "^${release}$" -o json 2>/dev/null | jq -r '.[0].namespace' 2>/dev/null || echo "")
+                        if [ -n "${RELEASE_NAMESPACE}" ]; then
+                            echo "  Uninstalling ${release} from ${RELEASE_NAMESPACE}..."
+                            helm uninstall "${release}" --namespace "${RELEASE_NAMESPACE}" --wait 2>/dev/null || true
+                        fi
+                    fi
+                done <<< "${HELM_RELEASES}"
+            fi
+        fi
+        
         # Delete all namespaces except system namespaces
         # Try using jq if available, otherwise use grep/awk
         if command -v jq &> /dev/null; then
@@ -113,13 +147,46 @@ if [ "${RESOURCE_COUNT}" -gt 0 ]; then
     fi
 fi
 
-# Apply scenario
+# Deploy scenario
 echo "Deploying scenario: ${SCENARIO_NAME}..."
-kubectl apply -f "${SCENARIO_FILE}"
 
-# Wait for resources to be created
-echo "Waiting for resources to be created..."
-sleep 3
+if [ "${SCENARIO_NAME}" = "with-operator" ]; then
+    # Install kube9-operator via Helm
+    OPERATOR_CHART_PATH="../kube9-operator/charts/kube9-operator"
+    
+    # Check if chart path exists
+    if [ ! -d "${OPERATOR_CHART_PATH}" ]; then
+        echo "Error: kube9-operator chart not found at ${OPERATOR_CHART_PATH}"
+        echo "Make sure kube9-operator repository is cloned at the expected location"
+        exit 1
+    fi
+    
+    echo "Installing kube9-operator via Helm..."
+    helm install kube9-operator "${OPERATOR_CHART_PATH}" \
+        --namespace kube9-system \
+        --create-namespace \
+        --wait \
+        --timeout 5m
+    
+    echo ""
+    echo "✓ kube9-operator installed successfully"
+    echo ""
+    
+    # Apply demo workloads
+    echo "Deploying demo workloads..."
+    kubectl apply -f "${WORKLOADS_FILE}"
+    
+    # Wait for resources to be created
+    echo "Waiting for resources to be created..."
+    sleep 3
+else
+    # Standard scenario - apply YAML
+    kubectl apply -f "${SCENARIO_FILE}"
+    
+    # Wait for resources to be created
+    echo "Waiting for resources to be created..."
+    sleep 3
+fi
 
 # Show deployed resources
 echo ""

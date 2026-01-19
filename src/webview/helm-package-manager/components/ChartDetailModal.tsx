@@ -38,6 +38,7 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
     onClose,
     onInstall
 }) => {
+    // All hooks must be called unconditionally before any early returns
     const [details, setDetails] = useState<ChartDetails | null>(null);
     const [activeTab, setActiveTab] = useState<ChartDetailTab>('readme');
     const [loading, setLoading] = useState(false);
@@ -45,6 +46,9 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
     const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
     const [installModalOpen, setInstallModalOpen] = useState(false);
     const [namespaces, setNamespaces] = useState<string[]>(['default']);
+    const [installHovered, setInstallHovered] = useState(false);
+    const [closeHovered, setCloseHovered] = useState(false);
+    const [retryHovered, setRetryHovered] = useState(false);
 
     /**
      * Fetch chart details from extension.
@@ -59,9 +63,10 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
 
         try {
             // Send message to extension to fetch details
-            // For now, use the chart name as-is (version support can be added to backend later)
+            // Use chart.chart if available (format: "repository/chart"), otherwise fall back to chart.name
             // The chart name format is typically "repository/chart" or just "chart"
-            vscode.postMessage({ command: 'getChartDetails', chart: chartToFetch.name });
+            const chartIdentifier = chartToFetch.chart || chartToFetch.name;
+            vscode.postMessage({ command: 'getChartDetails', chart: chartIdentifier });
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : String(err);
             setError(errorMessage);
@@ -200,6 +205,7 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
         }
     }, [chart, onInstall]);
 
+    // Early return after all hooks have been called
     if (!open || !chart) return null;
 
     // Modal overlay styles
@@ -368,11 +374,7 @@ export const ChartDetailModal: React.FC<ChartDetailModalProps> = ({
         backgroundColor: 'var(--vscode-button-hoverBackground)'
     };
 
-    const [installHovered, setInstallHovered] = useState(false);
-    const [closeHovered, setCloseHovered] = useState(false);
-    const [retryHovered, setRetryHovered] = useState(false);
-
-    const chartName = chart.name || chart.chart || 'Unknown Chart';
+    const chartName = chart?.name || chart?.chart || 'Unknown Chart';
     const isInstallDisabled = loading || !details;
 
     return (

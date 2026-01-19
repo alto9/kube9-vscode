@@ -95,12 +95,34 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 **Windows WSL2**:
 - Docker Desktop with WSL2 backend
 
+#### Helm (Required for with-operator scenario)
+
+If you plan to use the `with-operator` scenario to test operator features, you need Helm installed:
+
+**macOS**:
+```bash
+brew install helm
+```
+
+**Linux**:
+```bash
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+```
+
+**Verification**:
+```bash
+helm version
+```
+
+For detailed installation instructions, see: https://helm.sh/docs/intro/install/
+
 ### System Requirements
 
 - **CPUs**: 2 cores minimum (allocated to cluster)
 - **Memory**: 4GB RAM minimum (allocated to cluster)
 - **Disk**: ~2GB free space for Minikube cluster
 - **Operating System**: macOS, Linux, or Windows with WSL2
+- **Helm**: v3.x (required only for `with-operator` scenario)
 
 ## Quick Start
 
@@ -288,20 +310,43 @@ Exporting isolated kubeconfig...
 - Validates scenario name and file existence
 - Checks if Minikube cluster is running
 - Checks if kubeconfig exists
+- For `with-operator` scenario:
+  - Validates Helm is installed
+  - Installs kube9-operator Helm chart from `../kube9-operator/charts/kube9-operator`
+  - Then applies demo workloads YAML
+- For other scenarios:
+  - Applies scenario YAML to cluster
 - Detects existing resources and prompts for cleanup (optional)
-- Applies scenario YAML to cluster
 - Displays created resources
 
-**Output Example**:
+**Output Example (with-operator)**:
 ```
 Deploying scenario: with-operator...
-Waiting for resources to be created...
+Installing kube9-operator via Helm...
+NAME: kube9-operator
+LAST DEPLOYED: Mon Jan 19 10:36:20 2026
+NAMESPACE: kube9-system
+STATUS: deployed
+...
+✓ kube9-operator installed successfully
+
+Deploying demo workloads...
+namespace/production created
+deployment.apps/api-service created
+...
 
 ✓ Scenario 'with-operator' deployed successfully
+```
+
+**Output Example (other scenarios)**:
+```
+Deploying scenario: healthy...
+Waiting for resources to be created...
+
+✓ Scenario 'healthy' deployed successfully
 
 Created resources:
 NAMESPACE          NAME                              READY   STATUS
-kube9-system      deployment/kube9-operator         1/1     Running
 production        deployment/api-service             3/3     Running
 ...
 ```
@@ -332,10 +377,17 @@ Scenarios are YAML files that define different cluster states. Each scenario cre
 
 ### with-operator
 
-**Purpose**: Demonstrates kube9-vscode Pro Tier features with the kube9-operator deployed
+**Purpose**: Demonstrates kube9-vscode Pro Tier features with the real kube9-operator deployed via Helm
+
+**Installation Method**: 
+- Installs the actual kube9-operator Helm chart from `../kube9-operator/charts/kube9-operator`
+- Then deploys demo workloads YAML for realistic testing scenarios
 
 **Resources Created**:
-- `kube9-system` namespace with kube9-operator deployment
+- `kube9-system` namespace with real kube9-operator Helm release
+  - Operator pod running actual kube9-operator image
+  - Operator ConfigMap with real status reporting
+  - Full operator functionality (status updates, ArgoCD detection, etc.)
 - Multiple application namespaces (production, staging, development)
 - ~15-20 resources including:
   - Deployments with multiple replicas
@@ -343,16 +395,23 @@ Scenarios are YAML files that define different cluster states. Each scenario cre
   - ConfigMaps and Secrets (with dummy data)
   - Multiple namespaces with realistic workloads
 
+**Requirements**:
+- Helm must be installed (`brew install helm` or https://helm.sh/docs/intro/install/)
+- kube9-operator repository must be cloned at `../kube9-operator/`
+
 **When to Use**:
-- Testing Pro Tier features
+- Testing Pro Tier features with real operator behavior
+- Testing operator status detection and health reporting
 - Marketing screenshots showing operator integration
 - Demonstrating multi-namespace scenarios
-- Testing operator detection and health reporting
+- Testing Helm integration features
 
 **Example**:
 ```bash
 ./scripts/demo-cluster/populate.sh with-operator
 ```
+
+**Note**: This installs the **real** kube9-operator, not a mock. The operator will create its status ConfigMap and function exactly as it would in production (free tier mode).
 
 ### without-operator
 

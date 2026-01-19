@@ -557,9 +557,10 @@ export class HelmPackageManagerPanel {
             });
         }
 
-        // Load initial repository list and operator status
+        // Load initial repository list, operator status, and releases
         await this.handleListRepositories();
         await this.handleGetOperatorStatus();
+        await this.handleListReleases();
     }
 
     /**
@@ -613,9 +614,20 @@ export class HelmPackageManagerPanel {
 
             // Check if repository already exists
             const existing = await this.helmService.listRepositories();
-            if (existing.some(r => r.name === name)) {
-                this.sendError(`Repository '${name}' already exists`);
-                return;
+            const existingRepo = existing.find(r => r.name === name);
+            if (existingRepo) {
+                // Repository already exists
+                if (existingRepo.url === url) {
+                    // Same URL - just update it silently and continue (no error)
+                    await this.helmService.updateRepository(name);
+                    // Refresh repository list
+                    await this.handleListRepositories();
+                    return;
+                } else {
+                    // Different URL - this is an error
+                    this.sendError(`Repository '${name}' already exists with a different URL: ${existingRepo.url}`);
+                    return;
+                }
             }
 
             // Add repository
