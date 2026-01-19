@@ -386,9 +386,10 @@ suite('OperatedDashboardPanel Test Suite', () => {
         assert.ok(panelInfo, 'Panel info should exist');
         
         // Verify handler was registered (subscriptions array was populated)
+        // Should have at least 2 subscriptions: messageHandlerDisposable and onDidDispose handler
         assert.ok(
             mockContext.subscriptions.length > initialSubscriptionCount,
-            'Handler should be registered (subscriptions should be added)'
+            `Handler should be registered (subscriptions should be added). Expected > ${initialSubscriptionCount}, got ${mockContext.subscriptions.length}`
         );
         
         // Verify HTML is set
