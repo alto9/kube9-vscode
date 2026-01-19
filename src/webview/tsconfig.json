@@ -12,7 +12,9 @@
   "include": [
     "./argocd-application/**/*",
     "./event-viewer/**/*",
-    "./pod-describe/**/*"
+    "./pod-describe/**/*",
+    "./pvc-describe/**/*",
+    "./pv-describe/**/*"
   ]
 }
 
