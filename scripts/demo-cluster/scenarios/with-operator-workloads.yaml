@@ -1,61 +1,6 @@
----
-# with-operator.yaml - Pro Tier Demo Scenario
-# This scenario demonstrates kube9-vscode Pro Tier features with the kube9-operator deployed.
-# It includes the operator in kube9-system namespace and realistic multi-namespace applications.
-# Used for testing operator integration and taking marketing screenshots.
-
-# ============================================================================
-# Kube9 Operator Namespace and Deployment
-# ============================================================================
-
----
-# kube9-system namespace for the kube9-operator
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kube9-system
-  labels:
-    name: kube9-system
-    scenario: with-operator
-
----
-# kube9-operator deployment (placeholder image for demo purposes)
-# In production, this would use the actual kube9-operator image
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: kube9-operator
-  namespace: kube9-system
-  labels:
-    app: kube9-operator
-    scenario: with-operator
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: kube9-operator
-  template:
-    metadata:
-      labels:
-        app: kube9-operator
-        scenario: with-operator
-    spec:
-      containers:
-      - name: operator
-        image: nginx:latest
-        ports:
-        - containerPort: 8080
-          name: http
-        env:
-        - name: OPERATOR_MODE
-          value: "demo"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "200m"
+# with-operator-workloads.yaml - Demo workloads for with-operator scenario
+# This file contains demo applications/workloads only.
+# The kube9-operator itself is installed via Helm chart.
 
 # ============================================================================
 # Production Namespace and Applications

@@ -7,10 +7,12 @@ import { ReleaseDetailModal } from './components/ReleaseDetailModal';
 import { UpgradeReleaseModal } from './components/UpgradeReleaseModal';
 import { FeaturedChartsSection } from './components/FeaturedChartsSection';
 import { OperatorInstallModal } from './components/OperatorInstallModal';
+import { ChartDetailModal } from './components/ChartDetailModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ErrorMessage } from './components/ErrorMessage';
 import { HelmErrorType } from '../../services/HelmError';
 import { getVSCodeAPI } from './vscodeApi';
+import { ChartSearchResult } from './types';
 
 // Acquire VS Code API - use shared singleton to prevent multiple acquisitions
 const vscode = getVSCodeAPI();
@@ -59,6 +61,8 @@ export const HelmPackageManager: React.FC = () => {
     });
     const [operatorInstallModalOpen, setOperatorInstallModalOpen] = useState(false);
     const [selectedTab, setSelectedTab] = useState<string>('repositories');
+    const [chartDetailModalOpen, setChartDetailModalOpen] = useState(false);
+    const [selectedChart, setSelectedChart] = useState<ChartSearchResult | null>(null);
     
     // Ref to track if initial state has been restored
     const stateRestoredRef = useRef(false);
@@ -133,7 +137,8 @@ export const HelmPackageManager: React.FC = () => {
                         const currentFeaturedCharts = prev.featuredCharts.length > 0 
                             ? prev.featuredCharts 
                             : initialFeaturedCharts;
-                        return { ...prev, repositories: message.data as HelmState['repositories'], featuredCharts: currentFeaturedCharts };
+                        // Clear loading state once repositories are loaded
+                        return { ...prev, repositories: message.data as HelmState['repositories'], featuredCharts: currentFeaturedCharts, loading: false };
                     });
                     break;
 
@@ -203,6 +208,8 @@ export const HelmPackageManager: React.FC = () => {
 
                 case 'operatorStatusUpdated':
                     setOperatorStatus(message.data as OperatorInstallationStatus);
+                    // Clear loading state once operator status is loaded
+                    setState(prev => ({ ...prev, loading: false }));
                     break;
 
                 case 'uiStateRestored':
@@ -326,11 +333,65 @@ export const HelmPackageManager: React.FC = () => {
                     console.log('Upgrade operator clicked');
                 }}
                 onConfigure={() => {
-                    // TODO: Implement configure modal for operator
-                    console.log('Configure operator clicked');
+                    // Find the operator release and open detail modal
+                    if (operatorStatus.installed && operatorStatus.namespace) {
+                        // Find the operator release from the releases list
+                        const operatorRelease = state.releases.find(
+                            r => r.name === 'kube9-operator' && r.namespace === operatorStatus.namespace
+                        );
+                        
+                        if (operatorRelease) {
+                            // Set selected release and open modal
+                            setSelectedRelease(operatorRelease);
+                            setDetailModalOpen(true);
+                            // Fetch release details
+                            sendMessage({
+                                command: 'getReleaseDetails',
+                                name: 'kube9-operator',
+                                namespace: operatorStatus.namespace
+                            });
+                        } else {
+                            // If release not found in list yet, create a minimal release object
+                            const release: HelmRelease = {
+                                name: 'kube9-operator',
+                                namespace: operatorStatus.namespace,
+                                chart: 'kube9/kube9-operator',
+                                version: operatorStatus.version || 'unknown',
+                                status: 'deployed',
+                                revision: 1,
+                                updated: new Date()
+                            };
+                            setSelectedRelease(release);
+                            setDetailModalOpen(true);
+                            sendMessage({
+                                command: 'getReleaseDetails',
+                                name: 'kube9-operator',
+                                namespace: operatorStatus.namespace
+                            });
+                        }
+                    }
+                }}
+                onViewValues={() => {
+                    // Open chart detail modal to show default values
+                    if (operatorStatus.installed) {
+                        const chart: ChartSearchResult = {
+                            name: 'kube9/kube9-operator', // Chart identifier for fetching details
+                            chart: 'kube9/kube9-operator',
+                            description: 'Advanced Kubernetes management for VS Code',
+                            version: operatorStatus.latestVersion || operatorStatus.version || 'latest',
+                            repository: 'kube9'
+                        };
+                        // Set chart first, then open modal to ensure chart is available when modal renders
+                        setSelectedChart(chart);
+                        // Use setTimeout to ensure state update completes before opening modal
+                        setTimeout(() => {
+                            setChartDetailModalOpen(true);
+                        }, 0);
+                    }
                 }}
                 onFeaturedChartInstall={(chart: FeaturedChart) => {
-                    // Ensure the Aqua repository is added first
+                    // Ensure the Aqua repository is added first (if not already present)
+                    // handleAddRepository will silently handle the "already exists" case
                     sendMessage({
                         command: 'addRepository',
                         name: 'aqua',
@@ -492,6 +553,20 @@ export const HelmPackageManager: React.FC = () => {
                         command: 'listReleases',
                         params: { allNamespaces: true }
                     });
+                }}
+            />
+
+            {/* Chart Detail Modal for View Values */}
+            <ChartDetailModal
+                chart={selectedChart}
+                open={chartDetailModalOpen}
+                onClose={() => {
+                    setChartDetailModalOpen(false);
+                    setSelectedChart(null);
+                }}
+                onInstall={() => {
+                    // Not applicable for operator chart, but required by interface
+                    console.log('Install from chart detail modal');
                 }}
             />
                 </div>

@@ -14,6 +14,8 @@ interface OperatorCardProps {
     onUpgrade: () => void;
     /** Callback when configure button is clicked */
     onConfigure: () => void;
+    /** Callback when view values link is clicked */
+    onViewValues: () => void;
 }
 
 /**
@@ -24,7 +26,8 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     status,
     onInstall,
     onUpgrade,
-    onConfigure
+    onConfigure,
+    onViewValues
 }) => {
     const cardStyle: React.CSSProperties = {
         padding: '16px',
@@ -151,8 +154,7 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
 
     const handleViewValuesClick = (e: React.MouseEvent) => {
         e.preventDefault();
-        // Placeholder for view values functionality
-        console.log('View Values clicked');
+        onViewValues();
     };
 
     const [primaryButtonHovered, setPrimaryButtonHovered] = React.useState(false);

@@ -103,7 +103,6 @@ export const RepositoryCard: React.FC<RepositoryCardProps> = ({ repository, onUp
     const [removeHovered, setRemoveHovered] = React.useState(false);
 
     const formatChartCount = (count: number): string => {
-        if (count === 0) return 'No charts';
         if (count === 1) return '1 chart';
         return `${count} charts`;
     };
@@ -140,9 +139,11 @@ export const RepositoryCard: React.FC<RepositoryCardProps> = ({ repository, onUp
                     </button>
                 </div>
             </div>
-            <div style={metaStyle}>
-                <span>{formatChartCount(repository.chartCount)}</span>
-            </div>
+            {repository.chartCount > 0 && (
+                <div style={metaStyle}>
+                    <span>{formatChartCount(repository.chartCount)}</span>
+                </div>
+            )}
         </div>
     );
 };

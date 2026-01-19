@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import * as yaml from 'js-yaml';
 import { ChartSearchResult, ChartDetails, InstallParams, ListReleasesParams, UpgradeParams, ReleaseDetails, ReleaseRevision, HelmRelease, ReleaseStatus, UpgradeInfo, OperatorInstallationStatus } from '../webview/helm-package-manager/types';
 import { getContextInfo } from '../utils/kubectlContext';
 import { HelmError, parseHelmError } from './HelmError';
@@ -341,14 +342,35 @@ export class HelmService {
         }>;
 
         // Map to HelmRepository interface
-        // Note: chartCount and lastUpdated are not available from helm repo list
-        // These would need to be fetched separately or cached
+        // Note: Chart counts are intentionally set to 0 initially to avoid slow page loads
+        // Helm search operations take 10+ seconds per repository, making initial page load too slow
+        // Chart counts should be fetched separately if needed
         return repos.map(repo => ({
             name: repo.name,
             url: repo.url,
-            chartCount: 0, // Fetched separately or cached
-            lastUpdated: new Date() // Would need to be tracked separately
+            chartCount: 0,
+            lastUpdated: new Date()
         }));
+    }
+
+    /**
+     * Gets the chart count for a specific repository.
+     * Note: This operation can be slow (10+ seconds) as it performs a helm search.
+     * 
+     * @param repositoryName Repository name
+     * @returns Promise resolving to chart count
+     */
+    public async getRepositoryChartCount(repositoryName: string): Promise<number> {
+        try {
+            // Search for all charts in the repository
+            // Use repository name as prefix to match all charts from that repo
+            const charts = await this.searchCharts(repositoryName + '/');
+            return charts.length;
+        } catch (error) {
+            // If search fails, return 0
+            console.warn(`Failed to get chart count for repository ${repositoryName}:`, error);
+            return 0;
+        }
     }
 
     /**
@@ -364,6 +386,21 @@ export class HelmService {
         const validation = this.validateRepositoryInput(name, url);
         if (!validation.valid) {
             throw new Error(validation.errors.join(', '));
+        }
+
+        // Check if repository already exists
+        const repos = await this.listRepositories();
+        const existingRepo = repos.find(r => r.name === name);
+        if (existingRepo) {
+            // Repository already exists - check if URL matches
+            if (existingRepo.url === url) {
+                // Same URL, no need to add - just update it
+                await this.updateRepository(name);
+                return;
+            } else {
+                // Different URL - this is an error case
+                throw new Error(`Repository '${name}' already exists with a different URL: ${existingRepo.url}`);
+            }
         }
 
         // Execute helm repo add command
@@ -456,11 +493,24 @@ export class HelmService {
      * Gets the README content for a Helm chart.
      * 
      * @param chart Chart name (e.g., "bitnami/postgresql")
+     * @param version Optional chart version
      * @returns Promise resolving to README markdown content
      * @throws Error if chart not found or command fails
      */
-    public async getChartReadme(chart: string): Promise<string> {
-        const output = await this.executeCommand(['show', 'readme', chart]);
+    public async getChartReadme(chart: string, version?: string): Promise<string> {
+        // Ensure chart name is valid and doesn't contain flags
+        if (!chart || chart.trim().length === 0) {
+            throw new Error('Chart name is required');
+        }
+        // Build command args - NOTE: 'helm show readme' does NOT support --output flag
+        const args: string[] = ['show', 'readme', chart.trim()];
+        // Only add --version if it's a specific version (not 'latest' or empty)
+        if (version && version !== 'latest' && version.trim().length > 0) {
+            args.push('--version', version.trim());
+        }
+        // Explicitly ensure --output is NOT included for show readme command
+        console.log('[getChartReadme] Executing command:', args.join(' '));
+        const output = await this.executeCommand(args);
         return output;
     }
 
@@ -468,11 +518,24 @@ export class HelmService {
      * Gets the default values YAML for a Helm chart.
      * 
      * @param chart Chart name (e.g., "bitnami/postgresql")
+     * @param version Optional chart version
      * @returns Promise resolving to values YAML content
      * @throws Error if chart not found or command fails
      */
-    public async getChartValues(chart: string): Promise<string> {
-        const output = await this.executeCommand(['show', 'values', chart]);
+    public async getChartValues(chart: string, version?: string): Promise<string> {
+        // Ensure chart name is valid and doesn't contain flags
+        if (!chart || chart.trim().length === 0) {
+            throw new Error('Chart name is required');
+        }
+        // Build command args - NOTE: 'helm show values' does NOT support --output flag
+        const args: string[] = ['show', 'values', chart.trim()];
+        // Only add --version if it's a specific version (not 'latest' or empty)
+        if (version && version !== 'latest' && version.trim().length > 0) {
+            args.push('--version', version.trim());
+        }
+        // Explicitly ensure --output is NOT included for show values command
+        console.log('[getChartValues] Executing command:', args.join(' '));
+        const output = await this.executeCommand(args);
         return output;
     }
 
@@ -481,25 +544,42 @@ export class HelmService {
      * Fetches README, values, and chart metadata in parallel.
      * 
      * @param chart Chart name (e.g., "bitnami/postgresql")
+     * @param version Optional chart version
      * @returns Promise resolving to chart details
      * @throws Error if chart not found or command fails
      */
-    public async getChartDetails(chart: string): Promise<ChartDetails> {
+    public async getChartDetails(chart: string, version?: string): Promise<ChartDetails> {
+        // Ensure chart name is valid
+        if (!chart || chart.trim().length === 0) {
+            throw new Error('Chart name is required');
+        }
+        const chartName = chart.trim();
+        
+        // Build chart command args with optional version
+        // Note: 'helm show chart' outputs YAML by default, not JSON
+        // Some Helm versions don't support --output flag for 'show chart'
+        const chartArgs: string[] = ['show', 'chart', chartName];
+        // Only add --version if it's a specific version (not 'latest' or empty)
+        if (version && version !== 'latest' && version.trim().length > 0) {
+            chartArgs.push('--version', version.trim());
+        }
+        
         // Fetch readme, values, and chart.yaml in parallel
+        // Note: getChartReadme and getChartValues handle version separately and don't use --output
         const [readme, values, chartYaml] = await Promise.all([
-            this.getChartReadme(chart),
-            this.getChartValues(chart),
-            this.executeCommand(['show', 'chart', chart, '--output', 'json'])
+            this.getChartReadme(chartName, version),
+            this.getChartValues(chartName, version),
+            this.executeCommand(chartArgs)
         ]);
         
-        // Parse chart.yaml JSON
-        const chartInfo = JSON.parse(chartYaml) as {
+        // Parse chart.yaml YAML (helm show chart outputs YAML, not JSON)
+        const chartInfo = (yaml.load(chartYaml) as {
             name?: string;
             description?: string;
             maintainers?: Array<{ name: string; email?: string }>;
             keywords?: string[];
             home?: string;
-        };
+        }) || {};
         
         return {
             name: chart,
@@ -512,6 +592,7 @@ export class HelmService {
             home: chartInfo.home || ''
         };
     }
+
 
     /**
      * Installs a Helm chart with the given parameters.

@@ -17,6 +17,8 @@ interface FeaturedChartsSectionProps {
     onUpgrade: () => void;
     /** Callback when configure button is clicked */
     onConfigure: () => void;
+    /** Callback when view values link is clicked */
+    onViewValues: () => void;
     /** Callback when a featured chart install button is clicked */
     onFeaturedChartInstall: (chart: FeaturedChart) => void;
 }
@@ -31,6 +33,7 @@ export const FeaturedChartsSection: React.FC<FeaturedChartsSectionProps> = ({
     onInstall,
     onUpgrade,
     onConfigure,
+    onViewValues,
     onFeaturedChartInstall
 }) => {
     const sectionStyle: React.CSSProperties = {
@@ -66,6 +69,7 @@ export const FeaturedChartsSection: React.FC<FeaturedChartsSectionProps> = ({
                     onInstall={onInstall}
                     onUpgrade={onUpgrade}
                     onConfigure={onConfigure}
+                    onViewValues={onViewValues}
                 />
                 {/* Other featured charts as tiles */}
                 {featuredCharts.map((chart) => (
