@@ -1,12 +1,12 @@
 # Kube9 VS Code
 
-**Visual Kubernetes Cluster Management - Right in Your IDE**
+**Kubernetes Management in Your Favorite IDE**
 
 ![kube9 Logo](https://img.shields.io/badge/Status-Active-green) ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
 
 ## Overview
 
-Kube9 VS Code is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. It provides a modern, intuitive interface for managing your Kubernetes resources without leaving your IDE.
+Kube9 VS Code is an extension that brings visual Kubernetes cluster management directly into your development environment. It provides a modern, intuitive interface for managing your Kubernetes resources without leaving your IDE.
 
 ### Key Features
 
