@@ -788,3 +788,136 @@ body {
     }
 }
 
+/* ==========================================================================
+   PVC Describe Specific Styles
+   ========================================================================== */
+
+.usage-tab,
+.volume-details-tab,
+.metadata-tab {
+    width: 100%;
+}
+
+.section-description {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    margin-bottom: 16px;
+}
+
+.phase-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.phase-badge.phase-running {
+    background-color: rgba(73, 194, 109, 0.2);
+    color: var(--vscode-testing-iconPassed);
+}
+
+.phase-badge.phase-pending {
+    background-color: rgba(255, 191, 0, 0.2);
+    color: var(--vscode-editorWarning-foreground);
+}
+
+.phase-badge.phase-failed {
+    background-color: rgba(242, 76, 76, 0.2);
+    color: var(--vscode-testing-iconFailed);
+}
+
+.phase-badge.phase-succeeded {
+    background-color: rgba(73, 194, 109, 0.2);
+    color: var(--vscode-testing-iconPassed);
+}
+
+.read-only-badge,
+.read-write-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.read-only-badge {
+    background-color: rgba(255, 191, 0, 0.2);
+    color: var(--vscode-editorWarning-foreground);
+}
+
+.read-write-badge {
+    background-color: rgba(73, 194, 109, 0.2);
+    color: var(--vscode-testing-iconPassed);
+}
+
+.link-button {
+    background: transparent;
+    border: none;
+    color: var(--vscode-textLink-foreground);
+    cursor: pointer;
+    font-size: 0.9em;
+    text-decoration: underline;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+.link-button:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.link-button:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: 2px;
+}
+
+.finalizers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.finalizer-item {
+    padding: 8px 12px;
+    background-color: var(--vscode-textBlockQuote-background);
+    border-radius: 4px;
+    font-family: var(--vscode-editor-font-family);
+    font-size: 0.9em;
+    color: var(--vscode-foreground);
+}
+
+.key-value-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.key-value-item {
+    display: flex;
+    gap: 12px;
+    padding: 8px 12px;
+    background-color: var(--vscode-textBlockQuote-background);
+    border-radius: 4px;
+}
+
+.key-value-item .key {
+    font-weight: 600;
+    color: var(--vscode-foreground);
+    min-width: 150px;
+}
+
+.key-value-item .value {
+    color: var(--vscode-foreground);
+    word-break: break-word;
+    flex: 1;
+}
+
+.empty-message {
+    color: var(--vscode-descriptionForeground);
+    font-size: 0.9em;
+    font-style: italic;
+    padding: 20px;
+}
+

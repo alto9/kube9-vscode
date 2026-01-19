@@ -5,6 +5,7 @@ import { ClusterTreeItem } from '../tree/ClusterTreeItem';
 import { extractKindFromContextValue, getYAMLEditorManager } from '../extension';
 import { PodDescribeProvider } from '../providers/PodDescribeProvider';
 import { NamespaceDescribeProvider } from '../providers/NamespaceDescribeProvider';
+import { PVCDescribeProvider } from '../providers/PVCDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
@@ -27,6 +28,17 @@ interface DescribeResourceInfo {
  * Pod configuration passed from tree item to describe webview.
  */
 interface PodTreeItemConfig {
+    name: string;
+    namespace: string;
+    status?: string;
+    metadata?: Record<string, unknown>;
+    context: string;
+}
+
+/**
+ * PVC configuration passed from tree item to describe webview.
+ */
+interface PVCTreeItemConfig {
     name: string;
     namespace: string;
     status?: string;
@@ -70,6 +82,18 @@ export class DescribeWebview {
      * Used for refresh operations.
      */
     private static currentNamespaceConfig: NamespaceTreeItemConfig | undefined;
+
+    /**
+     * PVC describe provider instance for fetching PVC data.
+     * Initialized lazily when first needed.
+     */
+    private static pvcProvider: PVCDescribeProvider | undefined;
+
+    /**
+     * Current PVC configuration being displayed.
+     * Used for refresh operations.
+     */
+    private static currentPVCConfig: PVCTreeItemConfig | undefined;
 
     /**
      * Show the Describe webview for a resource.
@@ -302,6 +326,22 @@ export class DescribeWebview {
             return;
         }
 
+        if (kind === 'PersistentVolumeClaim') {
+            // Validate namespace (PVCs are always namespaced)
+            if (!namespace) {
+                vscode.window.showErrorMessage('Unable to describe PVC: namespace is required');
+                return;
+            }
+            
+            // Call showPVCDescribe
+            await DescribeWebview.showPVCDescribe(context, {
+                name,
+                namespace,
+                context: contextName
+            });
+            return;
+        }
+
         // Show the Describe webview for other resource types
         DescribeWebview.show(context, {
             kind,
@@ -462,6 +502,11 @@ export class DescribeWebview {
                                 DescribeWebview.currentNamespaceConfig,
                                 panel
                             );
+                        } else if (DescribeWebview.currentPVCConfig) {
+                            await DescribeWebview.loadPVCData(
+                                DescribeWebview.currentPVCConfig,
+                                panel
+                            );
                         }
                         break;
 
@@ -496,6 +541,17 @@ export class DescribeWebview {
                     case 'startPortForward':
                         // TODO: Implement port forwarding functionality
                         vscode.window.showInformationMessage('Port forwarding functionality coming soon');
+                        break;
+
+                    case 'navigateToPod':
+                        if (message.data && message.data.name && message.data.namespace) {
+                            await DescribeWebview.navigateToPod(
+                                message.data.name,
+                                message.data.namespace
+                            );
+                        } else {
+                            vscode.window.showErrorMessage('Invalid Pod data in navigateToPod message');
+                        }
                         break;
 
                     default:
@@ -604,6 +660,38 @@ export class DescribeWebview {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Failed to navigate to resource:', errorMessage);
             vscode.window.showErrorMessage(`Failed to navigate to resource: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Navigate to a specific Pod and open its describe webview.
+     * 
+     * @param podName The Pod name
+     * @param namespace The namespace name
+     */
+    private static async navigateToPod(podName: string, namespace: string): Promise<void> {
+        if (!DescribeWebview.currentPVCConfig) {
+            vscode.window.showErrorMessage('No PVC context available');
+            return;
+        }
+
+        try {
+            const pvcConfig = DescribeWebview.currentPVCConfig;
+            const contextName = pvcConfig.context;
+
+            // Open Pod describe webview
+            await DescribeWebview.showPodDescribe(
+                DescribeWebview.extensionContext!,
+                {
+                    name: podName,
+                    namespace: namespace,
+                    context: contextName
+                }
+            );
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to navigate to Pod:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to navigate to Pod: ${errorMessage}`);
         }
     }
 
@@ -903,6 +991,231 @@ export class DescribeWebview {
     <h1>Namespace / ${escapedNamespaceName}</h1>
     <div class="error">
         Failed to load webview template. Extension context is not available.
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Show the Describe webview for a PersistentVolumeClaim resource.
+     * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * 
+     * @param context The VS Code extension context
+     * @param pvcConfig PVC configuration with name, namespace, and context
+     */
+    public static async showPVCDescribe(
+        context: vscode.ExtensionContext,
+        pvcConfig: PVCTreeItemConfig
+    ): Promise<void> {
+        // Store the extension context for later use
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.currentPVCConfig = pvcConfig;
+
+        // Initialize PVC provider if not already initialized
+        if (!DescribeWebview.pvcProvider) {
+            const k8sClient = getKubernetesApiClient();
+            DescribeWebview.pvcProvider = new PVCDescribeProvider(k8sClient);
+        }
+
+        // If we already have a panel, reuse it and update the content
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updatePVCPanel(pvcConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create title with PVC name
+        const title = `PersistentVolumeClaim / ${pvcConfig.name}`;
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+
+        // Set the webview's HTML content
+        panel.webview.html = DescribeWebview.getPVCWebviewContent(panel.webview, pvcConfig);
+
+        // Set up message handling
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
+
+        // Fetch and send PVC data
+        await DescribeWebview.loadPVCData(pvcConfig, panel);
+
+        // Handle panel disposal - clear all describe webview state
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentPVCConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Update an existing panel with new PVC information.
+     * 
+     * @param pvcConfig PVC configuration
+     */
+    private static async updatePVCPanel(pvcConfig: PVCTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+
+        // Update panel title
+        const title = `PersistentVolumeClaim / ${pvcConfig.name}`;
+        DescribeWebview.currentPanel.title = title;
+        DescribeWebview.currentPVCConfig = pvcConfig;
+
+        // Update panel content
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getPVCWebviewContent(DescribeWebview.currentPanel.webview, pvcConfig);
+
+        // Reload PVC data
+        await DescribeWebview.loadPVCData(pvcConfig, DescribeWebview.currentPanel);
+    }
+
+    /**
+     * Load PVC data and send it to the webview.
+     * 
+     * @param pvcConfig PVC configuration
+     * @param panel Webview panel to send data to
+     */
+    private static async loadPVCData(
+        pvcConfig: PVCTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.pvcProvider) {
+            return;
+        }
+
+        try {
+            const pvcData = await DescribeWebview.pvcProvider.getPVCDetails(
+                pvcConfig.name,
+                pvcConfig.namespace,
+                pvcConfig.context
+            );
+
+            panel.webview.postMessage({
+                command: 'updatePVCData',
+                data: pvcData
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: `Failed to load PVC details: ${errorMessage}`
+                }
+            });
+        }
+    }
+
+    /**
+     * Generate the HTML content for the PVC Describe webview.
+     * Loads React bundle from webpack build output.
+     * 
+     * @param webview The webview instance
+     * @param pvcConfig PVC configuration
+     * @returns HTML content string
+     */
+    private static getPVCWebviewContent(webview: vscode.Webview, pvcConfig: PVCTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            // Fallback if extension context is not available
+            return this.getPVCFallbackHtml(pvcConfig);
+        }
+
+        const cspSource = webview.cspSource;
+        const escapedPVCName = DescribeWebview.escapeHtml(pvcConfig.name);
+        
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pvc-describe', 'index.js')
+        );
+
+        // Read header CSS and inline it
+        let headerCss = '';
+        try {
+            const headerCssPath = path.join(
+                DescribeWebview.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'styles',
+                'webview-header.css'
+            );
+            headerCss = fs.readFileSync(headerCssPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load header CSS:', error);
+        }
+
+        const nonce = getNonce();
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>PersistentVolumeClaim / ${escapedPVCName}</title>
+    <style>
+        ${headerCss}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
+    }
+
+    /**
+     * Fallback HTML content if template files cannot be loaded.
+     * 
+     * @param pvcConfig PVC configuration
+     * @returns Fallback HTML content string
+     */
+    private static getPVCFallbackHtml(pvcConfig: PVCTreeItemConfig): string {
+        const escapedPVCName = DescribeWebview.escapeHtml(pvcConfig.name);
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>PersistentVolumeClaim / ${escapedPVCName}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            margin: 0;
+        }
+        .error {
+            padding: 20px;
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 4px;
+            color: var(--vscode-errorForeground);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>PersistentVolumeClaim / ${escapedPVCName}</h1>
+    <div class="error">
+        Failed to load webview template. Please check that dist/media/pvc-describe/index.js exists.
     </div>
 </body>
 </html>`;
