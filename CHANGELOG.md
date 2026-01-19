@@ -1,3 +1,10 @@
+## [1.25.1](https://github.com/alto9/kube9-vscode/compare/v1.25.0...v1.25.1) (2026-01-19)
+
+
+### Bug Fixes
+
+* helm package manager delay issue ([a9d3574](https://github.com/alto9/kube9-vscode/commit/a9d35744d50979c90852aa7dc77bb9520a4be227))
+
 # [1.25.0](https://github.com/alto9/kube9-vscode/compare/v1.24.0...v1.25.0) (2026-01-16)
 
 
