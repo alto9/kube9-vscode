@@ -302,7 +302,7 @@ All standard context menu actions work automatically for Services:
 - **View YAML**: Opens YAML editor (already implemented)
 - **Edit**: Opens YAML editor in edit mode (already implemented)
 - **Delete**: Deletes service with confirmation (already implemented)
-- **Describe**: Shows service details (requires implementation)
+- **Describe**: Shows service details in graphical webview with Overview, Endpoints, Events, and Metadata tabs (implemented)
 - **Copy Name**: Copies service name to clipboard (requires implementation)
 - **Copy YAML**: Copies service YAML to clipboard (requires implementation)
 

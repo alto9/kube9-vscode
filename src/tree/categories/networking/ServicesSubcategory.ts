@@ -3,6 +3,7 @@ import { ClusterTreeItem } from '../../ClusterTreeItem';
 import { TreeItemData } from '../../TreeItemTypes';
 import { ServiceCommands, ServicePort } from '../../../kubectl/ServiceCommands';
 import { KubectlError } from '../../../kubernetes/KubectlError';
+import { addDescribeCommandToItems } from '../../describeUtils';
 
 /**
  * Type for error handler callback.
@@ -76,12 +77,11 @@ export class ServicesSubcategory {
             const selectorsFormatted = this.formatSelectors(serviceInfo.selectors);
             item.tooltip = `Service: ${serviceInfo.name}\nNamespace: ${serviceInfo.namespace}\nType: ${serviceInfo.type}\nCluster IP: ${serviceInfo.clusterIP}\nExternal IP: ${serviceInfo.externalIP || 'N/A'}\nPorts: ${portsFormatted || 'None'}\nSelectors: ${selectorsFormatted}\nEndpoints: N/A`;
 
-            // No click command (placeholder)
-
             return item;
         });
 
-        return serviceItems;
+        // Add describe command to service items
+        return addDescribeCommandToItems(serviceItems);
     }
 
     /**
