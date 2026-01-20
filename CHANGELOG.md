@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/alto9/kube9-vscode/compare/v1.25.1...v1.26.0) (2026-01-20)
+
+
+### Features
+
+* add describe webview for Kubernetes secrets ([58ad266](https://github.com/alto9/kube9-vscode/commit/58ad2668dc6a18d4cfd57940534b79cbc80d9a74)), closes [#51](https://github.com/alto9/kube9-vscode/issues/51)
+
 ## [1.25.1](https://github.com/alto9/kube9-vscode/compare/v1.25.0...v1.25.1) (2026-01-19)
 
 
