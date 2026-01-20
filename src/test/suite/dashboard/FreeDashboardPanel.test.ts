@@ -109,9 +109,6 @@ suite('FreeDashboardPanel Test Suite', () => {
         // Dispose the panel
         panelInfo.panel.dispose();
 
-        // Give it a moment for the disposal event to fire
-        await new Promise(resolve => setTimeout(resolve, 50));
-
         const openPanels2 = FreeDashboardPanel.getOpenPanels();
         assert.strictEqual(openPanels2.size, 0, 'Should have no open panels after disposal');
     });
