@@ -111,13 +111,16 @@ export class OperatedDashboardPanel {
         // Set the webview's HTML content
         panel.webview.html = getOperatedDashboardHtml(panel.webview, clusterName, operatorStatus);
 
-        // Proactively send initial data (postMessage is queued until webview is ready)
-        await OperatedDashboardPanel.sendDashboardDataWithStatusCheck(
+        // Proactively send initial data (fire-and-forget to avoid blocking panel creation)
+        // postMessage is queued by the browser until webview is ready
+        OperatedDashboardPanel.sendDashboardDataWithStatusCheck(
             panel,
             kubeconfigPath,
             contextName,
             true  // isInitialLoad = true
-        );
+        ).catch(error => {
+            console.error('Failed to send initial dashboard data:', error);
+        });
 
         // Start auto-refresh
         refreshManager.startAutoRefresh(

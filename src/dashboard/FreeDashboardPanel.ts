@@ -101,13 +101,16 @@ export class FreeDashboardPanel {
         // Set the webview's HTML content
         panel.webview.html = getDashboardHtml(panel.webview, clusterName);
 
-        // Proactively send initial data (postMessage is queued until webview is ready)
-        await FreeDashboardPanel.sendDashboardData(
+        // Proactively send initial data (fire-and-forget to avoid blocking panel creation)
+        // postMessage is queued by the browser until webview is ready
+        FreeDashboardPanel.sendDashboardData(
             panel,
             kubeconfigPath,
             contextName,
             true  // isInitialLoad = true
-        );
+        ).catch(error => {
+            console.error('Failed to send initial dashboard data:', error);
+        });
 
         // Start auto-refresh
         refreshManager.startAutoRefresh(
