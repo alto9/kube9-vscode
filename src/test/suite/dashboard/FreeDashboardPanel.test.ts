@@ -20,6 +20,16 @@ suite('FreeDashboardPanel Test Suite', () => {
     teardown(() => {
         // Clean up all panels after each test
         FreeDashboardPanel.closeAllPanels();
+        
+        // Dispose all subscriptions to prevent event listeners from keeping the process alive
+        if (mockContext && mockContext.subscriptions) {
+            mockContext.subscriptions.forEach(sub => {
+                if (sub && typeof sub.dispose === 'function') {
+                    sub.dispose();
+                }
+            });
+            mockContext.subscriptions.length = 0;
+        }
     });
 
     test('should create a new panel with correct title', async () => {
