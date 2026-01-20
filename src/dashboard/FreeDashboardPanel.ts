@@ -249,6 +249,8 @@ export class FreeDashboardPanel {
      */
     public static closeAllPanels(): void {
         for (const panelInfo of FreeDashboardPanel.openPanels.values()) {
+            // Ensure refresh interval is cleared even if dispose events don't fire
+            panelInfo.refreshManager.stopAutoRefresh();
             panelInfo.panel.dispose();
         }
         FreeDashboardPanel.openPanels.clear();

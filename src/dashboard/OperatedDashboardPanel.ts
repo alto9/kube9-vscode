@@ -410,6 +410,8 @@ export class OperatedDashboardPanel {
      */
     public static closeAllPanels(): void {
         for (const panelInfo of OperatedDashboardPanel.openPanels.values()) {
+            // Ensure refresh interval is cleared even if dispose events don't fire
+            panelInfo.refreshManager.stopAutoRefresh();
             panelInfo.panel.dispose();
         }
         OperatedDashboardPanel.openPanels.clear();

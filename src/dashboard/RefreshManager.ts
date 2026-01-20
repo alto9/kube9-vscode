@@ -51,6 +51,10 @@ export class DashboardRefreshManager {
                 await refreshCallback(panel, kubeconfigPath, contextName, false);
             }
         }, this.REFRESH_INTERVAL_MS);
+        // Avoid keeping the Node process alive in tests
+        if (typeof this.refreshInterval.unref === 'function') {
+            this.refreshInterval.unref();
+        }
     }
 
     /**
