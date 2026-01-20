@@ -1,3 +1,17 @@
+## [1.28.1](https://github.com/alto9/kube9-vscode/compare/v1.28.0...v1.28.1) (2026-01-20)
+
+
+### Bug Fixes
+
+* dashboard timing issues ([6bac518](https://github.com/alto9/kube9-vscode/commit/6bac518a739a939d5d3f1f7ce883b5e757826f77))
+* Fix EventEmitter mock to handle disposables parameter ([778f9e4](https://github.com/alto9/kube9-vscode/commit/778f9e4eeebfb25c0320af319982a0e94504c47d)), closes [#73](https://github.com/alto9/kube9-vscode/issues/73)
+* register message handler before setting webview HTML in FreeDashboardPanel ([c4d69e6](https://github.com/alto9/kube9-vscode/commit/c4d69e6baf51f1089f3e3f317839ac009477d0c1))
+* register message handler before webview HTML in OperatedDashboardPanel ([49ec739](https://github.com/alto9/kube9-vscode/commit/49ec739939890df2774c98849d9b8f9383248939))
+* slow tests ([8242e34](https://github.com/alto9/kube9-vscode/commit/8242e34194ff430f7abac9559c9823a1c2f47beb))
+* timing issues in actions ([74bb6c9](https://github.com/alto9/kube9-vscode/commit/74bb6c9a7166cd2651eba195eba7ccf4a127f8e8))
+* unit test hanging issue ([64a3c2e](https://github.com/alto9/kube9-vscode/commit/64a3c2e62069d347008bc8d71c0eaf1b8f07c420))
+* unit tests ([a3e3931](https://github.com/alto9/kube9-vscode/commit/a3e393155d2d19b789515f0af6db392b14229080))
+
 # [1.28.0](https://github.com/alto9/kube9-vscode/compare/v1.27.0...v1.28.0) (2026-01-20)
 
 
