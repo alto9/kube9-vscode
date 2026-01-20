@@ -28,7 +28,7 @@ const extensionConfig = {
     rules: [
       {
         test: /\.ts$/,
-        exclude: [/node_modules/, /src\/webview\/argocd-application/, /src\/webview\/event-viewer/, /src\/webview\/pod-logs/, /src\/webview\/pod-describe/, /src\/webview\/pvc-describe/, /src\/webview\/pv-describe/, /src\/webview\/secret-describe/, /src\/webview\/operator-health-report/, /src\/webview\/helm-package-manager/],
+        exclude: [/node_modules/, /src\/webview\/argocd-application/, /src\/webview\/event-viewer/, /src\/webview\/pod-logs/, /src\/webview\/pod-describe/, /src\/webview\/pvc-describe/, /src\/webview\/pv-describe/, /src\/webview\/secret-describe/, /src\/webview\/service-describe/, /src\/webview\/configmap-describe/, /src\/webview\/operator-health-report/, /src\/webview\/helm-package-manager/],
         use: [
           {
             loader: 'ts-loader',
@@ -276,7 +276,85 @@ const secretDescribeConfig = {
   }
 };
 
-module.exports = [extensionConfig, webviewConfig, podDescribeConfig, namespaceDescribeConfig, pvcDescribeConfig, pvDescribeConfig, secretDescribeConfig];
+/**@type {import('webpack').Configuration}*/
+const serviceDescribeConfig = {
+  target: 'web', // Webview runs in a browser context
+  entry: './src/webview/service-describe/index.tsx',
+  output: {
+    path: path.resolve(__dirname, 'dist', 'media', 'service-describe'),
+    filename: 'index.js',
+    devtoolModuleFilenameTemplate: '../[resource-path]'
+  },
+  devtool: 'source-map',
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.jsx']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env', { targets: 'defaults' }],
+                ['@babel/preset-react', { runtime: 'automatic' }],
+                '@babel/preset-typescript'
+              ]
+            }
+          }
+        ]
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
+      }
+    ]
+  }
+};
+
+/**@type {import('webpack').Configuration}*/
+const configMapDescribeConfig = {
+  target: 'web', // Webview runs in a browser context
+  entry: './src/webview/configmap-describe/index.tsx',
+  output: {
+    path: path.resolve(__dirname, 'dist', 'media', 'configmap-describe'),
+    filename: 'index.js',
+    devtoolModuleFilenameTemplate: '../[resource-path]'
+  },
+  devtool: 'source-map',
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.jsx']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env', { targets: 'defaults' }],
+                ['@babel/preset-react', { runtime: 'automatic' }],
+                '@babel/preset-typescript'
+              ]
+            }
+          }
+        ]
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
+      }
+    ]
+  }
+};
+
+module.exports = [extensionConfig, webviewConfig, podDescribeConfig, namespaceDescribeConfig, pvcDescribeConfig, pvDescribeConfig, secretDescribeConfig, serviceDescribeConfig, configMapDescribeConfig];
 
 
 

@@ -16,7 +16,8 @@
     "./pvc-describe/**/*",
     "./pv-describe/**/*",
     "./secret-describe/**/*",
-    "./service-describe/**/*"
+    "./service-describe/**/*",
+    "./configmap-describe/**/*"
   ]
 }
 

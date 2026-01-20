@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { GlobalState } from './state/GlobalState';
 import { TutorialWebview } from './webview/TutorialWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
-import { DescribeWebview } from './webview/DescribeWebview';
+import { DescribeWebview, ConfigMapTreeItemConfig } from './webview/DescribeWebview';
 import { HealthReportPanel } from './webview/HealthReportPanel';
 import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
 import { NodeDescribeWebview } from './webview/NodeDescribeWebview';
@@ -765,6 +765,26 @@ function registerCommands(): void {
     );
     context.subscriptions.push(describeCronJobCmd);
     disposables.push(describeCronJobCmd);
+    
+    // Register describe ConfigMap command
+    const describeConfigMapCmd = vscode.commands.registerCommand(
+        'kube9.describeConfigMap',
+        async (configMapConfig: ConfigMapTreeItemConfig) => {
+            try {
+                if (!configMapConfig || !configMapConfig.name || !configMapConfig.namespace) {
+                    throw new Error('Invalid ConfigMap configuration');
+                }
+                
+                await DescribeWebview.showConfigMapDescribe(context, configMapConfig);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to describe ConfigMap:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to describe ConfigMap: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(describeConfigMapCmd);
+    disposables.push(describeConfigMapCmd);
     
     // Register describe resource (raw) command
     const describeRawCmd = vscode.commands.registerCommand(

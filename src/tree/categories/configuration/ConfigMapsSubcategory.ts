@@ -75,7 +75,16 @@ export class ConfigMapsSubcategory {
             // Set tooltip with detailed information
             item.tooltip = `ConfigMap: ${configMapInfo.name}\nNamespace: ${configMapInfo.namespace}\nData Keys: ${configMapInfo.dataKeys}`;
 
-            // No click command (placeholder)
+            // Set command to open Describe webview on left-click
+            item.command = {
+                command: 'kube9.describeConfigMap',
+                title: 'Describe ConfigMap',
+                arguments: [{
+                    name: configMapInfo.name,
+                    namespace: configMapInfo.namespace,
+                    context: contextName
+                }]
+            };
 
             return item;
         });

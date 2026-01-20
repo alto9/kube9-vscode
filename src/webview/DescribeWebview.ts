@@ -9,6 +9,7 @@ import { PVCDescribeProvider } from '../providers/PVCDescribeProvider';
 import { PVDescribeProvider } from '../providers/PVDescribeProvider';
 import { SecretDescribeProvider } from '../providers/SecretDescribeProvider';
 import { ServiceDescribeProvider } from '../providers/ServiceDescribeProvider';
+import { ConfigMapDescribeProvider } from '../providers/ConfigMapDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
@@ -76,6 +77,17 @@ interface SecretTreeItemConfig {
 interface ServiceTreeItemConfig {
     name: string;
     namespace: string;
+    context: string;
+}
+
+/**
+ * ConfigMap configuration passed from tree item to describe webview.
+ */
+export interface ConfigMapTreeItemConfig {
+    name: string;
+    namespace: string;
+    status?: string;
+    metadata?: Record<string, unknown>;
     context: string;
 }
 
@@ -163,6 +175,18 @@ export class DescribeWebview {
      * Used for refresh operations.
      */
     private static currentServiceConfig: ServiceTreeItemConfig | undefined;
+
+    /**
+     * ConfigMap describe provider instance for fetching ConfigMap data.
+     * Initialized lazily when first needed.
+     */
+    private static configMapProvider: ConfigMapDescribeProvider | undefined;
+
+    /**
+     * Current ConfigMap configuration being displayed.
+     * Used for refresh operations.
+     */
+    private static currentConfigMapConfig: ConfigMapTreeItemConfig | undefined;
 
     /**
      * Show the Describe webview for a resource.
@@ -453,6 +477,22 @@ export class DescribeWebview {
             return;
         }
 
+        if (kind === 'ConfigMap') {
+            // Validate namespace (ConfigMaps are always namespaced)
+            if (!namespace) {
+                vscode.window.showErrorMessage('Unable to describe ConfigMap: namespace is required');
+                return;
+            }
+            
+            // Call showConfigMapDescribe
+            await DescribeWebview.showConfigMapDescribe(context, {
+                name,
+                namespace,
+                context: contextName
+            });
+            return;
+        }
+
         // Show the Describe webview for other resource types
         DescribeWebview.show(context, {
             kind,
@@ -633,6 +673,11 @@ export class DescribeWebview {
                                 DescribeWebview.currentServiceConfig,
                                 panel
                             );
+                        } else if (DescribeWebview.currentConfigMapConfig) {
+                            await DescribeWebview.loadConfigMapData(
+                                DescribeWebview.currentConfigMapConfig,
+                                panel
+                            );
                         }
                         break;
 
@@ -650,6 +695,8 @@ export class DescribeWebview {
                             await DescribeWebview.openSecretYamlEditor();
                         } else if (DescribeWebview.currentServiceConfig) {
                             await DescribeWebview.openServiceYamlEditor();
+                        } else if (DescribeWebview.currentConfigMapConfig) {
+                            await DescribeWebview.openConfigMapYamlEditor();
                         }
                         break;
 
@@ -684,10 +731,26 @@ export class DescribeWebview {
 
                     case 'navigateToPod':
                         if (message.data && message.data.name && message.data.namespace) {
-                            await DescribeWebview.navigateToPod(
-                                message.data.name,
-                                message.data.namespace
-                            );
+                            // Navigate to Pod - works from any context (PVC, ConfigMap, etc.)
+                            if (DescribeWebview.currentPVCConfig) {
+                                await DescribeWebview.navigateToPod(
+                                    message.data.name,
+                                    message.data.namespace
+                                );
+                            } else if (DescribeWebview.currentConfigMapConfig) {
+                                // Navigate to Pod from ConfigMap context
+                                const configMapConfig = DescribeWebview.currentConfigMapConfig;
+                                await DescribeWebview.showPodDescribe(
+                                    DescribeWebview.extensionContext!,
+                                    {
+                                        name: message.data.name,
+                                        namespace: message.data.namespace,
+                                        context: configMapConfig.context
+                                    }
+                                );
+                            } else {
+                                vscode.window.showErrorMessage('No context available for navigation');
+                            }
                         } else {
                             vscode.window.showErrorMessage('Invalid Pod data in navigateToPod message');
                         }
@@ -2269,6 +2332,265 @@ export class DescribeWebview {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Failed to open YAML editor for Service:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Show the Describe webview for a ConfigMap resource.
+     * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * 
+     * @param context The VS Code extension context
+     * @param configMapConfig ConfigMap configuration with name, namespace, and context
+     */
+    public static async showConfigMapDescribe(
+        context: vscode.ExtensionContext,
+        configMapConfig: ConfigMapTreeItemConfig
+    ): Promise<void> {
+        // Store the extension context for later use
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.currentConfigMapConfig = configMapConfig;
+
+        // Initialize ConfigMap provider if not already initialized
+        if (!DescribeWebview.configMapProvider) {
+            const k8sClient = getKubernetesApiClient();
+            DescribeWebview.configMapProvider = new ConfigMapDescribeProvider(k8sClient);
+        }
+
+        // If we already have a panel, reuse it and update the content
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updateConfigMapPanel(configMapConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create title with ConfigMap name
+        const title = `ConfigMap / ${configMapConfig.name}`;
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+
+        // Set the webview's HTML content
+        panel.webview.html = DescribeWebview.getConfigMapWebviewContent(panel.webview, configMapConfig);
+
+        // Set up message handling
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
+
+        // Fetch and send ConfigMap data
+        await DescribeWebview.loadConfigMapData(configMapConfig, panel);
+
+        // Handle panel disposal - clear all describe webview state
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentConfigMapConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Update an existing panel with new ConfigMap information.
+     * 
+     * @param configMapConfig ConfigMap configuration
+     */
+    private static async updateConfigMapPanel(configMapConfig: ConfigMapTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+
+        // Update panel title
+        const title = `ConfigMap / ${configMapConfig.name}`;
+        DescribeWebview.currentPanel.title = title;
+        DescribeWebview.currentConfigMapConfig = configMapConfig;
+
+        // Update panel content
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getConfigMapWebviewContent(DescribeWebview.currentPanel.webview, configMapConfig);
+
+        // Reload ConfigMap data
+        await DescribeWebview.loadConfigMapData(configMapConfig, DescribeWebview.currentPanel);
+    }
+
+    /**
+     * Load ConfigMap data and send it to the webview.
+     * 
+     * @param configMapConfig ConfigMap configuration
+     * @param panel Webview panel to send data to
+     */
+    private static async loadConfigMapData(
+        configMapConfig: ConfigMapTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.configMapProvider) {
+            return;
+        }
+
+        try {
+            const configMapData = await DescribeWebview.configMapProvider.getConfigMapDetails(
+                configMapConfig.name,
+                configMapConfig.namespace,
+                configMapConfig.context
+            );
+
+            panel.webview.postMessage({
+                command: 'updateConfigMapData',
+                data: configMapData
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: `Failed to load ConfigMap details: ${errorMessage}`
+                }
+            });
+        }
+    }
+
+    /**
+     * Generate the HTML content for the ConfigMap Describe webview.
+     * Loads React bundle from webpack build output.
+     * 
+     * @param webview The webview instance
+     * @param configMapConfig ConfigMap configuration
+     * @returns HTML content string
+     */
+    private static getConfigMapWebviewContent(webview: vscode.Webview, configMapConfig: ConfigMapTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            // Fallback if extension context is not available
+            return this.getConfigMapFallbackHtml(configMapConfig);
+        }
+
+        const cspSource = webview.cspSource;
+        const escapedConfigMapName = DescribeWebview.escapeHtml(configMapConfig.name);
+        
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'configmap-describe', 'index.js')
+        );
+
+        // Read header CSS and inline it
+        let headerCss = '';
+        try {
+            const headerCssPath = path.join(
+                DescribeWebview.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'styles',
+                'webview-header.css'
+            );
+            headerCss = fs.readFileSync(headerCssPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load header CSS:', error);
+        }
+
+        const nonce = getNonce();
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>ConfigMap / ${escapedConfigMapName}</title>
+    <style>
+        ${headerCss}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
+    }
+
+    /**
+     * Fallback HTML content if template files cannot be loaded.
+     * 
+     * @param configMapConfig ConfigMap configuration
+     * @returns Fallback HTML content string
+     */
+    private static getConfigMapFallbackHtml(configMapConfig: ConfigMapTreeItemConfig): string {
+        const escapedConfigMapName = DescribeWebview.escapeHtml(configMapConfig.name);
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>ConfigMap / ${escapedConfigMapName}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            margin: 0;
+        }
+        .error {
+            padding: 20px;
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 4px;
+            color: var(--vscode-errorForeground);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>ConfigMap / ${escapedConfigMapName}</h1>
+    <div class="error">
+        Failed to load webview template. Please check that dist/media/configmap-describe/index.js exists.
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
+     * Open YAML editor for the current ConfigMap.
+     * Uses the current ConfigMap configuration to build a ResourceIdentifier.
+     */
+    private static async openConfigMapYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentConfigMapConfig) {
+            vscode.window.showErrorMessage('No ConfigMap is currently being displayed');
+            return;
+        }
+
+        try {
+            const configMapConfig = DescribeWebview.currentConfigMapConfig;
+            
+            // Build ResourceIdentifier for ConfigMap
+            const resource = {
+                kind: 'ConfigMap',
+                name: configMapConfig.name,
+                namespace: configMapConfig.namespace,
+                apiVersion: 'v1',
+                cluster: configMapConfig.context
+            };
+
+            console.log('Opening YAML editor for ConfigMap:', resource);
+
+            // Get YAML editor manager and open editor
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for ConfigMap:', errorMessage);
             vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
         }
     }
