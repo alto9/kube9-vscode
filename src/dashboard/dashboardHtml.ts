@@ -676,7 +676,7 @@ export function getDashboardHtml(webview: vscode.Webview, clusterName: string): 
             });
         }
         
-        // Request initial data
+        // Request initial data (fallback - extension sends data proactively)
         vscode.postMessage({ type: 'requestData' });
     </script>
 </body>

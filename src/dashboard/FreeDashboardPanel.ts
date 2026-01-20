@@ -101,7 +101,7 @@ export class FreeDashboardPanel {
         // Set the webview's HTML content
         panel.webview.html = getDashboardHtml(panel.webview, clusterName);
 
-        // Proactively send initial data instead of waiting for webview request
+        // Proactively send initial data (postMessage is queued until webview is ready)
         await FreeDashboardPanel.sendDashboardData(
             panel,
             kubeconfigPath,
@@ -147,6 +147,7 @@ export class FreeDashboardPanel {
     ): Promise<void> {
         switch (message.type) {
             case 'requestData':
+                // Fallback handler in case proactive send fails
                 await FreeDashboardPanel.sendDashboardData(
                     panel,
                     kubeconfigPath,

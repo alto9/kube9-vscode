@@ -111,7 +111,7 @@ export class OperatedDashboardPanel {
         // Set the webview's HTML content
         panel.webview.html = getOperatedDashboardHtml(panel.webview, clusterName, operatorStatus);
 
-        // Proactively send initial data instead of waiting for webview request
+        // Proactively send initial data (postMessage is queued until webview is ready)
         await OperatedDashboardPanel.sendDashboardDataWithStatusCheck(
             panel,
             kubeconfigPath,
@@ -157,6 +157,7 @@ export class OperatedDashboardPanel {
     ): Promise<void> {
         switch (message.type) {
             case 'requestData':
+                // Fallback handler in case proactive send fails
                 await OperatedDashboardPanel.sendDashboardData(
                     panel,
                     kubeconfigPath,
