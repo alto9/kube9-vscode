@@ -14,7 +14,8 @@
     "./event-viewer/**/*",
     "./pod-describe/**/*",
     "./pvc-describe/**/*",
-    "./pv-describe/**/*"
+    "./pv-describe/**/*",
+    "./secret-describe/**/*"
   ]
 }
 
