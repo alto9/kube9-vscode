@@ -40,12 +40,12 @@ export class FreeDashboardPanel {
      * @param contextName - The kubectl context name
      * @param clusterName - The display name of the cluster
      */
-    public static show(
+    public static async show(
         context: vscode.ExtensionContext,
         kubeconfigPath: string,
         contextName: string,
         clusterName: string
-    ): void {
+    ): Promise<void> {
         // Store the extension context for later use
         FreeDashboardPanel.extensionContext = context;
 
@@ -85,19 +85,8 @@ export class FreeDashboardPanel {
             refreshManager
         });
 
-        // Set the webview's HTML content
-        panel.webview.html = getDashboardHtml(panel.webview, clusterName);
-
-        // Start auto-refresh
-        refreshManager.startAutoRefresh(
-            panel,
-            kubeconfigPath,
-            contextName,
-            FreeDashboardPanel.sendDashboardData.bind(FreeDashboardPanel)
-        );
-
-        // Handle messages from the webview
-        panel.webview.onDidReceiveMessage(
+        // Handle messages from the webview (register BEFORE setting HTML to prevent race condition)
+        const messageHandlerDisposable = panel.webview.onDidReceiveMessage(
             async (message) => {
                 await FreeDashboardPanel.handleWebviewMessage(
                     message,
@@ -105,9 +94,30 @@ export class FreeDashboardPanel {
                     kubeconfigPath,
                     contextName
                 );
-            },
-            undefined,
-            context.subscriptions
+            }
+        );
+        context.subscriptions.push(messageHandlerDisposable);
+
+        // Set the webview's HTML content
+        panel.webview.html = getDashboardHtml(panel.webview, clusterName);
+
+        // Proactively send initial data (fire-and-forget to avoid blocking panel creation)
+        // postMessage is queued by the browser until webview is ready
+        FreeDashboardPanel.sendDashboardData(
+            panel,
+            kubeconfigPath,
+            contextName,
+            true  // isInitialLoad = true
+        ).catch(error => {
+            console.error('Failed to send initial dashboard data:', error);
+        });
+
+        // Start auto-refresh
+        refreshManager.startAutoRefresh(
+            panel,
+            kubeconfigPath,
+            contextName,
+            FreeDashboardPanel.sendDashboardData.bind(FreeDashboardPanel)
         );
 
         // Handle panel disposal
@@ -140,6 +150,7 @@ export class FreeDashboardPanel {
     ): Promise<void> {
         switch (message.type) {
             case 'requestData':
+                // Fallback handler in case proactive send fails
                 await FreeDashboardPanel.sendDashboardData(
                     panel,
                     kubeconfigPath,
@@ -242,6 +253,8 @@ export class FreeDashboardPanel {
      */
     public static closeAllPanels(): void {
         for (const panelInfo of FreeDashboardPanel.openPanels.values()) {
+            // Ensure refresh interval is cleared even if dispose events don't fire
+            panelInfo.refreshManager.stopAutoRefresh();
             panelInfo.panel.dispose();
         }
         FreeDashboardPanel.openPanels.clear();

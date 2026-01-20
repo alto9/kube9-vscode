@@ -221,9 +221,9 @@ export class EventEmitter<T> {
     private listeners: Array<(e: T) => void> = [];
 
     get event(): Event<T> {
-        return (listener: (e: T) => void) => {
+        return (listener: (e: T) => void, thisArgs?: unknown, disposables?: { dispose(): unknown }[]) => {
             this.listeners.push(listener);
-            return {
+            const disposable = {
                 dispose: () => {
                     const index = this.listeners.indexOf(listener);
                     if (index > -1) {
@@ -231,6 +231,11 @@ export class EventEmitter<T> {
                     }
                 }
             };
+            // If disposables array is provided, add the disposable to it (VS Code API behavior)
+            if (disposables) {
+                disposables.push(disposable);
+            }
+            return disposable;
         };
     }
 

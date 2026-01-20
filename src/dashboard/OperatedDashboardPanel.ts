@@ -48,13 +48,13 @@ export class OperatedDashboardPanel {
      * @param clusterName - The display name of the cluster
      * @param operatorStatus - The operator status for this cluster
      */
-    public static show(
+    public static async show(
         context: vscode.ExtensionContext,
         kubeconfigPath: string,
         contextName: string,
         clusterName: string,
         operatorStatus: OperatorDashboardStatus
-    ): void {
+    ): Promise<void> {
         // Store the extension context for later use
         OperatedDashboardPanel.extensionContext = context;
 
@@ -95,19 +95,8 @@ export class OperatedDashboardPanel {
             refreshManager
         });
 
-        // Set the webview's HTML content
-        panel.webview.html = getOperatedDashboardHtml(panel.webview, clusterName, operatorStatus);
-
-        // Start auto-refresh
-        refreshManager.startAutoRefresh(
-            panel,
-            kubeconfigPath,
-            contextName,
-            OperatedDashboardPanel.sendDashboardDataWithStatusCheck.bind(OperatedDashboardPanel)
-        );
-
-        // Handle messages from the webview
-        panel.webview.onDidReceiveMessage(
+        // Handle messages from the webview (register BEFORE setting HTML to prevent race condition)
+        const messageHandlerDisposable = panel.webview.onDidReceiveMessage(
             async (message) => {
                 await OperatedDashboardPanel.handleWebviewMessage(
                     message,
@@ -115,9 +104,30 @@ export class OperatedDashboardPanel {
                     kubeconfigPath,
                     contextName
                 );
-            },
-            undefined,
-            context.subscriptions
+            }
+        );
+        context.subscriptions.push(messageHandlerDisposable);
+
+        // Set the webview's HTML content
+        panel.webview.html = getOperatedDashboardHtml(panel.webview, clusterName, operatorStatus);
+
+        // Proactively send initial data (fire-and-forget to avoid blocking panel creation)
+        // postMessage is queued by the browser until webview is ready
+        OperatedDashboardPanel.sendDashboardDataWithStatusCheck(
+            panel,
+            kubeconfigPath,
+            contextName,
+            true  // isInitialLoad = true
+        ).catch(error => {
+            console.error('Failed to send initial dashboard data:', error);
+        });
+
+        // Start auto-refresh
+        refreshManager.startAutoRefresh(
+            panel,
+            kubeconfigPath,
+            contextName,
+            OperatedDashboardPanel.sendDashboardDataWithStatusCheck.bind(OperatedDashboardPanel)
         );
 
         // Handle panel disposal
@@ -150,6 +160,7 @@ export class OperatedDashboardPanel {
     ): Promise<void> {
         switch (message.type) {
             case 'requestData':
+                // Fallback handler in case proactive send fails
                 await OperatedDashboardPanel.sendDashboardData(
                     panel,
                     kubeconfigPath,
@@ -403,6 +414,8 @@ export class OperatedDashboardPanel {
      */
     public static closeAllPanels(): void {
         for (const panelInfo of OperatedDashboardPanel.openPanels.values()) {
+            // Ensure refresh interval is cleared even if dispose events don't fire
+            panelInfo.refreshManager.stopAutoRefresh();
             panelInfo.panel.dispose();
         }
         OperatedDashboardPanel.openPanels.clear();
