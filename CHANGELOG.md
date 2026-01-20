@@ -1,3 +1,15 @@
+# [1.27.0](https://github.com/alto9/kube9-vscode/compare/v1.26.0...v1.27.0) (2026-01-20)
+
+
+### Bug Fixes
+
+* **webview:** improve Service describe webview styling consistency ([39f798d](https://github.com/alto9/kube9-vscode/commit/39f798ddf697be28a3884c84623fe13b6e601610))
+
+
+### Features
+
+* implement describe webview for services ([874a675](https://github.com/alto9/kube9-vscode/commit/874a67542735a4ebf26ae95fbb8f9b9f779fc003)), closes [#53](https://github.com/alto9/kube9-vscode/issues/53)
+
 # [1.26.0](https://github.com/alto9/kube9-vscode/compare/v1.25.1...v1.26.0) (2026-01-20)
 
 
