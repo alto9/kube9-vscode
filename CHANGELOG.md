@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/alto9/kube9-vscode/compare/v1.27.0...v1.28.0) (2026-01-20)
+
+
+### Features
+
+* implement describe webview for ConfigMaps ([0b96d48](https://github.com/alto9/kube9-vscode/commit/0b96d485339a489c8a132573394e106ad19ac189)), closes [#52](https://github.com/alto9/kube9-vscode/issues/52)
+
 # [1.27.0](https://github.com/alto9/kube9-vscode/compare/v1.26.0...v1.27.0) (2026-01-20)
 
 
