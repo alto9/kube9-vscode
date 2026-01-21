@@ -110,9 +110,10 @@ Scenario: Main log display area
   Given a user has Pod Logs Viewer open with logs loaded
   Then the main area should display log lines in a monospace font
   And each log line should be on a separate row
-  And horizontal scrolling should be available for long lines
+  And long lines should wrap to multiple lines without horizontal scrolling
   And vertical scrolling should scroll through log history
   And syntax highlighting should be applied for JSON logs
+  And each log entry should take as much vertical space as needed
 
 Scenario: Virtual scrolling for performance
   Given a user has logs with 10,000 lines loaded
@@ -121,6 +122,29 @@ Scenario: Virtual scrolling for performance
   And scrolling should be smooth and performant
   And scroll position should update the visible window dynamically
   And line numbers should update correctly
+
+Scenario: Multi-line log entries display fully
+  Given a user has logs containing multi-line entries like JSON or stack traces
+  And viewing logs with line:
+    """
+    {"level":"error","timestamp":"2024-12-29T10:30:45.123Z","message":"Request failed","details":{"url":"https://api.example.com","status":500,"error":"Internal Server Error"}}
+    """
+  Then the complete JSON should display on multiple wrapped lines
+  And no horizontal scrolling should be required
+  And each log entry should take as much vertical space as needed
+  And the log line height should adjust automatically to content
+
+Scenario: Stack traces display naturally across multiple lines
+  Given a user has logs containing a stack trace:
+    """
+    Error: Failed to process request
+        at processRequest (/app/src/handlers/api.js:45:15)
+        at async handleRoute (/app/src/router.js:123:5)
+        at async Server.<anonymous> (/app/src/server.js:89:3)
+    """
+  Then the entire stack trace should be visible without scrolling
+  And each line of the stack trace should wrap naturally
+  And the log viewer should calculate the total height dynamically
 
 Scenario: Log line syntax highlighting for JSON
   Given a user has logs containing JSON formatted lines
