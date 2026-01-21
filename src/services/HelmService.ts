@@ -213,7 +213,7 @@ export class HelmService {
                         outputChannel.appendLine(`[${closeTimestamp}] Suggestion: ${helmError.suggestion}`);
                     }
                     outputChannel.appendLine(`[${closeTimestamp}] Stderr: ${stderr || '(empty)'}`);
-                    outputChannel.show(true); // Show the output channel on error
+                    // Error logged to output channel - user can view via Output panel
                     
                     // Also log to console for Extension Host output
                     console.error('[Helm CLI Error]', {
@@ -255,7 +255,7 @@ export class HelmService {
                     outputChannel.appendLine(`[${errorTimestamp}] ERROR: Failed to spawn helm: ${error.message}`);
                 }
                 
-                outputChannel.show(true); // Show the output channel on error
+                // Error logged to output channel - user can view via Output panel
                 
                 // Log detailed error for debugging
                 console.error('[Helm CLI Error]', {
@@ -1098,7 +1098,7 @@ export class HelmService {
                     const errorTimestamp = new Date().toISOString();
                     const errorMsg = deploymentError instanceof Error ? deploymentError.message : String(deploymentError);
                     outputChannel.appendLine(`[${errorTimestamp}] [getOperatorStatus] Failed to get deployments: ${errorMsg}`);
-                    outputChannel.show(true);
+                    // Error logged to output channel - user can view via Output panel
                     // If we can't get deployments either, return not installed
                     const status: OperatorInstallationStatus = {
                         installed: false,

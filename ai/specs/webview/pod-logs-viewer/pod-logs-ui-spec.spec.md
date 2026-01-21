@@ -262,10 +262,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 };
 ```
 
-### Log Display Component (Virtual Scrolling)
+### Log Display Component (Virtual Scrolling with Dynamic Heights)
 
 ```typescript
-import { FixedSizeList as List } from 'react-window';
+import { VariableSizeList as List } from 'react-window';
 
 interface LogDisplayProps {
   logs: string[];
@@ -285,6 +285,39 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
   const listRef = useRef<List>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // Row height cache and refs for dynamic sizing
+  const rowHeights = useRef<Map<number, number>>(new Map());
+  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  
+  // Get height for a specific row index
+  const getItemSize = useCallback((index: number) => {
+    return rowHeights.current.get(index) || 20; // fallback to 20px minimum
+  }, []);
+  
+  // Measure row height after render
+  const setRowRef = useCallback((index: number) => (element: HTMLDivElement | null) => {
+    if (element) {
+      rowRefs.current.set(index, element);
+      const height = element.offsetHeight;
+      const currentHeight = rowHeights.current.get(index);
+      
+      if (currentHeight !== height) {
+        rowHeights.current.set(index, height);
+        // Force list to recalculate layout
+        listRef.current?.resetAfterIndex(index);
+      }
+    }
+  }, []);
+  
+  // Clear height cache when logs change significantly
+  useEffect(() => {
+    rowHeights.current.clear();
+    rowRefs.current.clear();
+    if (listRef.current) {
+      listRef.current.resetAfterIndex(0);
+    }
+  }, [logs.length]);
+  
   // Auto-scroll to bottom when follow mode is on
   useEffect(() => {
     if (followMode && listRef.current) {
@@ -295,15 +328,17 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
   // Detect scroll up to disable follow mode
   const handleScroll = ({ scrollOffset, scrollUpdateWasRequested }: any) => {
     if (!scrollUpdateWasRequested && followMode) {
-      const container = containerRef.current;
-      if (container) {
-        const scrollHeight = container.scrollHeight;
-        const clientHeight = container.clientHeight;
-        const isAtBottom = scrollOffset + clientHeight >= scrollHeight - 50;
-        
-        if (!isAtBottom) {
-          onScrollUp();
-        }
+      // Calculate total scrollable height by summing all row heights
+      let totalHeight = 0;
+      for (let i = 0; i < logs.length; i++) {
+        totalHeight += getItemSize(i);
+      }
+      
+      const clientHeight = containerRef.current?.clientHeight || 0;
+      const isAtBottom = scrollOffset + clientHeight >= totalHeight - 50;
+      
+      if (!isAtBottom) {
+        onScrollUp();
       }
     }
   };
@@ -314,7 +349,15 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
     const isMatch = searchQuery && content.toLowerCase().includes(searchQuery.toLowerCase());
     
     return (
-      <div style={style} className={`log-line ${isMatch ? 'highlight' : ''}`}>
+      <div 
+        ref={setRowRef(index)}
+        style={{
+          ...style,
+          height: 'auto',  // Allow natural height
+          minHeight: 20    // Minimum 20px
+        }}
+        className={`log-line ${isMatch ? 'highlight' : ''}`}
+      >
         {showTimestamps && timestamp && (
           <span className="timestamp">{timestamp}</span>
         )}
@@ -329,7 +372,7 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
         ref={listRef}
         height={600}
         itemCount={logs.length}
-        itemSize={20}
+        itemSize={getItemSize}
         width="100%"
         onScroll={handleScroll}
       >
@@ -500,13 +543,21 @@ Use VS Code CSS variables for theme compatibility:
   overflow: auto;
   font-family: 'Courier New', monospace;
   font-size: 13px;
-  line-height: 20px;
+  line-height: 1.4;
 }
 
 .log-line {
-  padding: 0 8px;
-  white-space: pre;
-  overflow-x: auto;
+  padding: 2px 8px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  min-height: 20px;
+}
+
+.log-line .log-content {
+  display: inline;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .log-line.highlight {
@@ -628,10 +679,21 @@ module.exports = {
 
 ## Performance Considerations
 
-### Virtual Scrolling
-- Use `react-window` for efficient rendering of large log lists
+### Virtual Scrolling with Dynamic Heights
+- Use `react-window` with `VariableSizeList` for efficient rendering of large log lists
 - Only render visible rows (50-100 at a time)
-- Calculate row height dynamically for wrapped lines
+- Dynamically calculate row heights based on actual content
+- Cache measured row heights to avoid repeated calculations
+- Clear height cache when log content changes significantly
+- Support multi-line log entries (JSON, stack traces) without horizontal scrolling
+
+### Height Measurement Strategy
+- Measure row heights after initial render using DOM `offsetHeight`
+- Cache measured heights in a Map for O(1) lookup
+- Invalidate cache and recalculate when:
+  - Log count changes (new logs added or cleared)
+  - Container switches (different pod/container)
+  - Window resizes
 
 ### Batched Updates
 - Batch log line additions (every 100ms)
@@ -641,7 +703,7 @@ module.exports = {
 ### Memory Management
 - Limit buffer to 10,000 lines
 - Trim oldest lines when limit exceeded
-- Clear logs from memory when panel closes
+- Clear logs and height cache from memory when panel closes
 
 ## Accessibility
 

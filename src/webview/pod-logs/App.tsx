@@ -145,12 +145,21 @@ export const App: React.FC = () => {
         };
     }, [sendMessage]);
 
-    // Check for empty state when stream disconnects with no logs
+    // Track if we've ever been connected to avoid premature empty state
+    const [hasBeenConnected, setHasBeenConnected] = useState(false);
+    
     useEffect(() => {
-        if (streamStatus === 'disconnected' && logs.length === 0 && viewState === 'loading') {
+        if (streamStatus === 'connected') {
+            setHasBeenConnected(true);
+        }
+    }, [streamStatus]);
+
+    // Check for empty state only after we've connected at least once and then disconnected
+    useEffect(() => {
+        if (hasBeenConnected && streamStatus === 'disconnected' && logs.length === 0 && viewState === 'loading') {
             setViewState('empty');
         }
-    }, [streamStatus, logs.length, viewState]);
+    }, [hasBeenConnected, streamStatus, logs.length, viewState]);
 
     // Search logic: find matching log lines
     useEffect(() => {

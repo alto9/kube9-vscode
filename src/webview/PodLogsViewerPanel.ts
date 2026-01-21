@@ -1309,6 +1309,21 @@ export class PodLogsViewerPanel {
         const timestamp = new Date().toISOString();
         console.log(`[PodLogsViewerPanel ${timestamp}] Stream closed for context: ${contextName}`);
 
+        // Flush any pending logs before closing
+        const pendingLines = PodLogsViewerPanel.pendingLogLines.get(contextName);
+        if (pendingLines && pendingLines.length > 0) {
+            console.log(`[PodLogsViewerPanel ${timestamp}] Flushing ${pendingLines.length} pending log lines before close`);
+            const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
+            if (panelInfo) {
+                PodLogsViewerPanel.sendMessage(panelInfo.panel, {
+                    type: 'logData',
+                    data: [...pendingLines]
+                });
+                // Clear the pending lines after sending
+                pendingLines.length = 0;
+            }
+        }
+
         const panelInfo = PodLogsViewerPanel.openPanels.get(contextName);
         if (panelInfo) {
             PodLogsViewerPanel.sendMessage(panelInfo.panel, {

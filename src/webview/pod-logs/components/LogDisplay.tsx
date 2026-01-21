@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
-import { FixedSizeList as List } from 'react-window';
+import { VariableSizeList as List } from 'react-window';
 
 /**
  * Props for LogDisplay component.
@@ -101,6 +101,52 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const [listHeight, setListHeight] = useState(600);
     const wasFollowingRef = useRef(false);
+    
+    // Row height cache and refs for dynamic sizing
+    const rowHeights = useRef<Map<number, number>>(new Map());
+    const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+    // Get height for a specific row index
+    const getItemSize = useCallback((index: number) => {
+        const cachedHeight = rowHeights.current.get(index);
+        if (cachedHeight) {
+            return cachedHeight;
+        }
+        
+        // Estimate height based on content length if not yet measured
+        // This provides better initial scroll calculations
+        if (index >= 0 && index < logs.length) {
+            const line = logs[index];
+            const parsed = parseLogLine(line);
+            const contentLength = parsed.content.length;
+            
+            // Rough estimate: ~100 characters per line at current font size
+            // With word wrapping, longer lines will take more vertical space
+            const estimatedLines = Math.ceil(contentLength / 100);
+            const lineHeight = 20; // matches CSS line-height
+            const padding = 4; // 2px top + 2px bottom padding
+            const estimatedHeight = Math.max(20, (estimatedLines * lineHeight) + padding);
+            
+            return estimatedHeight;
+        }
+        
+        return 20; // fallback minimum
+    }, [logs]);
+
+    // Measure row height after render
+    const setRowRef = useCallback((index: number) => (element: HTMLDivElement | null) => {
+        if (element) {
+            rowRefs.current.set(index, element);
+            const height = element.offsetHeight;
+            const currentHeight = rowHeights.current.get(index);
+            
+            if (currentHeight !== height) {
+                rowHeights.current.set(index, height);
+                // Force list to recalculate layout
+                listRef.current?.resetAfterIndex(index);
+            }
+        }
+    }, []);
 
     // Calculate list height from container
     useEffect(() => {
@@ -113,8 +159,23 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
 
         updateHeight();
         window.addEventListener('resize', updateHeight);
-        return () => window.removeEventListener('resize', updateHeight);
+        return () => {
+            window.removeEventListener('resize', updateHeight);
+            // Clear any pending scroll timeout on unmount
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+        };
     }, []);
+
+    // Clear height cache when logs change significantly
+    useEffect(() => {
+        rowHeights.current.clear();
+        rowRefs.current.clear();
+        if (listRef.current) {
+            listRef.current.resetAfterIndex(0);
+        }
+    }, [logs.length]);
 
     // Auto-scroll to bottom when followMode is on and logs change
     useEffect(() => {
@@ -132,30 +193,44 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
         }
     }, [searchMatches, currentMatchIndex]);
 
+    // Track last scroll offset to detect significant scroll movements
+    const lastScrollOffset = useRef(0);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     // Detect scroll up to disable follow mode
-    const handleScroll = useCallback(({ scrollOffset, scrollUpdateWasRequested }: any) => {
+    const handleScroll = useCallback(({ scrollOffset, scrollUpdateWasRequested }: { scrollOffset: number; scrollUpdateWasRequested: boolean }) => {
         // Only handle user-initiated scrolls, not programmatic ones
         if (scrollUpdateWasRequested) {
+            lastScrollOffset.current = scrollOffset;
             return;
         }
 
-        if (followMode && logs.length > 0) {
-            // Calculate total scrollable height: itemCount * itemSize
-            const itemSize = 20;
-            const totalHeight = logs.length * itemSize;
-            
-            // Calculate if we're at the bottom (within 50px threshold)
-            const isAtBottom = scrollOffset + listHeight >= totalHeight - 50;
-            
-            // If user scrolled up (not at bottom), disable follow mode
-            if (!isAtBottom && wasFollowingRef.current) {
+        if (!followMode || logs.length === 0 || !wasFollowingRef.current) {
+            lastScrollOffset.current = scrollOffset;
+            return;
+        }
+
+        // Clear any pending scroll timeout
+        if (scrollTimeoutRef.current) {
+            clearTimeout(scrollTimeoutRef.current);
+        }
+
+        // Detect scroll direction and magnitude
+        const scrollDelta = scrollOffset - lastScrollOffset.current;
+        const scrollingUp = scrollDelta < 0;
+        
+        // Only disable follow mode if user scrolled up by at least 200px
+        // This conservative threshold prevents false positives during height adjustments
+        if (scrollingUp && Math.abs(scrollDelta) > 200) {
+            // Debounce to ensure this isn't just a transient scroll during layout
+            scrollTimeoutRef.current = setTimeout(() => {
                 onScrollUp();
                 wasFollowingRef.current = false;
-            } else if (isAtBottom) {
-                wasFollowingRef.current = true;
-            }
+            }, 100);
         }
-    }, [followMode, logs.length, listHeight, onScrollUp]);
+        
+        lastScrollOffset.current = scrollOffset;
+    }, [followMode, logs.length, onScrollUp]);
 
     // Row component for rendering individual log lines
     const Row = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
@@ -165,7 +240,12 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
         
         return (
             <div
-                style={style}
+                ref={setRowRef(index)}
+                style={{
+                    ...style,
+                    height: 'auto',  // Allow natural height
+                    minHeight: 20    // Minimum 20px
+                }}
                 className={`log-line ${isMatch ? 'highlight' : ''}`}
                 role="row"
             >
@@ -177,7 +257,7 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
                 </span>
             </div>
         );
-    }, [logs, showTimestamps, searchQuery]);
+    }, [logs, showTimestamps, searchQuery, setRowRef]);
 
     // Empty state
     if (logs.length === 0) {
@@ -197,7 +277,7 @@ export const LogDisplay: React.FC<LogDisplayProps> = ({
                 ref={listRef}
                 height={listHeight}
                 itemCount={logs.length}
-                itemSize={20}
+                itemSize={getItemSize}
                 width="100%"
                 onScroll={handleScroll}
             >
