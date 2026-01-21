@@ -1,3 +1,10 @@
+## [1.28.2](https://github.com/alto9/kube9-vscode/compare/v1.28.1...v1.28.2) (2026-01-21)
+
+
+### Bug Fixes
+
+* pod logs viewer empty state on load and multi-line display ([12a908f](https://github.com/alto9/kube9-vscode/commit/12a908f1eef161f2043c6bcc0e7269457c516af2)), closes [#93](https://github.com/alto9/kube9-vscode/issues/93)
+
 ## [1.28.1](https://github.com/alto9/kube9-vscode/compare/v1.28.0...v1.28.1) (2026-01-20)
 
 
