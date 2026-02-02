@@ -517,12 +517,56 @@ export class TutorialWebview {
             color: var(--vscode-inputValidation-infoForeground);
             font-weight: 600;
         }
+
+        .video-section {
+            background: linear-gradient(135deg, var(--vscode-editor-inactiveSelectionBackground) 0%, var(--vscode-list-hoverBackground) 100%);
+            border-left: 4px solid var(--vscode-focusBorder);
+        }
+
+        .video-button {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            margin-top: 12px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .video-button:hover {
+            background-color: var(--vscode-button-hoverBackground);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .video-button:focus {
+            outline: 2px solid var(--vscode-focusBorder);
+            outline-offset: 2px;
+        }
+
+        .video-button:active {
+            transform: translateY(0);
+        }
     </style>
 </head>
 <body>
     <div class="header">
         ${iconHtml}
         <h1>Get Started with Kube9</h1>
+    </div>
+
+    <div class="section video-section">
+        <h2><span class="section-icon">📹</span> Video Tutorial</h2>
+        <p>Watch our video guide to see Kube9 in action and learn how to get started quickly.</p>
+        <button onclick="openExternal('https://www.youtube.com/watch?v=HiWLsyFJIyM')" class="video-button">
+            ▶ Watch Video Tutorial
+        </button>
     </div>
 
     <div class="dont-show-container">
@@ -566,107 +610,6 @@ export class TutorialWebview {
             <li>Expand clusters to explore namespaces and Kubernetes resources</li>
             <li>Click on any resource to view detailed information</li>
         </ol>
-    </div>
-
-    <div class="step">
-        <div class="step-header">
-            <div class="step-number">1</div>
-            <h2 class="step-title">Explore the Cluster View</h2>
-        </div>
-        <div class="step-description">
-            <p>Discover the Kube9 activity bar icon and learn about the tree structure that organizes clusters, namespaces, and resources.</p>
-            <img src="${getMediaUri('01-cluster-view.png')}" alt="Kube9 activity bar icon and cluster tree view" class="step-image" />
-        </div>
-        <div class="step-actions">
-            <button onclick="executeCommand('kube9ClusterView.focus')">Open Kube9 View</button>
-        </div>
-    </div>
-
-    <div class="step">
-        <div class="step-header">
-            <div class="step-number">2</div>
-            <h2 class="step-title">Explore Cluster Organizer</h2>
-        </div>
-        <div class="step-description">
-            <p>Learn how to customize your tree view organization with the Cluster Organizer. Organize clusters to tailor the interface to your workflow.</p>
-            <img src="${getMediaUri('02-cluster-manager.png')}" alt="Cluster Manager UI showing customization options" class="step-image" />
-        </div>
-        <div class="step-actions">
-            <button onclick="executeCommand('kube9.openClusterManager')">Open Cluster Organizer</button>
-        </div>
-    </div>
-
-    <div class="step">
-        <div class="step-header">
-            <div class="step-number">3</div>
-            <h2 class="step-title">Navigate Resources</h2>
-        </div>
-        <div class="step-description">
-            <p>Explore Kubernetes resources organized in a familiar hierarchical tree.</p>
-            <img src="${getMediaUri('03-navigation.png')}" alt="Expanded namespace showing resource hierarchy" class="step-image" />
-        </div>
-    </div>
-
-    <div class="step">
-        <div class="step-header">
-            <div class="step-number">4</div>
-            <h2 class="step-title">View Resources</h2>
-        </div>
-        <div class="step-description">
-            <p>View detailed information about any resource by clicking on it. See current status, conditions, events, and more in the describe webview.</p>
-            <img src="${getMediaUri('04-view-resource.png')}" alt="Resource describe webview showing pod status and details" class="step-image" />
-        </div>
-    </div>
-
-    <div class="step">
-        <div class="step-header">
-            <div class="step-number">5</div>
-            <h2 class="step-title">View Pod Logs</h2>
-        </div>
-        <div class="step-description">
-            <p>Access pod logs directly from the tree view for debugging and monitoring. Logs open in a dedicated viewer with filtering and search.</p>
-            <div class="info-message">
-                <strong>How to View Pod Logs:</strong> Right-click any pod in the Kube9 tree view and select View Logs from the context menu.
-            </div>
-            <img src="${getMediaUri('05-logs.png')}" alt="Pod logs viewer interface" class="step-image" />
-        </div>
-    </div>
-
-    <div class="step">
-        <div class="step-header">
-            <div class="step-number">6</div>
-            <h2 class="step-title">View Events</h2>
-        </div>
-        <div class="step-description">
-            <p>View cluster events in the Events Viewer. Events are displayed in a three-pane layout with filtering, sorting, and search capabilities.</p>
-            <div class="info-message">
-                <strong>Requires Kube9 Operator to be installed:</strong> Kube9 Operator provides advanced event tracking features that power the Events Viewer.
-            </div>
-            <img src="${getMediaUri('06-management.png')}" alt="Resource management operations including scale and delete" class="step-image" />
-        </div>
-    </div>
-
-    <div class="step">
-        <div class="step-header">
-            <div class="step-number">7</div>
-            <h2 class="step-title">Documentation</h2>
-        </div>
-        <div class="step-description">
-            <p>You've learned the essentials! Find more help and resources:</p>
-            <ul>
-                <li>Use <strong>Cmd/Ctrl+Shift+P</strong> to access all Kube9 commands</li>
-                <li>Right-click resources for context menus</li>
-                <li>Check out <a href="https://alto9.github.io/kube9/" class="command-link" onclick="openExternal('https://alto9.github.io/kube9/')">our documentation</a> for detailed guides</li>
-                <li>Join our <a href="https://github.com/alto9/kube9-vscode" class="command-link" onclick="openExternal('https://github.com/alto9/kube9-vscode')">community</a> for support</li>
-            </ul>
-            <p>Happy Kubernetes management! 🚀</p>
-        </div>
-    </div>
-
-    <div class="footer">
-        <button onclick="completeTutorial()" style="background-color: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground);">
-            Complete Tutorial
-        </button>
     </div>
 
     <script>
