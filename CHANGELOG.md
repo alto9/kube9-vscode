@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/alto9/kube9-vscode/compare/v1.28.2...v1.29.0) (2026-02-02)
+
+
+### Features
+
+* add describe webview for StorageClass resources ([3d343be](https://github.com/alto9/kube9-vscode/commit/3d343be0c8ed0218c6eef2011e8682d6a56f5688))
+
 ## [1.28.2](https://github.com/alto9/kube9-vscode/compare/v1.28.1...v1.28.2) (2026-01-21)
 
 
