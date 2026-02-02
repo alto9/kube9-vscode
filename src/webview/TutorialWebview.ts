@@ -35,10 +35,7 @@ export class TutorialWebview {
             column,
             {
                 enableScripts: true,
-                retainContextWhenHidden: true,
-                localResourceRoots: [
-                    vscode.Uri.joinPath(context.extensionUri, 'media', 'walkthrough')
-                ]
+                retainContextWhenHidden: true
             }
         );
 
@@ -183,13 +180,6 @@ export class TutorialWebview {
         const inlineIconHtml = activityBarIcon 
             ? `<img src="${activityBarIcon}" alt="Kube9 Icon" style="width: 18px; height: 18px; vertical-align: middle;" />`
             : '';
-
-        // Get media file URIs
-        const getMediaUri = (filename: string) => {
-            return webview.asWebviewUri(
-                vscode.Uri.joinPath(context.extensionUri, 'media', 'walkthrough', filename)
-            );
-        };
 
         return `<!DOCTYPE html>
 <html lang="en">
