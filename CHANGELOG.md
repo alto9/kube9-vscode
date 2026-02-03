@@ -1,3 +1,10 @@
+## [1.29.1](https://github.com/alto9/kube9-vscode/compare/v1.29.0...v1.29.1) (2026-02-03)
+
+
+### Bug Fixes
+
+* remove unused getMediaUri function and localResourceRoots config ([b0d7198](https://github.com/alto9/kube9-vscode/commit/b0d7198565213638b31bb89bff1dd8da0179b94f))
+
 # [1.29.0](https://github.com/alto9/kube9-vscode/compare/v1.28.2...v1.29.0) (2026-02-02)
 
 
