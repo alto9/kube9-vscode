@@ -1,3 +1,17 @@
+## [1.29.1](https://github.com/alto9/kube9-vscode/compare/v1.29.0...v1.29.1) (2026-02-03)
+
+
+### Bug Fixes
+
+* remove unused getMediaUri function and localResourceRoots config ([b0d7198](https://github.com/alto9/kube9-vscode/commit/b0d7198565213638b31bb89bff1dd8da0179b94f))
+
+# [1.29.0](https://github.com/alto9/kube9-vscode/compare/v1.28.2...v1.29.0) (2026-02-02)
+
+
+### Features
+
+* add describe webview for StorageClass resources ([3d343be](https://github.com/alto9/kube9-vscode/commit/3d343be0c8ed0218c6eef2011e8682d6a56f5688))
+
 ## [1.28.2](https://github.com/alto9/kube9-vscode/compare/v1.28.1...v1.28.2) (2026-01-21)
 
 
