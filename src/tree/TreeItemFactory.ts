@@ -272,8 +272,11 @@ export class TreeItemFactory {
         forward: PortForwardInfo,
         resourceData: TreeItemData
     ): ClusterTreeItem {
-        // Label format: localhost:8080 → default/nginx-pod:80
-        const label = `localhost:${forward.localPort} → ${forward.namespace}/${forward.podName}:${forward.remotePort}`;
+        // Label format: localhost:8080 → service/default/kube-dns:80 or pod/default/nginx-pod:80
+        const resourcePrefix = forward.resourceType === 'service'
+            ? `service/${forward.namespace}/${forward.resourceName}`
+            : `pod/${forward.namespace}/${forward.resourceName}`;
+        const label = `localhost:${forward.localPort} → ${resourcePrefix}:${forward.remotePort}`;
         
         const item = new ClusterTreeItem(
             label,
@@ -281,7 +284,7 @@ export class TreeItemFactory {
             vscode.TreeItemCollapsibleState.None,
             {
                 ...resourceData,
-                resourceName: forward.podName,
+                resourceName: forward.resourceName,
                 namespace: forward.namespace,
                 forwardId: forward.id
             }
@@ -356,7 +359,10 @@ export class TreeItemFactory {
      */
     private static buildForwardTooltip(forward: PortForwardInfo): string {
         const uptimeText = this.formatUptime(forward.uptime);
-        return `Port Forward: ${forward.podName}\n` +
+        const resourceLabel = forward.resourceType === 'service'
+            ? `Service: ${forward.resourceName}`
+            : `Pod: ${forward.resourceName}`;
+        return `Port Forward: ${resourceLabel}\n` +
                `Namespace: ${forward.namespace}\n` +
                `Local Port: ${forward.localPort}\n` +
                `Remote Port: ${forward.remotePort}\n` +

@@ -42,9 +42,12 @@ export async function viewPortForwardPodCommand(treeItem: ClusterTreeItem): Prom
         treeProvider.refresh();
         
         // 6. Show informational message
-        // Note: Direct pod reveal not available yet, so we inform the user
+        // Note: Direct resource reveal not available yet, so we inform the user
+        const resourceLabel = forwardInfo.resourceType === 'service'
+            ? `Service ${forwardInfo.resourceName}`
+            : `Pod ${forwardInfo.resourceName}`;
         vscode.window.showInformationMessage(
-            `Tree view focused. Look for Pod ${forwardInfo.podName} in namespace ${forwardInfo.namespace}`
+            `Tree view focused. Look for ${resourceLabel} in namespace ${forwardInfo.namespace}`
         );
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

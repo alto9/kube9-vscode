@@ -270,7 +270,7 @@
       },
       {
         "command": "kube9.viewPortForwardPod",
-        "title": "View Pod",
+        "title": "View Resource",
         "category": "kube9"
       },
       {
