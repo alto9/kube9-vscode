@@ -5,19 +5,25 @@ import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Configuration for starting a port forward.
+ * Supports both Pod and Service resources. Use podName for Pod forwards,
+ * serviceName with resourceType 'service' for Service forwards.
  */
 export interface PortForwardConfig {
-    /** Name of the pod */
-    podName: string;
-    /** Namespace containing the pod */
+    /** Resource type: 'pod' or 'service' (default: 'pod') */
+    resourceType?: 'pod' | 'service';
+    /** Name of the pod (required when resourceType is 'pod' or undefined) */
+    podName?: string;
+    /** Name of the service (required when resourceType is 'service') */
+    serviceName?: string;
+    /** Namespace containing the resource */
     namespace: string;
     /** kubectl context name */
     context: string;
     /** Local port to bind (1024-65535) */
     localPort: number;
-    /** Remote port on pod (1-65535) */
+    /** Remote port on resource (1-65535) */
     remotePort: number;
-    /** Optional: specific container (for multi-container pods) */
+    /** Optional: specific container (for multi-container pods only; ignored for services) */
     containerName?: string;
 }
 
@@ -65,7 +71,11 @@ interface PortForwardRecord {
 export interface PortForwardInfo {
     /** Unique identifier */
     id: string;
-    /** Pod name */
+    /** Resource type: 'pod' or 'service' */
+    resourceType: 'pod' | 'service';
+    /** Name of the pod or service */
+    resourceName: string;
+    /** Pod/service name (alias for resourceName; kept for backward compatibility) */
     podName: string;
     /** Namespace */
     namespace: string;
@@ -386,15 +396,46 @@ export class PortForwardManager {
     }
 
     /**
+     * Get the resource type from config (default: 'pod').
+     */
+    private getResourceType(config: PortForwardConfig): 'pod' | 'service' {
+        return config.resourceType ?? 'pod';
+    }
+
+    /**
+     * Get the resource name from config (pod name or service name).
+     */
+    private getResourceName(config: PortForwardConfig): string {
+        const resourceType = this.getResourceType(config);
+        if (resourceType === 'service') {
+            return config.serviceName ?? '';
+        }
+        return config.podName ?? '';
+    }
+
+    /**
      * Validate port forward configuration.
      * 
      * @param config Configuration to validate
      * @throws Error if configuration is invalid
      */
     private validateConfig(config: PortForwardConfig): void {
-        // Validate pod name is non-empty
-        if (!config.podName || config.podName.trim() === '') {
-            throw new Error('Pod name is required');
+        // Validate resourceType if provided
+        if (config.resourceType !== undefined && config.resourceType !== 'pod' && config.resourceType !== 'service') {
+            throw new Error('resourceType must be "pod" or "service"');
+        }
+
+        const resourceType = this.getResourceType(config);
+
+        // Validate resource name based on type
+        if (resourceType === 'service') {
+            if (!config.serviceName || config.serviceName.trim() === '') {
+                throw new Error('Service name is required when resourceType is "service"');
+            }
+        } else {
+            if (!config.podName || config.podName.trim() === '') {
+                throw new Error('Pod name is required');
+            }
         }
 
         // Validate namespace is non-empty
@@ -425,18 +466,19 @@ export class PortForwardManager {
      * @returns Array of command arguments
      */
     private buildKubectlCommand(config: PortForwardConfig): string[] {
-        // Escape pod name if needed (kubectl handles this natively, but validate)
-        const podName = config.podName;
-        
+        const resourceType = this.getResourceType(config);
+        const resourceName = this.getResourceName(config);
+
         const args = [
             'port-forward',
-            `pod/${podName}`, // Use pod/ prefix for clarity
+            `${resourceType}/${resourceName}`,
             `${config.localPort}:${config.remotePort}`,
             '-n', config.namespace,
             '--context', config.context
         ];
 
-        if (config.containerName) {
+        // containerName only applies to pods
+        if (resourceType === 'pod' && config.containerName) {
             args.push('-c', config.containerName);
         }
 
@@ -452,10 +494,14 @@ export class PortForwardManager {
     private getForwardInfo(record: PortForwardRecord): PortForwardInfo {
         const now = new Date();
         const uptime = Math.floor((now.getTime() - record.startTime.getTime()) / 1000);
+        const resourceType = this.getResourceType(record.config);
+        const resourceName = this.getResourceName(record.config);
 
         return {
             id: record.id,
-            podName: record.config.podName,
+            resourceType,
+            resourceName,
+            podName: resourceName, // backward compatibility
             namespace: record.config.namespace,
             context: record.config.context,
             localPort: record.config.localPort,
@@ -482,8 +528,12 @@ export class PortForwardManager {
      * @returns Existing forward record or undefined if not found
      */
     private findExistingForward(config: PortForwardConfig): PortForwardRecord | undefined {
+        const resourceType = this.getResourceType(config);
+        const resourceName = this.getResourceName(config);
+
         return Array.from(this.forwards.values()).find(record =>
-            record.config.podName === config.podName &&
+            this.getResourceType(record.config) === resourceType &&
+            this.getResourceName(record.config) === resourceName &&
             record.config.namespace === config.namespace &&
             record.config.context === config.context &&
             record.config.localPort === config.localPort
@@ -557,7 +607,7 @@ export class PortForwardManager {
             record.lastActivity = new Date();
 
             // Log to output channel
-            this.outputChannel.appendLine(`[${record.config.podName}] stderr: ${message.trim()}`);
+            this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] stderr: ${message.trim()}`);
 
             // kubectl not found
             if (message.includes('command not found') || message.includes('not recognized')) {
@@ -566,14 +616,14 @@ export class PortForwardManager {
             }
 
             // RBAC permission denied
-            if (message.includes('Forbidden') || message.includes('pods/portforward')) {
+            if (message.includes('Forbidden') || message.includes('pods/portforward') || message.includes('services/portforward')) {
                 this.handleRBACError(record, message);
                 return;
             }
 
-            // Pod not found or deleted
+            // Resource not found or deleted
             if (message.includes('not found') || message.includes('NotFound')) {
-                this.handlePodNotFound(record);
+                this.handleResourceNotFound(record);
                 return;
             }
 
@@ -669,8 +719,9 @@ export class PortForwardManager {
 
         // Show notification if unexpected exit
         if (code !== 0 && code !== null) {
+            const resourceName = this.getResourceName(record.config);
             vscode.window.showWarningMessage(
-                `Port forward stopped unexpectedly: localhost:${record.config.localPort} → ${record.config.namespace}/${record.config.podName}:${record.config.remotePort}`
+                `Port forward stopped unexpectedly: localhost:${record.config.localPort} → ${record.config.namespace}/${resourceName}:${record.config.remotePort}`
             );
         }
     }
@@ -689,7 +740,7 @@ export class PortForwardManager {
         } else {
             record.status = PortForwardStatus.Error;
             record.error = err.message || 'Failed to spawn kubectl process';
-            this.outputChannel.appendLine(`[${record.config.podName}] Process spawn error: ${err.message}`);
+            this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] Process spawn error: ${err.message}`);
             this.outputChannel.show(true);
 
             // Remove from forwards Map
@@ -712,8 +763,8 @@ export class PortForwardManager {
         const errorMsg = 'kubectl not found. Please install kubectl to use port forwarding.';
         record.status = PortForwardStatus.Error;
         record.error = errorMsg;
-        
-        this.outputChannel.appendLine(`[${record.config.podName}] Error: ${errorMsg}`);
+
+        this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] Error: ${errorMsg}`);
         this.outputChannel.show(true);
 
         vscode.window.showErrorMessage(
@@ -724,9 +775,9 @@ export class PortForwardManager {
                 vscode.env.openExternal(vscode.Uri.parse('https://kubernetes.io/docs/tasks/tools/'));
             }
         });
-        
+
         this.stopForward(record.id).catch(err => {
-            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after error: ${err.message}`);
+            this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] Failed to stop forward after error: ${err.message}`);
         });
     }
 
@@ -737,12 +788,12 @@ export class PortForwardManager {
      * @param message Error message from stderr
      */
     private handleRBACError(record: PortForwardRecord, message: string): void {
-        const errorMsg = `Permission denied: You need pods/portforward permission in namespace '${record.config.namespace}'`;
+        const errorMsg = `Permission denied: You need portforward permission in namespace '${record.config.namespace}'`;
         record.status = PortForwardStatus.Error;
         record.error = errorMsg;
-        
-        this.outputChannel.appendLine(`[${record.config.podName}] RBAC Error: ${errorMsg}`);
-        this.outputChannel.appendLine(`[${record.config.podName}] stderr: ${message.trim()}`);
+
+        this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] RBAC Error: ${errorMsg}`);
+        this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] stderr: ${message.trim()}`);
         this.outputChannel.show(true);
 
         vscode.window.showErrorMessage(
@@ -753,29 +804,32 @@ export class PortForwardManager {
                 vscode.env.openExternal(vscode.Uri.parse('https://kubernetes.io/docs/reference/access-authn-authz/rbac/'));
             }
         });
-        
+
         this.stopForward(record.id).catch(err => {
-            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after error: ${err.message}`);
+            this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] Failed to stop forward after error: ${err.message}`);
         });
     }
 
     /**
-     * Handle pod not found or deleted error.
+     * Handle resource not found or deleted error.
      * 
      * @param record Port forward record
      */
-    private handlePodNotFound(record: PortForwardRecord): void {
-        const infoMsg = `Port forward stopped: Pod '${record.config.podName}' was deleted`;
+    private handleResourceNotFound(record: PortForwardRecord): void {
+        const resourceName = this.getResourceName(record.config);
+        const resourceType = this.getResourceType(record.config);
+        const resourceLabel = resourceType === 'service' ? 'Service' : 'Pod';
+        const infoMsg = `Port forward stopped: ${resourceLabel} '${resourceName}' was not found`;
         record.status = PortForwardStatus.Error;
-        record.error = 'Pod not found';
-        
-        this.outputChannel.appendLine(`[${record.config.podName}] ${infoMsg}`);
+        record.error = `${resourceLabel} not found`;
+
+        this.outputChannel.appendLine(`[${resourceName}] ${infoMsg}`);
         this.outputChannel.show(true);
 
         vscode.window.showInformationMessage(infoMsg);
-        
+
         this.stopForward(record.id).catch(err => {
-            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after error: ${err.message}`);
+            this.outputChannel.appendLine(`[${resourceName}] Failed to stop forward after error: ${err.message}`);
         });
     }
 
@@ -786,18 +840,18 @@ export class PortForwardManager {
      * @param message Error message from stderr
      */
     private handleConnectionError(record: PortForwardRecord, message: string): void {
-        const errorMsg = 'Connection failed: Unable to reach pod. Check cluster connectivity.';
+        const errorMsg = 'Connection failed: Unable to reach resource. Check cluster connectivity.';
         record.status = PortForwardStatus.Error;
         record.error = errorMsg;
-        
-        this.outputChannel.appendLine(`[${record.config.podName}] Connection Error: ${errorMsg}`);
-        this.outputChannel.appendLine(`[${record.config.podName}] stderr: ${message.trim()}`);
+
+        this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] Connection Error: ${errorMsg}`);
+        this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] stderr: ${message.trim()}`);
         this.outputChannel.show(true);
 
         vscode.window.showErrorMessage(errorMsg);
-        
+
         this.stopForward(record.id).catch(err => {
-            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after error: ${err.message}`);
+            this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] Failed to stop forward after error: ${err.message}`);
         });
     }
 
@@ -807,17 +861,17 @@ export class PortForwardManager {
      * @param record Port forward record
      */
     private handleTimeout(record: PortForwardRecord): void {
-        const errorMsg = 'Port forward connection timed out. Check pod logs and try again.';
+        const errorMsg = 'Port forward connection timed out. Check resource availability and try again.';
         record.status = PortForwardStatus.Error;
         record.error = errorMsg;
-        
-        this.outputChannel.appendLine(`[${record.config.podName}] Timeout: ${errorMsg}`);
+
+        this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] Timeout: ${errorMsg}`);
         this.outputChannel.show(true);
 
         vscode.window.showErrorMessage(errorMsg);
-        
+
         this.stopForward(record.id).catch(err => {
-            this.outputChannel.appendLine(`[${record.config.podName}] Failed to stop forward after timeout: ${err.message}`);
+            this.outputChannel.appendLine(`[${this.getResourceName(record.config)}] Failed to stop forward after timeout: ${err.message}`);
         });
     }
 
