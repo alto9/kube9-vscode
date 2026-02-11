@@ -244,6 +244,11 @@
         "category": "kube9"
       },
       {
+        "command": "kube9.portForwardService",
+        "title": "Port Forward",
+        "category": "kube9"
+      },
+      {
         "command": "kube9.stopPortForward",
         "title": "Stop Port Forward",
         "category": "kube9"
@@ -476,6 +481,10 @@
           "when": "false"
         },
         {
+          "command": "kube9.portForwardService",
+          "when": "false"
+        },
+        {
           "command": "kube9.stopPortForward",
           "when": "false"
         },
@@ -589,6 +598,11 @@
         {
           "command": "kube9.portForwardPod",
           "when": "view == kube9ClusterView && viewItem == resource:Pod",
+          "group": "kube9-networking@1"
+        },
+        {
+          "command": "kube9.portForwardService",
+          "when": "view == kube9ClusterView && viewItem == resource:Service",
           "group": "kube9-networking@1"
         },
         {
