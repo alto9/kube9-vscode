@@ -34,14 +34,24 @@ export async function restartPortForwardCommand(treeItem: ClusterTreeItem): Prom
             return;
         }
         
-        // 4. Extract config from forward info
-        const config: PortForwardConfig = {
-            podName: forwardInfo.podName,
-            namespace: forwardInfo.namespace,
-            context: forwardInfo.context,
-            localPort: forwardInfo.localPort,
-            remotePort: forwardInfo.remotePort
-        };
+        // 4. Extract config from forward info (supports both Pod and Service)
+        const config: PortForwardConfig =
+            forwardInfo.resourceType === 'service'
+                ? {
+                    resourceType: 'service',
+                    serviceName: forwardInfo.resourceName,
+                    namespace: forwardInfo.namespace,
+                    context: forwardInfo.context,
+                    localPort: forwardInfo.localPort,
+                    remotePort: forwardInfo.remotePort
+                }
+                : {
+                    podName: forwardInfo.resourceName,
+                    namespace: forwardInfo.namespace,
+                    context: forwardInfo.context,
+                    localPort: forwardInfo.localPort,
+                    remotePort: forwardInfo.remotePort
+                };
         
         // 5. Restart forward with progress indication
         await vscode.window.withProgress({
@@ -58,7 +68,7 @@ export async function restartPortForwardCommand(treeItem: ClusterTreeItem): Prom
         
         // 6. Show success notification
         vscode.window.showInformationMessage(
-            `Port forward restarted: localhost:${config.localPort} → ${config.namespace}/${config.podName}:${config.remotePort}`
+            `Port forward restarted: localhost:${config.localPort} → ${config.namespace}/${forwardInfo.resourceName}:${config.remotePort}`
         );
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

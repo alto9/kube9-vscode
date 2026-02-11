@@ -34,7 +34,25 @@ Module.prototype.require = function (this: any, id: string): any {
         // Fallback to old path
         return originalRequire.call(this, path.join(__dirname, 'mocks', 'vscode'));
     }
-    
+
+    // If the module being required is 'child_process' from PortForwardManager, use mock
+    if (id === 'child_process') {
+        const requestingPath = (this.filename || this.id || '') as string;
+        if (requestingPath.includes('PortForwardManager')) {
+            const mockPath = path.join(__dirname, 'mocks', 'child_process');
+            return originalRequire.call(this, mockPath);
+        }
+    }
+
+    // If the module being required is 'net' from PortForwardManager, use mock (for isPortAvailable)
+    if (id === 'net') {
+        const requestingPath = (this.filename || this.id || '') as string;
+        if (requestingPath.includes('PortForwardManager')) {
+            const mockPath = path.join(__dirname, 'mocks', 'net');
+            return originalRequire.call(this, mockPath);
+        }
+    }
+
     // Otherwise, use the original require
     return originalRequire.apply(this, arguments as any);
 };
