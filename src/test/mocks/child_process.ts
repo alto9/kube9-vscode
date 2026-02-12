@@ -50,8 +50,9 @@ function createMockProcess(): {
     process.stderr = stderr;
     process.killed = false;
     process.on = EventEmitter.prototype.on.bind(process) as typeof process.on;
-    process.kill = () => {
+    process.kill = (signal?: string) => {
         process.killed = true;
+        setImmediate(() => process.emit('exit', null, signal ?? 'SIGTERM'));
         return true;
     };
     return process;
