@@ -10,6 +10,7 @@ import { PVDescribeProvider } from '../providers/PVDescribeProvider';
 import { SecretDescribeProvider } from '../providers/SecretDescribeProvider';
 import { ServiceDescribeProvider } from '../providers/ServiceDescribeProvider';
 import { ConfigMapDescribeProvider } from '../providers/ConfigMapDescribeProvider';
+import { StorageClassDescribeProvider } from '../providers/StorageClassDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
@@ -87,6 +88,15 @@ export interface ConfigMapTreeItemConfig {
     name: string;
     namespace: string;
     status?: string;
+    metadata?: Record<string, unknown>;
+    context: string;
+}
+
+/**
+ * StorageClass configuration passed from tree item to describe webview.
+ */
+interface StorageClassTreeItemConfig {
+    name: string;
     metadata?: Record<string, unknown>;
     context: string;
 }
@@ -187,6 +197,18 @@ export class DescribeWebview {
      * Used for refresh operations.
      */
     private static currentConfigMapConfig: ConfigMapTreeItemConfig | undefined;
+
+    /**
+     * StorageClass describe provider instance for fetching StorageClass data.
+     * Initialized lazily when first needed.
+     */
+    private static storageClassProvider: StorageClassDescribeProvider | undefined;
+
+    /**
+     * Current StorageClass configuration being displayed.
+     * Used for refresh operations.
+     */
+    private static currentStorageClassConfig: StorageClassTreeItemConfig | undefined;
 
     /**
      * Show the Describe webview for a resource.
@@ -493,6 +515,16 @@ export class DescribeWebview {
             return;
         }
 
+        if (kind === 'StorageClass') {
+            // StorageClasses are cluster-scoped (no namespace)
+            // Call showStorageClassDescribe
+            await DescribeWebview.showStorageClassDescribe(context, {
+                name,
+                context: contextName
+            });
+            return;
+        }
+
         // Show the Describe webview for other resource types
         DescribeWebview.show(context, {
             kind,
@@ -678,6 +710,11 @@ export class DescribeWebview {
                                 DescribeWebview.currentConfigMapConfig,
                                 panel
                             );
+                        } else if (DescribeWebview.currentStorageClassConfig) {
+                            await DescribeWebview.loadStorageClassData(
+                                DescribeWebview.currentStorageClassConfig,
+                                panel
+                            );
                         }
                         break;
 
@@ -697,6 +734,8 @@ export class DescribeWebview {
                             await DescribeWebview.openServiceYamlEditor();
                         } else if (DescribeWebview.currentConfigMapConfig) {
                             await DescribeWebview.openConfigMapYamlEditor();
+                        } else if (DescribeWebview.currentStorageClassConfig) {
+                            await DescribeWebview.openStorageClassYamlEditor();
                         }
                         break;
 
@@ -765,6 +804,11 @@ export class DescribeWebview {
                         } else {
                             vscode.window.showErrorMessage('Invalid PVC data in navigateToPVC message');
                         }
+                        break;
+
+                    case 'navigateToStorageClass':
+                        // Handle navigation to StorageClass (if needed in future)
+                        vscode.window.showInformationMessage('StorageClass navigation not yet implemented');
                         break;
 
                     default:
@@ -915,15 +959,27 @@ export class DescribeWebview {
      * @param namespace The namespace name
      */
     private static async navigateToPVC(pvcName: string, namespace: string): Promise<void> {
-        if (!DescribeWebview.currentPVConfig) {
-            vscode.window.showErrorMessage('No PV context available');
+        // Get context from any available config (PV, StorageClass, etc.)
+        let contextName: string | undefined;
+        
+        if (DescribeWebview.currentPVConfig) {
+            contextName = DescribeWebview.currentPVConfig.context;
+        } else if (DescribeWebview.currentStorageClassConfig) {
+            contextName = DescribeWebview.currentStorageClassConfig.context;
+        } else if (DescribeWebview.currentPVCConfig) {
+            contextName = DescribeWebview.currentPVCConfig.context;
+        } else if (DescribeWebview.currentPodConfig) {
+            contextName = DescribeWebview.currentPodConfig.context;
+        } else if (DescribeWebview.currentNamespaceConfig) {
+            contextName = DescribeWebview.currentNamespaceConfig.context;
+        }
+
+        if (!contextName) {
+            vscode.window.showErrorMessage('No context available for navigation');
             return;
         }
 
         try {
-            const pvConfig = DescribeWebview.currentPVConfig;
-            const contextName = pvConfig.context;
-
             // Open PVC describe webview
             await DescribeWebview.showPVCDescribe(
                 DescribeWebview.extensionContext!,
@@ -1862,6 +1918,74 @@ export class DescribeWebview {
     }
 
     /**
+     * Show the Describe webview for a StorageClass resource.
+     * Creates a new panel if none exists, or reuses and updates the existing panel.
+     * 
+     * @param context The VS Code extension context
+     * @param scConfig StorageClass configuration with name and context
+     */
+    public static async showStorageClassDescribe(
+        context: vscode.ExtensionContext,
+        scConfig: StorageClassTreeItemConfig
+    ): Promise<void> {
+        // Store the extension context for later use
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.currentStorageClassConfig = scConfig;
+
+        // Initialize StorageClass provider if not already initialized
+        if (!DescribeWebview.storageClassProvider) {
+            const k8sClient = getKubernetesApiClient();
+            DescribeWebview.storageClassProvider = new StorageClassDescribeProvider(k8sClient);
+        }
+
+        // If we already have a panel, reuse it and update the content
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updateStorageClassPanel(scConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create title with StorageClass name
+        const title = `StorageClass / ${scConfig.name}`;
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+
+        // Set the webview's HTML content
+        panel.webview.html = DescribeWebview.getStorageClassWebviewContent(panel.webview, scConfig);
+
+        // Set up message handling
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        // Set up help message handling
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
+
+        // Fetch and send StorageClass data
+        await DescribeWebview.loadStorageClassData(scConfig, panel);
+
+        // Handle panel disposal - clear all describe webview state
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentStorageClassConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
      * Update an existing panel with new Secret information.
      * 
      * @param secretConfig Secret configuration
@@ -1914,6 +2038,63 @@ export class DescribeWebview {
                 command: 'showError',
                 data: {
                     message: `Failed to load Secret details: ${errorMessage}`
+                }
+            });
+        }
+    }
+
+    /**
+     * Update an existing panel with new StorageClass information.
+     * 
+     * @param scConfig StorageClass configuration
+     */
+    private static async updateStorageClassPanel(scConfig: StorageClassTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+
+        // Update panel title
+        const title = `StorageClass / ${scConfig.name}`;
+        DescribeWebview.currentPanel.title = title;
+        DescribeWebview.currentStorageClassConfig = scConfig;
+
+        // Update panel content
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getStorageClassWebviewContent(DescribeWebview.currentPanel.webview, scConfig);
+
+        // Reload StorageClass data
+        await DescribeWebview.loadStorageClassData(scConfig, DescribeWebview.currentPanel);
+    }
+
+    /**
+     * Load StorageClass data and send it to the webview.
+     * 
+     * @param scConfig StorageClass configuration
+     * @param panel Webview panel to send data to
+     */
+    private static async loadStorageClassData(
+        scConfig: StorageClassTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.storageClassProvider) {
+            return;
+        }
+
+        try {
+            const scData = await DescribeWebview.storageClassProvider.getStorageClassDetails(
+                scConfig.name,
+                scConfig.context
+            );
+
+            panel.webview.postMessage({
+                command: 'updateStorageClassData',
+                data: scData
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: `Failed to load StorageClass details: ${errorMessage}`
                 }
             });
         }
@@ -1977,6 +2158,63 @@ export class DescribeWebview {
     }
 
     /**
+     * Generate the HTML content for the StorageClass Describe webview.
+     * Loads React bundle from webpack build output.
+     * 
+     * @param webview The webview instance
+     * @param scConfig StorageClass configuration
+     * @returns HTML content string
+     */
+    private static getStorageClassWebviewContent(webview: vscode.Webview, scConfig: StorageClassTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            // Fallback if extension context is not available
+            return this.getStorageClassFallbackHtml(scConfig);
+        }
+
+        const cspSource = webview.cspSource;
+        const escapedSCName = DescribeWebview.escapeHtml(scConfig.name);
+        
+        // Get React bundle URI
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'storageclass-describe', 'index.js')
+        );
+
+        // Read header CSS and inline it
+        let headerCss = '';
+        try {
+            const headerCssPath = path.join(
+                DescribeWebview.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'styles',
+                'webview-header.css'
+            );
+            headerCss = fs.readFileSync(headerCssPath, 'utf8');
+        } catch (error) {
+            console.error('Failed to load header CSS:', error);
+        }
+
+        const nonce = getNonce();
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>StorageClass / ${escapedSCName}</title>
+    <style>
+        ${headerCss}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
+    }
+
+    /**
      * Fallback HTML content if template files cannot be loaded.
      * 
      * @param secretConfig Secret configuration
@@ -2019,6 +2257,48 @@ export class DescribeWebview {
     }
 
     /**
+     * Fallback HTML content if template files cannot be loaded.
+     * 
+     * @param scConfig StorageClass configuration
+     * @returns Fallback HTML content string
+     */
+    private static getStorageClassFallbackHtml(scConfig: StorageClassTreeItemConfig): string {
+        const escapedSCName = DescribeWebview.escapeHtml(scConfig.name);
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>StorageClass / ${escapedSCName}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+            margin: 0;
+        }
+        .error {
+            padding: 20px;
+            background-color: var(--vscode-inputValidation-errorBackground);
+            border: 1px solid var(--vscode-inputValidation-errorBorder);
+            border-radius: 4px;
+            color: var(--vscode-errorForeground);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>StorageClass / ${escapedSCName}</h1>
+    <div class="error">
+        Failed to load webview template. Please check that dist/media/storageclass-describe/index.js exists.
+    </div>
+</body>
+</html>`;
+    }
+
+    /**
      * Open YAML editor for the current Secret.
      * Uses the current Secret configuration to build a ResourceIdentifier.
      */
@@ -2048,6 +2328,41 @@ export class DescribeWebview {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Failed to open YAML editor for Secret:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Open YAML editor for the current StorageClass.
+     * Uses the current StorageClass configuration to build a ResourceIdentifier.
+     */
+    private static async openStorageClassYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentStorageClassConfig) {
+            vscode.window.showErrorMessage('No StorageClass is currently being displayed');
+            return;
+        }
+
+        try {
+            const scConfig = DescribeWebview.currentStorageClassConfig;
+            
+            // Build ResourceIdentifier for StorageClass
+            // StorageClasses are cluster-scoped, so namespace field is undefined
+            const resource = {
+                kind: 'StorageClass',
+                name: scConfig.name,
+                namespace: undefined, // StorageClasses are cluster-scoped
+                apiVersion: 'storage.k8s.io/v1',
+                cluster: scConfig.context
+            };
+
+            console.log('Opening YAML editor for StorageClass:', resource);
+
+            // Get YAML editor manager and open editor
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for StorageClass:', errorMessage);
             vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
         }
     }
