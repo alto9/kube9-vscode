@@ -5,8 +5,30 @@ import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import * as yaml from 'js-yaml';
 
 /**
+ * Removes managedFields from a Kubernetes resource before display.
+ * managedFields is server-managed metadata that clutters the YAML view
+ * and is not needed for viewing or editing. Filtering at metadata level
+ * works for all resource types (Pods, Deployments, Services, etc.).
+ *
+ * @param resource - The Kubernetes resource object (may be mutated)
+ */
+export function filterManagedFieldsForDisplay(resource: unknown): void {
+    if (!resource || typeof resource !== 'object') {
+        return;
+    }
+    const obj = resource as Record<string, unknown>;
+    if (obj.metadata && typeof obj.metadata === 'object' && obj.metadata !== null) {
+        const metadata = obj.metadata as Record<string, unknown>;
+        if ('managedFields' in metadata) {
+            delete metadata.managedFields;
+        }
+    }
+}
+
+/**
  * Fetches a Kubernetes resource and converts it to YAML format.
  * Routes to the appropriate API based on resource kind.
+ * Filters managedFields from the output for a cleaner view.
  */
 async function fetchResourceAsYAML(
     kind: string,
@@ -83,6 +105,9 @@ async function fetchResourceAsYAML(
                 throw new Error(`Unsupported cluster-scoped resource type: ${kind}`);
         }
     }
+    
+    // Filter managedFields from display - clutters view and not needed for editing
+    filterManagedFieldsForDisplay(resource);
     
     // Convert to YAML format
     return yaml.dump(resource, {
