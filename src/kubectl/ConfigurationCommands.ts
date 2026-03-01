@@ -1,6 +1,7 @@
 import { KubectlError } from '../kubernetes/KubectlError';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
+import { fetchSecrets } from '../kubernetes/resourceFetchers';
 
 
 /**
@@ -212,16 +213,20 @@ export class ConfigurationCommands {
     }
 
     /**
-     * Retrieves the list of secrets from all namespaces using the Kubernetes API client.
+     * Retrieves the list of secrets using the Kubernetes API client.
      * Uses direct API calls to fetch Secret resources.
+     * When namespace is provided, fetches only secrets from that namespace.
+     * When namespace is not provided, fetches secrets from all namespaces.
      * 
      * @param kubeconfigPath Path to the kubeconfig file (unused, kept for backward compatibility)
      * @param contextName Name of the context to query
+     * @param namespace Optional namespace to filter secrets. If not provided, fetches all namespaces
      * @returns SecretsResult with secrets array and optional error information
      */
     public static async getSecrets(
         kubeconfigPath: string,
-        contextName: string
+        contextName: string,
+        namespace?: string
     ): Promise<SecretsResult> {
         try {
             // Set context on API client
@@ -230,26 +235,29 @@ export class ConfigurationCommands {
             
             // Check cache first
             const cache = getResourceCache();
-            const cacheKey = `${contextName}:secrets`;
+            const cacheKey = namespace 
+                ? `${contextName}:secrets:${namespace}`
+                : `${contextName}:secrets`;
             const cached = cache.get<SecretInfo[]>(cacheKey);
             if (cached) {
                 return { secrets: cached };
             }
             
-            // Fetch from API - get all secrets across all namespaces
-            const response = await apiClient.core.listSecretForAllNamespaces({
-                timeoutSeconds: 10
+            // Fetch from API
+            const v1Secrets = await fetchSecrets({ 
+                namespace, 
+                timeout: 10 
             });
             
             // Transform k8s.V1Secret[] to SecretInfo[] format
-            const secrets: SecretInfo[] = response.items.map(secret => {
+            const secrets: SecretInfo[] = v1Secrets.map(secret => {
                 const name = secret.metadata?.name || 'Unknown';
-                const namespace = secret.metadata?.namespace || 'Unknown';
+                const secretNamespace = secret.metadata?.namespace || 'Unknown';
                 const type = secret.type || 'Unknown';
                 
                 return {
                     name,
-                    namespace,
+                    namespace: secretNamespace,
                     type
                 };
             });
@@ -270,6 +278,8 @@ export class ConfigurationCommands {
         } catch (error: unknown) {
             // API call failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            console.log(`Secret query failed for context ${contextName}${namespace ? ` in namespace ${namespace}` : ''}: ${kubectlError.getDetails()}`);
             
             return {
                 secrets: [],
