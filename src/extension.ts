@@ -47,6 +47,7 @@ import { stopAllPortForwardsCommand } from './commands/stopAllPortForwards';
 import { showPortForwardsCommand } from './commands/showPortForwards';
 import { PortForwardManager } from './services/PortForwardManager';
 import { portForwardPodCommand } from './commands/portForwardPod';
+import { portForwardServiceCommand } from './commands/portForwardService';
 import { copyPortForwardURLCommand } from './commands/copyPortForwardURL';
 import { viewPortForwardPodCommand } from './commands/viewPortForwardPod';
 import { restartPortForwardCommand } from './commands/restartPortForward';
@@ -1532,6 +1533,13 @@ function registerCommands(): void {
     );
     context.subscriptions.push(portForwardPodCmd);
     disposables.push(portForwardPodCmd);
+
+    const portForwardServiceCmd = vscode.commands.registerCommand(
+        'kube9.portForwardService',
+        portForwardServiceCommand
+    );
+    context.subscriptions.push(portForwardServiceCmd);
+    disposables.push(portForwardServiceCmd);
     
     // Register stop port forward command
     const stopPortForwardCmd = vscode.commands.registerCommand(

@@ -493,23 +493,23 @@ export async function portForwardPodCommand(treeItem: ClusterTreeItem): Promise<
                         localPort: localPort,
                         remotePort: remotePort
                     };
-                    
+
                     await manager.startForward(config);
-                    
-                    // Success notification with action buttons
-                    const action = await vscode.window.showInformationMessage(
-                        `✅ Port forward established: localhost:${localPort} → ${metadata.namespace}/${metadata.name}:${remotePort}`,
-                        'Open Browser',
-                        'Show Forwards'
-                    );
-                    
-                    if (action === 'Open Browser') {
-                        vscode.env.openExternal(vscode.Uri.parse(`http://localhost:${localPort}`));
-                    } else if (action === 'Show Forwards') {
-                        vscode.commands.executeCommand('kube9.showPortForwards');
-                    }
                 }
             );
+
+            // Success notification with action buttons (outside withProgress so it dismisses immediately)
+            const action = await vscode.window.showInformationMessage(
+                `✅ Port forward established: localhost:${localPort} → ${metadata.namespace}/${metadata.name}:${remotePort}`,
+                'Open Browser',
+                'Show Forwards'
+            );
+
+            if (action === 'Open Browser') {
+                vscode.env.openExternal(vscode.Uri.parse(`http://localhost:${localPort}`));
+            } else if (action === 'Show Forwards') {
+                vscode.commands.executeCommand('kube9.showPortForwards');
+            }
         } catch (error) {
             handlePortForwardError(error, metadata, remotePort, localPort);
         }
