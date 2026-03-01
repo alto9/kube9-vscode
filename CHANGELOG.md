@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/alto9/kube9-vscode/compare/v1.31.0...v1.32.0) (2026-03-01)
+
+
+### Features
+
+* **yaml:** filter managedFields from View YAML output ([300f38b](https://github.com/alto9/kube9-vscode/commit/300f38b967e59d4aeee27f209df3dd538331a4c5))
+
 # [1.31.0](https://github.com/alto9/kube9-vscode/compare/v1.30.0...v1.31.0) (2026-03-01)
 
 
