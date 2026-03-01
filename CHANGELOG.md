@@ -1,3 +1,17 @@
+# [1.31.0](https://github.com/alto9/kube9-vscode/compare/v1.30.0...v1.31.0) (2026-03-01)
+
+
+### Bug Fixes
+
+* **test:** emit exit event in child_process mock to prevent teardown timeout ([b132b12](https://github.com/alto9/kube9-vscode/commit/b132b12b504f3245cdbd3fe490a8198614ebdcdb))
+
+
+### Features
+
+* **port-forward:** add portForwardService command and fix progress notification ([1f7ff45](https://github.com/alto9/kube9-vscode/commit/1f7ff459e60063e1f6b2c4203f058bfffcbc8af2)), closes [#107](https://github.com/alto9/kube9-vscode/issues/107)
+* **port-forward:** extend PortForwardManager to support Service resources ([c81676f](https://github.com/alto9/kube9-vscode/commit/c81676f7f23167376a0184f2259fdba7b61d31a7))
+* **port-forward:** integrate Service port forwarding into management UI ([4f688f9](https://github.com/alto9/kube9-vscode/commit/4f688f9d5d5f84d4c95f8c907b6640fe9f0a2628)), closes [#108](https://github.com/alto9/kube9-vscode/issues/108)
+
 # [1.30.0](https://github.com/alto9/kube9-vscode/compare/v1.29.1...v1.30.0) (2026-03-01)
 
 
