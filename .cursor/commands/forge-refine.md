@@ -1,4 +1,4 @@
-<!-- forge-hash: 74b181f0df7917f6a6dc98c44890120002a9e7814f34cecb406d96dae281f394 -->
+<!-- forge-hash: 76c10028cbfede92f7b88e6a647fe7415499de7f3cc6d7d861c7f5b24114b44d -->
 
 # Forge Refine
 
@@ -11,10 +11,38 @@ You must provide a GitHub issue link when using this command. The issue should b
 ## What This Command Does
 
 1. **Reads the GitHub issue**: Understands the current state of the issue
-2. **Clarifies business value**: Ensures the business value is clearly spelled out and accurate
-3. **Defines testing procedures**: Fills out testing procedures from a BAU (Business As Usual) perspective
-4. **Defines success and failure**: Ensures clear definitions of success and failure criteria
-5. **Updates the issue**: Saves refined content back to the GitHub issue
+2. **Assesses issue complexity**: Examines the issue and counts how many sub-issues would be needed (0, 1, or 2+)
+3. **Applies single sub-issue rule**: If only 1 sub-issue would be needed, refines the parent issue directly without creating any sub-issues
+4. **Determines issue type**: Identifies whether this is a bug report or feature request
+5. **Loads appropriate template**: Reads the corresponding template file (bug_report.yml or feature_request.yml) to understand required fields
+6. **Clarifies business value**: Ensures the business value is clearly spelled out and accurate
+7. **Defines testing procedures**: Fills out testing procedures from a BAU (Business As Usual) perspective
+8. **Defines success and failure**: Ensures clear definitions of success and failure criteria
+9. **Updates the issue**: Saves refined content back to the GitHub issue
+10. **Handles sub-issues only if 2+ needed**: Only if 2+ sub-issues are needed, creates and refines them as part of the refinement process
+
+## Issue Type Detection
+
+**CRITICAL**: Before refining the issue, you MUST determine the issue type:
+
+1. **Read the GitHub issue** using the GitHub MCP tools to get:
+   - Issue labels (check for "bug" or "enhancement" labels)
+   - Issue title (check for "[Bug]" or "[Feature]" prefixes)
+   - Issue body structure
+
+2. **Determine issue type**:
+   - If the issue has a "bug" label OR title starts with "[Bug]" → **Bug Report**
+   - If the issue has an "enhancement" label OR title starts with "[Feature]" → **Feature Request**
+
+3. **Load the appropriate template**:
+   - **Bug Report**: Read `.github/ISSUE_TEMPLATE/bug_report.yml`
+   - **Feature Request**: Read `.github/ISSUE_TEMPLATE/feature_request.yml`
+
+4. **Extract required fields** from the template file:
+   - Parse the YAML structure to identify all form fields
+   - Note which fields are marked as `required: true` in the validations
+   - Map template field IDs to the sections that need to be refined
+   - Use the template's field labels and descriptions to guide refinement
 
 ## Important Guidelines
 
@@ -22,66 +50,63 @@ You must provide a GitHub issue link when using this command. The issue should b
 - **BAU perspective**: Testing procedures should be written from a business-as-usual perspective, not technical testing
 - **Clear definitions**: Success and failure criteria must be unambiguous
 - **Work with GitHub issues directly**: All changes are made to the GitHub issue, not local files
-- **Required fields**: The following fields must be filled out before progressing to Scribe mode:
-  - Problem Statement
-  - Business Value
-  - Testing Procedures (BAU perspective)
-  - Definition of Success
-  - Definition of Failure
-
-## When to Progress to Scribe Mode
-
-**CRITICAL**: Before progressing to Scribe mode, evaluate whether sub-issues are needed:
-
-- **If only 1 sub-issue would be created**: **DO NOT** create a sub-issue. Instead, refine the parent issue with implementation details and skip Scribe mode entirely. There is no need for a single sub-issue - the parent issue can be implemented directly.
-- **Only create sub-issues if it makes sense**: Sub-issues should only be created when:
-  - The work can be logically broken into multiple independent, potentially shippable pieces
-  - Each sub-issue represents a complete, working increment of value
-  - The breakdown improves clarity and parallelization
-- **Each sub-issue must be 'potentially shippable'**: 
-  - No broken state in between sub-issues
-  - Each sub-issue should result in a working, testable state
-  - The system should be functional after each sub-issue is completed
-  - Avoid creating sub-issues that leave the system in an incomplete or broken state
-
-**Decision Flow**:
-1. After refining the issue, assess if it needs to be broken down
-2. If breakdown would result in only 1 sub-issue → Skip Scribe mode, refine parent issue with implementation details
-3. If breakdown would result in 2+ sub-issues that are each potentially shippable → Progress to Scribe mode
-4. If breakdown would result in sub-issues that leave the system broken → Don't create sub-issues, refine parent issue instead
+- **Use template fields**: Required fields are determined dynamically from the template file, not hardcoded
+- **Template enforcement**: The rule enforces project-specific templates - fields come from the template files
 
 ## Issue Structure
 
-The GitHub issue body should contain the following sections:
+The GitHub issue body structure depends on the issue type and is defined by the template file:
 
-```markdown
-### Problem Statement
-[What problem does this feature solve?]
+- **Bug Reports**: Fields from `bug_report.yml` (e.g., Bug Description, Steps to Reproduce, Expected Behavior, Actual Behavior, Version info, etc.)
+- **Feature Requests**: Fields from `feature_request.yml` (e.g., Problem Statement, Proposed Solution, Alternatives Considered, Use Cases, Priority, etc.)
 
-### Business Value
-[What is the business value of this feature?]
+**Required fields** are determined by the template file's `validations.required: true` settings.
 
-### Testing Procedures
-[How should this be tested from a BAU perspective?]
+## Complexity Assessment and Sub-Issue Handling
 
-### Definition of Success
-[What defines success for this feature?]
+**CRITICAL**: Before refining, you MUST assess the issue complexity and determine how many sub-issues would be needed:
 
-### Definition of Failure
-[What defines failure for this feature?]
-```
+1. **Examine the issue**: Read the issue content to understand its scope and complexity
+2. **Count potential sub-issues**: Determine how many independent, potentially shippable pieces the work would break into
+3. **Apply the single sub-issue rule**:
+   - **🚨 ABSOLUTE RULE**: If only 1 sub-issue would be created → **DO NOT create any sub-issues**. Refine the parent issue directly and skip sub-issue creation entirely.
+   - **Only if 2+ sub-issues**: Only create sub-issues when the work can be broken into 2 or more independent, potentially shippable pieces.
+
+4. **Sub-issue creation criteria** (only applies when 2+ sub-issues are needed):
+   - The work can be logically broken into **2 or more** independent, potentially shippable pieces
+   - Each sub-issue represents a complete, working increment of value
+   - The breakdown improves clarity and parallelization
+   - Each sub-issue results in a working, testable state (no broken states between sub-issues)
+
+5. **Refinement scope**:
+   - **Parent issues**: Always refine the parent issue. If 2+ sub-issues are needed, create and refine them as part of refining the parent issue.
+   - **Sub-issues**: Sub-issues are NEVER refined individually. They are only created and refined as part of refining their parent issue.
+   - **Single sub-issue scenario**: If only 1 sub-issue would be needed, refine the parent issue with all necessary details and do NOT create any sub-issues.
+
+6. **Decision flow**:
+   - Assess complexity → Count potential sub-issues
+   - If 1 sub-issue → Refine parent issue only, NO sub-issues created → Skip Scribe mode
+   - If 2+ sub-issues → Refine parent issue AND create/refine sub-issues → Progress to Scribe mode
+   - If 0 sub-issues (simple fix) → Refine parent issue only → Skip Scribe mode
 
 ## Usage
 
 1. Use the `forge-refine` command in Cursor
 2. Provide the GitHub issue link: `https://github.com/owner/repo/issues/123`
-3. The AI will help refine each section of the issue
+3. The AI will:
+   - Read the issue to assess its complexity
+   - Determine issue type (bug or feature)
+   - Load the appropriate template file
+   - Extract required fields from the template
+   - Help refine each required section of the issue
+   - If 2+ sub-issues are needed, create and refine them as part of the refinement process
+   - **CRITICAL**: If only 1 sub-issue would be needed, do NOT create it - refine the parent issue directly
 4. Review and save changes back to GitHub
-5. Evaluate whether sub-issues are needed:
-   - If only 1 sub-issue would be created → Skip Scribe mode, refine parent issue with implementation details
-   - If 2+ potentially shippable sub-issues make sense → Progress to Scribe mode
-   - If sub-issues would leave system broken → Don't create sub-issues, refine parent issue instead
+5. **If 0-1 sub-issues would be needed**: Refinement is complete, skip Scribe mode entirely
+6. **If 2+ sub-issues were created**: Once all required fields are complete for both parent and sub-issues, progress to Scribe mode
 
 ## Goal
 
-The goal of Refinement mode is to get the original ticket in the most informed state possible, excluding technical implementation details. The business value must be clearly spelled out and accurate at the end of the refinement phase.
+The goal of Refinement mode is to get the original ticket in the most informed state possible, excluding technical implementation details. The business value must be clearly spelled out and accurate at the end of the refinement phase. 
+
+**CRITICAL RULE**: If only 1 sub-issue would be needed, do NOT create it - refine the parent issue directly. Sub-issues are only created when 2+ are needed. Simple fixes and single-sub-issue scenarios are refined directly without any sub-issues. Complex issues requiring 2+ sub-issues are refined along with their sub-issues, ensuring both parent and children are properly refined together. Sub-issues are never refined individually - they are only created and refined as part of refining their parent issue. The refinement process uses project-specific templates to ensure consistency and completeness.
