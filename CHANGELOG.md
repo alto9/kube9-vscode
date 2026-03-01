@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/alto9/kube9-vscode/compare/v1.29.1...v1.30.0) (2026-03-01)
+
+
+### Features
+
+* **tree-view:** add namespace filtering to secrets tree view ([72fae11](https://github.com/alto9/kube9-vscode/commit/72fae1150e5e0feb53753110e9cd2f60e546ceeb)), closes [#105](https://github.com/alto9/kube9-vscode/issues/105)
+
 ## [1.29.1](https://github.com/alto9/kube9-vscode/compare/v1.29.0...v1.29.1) (2026-02-03)
 
 

@@ -224,6 +224,50 @@ export async function fetchServices(options: FetchOptions = {}): Promise<k8s.V1S
 }
 
 /**
+ * Fetch secrets from the cluster.
+ * Can fetch secrets from a specific namespace or from all namespaces.
+ * 
+ * @param options - Optional fetch options including namespace, timeout, label selector, and field selector
+ * @returns Promise resolving to an array of V1Secret objects
+ * @throws Error if the API request fails or times out
+ * 
+ * @example
+ * ```typescript
+ * // Fetch all secrets from all namespaces
+ * const allSecrets = await fetchSecrets();
+ * 
+ * // Fetch secrets from a specific namespace
+ * const defaultSecrets = await fetchSecrets({ namespace: 'default' });
+ * 
+ * // Fetch secrets with label selector
+ * const appSecrets = await fetchSecrets({ namespace: 'production', labelSelector: 'app=myapp' });
+ * ```
+ */
+export async function fetchSecrets(options: FetchOptions = {}): Promise<k8s.V1Secret[]> {
+    const client = getKubernetesApiClient();
+
+    try {
+        const response = options.namespace
+            ? await client.core.listNamespacedSecret({
+                namespace: options.namespace,
+                fieldSelector: options.fieldSelector,
+                labelSelector: options.labelSelector,
+                timeoutSeconds: options.timeout || 10
+            })
+            : await client.core.listSecretForAllNamespaces({
+                fieldSelector: options.fieldSelector,
+                labelSelector: options.labelSelector,
+                timeoutSeconds: options.timeout || 10
+            });
+
+        return response.items;
+    } catch (error) {
+        handleApiError(error, 'fetch secrets');
+        throw error;
+    }
+}
+
+/**
  * Fetch cluster resources in parallel for tree view initialization.
  * This function fetches nodes, namespaces, and pods simultaneously using Promise.all()
  * to significantly reduce load time compared to sequential fetching.
