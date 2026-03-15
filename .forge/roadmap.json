@@ -1,0 +1,96 @@
+{
+  "roadmap": {
+    "milestones": [
+      {
+        "title": "M1 - Core Workflow Hardening (Delivered Baseline)",
+        "outcome": "Establish a reliable baseline for daily Kubernetes operations in VS Code by completing service port-forwarding, YAML output hygiene, and foundational describe/onboarding enhancements.",
+        "in_scope": "Service resource port-forwarding from UI and command layer; remove noisy managedFields from View YAML output; expand describe webview support to additional resources; improve onboarding/discoverability touchpoints.",
+        "due_date": "2026-03",
+        "depends_on": [],
+        "technical_concepts": [
+          "VS Code extension-host runtime",
+          "Hybrid Kubernetes execution model",
+          "Tree + command + webview interaction architecture",
+          "YAML editing through virtual file system",
+          "Graceful degradation and operational safety defaults"
+        ],
+        "tickets": [
+          "#99 [Feature]: Port Forwarding for Services (closed)",
+          "#107 Implement portForwardService command handler (closed)",
+          "#108 Integrate Service port forwarding into UI (closed)",
+          "#109 Extend PortForwardManager to support Service resources (closed)",
+          "#100 [Feature]: View YAML contains managed fields (closed)",
+          "#101 Filter managedFields from View YAML output (closed)",
+          "#54 Implement Describe Webview for Storage Classes (closed)",
+          "#96 [Feature]: YouTube video linked to getting started page (closed)"
+        ]
+      },
+      {
+        "title": "M2 - Secrets UX Consistency and Safety",
+        "outcome": "Deliver a predictable, namespace-aware Secrets workflow with consistent operations and correct value reveal behavior across tree and command interactions.",
+        "in_scope": "Unify secret manipulation patterns with other resource types; remove unsupported New Secret navigation path; ensure reveal action displays decoded values correctly; keep namespace-grouping and namespace-reactive behavior stable.",
+        "due_date": "2026-04",
+        "depends_on": [
+          "M1 - Core Workflow Hardening (Delivered Baseline)"
+        ],
+        "technical_concepts": [
+          "Local-first Kubernetes access via kubeconfig",
+          "Hybrid Kubernetes execution model",
+          "Tree + command + webview interaction architecture",
+          "Context-scoped state and caching strategy",
+          "Graceful degradation and operational safety defaults"
+        ],
+        "tickets": [
+          "#97 [Feature]: Secret reveal (open)",
+          "#102 Fix secret reveal to display actual decoded values (open)",
+          "#103 Remove 'New Secret' navigation option from tree view (open)",
+          "#104 Standardize Secret manipulation patterns to match other resource types (open)",
+          "#98 [Feature]: secrets not grouped by namespace (closed precursor)",
+          "#105 Add namespace filtering logic to secrets tree view (closed precursor)",
+          "#106 Add reactive namespace change handling for secrets tree view (closed precursor)"
+        ]
+      },
+      {
+        "title": "M3 - Resource Discovery and YAML Productivity",
+        "outcome": "Improve speed-of-navigation and authoring productivity for common cluster operations through templates, global search, and one-click YAML copy workflows.",
+        "in_scope": "Add reusable YAML templates for common Kubernetes resources; implement global resource search and tree view filtering; add quick copy of resource YAML to clipboard with consistent context awareness.",
+        "due_date": "2026-05",
+        "depends_on": [
+          "M1 - Core Workflow Hardening (Delivered Baseline)"
+        ],
+        "technical_concepts": [
+          "VS Code extension-host runtime",
+          "Tree + command + webview interaction architecture",
+          "YAML editing through virtual file system",
+          "Context-scoped state and caching strategy"
+        ],
+        "tickets": [
+          "#7 Add YAML templates for common Kubernetes resources (open)",
+          "#16 Add global resource search and tree view filtering (open)",
+          "#19 Add quick copy resource YAML to clipboard (open)",
+          "#101 Filter managedFields from View YAML output (closed dependency signal)"
+        ]
+      },
+      {
+        "title": "M4 - Extensible Resource Coverage (CRD/Custom Objects)",
+        "outcome": "Extend describe and inspection workflows to generic custom objects so CRD-heavy environments get first-class support without bespoke implementations per kind.",
+        "in_scope": "Deliver a generic custom object describe view and ensure it integrates with tree selection, webview rendering, and existing command/navigation patterns.",
+        "due_date": "2026-06",
+        "depends_on": [
+          "M1 - Core Workflow Hardening (Delivered Baseline)",
+          "M3 - Resource Discovery and YAML Productivity"
+        ],
+        "technical_concepts": [
+          "Hybrid Kubernetes execution model",
+          "Tree + command + webview interaction architecture",
+          "Progressive enhancement with optional kube9-operator",
+          "Graceful degradation and operational safety defaults"
+        ],
+        "tickets": [
+          "#95 [Feature]: Generic custom object describe view (open)",
+          "#54 Implement Describe Webview for Storage Classes (closed reference)"
+        ]
+      }
+    ]
+  }
+}

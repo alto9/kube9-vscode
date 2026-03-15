@@ -1,0 +1,279 @@
+{
+  "version": "1.3.0",
+  "description": "Canonical skill registry for agent and command execution. Agents and commands should resolve skill IDs from assignment maps below, then execute via the skill entry script_path and usage.",
+  "canonical_categories": [
+    "gh_cli",
+    "npm_wrapper",
+    "git_flow",
+    "research"
+  ],
+  "skills": [
+    {
+      "id": "fetch-url",
+      "status": "active",
+      "category": "research",
+      "retag": "url-ingestion",
+      "script_path": ".cursor/skills/fetch-url/scripts/fetch-url.sh",
+      "usage": ".cursor/skills/fetch-url/scripts/fetch-url.sh \"<url>\" --timeout 20 --max-chars 12000",
+      "primary_consumers": [
+        "visionary",
+        "architect",
+        "runtime",
+        "business_logic",
+        "data",
+        "interface",
+        "integration",
+        "operations"
+      ]
+    },
+    {
+      "id": "gh-get-milestones",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-get-milestones",
+      "script_path": ".cursor/skills/gh-get-milestones/scripts/gh-get-milestones.sh",
+      "usage": ".cursor/skills/gh-get-milestones/scripts/gh-get-milestones.sh [state] [per_page]",
+      "primary_consumers": ["planner"]
+    },
+    {
+      "id": "gh-create-milestone",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-create-milestone",
+      "script_path": ".cursor/skills/gh-create-milestone/scripts/gh-create-milestone.sh",
+      "usage": ".cursor/skills/gh-create-milestone/scripts/gh-create-milestone.sh <title> [description] [due_date]",
+      "primary_consumers": ["planner"]
+    },
+    {
+      "id": "gh-save-milestone",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-save-milestone",
+      "script_path": ".cursor/skills/gh-save-milestone/scripts/gh-save-milestone.sh",
+      "usage": ".cursor/skills/gh-save-milestone/scripts/gh-save-milestone.sh",
+      "primary_consumers": ["planner"]
+    },
+    {
+      "id": "gh-issue-list",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-issue-list",
+      "script_path": ".cursor/skills/gh-issue-list/scripts/gh-issue-list.sh",
+      "usage": ".cursor/skills/gh-issue-list/scripts/gh-issue-list.sh [state] [limit]",
+      "primary_consumers": ["planner", "scribe", "build_preparation", "review_implementation"]
+    },
+    {
+      "id": "gh-create-issue",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-create-issue",
+      "script_path": ".cursor/skills/gh-create-issue/scripts/gh-create-issue.sh",
+      "usage": ".cursor/skills/gh-create-issue/scripts/gh-create-issue.sh <title> [body]",
+      "primary_consumers": ["planner", "scribe"]
+    },
+    {
+      "id": "gh-get-issue",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-get-issue",
+      "script_path": ".cursor/skills/gh-get-issue/scripts/gh-get-issue.sh",
+      "usage": ".cursor/skills/gh-get-issue/scripts/gh-get-issue.sh <issue-ref>",
+      "primary_consumers": [
+        "planner",
+        "scribe",
+        "build_preparation",
+        "build_security",
+        "review_implementation"
+      ]
+    },
+    {
+      "id": "gh-edit-issue",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-edit-issue",
+      "script_path": ".cursor/skills/gh-edit-issue/scripts/gh-edit-issue.sh",
+      "usage": ".cursor/skills/gh-edit-issue/scripts/gh-edit-issue.sh <issue-ref> [--title \"...\"] [--body \"...\"] [--state open|closed]",
+      "primary_consumers": ["planner"]
+    },
+    {
+      "id": "gh-project-item-add",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-project-item-add",
+      "script_path": ".cursor/skills/gh-project-item-add/scripts/gh-project-item-add.sh",
+      "usage": ".cursor/skills/gh-project-item-add/scripts/gh-project-item-add.sh <issue-ref> [project-url]",
+      "primary_consumers": ["planner", "scribe"]
+    },
+    {
+      "id": "gh-pr-checkout",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-pr-checkout",
+      "script_path": ".cursor/skills/gh-pr-checkout/scripts/gh-pr-checkout.sh",
+      "usage": ".cursor/skills/gh-pr-checkout/scripts/gh-pr-checkout.sh <pr-ref>",
+      "primary_consumers": ["review_implementation"]
+    },
+    {
+      "id": "gh-pr-review",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-pr-review",
+      "script_path": ".cursor/skills/gh-pr-review/scripts/gh-pr-review.sh",
+      "usage": ".cursor/skills/gh-pr-review/scripts/gh-pr-review.sh <pr-ref>",
+      "primary_consumers": ["review_security", "review_wrap"]
+    },
+    {
+      "id": "gh-create-pr",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-create-pr",
+      "script_path": ".cursor/skills/gh-create-pr/scripts/gh-create-pr.sh",
+      "usage": ".cursor/skills/gh-create-pr/scripts/gh-create-pr.sh [base-branch]",
+      "primary_consumers": ["build_wrap"]
+    },
+    {
+      "id": "gh-issue-comment",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-issue-comment",
+      "script_path": ".cursor/skills/gh-issue-comment/scripts/gh-issue-comment.sh",
+      "usage": ".cursor/skills/gh-issue-comment/scripts/gh-issue-comment.sh <issue-ref> <comment>",
+      "primary_consumers": ["review_wrap"]
+    },
+    {
+      "id": "gh-pr-merge",
+      "status": "active",
+      "category": "gh_cli",
+      "retag": "gh-pr-merge",
+      "script_path": ".cursor/skills/gh-pr-merge/scripts/gh-pr-merge.sh",
+      "usage": ".cursor/skills/gh-pr-merge/scripts/gh-pr-merge.sh <pr-ref> [merge|squash|rebase]",
+      "primary_consumers": ["review_wrap"]
+    },
+    {
+      "id": "lint-test",
+      "status": "active",
+      "category": "npm_wrapper",
+      "retag": "lint-test",
+      "script_path": ".cursor/skills/lint-test/scripts/lint-test.sh",
+      "usage": ".cursor/skills/lint-test/scripts/lint-test.sh",
+      "primary_consumers": ["build_development", "review_implementation"]
+    },
+    {
+      "id": "unit-test",
+      "status": "active",
+      "category": "npm_wrapper",
+      "retag": "unit-test",
+      "script_path": ".cursor/skills/unit-test/scripts/unit-test.sh",
+      "usage": ".cursor/skills/unit-test/scripts/unit-test.sh",
+      "primary_consumers": ["build_development", "review_implementation"]
+    },
+    {
+      "id": "integration-test",
+      "status": "active",
+      "category": "npm_wrapper",
+      "retag": "integration-test",
+      "script_path": ".cursor/skills/integration-test/scripts/integration-test.sh",
+      "usage": ".cursor/skills/integration-test/scripts/integration-test.sh",
+      "primary_consumers": ["build_development", "review_implementation"]
+    },
+    {
+      "id": "create-feature-branch",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "branch-create",
+      "script_path": ".cursor/skills/create-feature-branch/scripts/create-feature-branch.sh",
+      "usage": ".cursor/skills/create-feature-branch/scripts/create-feature-branch.sh <branch-name> [root-branch]",
+      "primary_consumers": ["build_preparation"]
+    },
+    {
+      "id": "start-issue-build",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "workspace-bootstrap",
+      "script_path": ".cursor/skills/start-issue-build/scripts/start-issue-build.sh",
+      "usage": ".cursor/skills/start-issue-build/scripts/start-issue-build.sh",
+      "primary_consumers": ["build_preparation"]
+    },
+    {
+      "id": "commit",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "commit-code",
+      "script_path": ".cursor/skills/commit/scripts/commit.sh",
+      "usage": ".cursor/skills/commit/scripts/commit.sh -m \"<message>\"",
+      "primary_consumers": ["build_wrap"]
+    },
+    {
+      "id": "push-branch",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "branch-push",
+      "script_path": ".cursor/skills/push-branch/scripts/push-branch.sh",
+      "usage": ".cursor/skills/push-branch/scripts/push-branch.sh",
+      "primary_consumers": ["build_wrap"]
+    }
+  ],
+  "agent_assignments": {
+    "planner": ["gh-get-milestones", "gh-create-milestone", "gh-save-milestone", "gh-issue-list", "gh-get-issue", "gh-create-issue", "gh-edit-issue", "gh-project-item-add"],
+    "scribe": ["gh-issue-list", "gh-get-issue", "gh-create-issue", "gh-project-item-add"],
+    "build_preparation": ["gh-get-issue", "create-feature-branch"],
+    "build_development": ["lint-test", "unit-test", "integration-test"],
+    "build_security": [],
+    "build_wrap": ["commit", "push-branch", "gh-create-pr"],
+    "review_implementation": [],
+    "review_security": [],
+    "review_wrap": ["gh-issue-comment", "gh-pr-review", "gh-pr-merge"]
+  },
+  "command_assignments": {
+    "start-issue-build": ["gh-get-issue", "create-feature-branch"],
+    "start-pr-review": ["gh-get-issue", "gh-pr-checkout"]
+  },
+  "archived_legacy_removed": [
+    {
+      "id": "pull-milestones",
+      "replaced_by": "gh-get-milestones",
+      "reason": "Archived after canonical gh-* milestone wrappers were added."
+    },
+    {
+      "id": "make-milestone",
+      "replaced_by": "gh-create-milestone",
+      "reason": "Archived after canonical gh-* milestone wrappers were added."
+    },
+    {
+      "id": "push-milestones",
+      "replaced_by": "gh-save-milestone",
+      "reason": "Archived after canonical gh-* milestone wrappers were added."
+    },
+    {
+      "id": "make-issue",
+      "replaced_by": "gh-create-issue",
+      "reason": "Archived after canonical gh-* issue wrappers were added."
+    },
+    {
+      "id": "get-issue-details",
+      "replaced_by": "gh-get-issue",
+      "reason": "Archived after canonical gh-* issue wrappers were added."
+    },
+    {
+      "id": "review-pr",
+      "replaced_by": "gh-pr-checkout",
+      "reason": "Archived after canonical gh-* PR wrappers were added."
+    },
+    {
+      "id": "make-pull-request",
+      "replaced_by": "gh-cli direct usage",
+      "reason": "Archived to keep the skill set scoped to contract-required workflows."
+    },
+    {
+      "id": "make-sub-issue",
+      "replaced_by": "gh-create-issue",
+      "reason": "Archived to keep issue creation workflows consolidated."
+    }
+  ],
+  "pruned_defaults": [
+    {
+      "id": "designer-feature-flow",
+      "reason": "Deprecated with removal of .forge/features.json and replacement by knowledge_map contracts."
+    }
+  ]
+}

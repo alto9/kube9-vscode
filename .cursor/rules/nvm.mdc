@@ -1,5 +1,0 @@
----
-alwaysApply: true
----
-
-This project strictly requires Node version 22 for development and the workspace utilizes NVM to enforce this. Terminal commands should run `nvm use` at the start of their session before any node commands are performed.
