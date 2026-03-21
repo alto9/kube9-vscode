@@ -228,28 +228,20 @@ npm run package
 - Verify enhanced metrics views appear
 - Test operator-provided data display
 
-### Testing with Demo Cluster
+### Local cluster (kube9-localcluster)
 
-For safe testing without affecting real clusters, use the isolated demo cluster system:
+Cluster creation and demo scenarios live in the **[kube9-localcluster](https://github.com/alto9/kube9-localcluster)** repository (not in this repo). Clone it next to `kube9-vscode`, then:
 
 ```bash
-# Start demo cluster
-./scripts/demo-cluster/start.sh
-
-# Populate with a scenario
-./scripts/demo-cluster/populate.sh with-operator
-
-# Launch Extension (Demo Cluster) in VSCode
-# Press F5 → Select "Extension (Demo Cluster)"
+cd ../kube9-localcluster
+./scripts/start.sh
+./scripts/populate.sh with-operator   # or another scenario
+export KUBECONFIG="$PWD/out/kubeconfig"
 ```
 
-The demo cluster is completely isolated from your real clusters and is safe for:
-- Feature development and testing
-- Marketing screenshots
-- QA regression testing
-- Demo presentations
+In VS Code, use **Extension (Demo Cluster)** — it sets `KUBECONFIG` to `../kube9-localcluster/out/kubeconfig` (sibling checkout). If your path differs, set `KUBECONFIG` yourself or adjust `.vscode/launch.json`.
 
-See [scripts/demo-cluster/README.md](scripts/demo-cluster/README.md) for complete documentation.
+That cluster uses a dedicated Minikube profile and is isolated from your default kubeconfig — suitable for feature work, screenshots, QA, and demos.
 
 ## Technology Stack
 
@@ -275,6 +267,7 @@ Enhanced monitoring features are automatically enabled when the kube9-operator i
 
 ## Related Projects
 
+- **[kube9-localcluster](https://github.com/alto9/kube9-localcluster)** - Local Minikube cluster scripts and scenarios for developing this extension and kube9-operator.
 - **[kube9-operator](../kube9-operator)** - Kubernetes operator for enhanced cluster monitoring and metrics collection. Install this in your cluster to unlock enhanced monitoring features in the VS Code extension.
 - **[kube9-desktop](../kube9-desktop)** - Desktop application for Kubernetes management with integrated development tools.
 
