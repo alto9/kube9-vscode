@@ -1,3 +1,11 @@
+## [1.32.4](https://github.com/alto9/kube9-vscode/compare/v1.32.3...v1.32.4) (2026-03-22)
+
+
+### Bug Fixes
+
+* **actions:** add @semantic-release/exec dependency to package-lock.json ([3b20f0f](https://github.com/alto9/kube9-vscode/commit/3b20f0ff665a8d6823bb4f93927f6c0917f85ec0))
+* **actions:** update release workflow and configuration ([057cfd6](https://github.com/alto9/kube9-vscode/commit/057cfd627d008d3f7e72988ca80bae16aa3d2d7d))
+
 ## [1.32.3](https://github.com/alto9/kube9-vscode/compare/v1.32.2...v1.32.3) (2026-03-21)
 
 ## [1.32.2](https://github.com/alto9/kube9-vscode/compare/v1.32.1...v1.32.2) (2026-03-18)
