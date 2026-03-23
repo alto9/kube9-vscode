@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/alto9/kube9-vscode/compare/v1.32.4...v1.33.0) (2026-03-23)
+
+
+### Features
+
+* **secret-describe:** enhance secret value handling and display ([efa2672](https://github.com/alto9/kube9-vscode/commit/efa2672c898e119dc665c351cdedcb29544bde0c))
+
 ## [1.32.4](https://github.com/alto9/kube9-vscode/compare/v1.32.3...v1.32.4) (2026-03-22)
 
 
