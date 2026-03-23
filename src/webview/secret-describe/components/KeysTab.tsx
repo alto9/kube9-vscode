@@ -131,7 +131,9 @@ export const KeysTab: React.FC<KeysTabProps> = ({ data }) => {
                                                 borderRadius: '2px',
                                                 color: 'var(--vscode-textLink-foreground)'
                                             }}>
-                                                {obfuscateValue('*'.repeat(Math.min(key.size, 50)))}
+                                                {key.value !== undefined && key.value !== null 
+                                                    ? (key.value === '' ? '(empty)' : key.value)
+                                                    : '(no value)'}
                                             </code>
                                         ) : (
                                             <span style={{ color: 'var(--vscode-descriptionForeground)' }}>
