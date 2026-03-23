@@ -9,6 +9,7 @@ yarn.lock
 out/
 dist/
 *.vsix
+.semantic-release-success
 
 # VS Code
 .vscode-test/
@@ -40,3 +41,5 @@ Thumbs.db
 .idea/
 *.iml
 
+# Kubernetes 
+kubeconfig

@@ -1,0 +1,40 @@
+{
+  "vision": {
+    "title": "Kube9 VS Code: Kubernetes management made simple inside the IDE",
+    "mission": "Help developers and platform engineers operate Kubernetes safely and quickly from VS Code by combining visual cluster workflows, GitOps visibility, and optional operator-powered intelligence.",
+    "core_purpose": "Kube9 VS Code exists to remove Kubernetes context switching and CLI friction. It provides an IDE-native control plane for everyday cluster tasks (navigation, inspect, edit, apply, logs, events, port-forwarding, and ArgoCD actions) while preserving user control through local-first operation and kubectl-native access.",
+    "key_architecture": "Dual-mode product model: (1) strong standalone extension value with local webviews and direct kubectl/API interactions using kubeconfig, and (2) progressive enhancement when kube9-operator is present, unlocking operated dashboards, richer status, and AI recommendation surfaces tied to free/pro operator tiers.",
+    "last_validated": "2026-03-07",
+    "long_term_vision": {
+      "strategic_goals": {
+        "now": "Win as a trusted open-source VS Code extension for daily Kubernetes operations: reliable multi-cluster workflows, fast resource interactions, strong onboarding/tutorials, and practical GitOps visibility through ArgoCD integration.",
+        "next": "Make operated mode the default path for teams that need deeper insights: clearer free-vs-pro value boundaries, better recommendation quality, and tighter day-2 workflows that connect troubleshooting, events, and remediation actions.",
+        "later": "Become the developer-facing front door of the broader Kube9 ecosystem across interfaces and environments, with proactive intelligence and policy-aware guidance that helps teams prevent incidents rather than react to them."
+      }
+    },
+    "key_principles": [
+      "Developer-first workflow: every feature must reduce context switching and operational cognitive load.",
+      "Simple by default, powerful when needed: core workflows must be immediately useful before advanced capabilities are introduced.",
+      "Progressive enhancement: free/standalone experience is complete; operator-powered and pro capabilities add depth without breaking baseline value.",
+      "Local-first trust model: kubeconfig and operational control remain with the user; avoid unnecessary external dependencies for core tasks.",
+      "Actionable intelligence over noisy telemetry: insights should prioritize clear severity, direct remediation, and measurable user impact.",
+      "GitOps-aware operations: support modern deployment workflows (ArgoCD) as a first-class part of cluster management."
+    ],
+    "market_strategy": {
+      "competitive_advantages": [
+        "IDE-native Kubernetes management that fits existing developer flow instead of requiring a separate dashboard app.",
+        "Broad practical command surface in one extension (resource CRUD, YAML, logs, events, port forwarding, context switching, Helm, ArgoCD actions).",
+        "Clear progression from local standalone usage to operator-enhanced intelligence with free/pro tiers.",
+        "Cross-cluster, kubeconfig-native compatibility without forcing vendor lock-in to a specific managed Kubernetes provider.",
+        "Strong onboarding and discoverability via tutorial, command palette, and contextual help paths."
+      ],
+      "differentiation_from_competitors": [
+        "vs kubectl-only workflows: Kube9 keeps kubectl compatibility but adds visual speed, discoverability, and guided actions.",
+        "vs standalone Kubernetes UIs: Kube9 emphasizes in-IDE continuity, reducing tool-hopping during development and debugging.",
+        "vs generic cluster viewers: Kube9 combines day-1 operations and day-2 signals (events, operated dashboards, ArgoCD drift context) in one developer workspace.",
+        "vs cloud-specific consoles: Kube9 is cluster-agnostic and portable across any environment reachable through kubeconfig.",
+        "vs pure AI assistants: Kube9 is execution-integrated product UX, not only advice; actions and context live where operators already work."
+      ]
+    }
+  }
+}

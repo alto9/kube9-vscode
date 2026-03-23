@@ -1,0 +1,9 @@
+{
+  "name": "kube9-vscode",
+  "description": "",
+  "type": "opensource",
+  "metadata_path": ".forge",
+  "code_path": ".",
+  "github_url": "https://github.com/owner/kube9-vscode",
+  "github_board": "https://github.com/orgs/owner/projects/1"
+}

@@ -33,10 +33,6 @@ Fixes #(issue)
 - [ ] Tested on multiple OS (macOS, Windows, Linux)
 - [ ] Tested with different VS Code versions
 
-## Screenshots (if appropriate)
-
-<!-- Add screenshots or GIFs demonstrating the change -->
-
 ## Checklist
 
 - [ ] My code follows the code style of this project
@@ -49,6 +45,14 @@ Fixes #(issue)
 - [ ] I have updated the CHANGELOG.md (if applicable)
 - [ ] I have tested the extension in Extension Development Host
 - [ ] I have verified the change works with real Kubernetes clusters
+
+## How to Test this Work
+
+<!-- Include Step by Step Technical Testing steps for technical users and stories -->
+
+## How to Validate this Work
+
+<!-- Include Step by Step BAT Testing steps for non-technical users -->
 
 ## Additional Notes
 

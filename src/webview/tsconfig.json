@@ -17,7 +17,8 @@
     "./pv-describe/**/*",
     "./secret-describe/**/*",
     "./service-describe/**/*",
-    "./configmap-describe/**/*"
+    "./configmap-describe/**/*",
+    "./storageclass-describe/**/*"
   ]
 }
 

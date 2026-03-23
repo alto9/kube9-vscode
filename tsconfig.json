@@ -33,6 +33,7 @@
     "src/webview/secret-describe",
     "src/webview/service-describe",
     "src/webview/configmap-describe",
+    "src/webview/storageclass-describe",
     "src/webview/operator-health-report",
     "src/webview/helm-package-manager",
     "src/webview/components"

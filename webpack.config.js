@@ -28,7 +28,7 @@ const extensionConfig = {
     rules: [
       {
         test: /\.ts$/,
-        exclude: [/node_modules/, /src\/webview\/argocd-application/, /src\/webview\/event-viewer/, /src\/webview\/pod-logs/, /src\/webview\/pod-describe/, /src\/webview\/pvc-describe/, /src\/webview\/pv-describe/, /src\/webview\/secret-describe/, /src\/webview\/service-describe/, /src\/webview\/configmap-describe/, /src\/webview\/operator-health-report/, /src\/webview\/helm-package-manager/],
+        exclude: [/node_modules/, /src\/webview\/argocd-application/, /src\/webview\/event-viewer/, /src\/webview\/pod-logs/, /src\/webview\/pod-describe/, /src\/webview\/pvc-describe/, /src\/webview\/pv-describe/, /src\/webview\/secret-describe/, /src\/webview\/service-describe/, /src\/webview\/configmap-describe/, /src\/webview\/storageclass-describe/, /src\/webview\/operator-health-report/, /src\/webview\/helm-package-manager/],
         use: [
           {
             loader: 'ts-loader',
@@ -354,7 +354,46 @@ const configMapDescribeConfig = {
   }
 };
 
-module.exports = [extensionConfig, webviewConfig, podDescribeConfig, namespaceDescribeConfig, pvcDescribeConfig, pvDescribeConfig, secretDescribeConfig, serviceDescribeConfig, configMapDescribeConfig];
+/**@type {import('webpack').Configuration}*/
+const storageClassDescribeConfig = {
+  target: 'web', // Webview runs in a browser context
+  entry: './src/webview/storageclass-describe/index.tsx',
+  output: {
+    path: path.resolve(__dirname, 'dist', 'media', 'storageclass-describe'),
+    filename: 'index.js',
+    devtoolModuleFilenameTemplate: '../[resource-path]'
+  },
+  devtool: 'source-map',
+  resolve: {
+    extensions: ['.ts', '.tsx', '.js', '.jsx']
+  },
+  module: {
+    rules: [
+      {
+        test: /\.tsx?$/,
+        exclude: /node_modules/,
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env', { targets: 'defaults' }],
+                ['@babel/preset-react', { runtime: 'automatic' }],
+                '@babel/preset-typescript'
+              ]
+            }
+          }
+        ]
+      },
+      {
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader']
+      }
+    ]
+  }
+};
+
+module.exports = [extensionConfig, webviewConfig, podDescribeConfig, namespaceDescribeConfig, pvcDescribeConfig, pvDescribeConfig, secretDescribeConfig, serviceDescribeConfig, configMapDescribeConfig, storageClassDescribeConfig];
 
 
 

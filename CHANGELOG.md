@@ -1,3 +1,59 @@
+## [1.32.4](https://github.com/alto9/kube9-vscode/compare/v1.32.3...v1.32.4) (2026-03-22)
+
+
+### Bug Fixes
+
+* **actions:** add @semantic-release/exec dependency to package-lock.json ([3b20f0f](https://github.com/alto9/kube9-vscode/commit/3b20f0ff665a8d6823bb4f93927f6c0917f85ec0))
+* **actions:** update release workflow and configuration ([057cfd6](https://github.com/alto9/kube9-vscode/commit/057cfd627d008d3f7e72988ca80bae16aa3d2d7d))
+
+## [1.32.3](https://github.com/alto9/kube9-vscode/compare/v1.32.2...v1.32.3) (2026-03-21)
+
+## [1.32.2](https://github.com/alto9/kube9-vscode/compare/v1.32.1...v1.32.2) (2026-03-18)
+
+## [1.32.1](https://github.com/alto9/kube9-vscode/compare/v1.32.0...v1.32.1) (2026-03-15)
+
+# [1.32.0](https://github.com/alto9/kube9-vscode/compare/v1.31.0...v1.32.0) (2026-03-01)
+
+
+### Features
+
+* **yaml:** filter managedFields from View YAML output ([300f38b](https://github.com/alto9/kube9-vscode/commit/300f38b967e59d4aeee27f209df3dd538331a4c5))
+
+# [1.31.0](https://github.com/alto9/kube9-vscode/compare/v1.30.0...v1.31.0) (2026-03-01)
+
+
+### Bug Fixes
+
+* **test:** emit exit event in child_process mock to prevent teardown timeout ([b132b12](https://github.com/alto9/kube9-vscode/commit/b132b12b504f3245cdbd3fe490a8198614ebdcdb))
+
+
+### Features
+
+* **port-forward:** add portForwardService command and fix progress notification ([1f7ff45](https://github.com/alto9/kube9-vscode/commit/1f7ff459e60063e1f6b2c4203f058bfffcbc8af2)), closes [#107](https://github.com/alto9/kube9-vscode/issues/107)
+* **port-forward:** extend PortForwardManager to support Service resources ([c81676f](https://github.com/alto9/kube9-vscode/commit/c81676f7f23167376a0184f2259fdba7b61d31a7))
+* **port-forward:** integrate Service port forwarding into management UI ([4f688f9](https://github.com/alto9/kube9-vscode/commit/4f688f9d5d5f84d4c95f8c907b6640fe9f0a2628)), closes [#108](https://github.com/alto9/kube9-vscode/issues/108)
+
+# [1.30.0](https://github.com/alto9/kube9-vscode/compare/v1.29.1...v1.30.0) (2026-03-01)
+
+
+### Features
+
+* **tree-view:** add namespace filtering to secrets tree view ([72fae11](https://github.com/alto9/kube9-vscode/commit/72fae1150e5e0feb53753110e9cd2f60e546ceeb)), closes [#105](https://github.com/alto9/kube9-vscode/issues/105)
+
+## [1.29.1](https://github.com/alto9/kube9-vscode/compare/v1.29.0...v1.29.1) (2026-02-03)
+
+
+### Bug Fixes
+
+* remove unused getMediaUri function and localResourceRoots config ([b0d7198](https://github.com/alto9/kube9-vscode/commit/b0d7198565213638b31bb89bff1dd8da0179b94f))
+
+# [1.29.0](https://github.com/alto9/kube9-vscode/compare/v1.28.2...v1.29.0) (2026-02-02)
+
+
+### Features
+
+* add describe webview for StorageClass resources ([3d343be](https://github.com/alto9/kube9-vscode/commit/3d343be0c8ed0218c6eef2011e8682d6a56f5688))
+
 ## [1.28.2](https://github.com/alto9/kube9-vscode/compare/v1.28.1...v1.28.2) (2026-01-21)
 
 

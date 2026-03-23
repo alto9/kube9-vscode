@@ -57,6 +57,8 @@ export interface SecretKeyInfo {
     size: number;
     /** Formatted size string (e.g., "1.2 KB") */
     sizeFormatted: string;
+    /** Decoded secret value (only included when secret is fetched, not displayed by default) */
+    value?: string;
 }
 
 /**
@@ -232,7 +234,8 @@ export class SecretDescribeProvider {
 
     /**
      * Formats Secret keys information.
-     * SECURITY: Only extracts key names and sizes, NEVER actual values.
+     * SECURITY: Decodes base64 values for display when explicitly revealed by user.
+     * Values are included in the data structure but only displayed when user clicks "Reveal".
      */
     private formatKeys(secret: k8s.V1Secret): SecretKeys {
         const data = secret.data || {};
@@ -242,13 +245,34 @@ export class SecretDescribeProvider {
         Object.entries(data).forEach(([keyName, encodedValue]) => {
             // Calculate size from base64-encoded value
             // Base64 encoding increases size by ~33%, so we calculate original size
-            const encodedSize = encodedValue ? Buffer.from(encodedValue, 'base64').length : 0;
+            let encodedSize = 0;
+            let decodedValue: string | undefined;
+
+            if (encodedValue) {
+                try {
+                    // Decode base64 value
+                    const buffer = Buffer.from(encodedValue, 'base64');
+                    encodedSize = buffer.length;
+                    // Convert to UTF-8 string for display
+                    decodedValue = buffer.toString('utf-8');
+                } catch (error) {
+                    // Handle invalid base64 encoding gracefully
+                    // Set size to 0 and value to indicate error
+                    encodedSize = 0;
+                    decodedValue = '(invalid base64 encoding)';
+                }
+            } else {
+                // Empty or null value
+                decodedValue = '';
+            }
+
             totalSize += encodedSize;
 
             keys.push({
                 name: keyName,
                 size: encodedSize,
-                sizeFormatted: this.formatSize(encodedSize)
+                sizeFormatted: this.formatSize(encodedSize),
+                value: decodedValue
             });
         });
 
