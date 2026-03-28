@@ -115,11 +115,8 @@ export class TutorialWebview {
                             'kube9.tutorialCompleted',
                             true
                         );
-                        // Save dismissal preference if checkbox was checked
-                        if (message.doNotShowAgain) {
-                            const globalState = GlobalState.getInstance();
-                            await globalState.setWelcomeScreenDismissed(true);
-                        }
+                        // Persist dismissal preference as an idempotent write
+                        await GlobalState.getInstance().setWelcomeScreenDismissed(Boolean(message.doNotShowAgain));
                         vscode.window.showInformationMessage(
                             'Tutorial completed! You can replay it anytime from the Command Palette.'
                         );
@@ -129,8 +126,15 @@ export class TutorialWebview {
                     case 'dismiss': {
                         // Handle dismissal with checkbox state
                         const globalState = GlobalState.getInstance();
-                        await globalState.setWelcomeScreenDismissed(message.doNotShowAgain);
+                        await globalState.setWelcomeScreenDismissed(Boolean(message.doNotShowAgain));
                         panel.dispose();
+                        break;
+                    }
+
+                    case 'setDoNotShowAgain': {
+                        // Persist checkbox changes immediately so close flows cannot lose preference
+                        const globalState = GlobalState.getInstance();
+                        await globalState.setWelcomeScreenDismissed(Boolean(message.value));
                         break;
                     }
 
@@ -632,7 +636,10 @@ export class TutorialWebview {
             const checkbox = document.getElementById('doNotShowAgain');
             if (checkbox) {
                 checkbox.addEventListener('change', () => {
-                    // Optionally save immediately on change, or wait for close/complete
+                    vscode.postMessage({
+                        command: 'setDoNotShowAgain',
+                        value: checkbox.checked
+                    });
                 });
             }
         });
