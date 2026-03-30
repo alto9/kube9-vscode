@@ -4,7 +4,9 @@
   "title": "Forge Features Schema",
   "type": "object",
   "additionalProperties": false,
-  "required": ["features"],
+  "required": [
+    "features"
+  ],
   "properties": {
     "features": {
       "type": "array",
@@ -18,31 +20,37 @@
     "feature": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title", "outcome", "goals", "features"],
+      "required": [
+        "feature_id",
+        "description",
+        "goals",
+        "features"
+      ],
       "properties": {
-        "id": {
-          "type": "string",
-          "minLength": 1
+        "feature_id": {
+          "type": "string"
         },
-        "title": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 120
-        },
-        "outcome": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 280
+        "description": {
+          "type": "string"
         },
         "goals": {
           "type": "array",
           "minItems": 1,
-          "maxItems": 7,
-          "uniqueItems": true,
           "items": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 180
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "priority",
+              "text"
+            ],
+            "properties": {
+              "priority": {
+                "type": "integer"
+              },
+              "text": {
+                "type": "string"
+              }
+            }
           }
         },
         "features": {

@@ -1,115 +1,136 @@
 {
-  "version": "1.4.0",
+  "version": "1.5.2",
   "description": "Canonical skill registry for agent and command execution. Agents and commands should resolve skill IDs from assignment maps below, then execute via the skill entry script_path and usage.",
   "canonical_categories": [
-    "npm_wrapper",
-    "git_flow",
-    "research"
+    "git_flow"
   ],
   "skills": [
     {
-      "id": "fetch-url",
-      "status": "active",
-      "category": "research",
-      "retag": "url-ingestion",
-      "script_path": ".cursor/skills/fetch-url/scripts/fetch-url.js",
-      "usage": "node .cursor/skills/fetch-url/scripts/fetch-url.js \"<url>\" --timeout 20 --max-chars 24000",
-      "primary_consumers": [
-        "product_owner",
-        "architect",
-        "planner",
-        "runtime",
-        "business_logic",
-        "data",
-        "interface",
-        "integration",
-        "operations"
-      ]
-    },
-    {
-      "id": "lint-test",
-      "status": "active",
-      "category": "npm_wrapper",
-      "retag": "lint-test",
-      "script_path": ".cursor/skills/lint-test/scripts/lint-test.js",
-      "usage": "node .cursor/skills/lint-test/scripts/lint-test.js",
-      "primary_consumers": ["engineer", "quality_assurance"]
-    },
-    {
-      "id": "unit-test",
-      "status": "active",
-      "category": "npm_wrapper",
-      "retag": "unit-test",
-      "script_path": ".cursor/skills/unit-test/scripts/unit-test.js",
-      "usage": "node .cursor/skills/unit-test/scripts/unit-test.js",
-      "primary_consumers": ["engineer", "quality_assurance"]
-    },
-    {
-      "id": "integration-test",
-      "status": "active",
-      "category": "npm_wrapper",
-      "retag": "integration-test",
-      "script_path": ".cursor/skills/integration-test/scripts/integration-test.js",
-      "usage": "node .cursor/skills/integration-test/scripts/integration-test.js",
-      "primary_consumers": ["engineer", "quality_assurance"]
-    },
-    {
-      "id": "create-feature-branch",
+      "id": "create-issue-branch",
       "status": "active",
       "category": "git_flow",
       "retag": "branch-create",
-      "script_path": ".cursor/skills/create-feature-branch/scripts/create-feature-branch.js",
-      "usage": "node .cursor/skills/create-feature-branch/scripts/create-feature-branch.js <branch-name> [root-branch]",
-      "primary_consumers": ["tech_writer", "engineer"]
+      "script_path": ".cursor/skills/create-issue-branch/scripts/create-issue-branch.sh",
+      "usage": ".cursor/skills/create-issue-branch/scripts/create-issue-branch.sh (<owner/repo> <branch-name> <issue-number> <root-branch> | <branch-name> <issue-number> [root-branch])",
+      "primary_consumers": [
+        "tech_writer",
+        "engineer"
+      ]
+    },
+    {
+      "id": "assign-issue-to-me",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "github-issue-assign",
+      "script_path": ".cursor/skills/assign-issue-to-me/scripts/assign-issue-to-me.sh",
+      "usage": ".cursor/skills/assign-issue-to-me/scripts/assign-issue-to-me.sh (<owner/repo> <issue-number> | <issue-number>)",
+      "primary_consumers": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "get-issue-branches",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "github-issue-branches",
+      "script_path": ".cursor/skills/get-issue-branches/scripts/get-issue-branches.sh",
+      "usage": ".cursor/skills/get-issue-branches/scripts/get-issue-branches.sh (<owner/repo> <issue-number> | <issue-number>)",
+      "primary_consumers": [
+        "tech_writer",
+        "engineer"
+      ]
+    },
+    {
+      "id": "link-subissue-to-issue",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "github-subissue-link",
+      "script_path": ".cursor/skills/link-subissue-to-issue/scripts/link-subissue-to-issue.sh",
+      "usage": ".cursor/skills/link-subissue-to-issue/scripts/link-subissue-to-issue.sh ([--replace-parent|-r] <owner/repo> <parent-issue-number> <child-issue-number> | [--replace-parent|-r] <parent-issue-number> <child-issue-number>)",
+      "primary_consumers": [
+        "tech_writer"
+      ]
     },
     {
       "id": "commit",
       "status": "active",
       "category": "git_flow",
       "retag": "commit-code",
-      "script_path": ".cursor/skills/commit/scripts/commit.js",
-      "usage": "node .cursor/skills/commit/scripts/commit.js -m \"<message>\"",
-      "primary_consumers": ["engineer"]
+      "script_path": ".cursor/skills/commit/scripts/commit.sh",
+      "usage": ".cursor/skills/commit/scripts/commit.sh -m \"<message>\"",
+      "primary_consumers": [
+        "engineer"
+      ]
     },
     {
       "id": "push-branch",
       "status": "active",
       "category": "git_flow",
       "retag": "branch-push",
-      "script_path": ".cursor/skills/push-branch/scripts/push-branch.js",
-      "usage": "node .cursor/skills/push-branch/scripts/push-branch.js",
-      "primary_consumers": ["engineer"]
+      "script_path": ".cursor/skills/push-branch/scripts/push-branch.sh",
+      "usage": ".cursor/skills/push-branch/scripts/push-branch.sh",
+      "primary_consumers": [
+        "engineer",
+        "tech_writer"
+      ]
     },
     {
       "id": "pull-milestones",
       "status": "active",
       "category": "git_flow",
       "retag": "github-milestones",
-      "script_path": ".cursor/skills/pull-milestones/scripts/pull-milestones.js",
-      "usage": "node .cursor/skills/pull-milestones/scripts/pull-milestones.js [owner/repo] --state open --format json [--compact]",
-      "primary_consumers": ["planner", "tech_writer", "engineer"]
+      "script_path": ".cursor/skills/pull-milestones/scripts/pull-milestones.sh",
+      "usage": ".cursor/skills/pull-milestones/scripts/pull-milestones.sh [owner/repo] --state open --format json [--compact]",
+      "primary_consumers": [
+        "planner",
+        "tech_writer",
+        "engineer"
+      ]
     },
     {
       "id": "pull-milestone-issues",
       "status": "active",
       "category": "git_flow",
       "retag": "github-milestone-issues",
-      "script_path": ".cursor/skills/pull-milestone-issues/scripts/pull-milestone-issues.js",
-      "usage": "node .cursor/skills/pull-milestone-issues/scripts/pull-milestone-issues.js <milestone-id> [owner/repo] --state open --format json [--compact]",
-      "primary_consumers": ["planner", "tech_writer", "engineer"]
+      "script_path": ".cursor/skills/pull-milestone-issues/scripts/pull-milestone-issues.sh",
+      "usage": ".cursor/skills/pull-milestone-issues/scripts/pull-milestone-issues.sh <milestone-id> [owner/repo] --state open --format json [--compact]",
+      "primary_consumers": [
+        "planner",
+        "tech_writer",
+        "engineer"
+      ]
     }
   ],
   "agent_assignments": {
-    "planner": ["fetch-url", "pull-milestones", "pull-milestone-issues"],
-    "tech_writer": ["create-feature-branch", "pull-milestone-issues"],
-    "engineer": ["create-feature-branch", "lint-test", "unit-test", "integration-test", "commit", "push-branch"],
+    "planner": [
+      "pull-milestones",
+      "pull-milestone-issues"
+    ],
+    "tech_writer": [
+      "create-issue-branch",
+      "push-branch",
+      "pull-milestone-issues",
+      "get-issue-branches",
+      "link-subissue-to-issue"
+    ],
+    "engineer": [
+      "create-issue-branch",
+      "assign-issue-to-me",
+      "get-issue-branches",
+      "commit",
+      "push-branch"
+    ],
     "quality_assurance": []
   },
   "command_assignments": {
     "architect-this": [],
-    "plan-roadmap": ["pull-milestones", "pull-milestone-issues"],
+    "plan-roadmap": [
+      "pull-milestones",
+      "pull-milestone-issues"
+    ],
     "refine-issue": [],
     "build-from-github": [],
+    "build-from-pr-review": [],
     "review-pr": []
   },
   "archived_legacy_removed": [

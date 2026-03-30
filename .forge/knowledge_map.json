@@ -13,7 +13,6 @@
         ".forge/schemas/features.schema.json",
         {
           "name": "runtime",
-          "agent": "runtime",
           "primary_doc": ".forge/runtime/index.md",
           "description": "How the application starts, runs, and shuts down.",
           "children": [
@@ -25,7 +24,6 @@
         },
         {
           "name": "business_logic",
-          "agent": "business_logic",
           "primary_doc": ".forge/business_logic/index.md",
           "description": "Core domain behavior and rules, independent of UI and infrastructure.",
           "children": [
@@ -37,7 +35,6 @@
         },
         {
           "name": "data",
-          "agent": "data",
           "primary_doc": ".forge/data/index.md",
           "description": "How data is modeled, persisted, serialized, and kept consistent.",
           "children": [
@@ -49,7 +46,6 @@
         },
         {
           "name": "interface",
-          "agent": "interface",
           "primary_doc": ".forge/interface/index.md",
           "description": "How users interact with the system through inputs, presentation, and flow.",
           "children": [
@@ -61,7 +57,6 @@
         },
         {
           "name": "integration",
-          "agent": "integration",
           "primary_doc": ".forge/integration/index.md",
           "description": "How the application connects to external APIs, services, and boundaries.",
           "children": [
@@ -73,7 +68,6 @@
         },
         {
           "name": "operations",
-          "agent": "operations",
           "primary_doc": ".forge/operations/index.md",
           "description": "How the application is built, deployed, observed, and secured.",
           "children": [
