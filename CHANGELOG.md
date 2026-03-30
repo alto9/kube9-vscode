@@ -1,3 +1,10 @@
+## [1.33.2](https://github.com/alto9/kube9-vscode/compare/v1.33.1...v1.33.2) (2026-03-30)
+
+
+### Bug Fixes
+
+* **tutorial:** persist welcome dismissal on checkbox changes ([9b6030a](https://github.com/alto9/kube9-vscode/commit/9b6030abff92f545708736b3ee93e0fb05443ec9))
+
 ## [1.33.1](https://github.com/alto9/kube9-vscode/compare/v1.33.0...v1.33.1) (2026-03-24)
 
 # [1.33.0](https://github.com/alto9/kube9-vscode/compare/v1.32.4...v1.33.0) (2026-03-23)
