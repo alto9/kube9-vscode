@@ -1,9 +1,9 @@
 {
   "name": "kube9-vscode",
-  "description": "",
+  "description": "VS Code extension for local-first Kubernetes management with tree navigation, YAML workflows, logs/events, port-forwarding, Helm tooling, and ArgoCD integration.",
   "type": "opensource",
   "metadata_path": ".forge",
   "code_path": ".",
-  "github_url": "https://github.com/owner/kube9-vscode",
-  "github_board": "https://github.com/orgs/owner/projects/1"
+  "github_url": "https://github.com/alto9/kube9-vscode",
+  "github_board": "https://github.com/orgs/alto9/projects/9"
 }

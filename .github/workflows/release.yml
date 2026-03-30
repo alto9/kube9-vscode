@@ -108,3 +108,51 @@ jobs:
           fi
           npx --yes ovsx publish --packagePath "$VSIX_FILE" --pat "$OVSX_PAT"
 
+      - name: Fetch latest GitHub release for Slack
+        if: always() && hashFiles('.semantic-release-success') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/releases/latest" \
+            --jq '{tag_name: .tag_name, body: (.body // ""), html_url: .html_url}' > release-meta.json
+
+      - name: Build Slack payload
+        if: always() && hashFiles('.semantic-release-success') != ''
+        run: |
+          jq -n --slurpfile meta release-meta.json '
+            ($meta[0]) as $m |
+            (($m.body) | if length > 2800 then .[0:2800] + "\n\n_…truncated_" else . end) as $bodySafe |
+            {
+              channel: "#alto9-tech-team",
+              text: ("Forge " + $m.tag_name + " released"),
+              blocks: [
+                {
+                  type: "header",
+                  text: {type: "plain_text", text: ("Forge " + $m.tag_name), emoji: true}
+                },
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: (if ($bodySafe | length) > 0 then $bodySafe else "_No release notes provided._" end)
+                  }
+                },
+                {
+                  type: "context",
+                  elements: [
+                    {type: "mrkdwn", text: ("<" + $m.html_url + "|View release on GitHub>")}
+                  ]
+                }
+              ]
+            }
+          ' > slack-payload.json
+
+      - name: Post release to Slack
+        if: always() && hashFiles('.semantic-release-success') != ''
+        continue-on-error: true
+        uses: slackapi/slack-github-action@v3.0.1
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload-file-path: slack-payload.json
+
