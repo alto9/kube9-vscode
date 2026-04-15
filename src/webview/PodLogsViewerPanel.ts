@@ -141,7 +141,8 @@ export class PodLogsViewerPanel {
             if (existingInstanceId) {
                 const existing = PodLogsViewerPanel.openPanels.get(existingInstanceId);
                 if (existing) {
-                    existing.panel.reveal(vscode.ViewColumn.One);
+                    // Preserve split layout: reveal in the column where the panel already lives
+                    existing.panel.reveal();
                     logsProvider.dispose();
                     return;
                 }
@@ -180,6 +181,12 @@ export class PodLogsViewerPanel {
      * @param container - The container name (or 'all' for all containers)
      * @param logsProvider - The LogsProvider instance for this panel
      */
+    private static formatPanelTitle(podName: string, namespace: string, container: string): string {
+        return container === 'all'
+            ? `Logs: ${podName} (all containers) — ${namespace}`
+            : `Logs: ${podName} — ${namespace}`;
+    }
+
     private static async createPanel(
         context: vscode.ExtensionContext,
         viewerInstanceId: string,
@@ -191,10 +198,7 @@ export class PodLogsViewerPanel {
         container: string,
         logsProvider: LogsProvider
     ): Promise<void> {
-        const panelTitle =
-            container === 'all'
-                ? `Logs: ${podName} (all containers) — ${namespace}`
-                : `Logs: ${podName} — ${namespace}`;
+        const panelTitle = PodLogsViewerPanel.formatPanelTitle(podName, namespace, container);
 
         const panel = vscode.window.createWebviewPanel(
             'kube9PodLogs',
@@ -600,13 +604,24 @@ export class PodLogsViewerPanel {
 
         const clusterCtx = panelInfo.currentPod.contextName;
 
+        const normalizedContainer = container === 'all' ? 'all' : container;
         const oldCompositeKey = panelInfo.compositeKey;
         const newCompositeKey = makePodLogsViewerKey(
             panelInfo.currentPod.contextName,
             panelInfo.currentPod.namespace,
             panelInfo.currentPod.name,
-            container
+            normalizedContainer
         );
+
+        if (newCompositeKey !== oldCompositeKey) {
+            const occupantViewerId = PodLogsViewerPanel.compositeKeyToViewerInstanceId.get(newCompositeKey);
+            if (occupantViewerId && occupantViewerId !== viewerInstanceId) {
+                vscode.window.showWarningMessage(
+                    'Another pod log viewer is already open for this pod and container. Close that viewer or choose a different container.'
+                );
+                return;
+            }
+        }
 
         try {
             if (panelInfo.currentPod.container === 'all') {
@@ -625,19 +640,19 @@ export class PodLogsViewerPanel {
             }
             PodLogsViewerPanel.cleanupBatching(viewerInstanceId);
 
-            panelInfo.currentPod.container = container;
+            panelInfo.currentPod.container = normalizedContainer;
 
             if (oldCompositeKey !== newCompositeKey) {
                 PodLogsViewerPanel.compositeKeyToViewerInstanceId.delete(oldCompositeKey);
-                const existingId = PodLogsViewerPanel.compositeKeyToViewerInstanceId.get(newCompositeKey);
-                if (existingId && existingId !== viewerInstanceId) {
-                    console.warn(
-                        `[PodLogsViewerPanel ${timestamp}] Composite key collision when switching container; keeping this panel instance.`
-                    );
-                }
                 PodLogsViewerPanel.compositeKeyToViewerInstanceId.set(newCompositeKey, viewerInstanceId);
                 panelInfo.compositeKey = newCompositeKey;
             }
+
+            panelInfo.panel.title = PodLogsViewerPanel.formatPanelTitle(
+                panelInfo.currentPod.name,
+                panelInfo.currentPod.namespace,
+                normalizedContainer
+            );
 
             PodLogsViewerPanel.sendMessage(panelInfo.panel, {
                 type: 'logData',
