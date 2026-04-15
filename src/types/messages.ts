@@ -69,10 +69,9 @@ export type WebviewToExtensionMessage =
      */
     | { type: 'ready' }
     /**
-     * Request to refresh logs.
-     * Sent when user clicks refresh button to reload logs from Kubernetes API.
+     * Open contextual help (handled by WebviewHelpHandler on the extension side).
      */
-    | { type: 'refresh' }
+    | { type: 'openHelp'; context: string }
     /**
      * Request to toggle follow mode on/off.
      * Sent when user toggles follow mode to enable/disable automatic scrolling to latest logs.
@@ -83,16 +82,6 @@ export type WebviewToExtensionMessage =
      * Sent when user toggles timestamps to show/hide timestamps in log lines.
      */
     | { type: 'toggleTimestamps'; enabled: boolean }
-    /**
-     * Request to copy logs to clipboard.
-     * Sent when user clicks copy button to copy all visible logs to clipboard.
-     */
-    | { type: 'copy'; lines: string[]; includeTimestamps: boolean }
-    /**
-     * Request to export logs to a file.
-     * Sent when user clicks export button to save logs to a file with customizable filename.
-     */
-    | { type: 'export'; lines: string[]; podName: string; containerName: string; includeTimestamps: boolean }
     /**
      * Request to set line limit for log fetching.
      * Sent when user selects a line limit from dropdown or enters a custom value.

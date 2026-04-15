@@ -22,16 +22,6 @@ interface ToolbarProps {
     onToggleFollow: () => void;
     /** Handler for previous logs toggle */
     onTogglePrevious: () => void;
-    /** Handler for refresh action */
-    onRefresh: () => void;
-    /** Handler for clear action */
-    onClear: () => void;
-    /** Handler for copy action */
-    onCopy: () => void;
-    /** Handler for export action */
-    onExport: () => void;
-    /** Handler for search action */
-    onSearch: () => void;
 }
 
 /**
@@ -46,12 +36,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     onLineLimitChange,
     onToggleTimestamps,
     onToggleFollow,
-    onTogglePrevious,
-    onRefresh,
-    onClear,
-    onCopy,
-    onExport,
-    onSearch
+    onTogglePrevious
 }) => {
     // Convert lineLimit to string for select value
     const lineLimitValue = preferences.lineLimit === 'all' ? 'all' : String(preferences.lineLimit);

@@ -308,8 +308,8 @@ export class PodLogsViewerPanel {
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'ready' message`);
                 await PodLogsViewerPanel.sendInitialState(viewerInstanceId);
                 break;
-            case 'refresh':
-                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'refresh' message`);
+            case 'openHelp':
+                // Handled by WebviewHelpHandler on the same webview; no-op here avoids unknown-type noise.
                 break;
             case 'toggleFollow':
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'toggleFollow' message, enabled=${message.enabled}`);
@@ -318,14 +318,6 @@ export class PodLogsViewerPanel {
             case 'toggleTimestamps':
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'toggleTimestamps' message, enabled=${message.enabled}`);
                 await PodLogsViewerPanel.handleToggleTimestamps(viewerInstanceId, message.enabled);
-                break;
-            case 'copy':
-                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'copy' message`);
-                await PodLogsViewerPanel.handleCopy(message.lines);
-                break;
-            case 'export':
-                console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'export' message`);
-                await PodLogsViewerPanel.handleExport(message.lines, message.podName, message.containerName, message.includeTimestamps);
                 break;
             case 'setLineLimit':
                 console.log(`[PodLogsViewerPanel ${timestamp}] Processing 'setLineLimit' message, limit=${message.limit}`);
@@ -680,91 +672,6 @@ export class PodLogsViewerPanel {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to switch container: ${errorMessage}`);
             vscode.window.showErrorMessage(`Failed to switch container: ${errorMessage}`);
-        }
-    }
-
-    /**
-     * Handle copy logs request from webview.
-     * Copies formatted log lines to clipboard and shows notification.
-     * 
-     * @param lines - Array of log lines to copy
-     */
-    private static async handleCopy(lines: string[]): Promise<void> {
-        const timestamp = new Date().toISOString();
-        
-        try {
-            if (lines.length === 0) {
-                vscode.window.showInformationMessage('No logs to copy');
-                return;
-            }
-
-            // Join lines with newline to preserve line breaks
-            const text = lines.join('\n');
-            
-            // Write to clipboard
-            await vscode.env.clipboard.writeText(text);
-            
-            // Show notification with line count
-            vscode.window.showInformationMessage(
-                `${lines.length} lines copied to clipboard`
-            );
-            
-            console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Copied ${lines.length} lines to clipboard`);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to copy logs: ${errorMessage}`);
-            vscode.window.showErrorMessage(`Failed to copy logs: ${errorMessage}`);
-        }
-    }
-
-    /**
-     * Handle export logs request from webview.
-     * Shows save dialog and writes logs to selected file.
-     *
-     * @param lines - Array of log lines to export
-     * @param podName - Name of the pod
-     * @param containerName - Name of the container
-     * @param includeTimestamps - Whether timestamps should be included
-     */
-    private static async handleExport(
-        lines: string[],
-        podName: string,
-        containerName: string,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        _includeTimestamps: boolean
-    ): Promise<void> {
-        const timestamp = new Date().toISOString();
-        console.log(`[PodLogsViewerPanel ${timestamp}] handleExport called for pod: ${podName}, container: ${containerName}`);
-        
-        try {
-            // Generate default filename: {podName}-{containerName}-{timestamp}.log
-            const fileTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const defaultFilename = `${podName}-${containerName}-${fileTimestamp}.log`;
-            
-            // Show save dialog
-            const uri = await vscode.window.showSaveDialog({
-                defaultUri: vscode.Uri.file(defaultFilename),
-                filters: { 'Log Files': ['log', 'txt'] }
-            });
-            
-            if (uri) {
-                // Join log lines with newlines
-                const content = lines.join('\n');
-                
-                // Write file
-                await vscode.workspace.fs.writeFile(uri, Buffer.from(content, 'utf8'));
-                
-                // Show success notification
-                vscode.window.showInformationMessage(`Logs exported to ${uri.fsPath}`);
-                
-                console.log(`[PodLogsViewerPanel ${timestamp}] ✅ Exported ${lines.length} lines to ${uri.fsPath}`);
-            } else {
-                console.log(`[PodLogsViewerPanel ${timestamp}] Export cancelled by user`);
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(`[PodLogsViewerPanel ${timestamp}] ❌ Failed to export logs: ${errorMessage}`);
-            vscode.window.showErrorMessage(`Export failed: ${errorMessage}`);
         }
     }
 

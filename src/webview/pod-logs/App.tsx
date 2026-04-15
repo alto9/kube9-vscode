@@ -8,8 +8,11 @@ import { SearchBar } from './components/SearchBar';
 import { LoadingState, EmptyState, ErrorState } from './components/StateDisplay';
 import { PanelPreferences } from '../../utils/PreferencesManager';
 
-// Acquire VS Code API
+// Acquire VS Code API (expose for WebviewHeader Help — that module loads before this runs; lazy getVSCodeAPI reads window.vscodeApi)
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
+if (typeof window !== 'undefined' && vscode) {
+    (window as unknown as { vscodeApi: typeof vscode }).vscodeApi = vscode;
+}
 
 /**
  * Main App component for the Pod Logs Viewer webview.
@@ -243,22 +246,6 @@ export const App: React.FC = () => {
         }
     }, [preferences, sendMessage]);
 
-    const handleRefresh = React.useCallback(() => {
-        // Clear logs and reset to loading state when retrying
-        setLogs([]);
-        setLineCount(0);
-        setViewState('loading');
-        setErrorMessage('');
-        setAnnouncement('Logs refreshed');
-        sendMessage({ type: 'refresh' });
-    }, [sendMessage]);
-
-    const handleClear = React.useCallback(() => {
-        // Clear logs from display
-        setLogs([]);
-        setLineCount(0);
-    }, []);
-
     const handleScrollUp = React.useCallback(() => {
         // Disable follow mode when user scrolls up
         if (preferences && preferences.followMode) {
@@ -267,54 +254,6 @@ export const App: React.FC = () => {
             sendMessage({ type: 'toggleFollow', enabled: false });
         }
     }, [preferences, sendMessage]);
-
-    const handleCopy = React.useCallback(() => {
-        if (!preferences || logs.length === 0) {
-            console.log('[PodLogsApp] Copy requested but no logs or preferences available');
-            return;
-        }
-
-        // Parse and format logs based on timestamp preference
-        const formattedLines = logs.map(line => {
-            // Parse timestamp if present in format: 2024-12-29T10:30:45.123Z <content>
-            const timestampRegex = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)\s+(.*)$/;
-            const match = line.match(timestampRegex);
-            
-            if (match) {
-                const [, timestamp, content] = match;
-                // Include timestamp if preference is enabled
-                return preferences.showTimestamps ? `${timestamp} ${content}` : content;
-            }
-            
-            // No timestamp in log line, return as-is
-            return line;
-        });
-
-        // Announce copy action
-        setAnnouncement('Logs copied to clipboard');
-
-        // Send copy message to extension
-        sendMessage({
-            type: 'copy',
-            lines: formattedLines,
-            includeTimestamps: preferences.showTimestamps
-        });
-    }, [logs, preferences, sendMessage]);
-
-    const handleExport = React.useCallback(() => {
-        if (!initialState || !preferences) {
-            console.log('[PodLogsApp] Cannot export: initialState or preferences not available');
-            return;
-        }
-        
-        sendMessage({
-            type: 'export',
-            lines: logs,
-            podName: initialState.pod.name,
-            containerName: initialState.pod.container,
-            includeTimestamps: preferences.showTimestamps
-        });
-    }, [logs, initialState, preferences, sendMessage]);
 
     const handleSearchOpen = React.useCallback(() => {
         setSearchVisible(true);
@@ -352,23 +291,12 @@ export const App: React.FC = () => {
         setCurrentMatchIndex(prevIndex);
     }, [searchMatches, currentMatchIndex]);
 
-    // Keyboard shortcuts: Ctrl+F / Cmd+F to open search, Ctrl+R / Cmd+R to refresh, Ctrl+Shift+C / Cmd+Shift+C to copy
+    // Keyboard shortcut: Ctrl+F / Cmd+F to open search
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Ctrl+F / Cmd+F: Open search
             if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) {
                 e.preventDefault();
                 handleSearchOpen();
-            }
-            // Ctrl+R / Cmd+R: Refresh
-            if ((e.ctrlKey || e.metaKey) && e.key === 'r' && !e.shiftKey) {
-                e.preventDefault();
-                handleRefresh();
-            }
-            // Ctrl+Shift+C / Cmd+Shift+C: Copy
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'c') {
-                e.preventDefault();
-                handleCopy();
             }
         };
 
@@ -376,38 +304,16 @@ export const App: React.FC = () => {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [handleSearchOpen, handleRefresh, handleCopy]);
+    }, [handleSearchOpen]);
 
     // Build header actions
     const headerActions: WebviewHeaderAction[] = [];
     if (initialState && preferences) {
-        headerActions.push(
-            {
-                label: 'Refresh',
-                icon: 'codicon-refresh',
-                onClick: handleRefresh
-            },
-            {
-                label: 'Clear',
-                icon: 'codicon-clear-all',
-                onClick: handleClear
-            },
-            {
-                label: 'Copy',
-                icon: 'codicon-copy',
-                onClick: handleCopy
-            },
-            {
-                label: 'Export',
-                icon: 'codicon-save',
-                onClick: handleExport
-            },
-            {
-                label: 'Search',
-                icon: 'codicon-search',
-                onClick: handleSearchOpen
-            }
-        );
+        headerActions.push({
+            label: 'Search',
+            icon: 'codicon-search',
+            onClick: handleSearchOpen
+        });
     }
 
     const podTitle = initialState?.pod 
@@ -431,11 +337,6 @@ export const App: React.FC = () => {
                     onToggleTimestamps={handleToggleTimestamps}
                     onToggleFollow={handleToggleFollow}
                     onTogglePrevious={handleTogglePrevious}
-                    onRefresh={handleRefresh}
-                    onClear={handleClear}
-                    onCopy={handleCopy}
-                    onExport={handleExport}
-                    onSearch={handleSearchOpen}
                 />
             ) : null}
             {searchVisible && initialState && preferences && (
@@ -456,7 +357,7 @@ export const App: React.FC = () => {
             )}
             {viewState === 'loading' && <LoadingState />}
             {viewState === 'empty' && <EmptyState />}
-            {viewState === 'error' && <ErrorState error={errorMessage} onRetry={handleRefresh} />}
+            {viewState === 'error' && <ErrorState error={errorMessage} />}
             {viewState === 'loaded' && initialState && preferences && (
                 <LogDisplay
                     logs={logs}

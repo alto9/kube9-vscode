@@ -96,8 +96,8 @@ export const EmptyState: React.FC<EmptyStateProps> = () => {
 interface ErrorStateProps {
     /** Error message to display */
     error: string;
-    /** Callback function when retry button is clicked */
-    onRetry: () => void;
+    /** Optional retry action */
+    onRetry?: () => void;
 }
 
 /**
@@ -145,9 +145,11 @@ export const ErrorState: React.FC<ErrorStateProps> = ({ error, onRetry }) => {
         <div className="state-display error" style={containerStyle}>
             <span className="codicon codicon-error" style={iconStyle}></span>
             <div style={messageStyle}>{error}</div>
-            <button style={retryButtonStyle} onClick={onRetry}>
-                Retry
-            </button>
+            {onRetry ? (
+                <button type="button" style={retryButtonStyle} onClick={onRetry}>
+                    Retry
+                </button>
+            ) : null}
         </div>
     );
 };
