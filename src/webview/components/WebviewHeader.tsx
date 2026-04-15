@@ -42,8 +42,6 @@ function getVSCodeAPI(): any {
     return undefined;
 }
 
-const vscode = getVSCodeAPI();
-
 /**
  * Standardized header component for all webviews.
  * Provides consistent title (left) and actions menu (right) with optional help button.
@@ -54,8 +52,11 @@ export const WebviewHeader: React.FC<WebviewHeaderProps> = ({
     helpContext
 }) => {
     const handleHelpClick = () => {
-        if (vscode && helpContext) {
-            vscode.postMessage({
+        // Resolve on each click: acquireVsCodeApi runs in the app entry module; this module
+        // loads first so a module-level capture would always be undefined for pod-logs et al.
+        const api = getVSCodeAPI();
+        if (api && helpContext) {
+            api.postMessage({
                 type: 'openHelp',
                 context: helpContext
             });

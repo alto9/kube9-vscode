@@ -33,8 +33,10 @@ interface StreamParams {
 }
 
 export class LogsProvider {
-    private kubeConfig: k8s.KubeConfig;
-    private logApi: k8s.Log;
+    private kubeConfig!: k8s.KubeConfig;
+    private logApi!: k8s.Log;
+    /** Context this instance is pinned to; kubeconfig is reloaded from disk using this name before API calls. */
+    private readonly contextName: string;
     private currentAbortController: AbortController | null = null;
     private currentStream: Writable | null = null;
     private reconnectAttempts = 0;
@@ -48,9 +50,20 @@ export class LogsProvider {
      * @param contextName - The kubectl context name to use for API connections
      */
     constructor(contextName: string) {
-        this.kubeConfig = new k8s.KubeConfig();
-        this.kubeConfig.loadFromDefault();
-        this.kubeConfig.setCurrentContext(contextName);
+        this.contextName = contextName;
+        this.refreshKubeConfigFromDisk();
+    }
+
+    /**
+     * Reload kubeconfig from the default path and select this instance's context.
+     * Call before streaming and read operations so multiple concurrent viewers stay valid
+     * after `kubectl config use-context`, credential refresh, or other kubeconfig edits.
+     */
+    private refreshKubeConfigFromDisk(): void {
+        const kc = new k8s.KubeConfig();
+        kc.loadFromDefault();
+        kc.setCurrentContext(this.contextName);
+        this.kubeConfig = kc;
         this.logApi = new k8s.Log(this.kubeConfig);
     }
 
@@ -85,6 +98,8 @@ export class LogsProvider {
 
         // Stop any existing stream
         this.stopStream();
+
+        this.refreshKubeConfigFromDisk();
 
         // Store parameters for potential reconnection
         this.lastStreamParams = {
@@ -285,6 +300,7 @@ export class LogsProvider {
      * @throws Error if the pod cannot be fetched or accessed
      */
     public async getPodContainers(namespace: string, podName: string): Promise<string[]> {
+        this.refreshKubeConfigFromDisk();
         const coreApi = this.kubeConfig.makeApiClient(k8s.CoreV1Api);
         const pod = await coreApi.readNamespacedPod({
             name: podName,
@@ -332,6 +348,7 @@ export class LogsProvider {
         containerName: string
     ): Promise<boolean> {
         try {
+            this.refreshKubeConfigFromDisk();
             const coreApi = this.kubeConfig.makeApiClient(k8s.CoreV1Api);
             const pod = await coreApi.readNamespacedPod({
                 name: podName,
