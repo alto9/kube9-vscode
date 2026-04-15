@@ -1,3 +1,16 @@
+# [1.34.0](https://github.com/alto9/kube9-vscode/compare/v1.33.2...v1.34.0) (2026-04-15)
+
+
+### Bug Fixes
+
+* **pod-logs:** QA — kubeconfig refresh, dedupe collision, panel title, reveal ([5fb9665](https://github.com/alto9/kube9-vscode/commit/5fb9665dc77d8d384301b8884d3879ac1f401698)), closes [#130](https://github.com/alto9/kube9-vscode/issues/130)
+* **pod-logs:** trim broken header actions and fix Help ([6cdd617](https://github.com/alto9/kube9-vscode/commit/6cdd617251415e059123b56ed0db94fb53764ade))
+
+
+### Features
+
+* **pod-logs:** multi-instance viewers with per-panel state ([c192fc3](https://github.com/alto9/kube9-vscode/commit/c192fc3c6377cb5a2dfb58b791ab5dfdcd7f719a)), closes [#127](https://github.com/alto9/kube9-vscode/issues/127)
+
 ## [1.33.2](https://github.com/alto9/kube9-vscode/compare/v1.33.1...v1.33.2) (2026-03-30)
 
 
