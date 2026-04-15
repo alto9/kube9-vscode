@@ -1,6 +1,6 @@
 # Release Process
 
-kube9 uses automated versioning and publishing based on [Conventional Commits](https://www.conventionalcommits.org/).
+kube9 uses [Conventional Commits](https://www.conventionalcommits.org/) and [semantic-release](https://semantic-release.gitbook.io/) to compute versions, update the changelog, create git tags and GitHub releases, and publish the VSIX. **Publishing is manual:** merging to `main` runs CI only; a maintainer runs the Release workflow when ready to ship.
 
 ## Pre-Publish Checklist
 
@@ -18,10 +18,20 @@ Before your first release, verify the following are configured:
 - ✅ `publisher` exists on marketplace (verify at https://marketplace.visualstudio.com/manage/publishers/alto9)
 - ⚠️ `icon` field (optional but recommended - 128x128 PNG at root or media directory)
 
+### Maintainer checklist before clicking "Run workflow"
+
+- Confirm the **latest commit on the branch you are releasing** has a **green CI** run (or rely on the Release workflow’s own build and test steps).
+- Confirm repository **Actions** allows **workflow_dispatch** for this workflow (org/repo policy).
+- Confirm these **secrets** exist for Actions (manual runs use the same secrets as before):
+  - `GH_APP_ID` and `GH_APP_PRIVATE_KEY` (GitHub App used so semantic-release can push version commits and tags)
+  - `VSCE_PAT` (VS Code Marketplace)
+  - `OVSX_PAT` (Open VSX; optional if you skip that step when unset)
+  - `SLACK_BOT_TOKEN` (Slack notification; step is best-effort if missing)
+
 ### GitHub Secrets
 
 - ✅ `VSCE_PAT` configured in GitHub repository secrets
-- ✅ `GITHUB_TOKEN` (automatically provided by GitHub Actions)
+- ✅ `GITHUB_TOKEN` (automatically provided by GitHub Actions; semantic-release uses the GitHub App token from the workflow step)
 
 ### Local Testing
 
@@ -36,31 +46,43 @@ npm run package
 npm run release -- --dry-run
 ```
 
-## Automated Release Process
+## Manual release process
 
-When you merge commits to the `main` branch, the release workflow automatically:
+Releases are **not** triggered by merges. When you want to publish:
 
-1. Analyzes commit messages to determine the next version
-2. Updates `package.json` with the new version
-3. Generates/updates `CHANGELOG.md`
-4. Creates a git tag
-5. Publishes the VSCode extension to the marketplace
-6. Attaches the `.vsix` file to the GitHub release
+1. Merge work to `main` (or `master`) using conventional commits as usual.
+2. In GitHub: **Actions** → **Release** → **Run workflow**.
+3. Choose the **branch** to run from (typically `main`). That branch is what gets checked out, versioned, tagged, and published.
+
+The workflow then:
+
+1. Builds and tests the extension
+2. Runs **semantic-release**, which:
+   - Analyzes commit messages since the last release
+   - Determines the next version
+   - Updates `package.json` and `package-lock.json`
+   - Updates `CHANGELOG.md`
+   - Creates a git tag and GitHub release (with VSIX asset per `.releaserc.json`)
+3. Re-packages the VSIX at the new version
+4. Publishes to the VS Code Marketplace and Open VSX
+
+If there are no releasable commits, semantic-release exits without a new version; nothing is published to marketplaces.
 
 ## How It Works
 
 ### Commit Message Analysis
 
-The system uses semantic-release to analyze commit messages and determine version bumps:
+semantic-release analyzes commits (see `.releaserc.json` for exact rules). In general:
 
 - **feat**: New feature → Minor version bump (0.1.0 → 0.2.0)
 - **fix**: Bug fix → Patch version bump (0.1.0 → 0.1.1)
 - **feat!** or **BREAKING CHANGE**: Breaking change → Major version bump (0.1.0 → 1.0.0)
-- **docs**, **style**, **refactor**, **test**, **chore**, **ci**, **build**: No version bump
+- **chore**, **ci**, **docs** (per this repo’s `releaseRules`): Patch bump
+- **style**, **refactor**, **test**, **build**: Depends on analyzer defaults and custom rules; see `.releaserc.json`
 
 ### Release Workflow
 
-The `.github/workflows/release.yml` workflow runs on every push to `main`:
+The [.github/workflows/release.yml](.github/workflows/release.yml) workflow runs **only** when started manually:
 
 1. **Build**: Compiles the extension
 2. **Test**: Runs unit tests
@@ -72,7 +94,7 @@ The `.github/workflows/release.yml` workflow runs on every push to `main`:
    - Updates `CHANGELOG.md`
    - Creates a git tag and GitHub release with `.vsix` attached
 5. **Re-package extension (post-release)**: Creates `.vsix` file with the new version
-6. **Publish**: Publishes extension to marketplace using the versioned `.vsix` file
+6. **Publish**: Publishes extension to marketplaces using the versioned `.vsix` file
 
 ## Required Secrets
 
@@ -89,9 +111,9 @@ The following secrets are configured in GitHub repository settings:
   5. Name: `VSCE_PAT`, Value: (paste token)
 
 ### GITHUB_TOKEN
-- **Purpose**: Creates releases and tags (automatically provided by GitHub Actions)
+- **Purpose**: Used for steps that call `gh` with the default token; semantic-release uses the GitHub App installation token from the workflow
 - **Status**: ✅ Automatic
-- **Note**: No action needed, this is automatically available in all workflows
+- **Note**: The workflow generates a GitHub App token for semantic-release so it can push commits and tags
 
 ## Testing Releases
 
@@ -106,17 +128,15 @@ This shows:
 - Which commits would be included
 - What would be published
 
-## Manual Release (If Needed)
+## Local semantic-release (advanced)
 
-If you need to manually trigger a release or skip the automated process:
+To run semantic-release locally (requires appropriate credentials and a clean git state):
 
 ```bash
-# Set version manually (not recommended)
-npm version patch|minor|major
-
-# Or use semantic-release manually
 npm run release
 ```
+
+Avoid ad-hoc `npm version` unless you have a specific reason; the normal path is the Actions workflow.
 
 ## Skipping Releases
 
@@ -128,15 +148,14 @@ git commit -m "docs: update README [skip release]"
 
 ## Troubleshooting
 
-### Release didn't trigger
-- Check that commits use conventional commit format (`feat:`, `fix:`, etc.)
-- Verify you're pushing to `main` or `master` branch
-- Check GitHub Actions logs for errors
-- Ensure at least one commit requires a version bump (not just `docs:` or `chore:`)
+### Release did not publish a new version
+- semantic-release found nothing to release (no version-worthy commits since the last tag). Use `npm run release:dry-run` locally to preview.
+- Verify commits use conventional commit format where required (`feat:`, `fix:`, etc.)
+- Look for errors in the "Run semantic-release" step
 
 ### Version not updating
-- Ensure commit messages follow conventional format
-- Check that semantic-release can access the repository
+- Ensure commit messages follow conventional format and `.releaserc.json` rules
+- Check that semantic-release can push to the repository (GitHub App token and permissions)
 - Look for errors in the "Run semantic-release" step
 
 ### VSCode extension not publishing
@@ -153,27 +172,31 @@ git commit -m "docs: update README [skip release]"
 
 ## Examples
 
-### Patch Release (Bug Fix)
+### Patch release (after bug fix merged)
+
 ```bash
 git commit -m "fix(ui): resolve cluster view refresh issue"
 git push origin main
-# → Releases 0.1.0 → 0.1.1
+# After CI passes, run the Release workflow in Actions → Release → Run workflow (branch: main)
+# → e.g. 0.1.0 → 0.1.1
 ```
 
-### Minor Release (New Feature)
+### Minor release (new feature)
+
 ```bash
 git commit -m "feat(dashboard): add namespace resource metrics"
 git push origin main
-# → Releases 0.1.0 → 0.2.0
+# Run Release workflow when ready → e.g. 0.1.0 → 0.2.0
 ```
 
-### Major Release (Breaking Change)
+### Major release (breaking change)
+
 ```bash
 git commit -m "feat!: redesign cluster connection API
 
 BREAKING CHANGE: Cluster connection method has changed"
 git push origin main
-# → Releases 0.1.0 → 1.0.0
+# Run Release workflow when ready → e.g. 0.1.0 → 1.0.0
 ```
 
 ## First-Time Publishing Verification
@@ -188,23 +211,12 @@ Before the first publish to marketplace:
 
 ### Repository Configuration
 
-1. **GitHub secrets configured**: `VSCE_PAT` in repository settings
-2. **Branch protection**: Ensure `main`/`master` branch is protected
-3. **Workflow permissions**: Verify GitHub Actions has permission to create releases and push tags
+1. **GitHub secrets configured**: `VSCE_PAT`, GitHub App secrets, and others listed above
+2. **Branch protection**: Ensure `main`/`master` branch is protected as appropriate
+3. **Workflow permissions**: Verify GitHub Actions has permission to create releases; semantic-release uses the GitHub App for pushes
 
 ## Configuration Files
 
 - `.releaserc.json`: Semantic-release configuration
-- `.github/workflows/release.yml`: GitHub Actions workflow
+- `.github/workflows/release.yml`: GitHub Actions workflow (manual dispatch)
 - `CHANGELOG.md`: Auto-generated changelog
-
-
-
-
-
-
-
-
-
-
-
