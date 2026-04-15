@@ -8,8 +8,11 @@ import { KubectlError, KubectlErrorType } from '../../../kubernetes/KubectlError
 import * as kubectlContextModule from '../../../utils/kubectlContext';
 import * as vscode from '../../mocks/vscode';
 import { ClusterCustomizationService } from '../../../services/ClusterCustomizationService';
+import { resetKubernetesApiClient } from '../../../kubernetes/apiClient';
 
-suite('ClusterTreeProvider Test Suite', () => {
+suite('ClusterTreeProvider Test Suite', function () {
+    // CI can exceed Mocha's default 2s when the tree triggers background work; connectivity is mocked in setup.
+    this.timeout(10000);
     let provider: ClusterTreeProvider;
     let originalGetNamespaces: typeof NamespaceCommands.getNamespaces;
     let originalCheckMultipleConnectivity: typeof ClusterConnectivity.checkMultipleConnectivity;
@@ -34,6 +37,8 @@ suite('ClusterTreeProvider Test Suite', () => {
     };
 
     setup(() => {
+        resetKubernetesApiClient();
+
         provider = new ClusterTreeProvider();
         
         // Save original methods for restoration
@@ -41,6 +46,13 @@ suite('ClusterTreeProvider Test Suite', () => {
         originalCheckMultipleConnectivity = ClusterConnectivity.checkMultipleConnectivity;
         originalGetCurrentNamespace = kubectlContextModule.getCurrentNamespace;
         originalGetNamespaceForContext = kubectlContextModule.getNamespaceForContext;
+
+        // Default: never hit real clusters from lazy connectivity checks (flaky/slow in CI).
+        ClusterConnectivity.checkMultipleConnectivity = async (
+            _kubeconfigPath: string,
+            contextNames: string[]
+        ): Promise<ConnectivityResult[]> =>
+            contextNames.map(() => ({ status: ClusterStatus.Connected }));
         
         // Mock getCurrentNamespace to return null by default (no active namespace)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,12 +97,6 @@ suite('ClusterTreeProvider Test Suite', () => {
 
     suite('2-Level Structure Tests', () => {
         test('Should return clusters at root level', async () => {
-            // Mock connectivity check to avoid waiting
-            ClusterConnectivity.checkMultipleConnectivity = async () => [
-                { status: ClusterStatus.Connected },
-                { status: ClusterStatus.Connected }
-            ];
-
             provider.setKubeconfig(mockKubeconfig);
             
             const items = await provider.getChildren();
