@@ -1,6 +1,6 @@
 {
-  "version": "1.5.2",
-  "description": "Canonical skill registry for agent and command execution. Agents and commands should resolve skill IDs from assignment maps below, then execute via the skill entry script_path and usage.",
+  "version": "1.5.5",
+  "description": "Canonical skill registry for agent and command execution. Agents and commands should resolve skill IDs from assignment maps below, then execute via the skill entry script_path and usage (paths are relative to the Cursor workspace root, e.g. .cursor/skills/... after Forge setup for Cursor). Skills installed only under ~/.cursor/skills are out of band for Forge unless copied into the project.",
   "canonical_categories": [
     "git_flow"
   ],
@@ -13,7 +13,6 @@
       "script_path": ".cursor/skills/create-issue-branch/scripts/create-issue-branch.sh",
       "usage": ".cursor/skills/create-issue-branch/scripts/create-issue-branch.sh (<owner/repo> <branch-name> <issue-number> <root-branch> | <branch-name> <issue-number> [root-branch])",
       "primary_consumers": [
-        "tech_writer",
         "engineer"
       ]
     },
@@ -35,6 +34,17 @@
       "retag": "github-issue-branches",
       "script_path": ".cursor/skills/get-issue-branches/scripts/get-issue-branches.sh",
       "usage": ".cursor/skills/get-issue-branches/scripts/get-issue-branches.sh (<owner/repo> <issue-number> | <issue-number>)",
+      "primary_consumers": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "resolve-issue-parentage",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "github-issue-parentage",
+      "script_path": ".cursor/skills/resolve-issue-parentage/scripts/resolve-issue-parentage.sh",
+      "usage": ".cursor/skills/resolve-issue-parentage/scripts/resolve-issue-parentage.sh (<owner/repo> <issue-number> | <issue-number>)",
       "primary_consumers": [
         "tech_writer",
         "engineer"
@@ -70,8 +80,7 @@
       "script_path": ".cursor/skills/push-branch/scripts/push-branch.sh",
       "usage": ".cursor/skills/push-branch/scripts/push-branch.sh",
       "primary_consumers": [
-        "engineer",
-        "tech_writer"
+        "engineer"
       ]
     },
     {
@@ -99,6 +108,29 @@
         "tech_writer",
         "engineer"
       ]
+    },
+    {
+      "id": "gh-pr-review",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "github-pr-review",
+      "script_path": ".cursor/skills/gh-pr-review/scripts/gh-pr-review.sh",
+      "usage": ".cursor/skills/gh-pr-review/scripts/gh-pr-review.sh (<owner/repo> <pr-number> <approve|request-changes|comment> <body> | <pr-number> <approve|request-changes|comment> <body>)",
+      "primary_consumers": [
+        "quality_assurance"
+      ]
+    },
+    {
+      "id": "gh-project-set-status",
+      "status": "active",
+      "category": "git_flow",
+      "retag": "github-project-status",
+      "script_path": ".cursor/skills/gh-project-set-status/scripts/gh-project-set-status.sh",
+      "usage": ".cursor/skills/gh-project-set-status/scripts/gh-project-set-status.sh <github_board_url> <owner/repo> <issue-number> <status-name>",
+      "primary_consumers": [
+        "engineer",
+        "quality_assurance"
+      ]
     }
   ],
   "agent_assignments": {
@@ -107,20 +139,23 @@
       "pull-milestone-issues"
     ],
     "tech_writer": [
-      "create-issue-branch",
-      "push-branch",
+      "resolve-issue-parentage",
       "pull-milestone-issues",
-      "get-issue-branches",
       "link-subissue-to-issue"
     ],
     "engineer": [
+      "resolve-issue-parentage",
       "create-issue-branch",
       "assign-issue-to-me",
       "get-issue-branches",
+      "gh-project-set-status",
       "commit",
       "push-branch"
     ],
-    "quality_assurance": []
+    "quality_assurance": [
+      "gh-pr-review",
+      "gh-project-set-status"
+    ]
   },
   "command_assignments": {
     "architect-this": [],
@@ -128,10 +163,19 @@
       "pull-milestones",
       "pull-milestone-issues"
     ],
-    "refine-issue": [],
-    "build-from-github": [],
+    "refine-issue": [
+      "resolve-issue-parentage"
+    ],
+    "build-from-github": [
+      "resolve-issue-parentage",
+      "get-issue-branches",
+      "create-issue-branch",
+      "gh-project-set-status"
+    ],
     "build-from-pr-review": [],
-    "review-pr": []
+    "review-pr": [
+      "gh-pr-review"
+    ]
   },
   "archived_legacy_removed": [
     {
@@ -221,11 +265,6 @@
     },
     {
       "id": "gh-pr-checkout",
-      "replaced_by": "available tools",
-      "reason": "Removed; agents use available tools (MCP, etc.) for GitHub operations."
-    },
-    {
-      "id": "gh-pr-review",
       "replaced_by": "available tools",
       "reason": "Removed; agents use available tools (MCP, etc.) for GitHub operations."
     },

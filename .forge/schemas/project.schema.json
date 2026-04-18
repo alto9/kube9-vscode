@@ -46,6 +46,10 @@
       "type": "string",
       "minLength": 1,
       "description": "GitHub Projects (v2) board URL, e.g. https://github.com/orgs/org-name/projects/3 — not the issues list URL."
+    },
+    "doc_repo": {
+      "type": "string",
+      "description": "Optional: name of a folder in the Cursor multi-root workspace that contains the documentation repository (sibling of the application repo). Used by /build-from-github for auto-documentation."
     }
   }
 }
