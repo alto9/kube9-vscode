@@ -117,16 +117,16 @@ jobs:
       - name: Build Slack payload
         if: always() && hashFiles('.semantic-release-success') != ''
         run: |
-          jq -n --slurpfile meta release-meta.json '
+          jq -n --arg repo "${{ github.event.repository.name }}" --slurpfile meta release-meta.json '
             ($meta[0]) as $m |
             (($m.body) | if length > 2800 then .[0:2800] + "\n\n_…truncated_" else . end) as $bodySafe |
             {
               channel: "#alto9-tech-team",
-              text: ("Forge " + $m.tag_name + " released"),
+              text: ($repo + " " + $m.tag_name + " released"),
               blocks: [
                 {
                   type: "header",
-                  text: {type: "plain_text", text: ("Forge " + $m.tag_name), emoji: true}
+                  text: {type: "plain_text", text: ($repo + " " + $m.tag_name), emoji: true}
                 },
                 {
                   type: "section",
