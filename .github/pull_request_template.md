@@ -35,6 +35,7 @@ Fixes #(issue)
 
 ## Checklist
 
+- [ ] Telemetry: if adding/changing **product telemetry** ([`docs/telemetry-event-catalog.md`](../docs/telemetry-event-catalog.md)), catalog and governance aligned per [CONTRIBUTING](../CONTRIBUTING.md#product-telemetry-and-event-catalog-prs)
 - [ ] My code follows the code style of this project
 - [ ] I have updated the documentation accordingly
 - [ ] I have added tests to cover my changes
