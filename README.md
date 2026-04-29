@@ -45,8 +45,8 @@ Kube9 VS Code provides a clean separation between local development tooling and 
 - Uses your kubeconfig to interact with clusters
 - All UI is generated locally in VS Code webviews
 - Direct kubectl operations for resource management
-- No data sent to external servers
-- Your kubeconfig never leaves your machine
+- Cluster credentials and API payloads are not uploaded for routine management; your kubeconfig stays on your machine
+- Optional product telemetry (when enabled in the extension) is separate from cluster access and is limited to allowlisted, non-identifying events—see [Privacy and product telemetry](#privacy-and-product-telemetry)
 
 **Enhanced with kube9-operator (Optional):**
 - Install [kube9-operator](../kube9-operator) in your cluster for enhanced monitoring
@@ -302,16 +302,27 @@ npm run watch
 # Press F5 in VS Code to launch Extension Development Host
 ```
 
+## Privacy and product telemetry
+
+Kube9 may collect **optional product telemetry** so we can understand **which IDE features are used**, **coarse success vs failure of workflows**, and **error categories**—for aggregate product insight, not per-cluster debugging. Telemetry is **not required** for core cluster management.
+
+- **Your consent**: When telemetry is active, it follows **VS Code and marketplace telemetry settings**; your global IDE choices remain authoritative.
+- **What we allow**: Only **allowlisted semantic events** (for example command or feature identifiers, webview or dashboard opens, and coarse outcomes where those can be derived **without** logging arguments). Error-related telemetry uses **enumerated categories** aligned with the extension’s error taxonomy—not raw cluster content.
+- **What we never send as telemetry**: kubeconfig paths; cluster, context, namespace, or resource names or UIDs; manifest or YAML/spec content; log lines from clusters; Kubernetes API response bodies; or free-form strings from your workspace paths or documents. **Cluster-identifying data is not included** in product telemetry payloads (see `.forge/operations/observability.md` and `.forge/operations/security.md` in this repository).
+- **Planned backend**: The Forge contract describes a shared analytics backend (for example GA4) for **enumerated fields only**; local output channels and logs remain the default for troubleshooting.
+- **Event catalog**: The maintained list of telemetry events and fields is tracked with the M1.1 governance work—for example [issue #137](https://github.com/alto9/kube9-vscode/issues/137)—and will be linked here once published.
+
+Until explicit telemetry is shipped in this extension, the above describes **intended behavior** under the project contracts; treat wording as “when enabled” if you are validating against a build that has not yet implemented instrumentation.
+
 ## Security
 
 For security concerns, please see our [Security Policy](SECURITY.md).
 
 ### Extension Security
-- All data stays on your machine
-- Uses your kubeconfig for cluster access
-- No external API calls
-- No data collection
-- Your kubeconfig never leaves VS Code
+- Local-first cluster access: kubeconfig and kubectl-driven operations stay on your machine
+- Uses your kubeconfig for cluster access; it is not transmitted as part of optional product telemetry (see [Privacy and product telemetry](#privacy-and-product-telemetry))
+- No upload of manifests, resource names, or API bodies for product telemetry when instrumentation is enabled under the allowlisted rules above
+- Sensitive operations require explicit commands and VS Code permission prompts where applicable
 
 ### With kube9-operator (Optional)
 When using the kube9-operator:

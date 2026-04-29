@@ -54,6 +54,14 @@
     "out",
     "dist",
     "**/*.d.ts"
+  ],
+  "overrides": [
+    {
+      "files": ["src/telemetry/**/*.ts"],
+      "rules": {
+        "kube9-telemetry-payload-guard": "error"
+      }
+    }
   ]
 }
 
