@@ -60,6 +60,8 @@ import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
 import { HelpController, registerHelpMenuCommand, registerContextMenuHelpCommands } from './help/HelpController';
 import { HelpStatusBar } from './help/HelpStatusBar';
+import { ProductTelemetryEventName } from './telemetry/productTelemetry';
+import { registerExtensionProductTelemetry } from './telemetry/vscodeExtensionTelemetry';
 
 
 /**
@@ -198,6 +200,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Initialize global state management
         GlobalState.initialize(context);
+
+        const productTelemetry = registerExtensionProductTelemetry(context);
         
         // Check if tutorial has been completed
         const tutorialCompleted = context.globalState.get<boolean>(
@@ -397,6 +401,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             );
         });
         context.subscriptions.push(contextChangeSubscription);
+        
+        productTelemetry.emit(ProductTelemetryEventName.ExtensionActivated, { outcome: 'success' });
         
         console.log('kube9 extension activated successfully!');
         
