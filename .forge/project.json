@@ -1,6 +1,6 @@
 {
   "name": "kube9-vscode",
-  "description": "VS Code extension for local-first Kubernetes management with tree navigation, YAML workflows, logs/events, port-forwarding, Helm tooling, and ArgoCD integration.",
+  "description": "VS Code extension for local-first Kubernetes management with tree navigation, YAML workflows, logs/events, port-forwarding, Helm tooling, and ArgoCD integration—the primary kube9-desktop IDE surface. Product roadmap includes optional privacy-preserving usage/reliability telemetry (see .forge contracts), never required for baseline cluster workflows.",
   "type": "opensource",
   "metadata_path": ".forge",
   "code_path": ".",

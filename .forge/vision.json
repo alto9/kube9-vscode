@@ -2,13 +2,13 @@
   "vision": {
     "title": "Kube9 VS Code: Kubernetes management made simple inside the IDE",
     "mission": "Help developers and platform engineers operate Kubernetes safely and quickly from VS Code by combining visual cluster workflows, GitOps visibility, and optional operator-powered intelligence.",
-    "core_purpose": "Kube9 VS Code exists to remove Kubernetes context switching and CLI friction. It provides an IDE-native control plane for everyday cluster tasks (navigation, inspect, edit, apply, logs, events, port-forwarding, and ArgoCD actions) while preserving user control through local-first operation and kubectl-native access.",
+    "core_purpose": "Kube9 IDE extensions (including the kube9-vscode marketplace extension—the primary kube9-desktop surface today) remove Kubernetes context switching and CLI friction. They provide an IDE-native control plane for everyday cluster tasks (navigation, inspect, edit, apply, logs, events, port-forwarding, and ArgoCD actions) while preserving user control through local-first operation and kubectl-native access.",
     "key_architecture": "Dual-mode product model: (1) strong standalone extension value with local webviews and direct kubectl/API interactions using kubeconfig, and (2) progressive enhancement when kube9-operator is present, unlocking operated dashboards, richer status, and AI recommendation surfaces tied to free/pro operator tiers.",
-    "last_validated": "2026-03-07",
+    "last_validated": "2026-04-29",
     "long_term_vision": {
       "strategic_goals": {
-        "now": "Win as a trusted open-source VS Code extension for daily Kubernetes operations: reliable multi-cluster workflows, fast resource interactions, strong onboarding/tutorials, and practical GitOps visibility through ArgoCD integration.",
-        "next": "Make operated mode the default path for teams that need deeper insights: clearer free-vs-pro value boundaries, better recommendation quality, and tighter day-2 workflows that connect troubleshooting, events, and remediation actions.",
+        "now": "Win as a trusted open-source VS Code extension for daily Kubernetes operations: reliable multi-cluster workflows, fast resource interactions, strong onboarding/tutorials, and practical GitOps visibility through ArgoCD integration—with privacy-preserving product telemetry where enabled (feature usage and coarse error signals, never cluster payloads or identifiable customer data).",
+        "next": "Make operated mode the default path for teams that need deeper insights: clearer free-vs-pro value boundaries, better recommendation quality, and tighter day-2 workflows that connect troubleshooting, events, and remediation actions; use telemetry-informed reliability and funnel insight to prioritize UX and stability work.",
         "later": "Become the developer-facing front door of the broader Kube9 ecosystem across interfaces and environments, with proactive intelligence and policy-aware guidance that helps teams prevent incidents rather than react to them."
       }
     },
@@ -17,6 +17,7 @@
       "Simple by default, powerful when needed: core workflows must be immediately useful before advanced capabilities are introduced.",
       "Progressive enhancement: free/standalone experience is complete; operator-powered and pro capabilities add depth without breaking baseline value.",
       "Local-first trust model: kubeconfig and operational control remain with the user; avoid unnecessary external dependencies for core tasks.",
+      "Privacy-preserving usage and reliability telemetry: optional telemetry (aligned with IDE consent settings) informs what features succeed and where errors cluster, without shipping cluster-identifying data, manifests, kubeconfig paths, resource names, or customer content.",
       "Actionable intelligence over noisy telemetry: insights should prioritize clear severity, direct remediation, and measurable user impact.",
       "GitOps-aware operations: support modern deployment workflows (ArgoCD) as a first-class part of cluster management."
     ],
