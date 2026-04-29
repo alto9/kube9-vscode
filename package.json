@@ -721,7 +721,7 @@
     "test:unit": "node --experimental-require-module node_modules/.bin/mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/src/test/**/*.test.js' --grep '@requires-k8s' --invert",
     "test:integration": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/tests/**/*.test.js'",
     "test:all": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/{src/test,tests}/**/*.test.js'",
-    "lint": "eslint src --ext ts",
+    "lint": "eslint src --ext ts --rulesdir eslint-rules",
     "prepackage": "npm run build",
     "package": "vsce package",
     "release": "semantic-release",

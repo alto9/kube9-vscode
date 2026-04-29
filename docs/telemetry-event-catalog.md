@@ -3,6 +3,7 @@
 **Canonical enumeration** for [kube9-vscode](https://github.com/alto9/kube9-vscode) product telemetry (VS Code extension / kube9-desktop aligned surfaces).
 
 - **Governance contracts:** [.forge/operations/observability.md](../.forge/operations/observability.md), [.forge/operations/security.md](../.forge/operations/security.md)
+- **Lint / forbid-list guardrails:** [telemetry-lint-guardrails.md](./telemetry-lint-guardrails.md) (runs via `npm run lint`)
 - **Upstream work:** Planned instrumentation façade and emitted events are tracked under [M1.2 (#133)](https://github.com/alto9/kube9-vscode/issues/133). Implementations MUST only emit events that appear in the **Shipped** table below (or merge an update to this document in the same change).
 
 ## Version
@@ -13,7 +14,7 @@
 
 ## Shipped events
 
-Events that exist in **`main`** at this revision (`v1`): **none** — a repository-wide search finds no telemetry façade or emit call sites yet. Future PRs MUST add rows here **in the same PR** that introduces the corresponding emit path.
+Events that exist in **`main`** at this revision (`v1`): **none** — catalog rows remain reserved until the first **Shipped** emit lands alongside this file. A governance **`src/telemetry/`** façade (lint scope + typed stub) may exist without changing that fact.
 
 Columns:
 

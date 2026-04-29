@@ -119,7 +119,7 @@ We welcome feature suggestions! Use the [feature request template](.github/ISSUE
 If your change introduces or modifies **product telemetry** (allowlisted semantic events, VS Code telemetry API usage dedicated to aggregated product insight, or payload types for same):
 
 1. Update **[`docs/telemetry-event-catalog.md`](docs/telemetry-event-catalog.md)** in the **same PR** whenever you add/remove/rename an event key or allowed field.
-2. Treat **[`.forge/operations/observability.md`](.forge/operations/observability.md)** **Never send** list as authoritative: no kubeconfig paths, cluster/resource-identifying strings, manifests, logs, API bodies, or unconstrained user/workspace strings.
+2. Treat **[`.forge/operations/observability.md`](.forge/operations/observability.md)** **Never send** list as authoritative: no kubeconfig paths, cluster/resource-identifying strings, manifests, logs, API bodies, or unconstrained user/workspace strings. Automated guardrails for the façade tree are described in **[`docs/telemetry-lint-guardrails.md`](docs/telemetry-lint-guardrails.md)** (see also `npm run lint`).
 3. Request review from **at least one maintainer** familiar with telemetry governance (forbid-list compliance, enumerated payloads only).
 4. Do not mark events as shipped in the catalog unless corresponding emit code merges in the **same revision**—otherwise label as **Proposed** in [`docs/telemetry-event-catalog.md`](docs/telemetry-event-catalog.md).
 
