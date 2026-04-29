@@ -762,11 +762,22 @@ export const commands = {
 };
 
 /**
- * Mock env API
+ * Mock env API — telemetry consent aligns with vscodeExtensionTelemetry and unit tests.
  */
 const openedUris: Uri[] = [];
 
+let mockIsTelemetryEnabled = true;
+
 export const env = {
+    get isTelemetryEnabled(): boolean {
+        return mockIsTelemetryEnabled;
+    },
+    /** Test-only toggle for vscode.env.isTelemetryEnabled (defaults to enabled). */
+    _mockSetTelemetryEnabled(enabled: boolean): void {
+        mockIsTelemetryEnabled = enabled;
+    },
+    machineId: 'test-machine-id',
+    sessionId: 'test-session-id',
     openExternal: async (target: Uri): Promise<boolean> => {
         openedUris.push(target);
         return Promise.resolve(true);
@@ -774,7 +785,7 @@ export const env = {
     _clearOpenedUris: (): void => {
         openedUris.length = 0;
     },
-    _getOpenedUris: (): Uri[] => {
+    _getOpenedUris(): Uri[] {
         return [...openedUris];
     },
     _addOpenedUri: (uri: Uri): void => {

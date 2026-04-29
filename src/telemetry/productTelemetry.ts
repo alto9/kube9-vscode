@@ -8,8 +8,8 @@
  * Use only {@link ProductTelemetryEventName} and {@link ProductTelemetryProperties};
  * never pass kubeconfig or cluster identifiers, resource names, manifests, kubectl
  * output, workspace paths, or raw `Error.message`. Transport is injected via
- * {@link ProductTelemetryReporter} (mock in unit tests; VS Code reporter in sibling
- * work). No network I/O here.
+ * {@link ProductTelemetryReporter} (mocks in unit tests; `@vscode/extension-telemetry` wiring via
+ * `vscodeExtensionTelemetry.ts`). No network I/O here.
  *
  * Automated import enforcement: [#138](https://github.com/alto9/kube9-vscode/issues/138).
  * Event catalog alignment: [#137](https://github.com/alto9/kube9-vscode/issues/137).
