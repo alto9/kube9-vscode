@@ -22,7 +22,7 @@ If a pattern is safe but the rule rejects it:
 
 - Does **not** analyze string concatenation (`a + b`), member access on user objects, or data flow across functions — extend rules iteratively (see [#138](https://github.com/alto9/kube9-vscode/issues/138)).
 - Does **not** yet cover call sites outside `src/telemetry/`; M1.2 PRs should tighten overrides once the façade is wired.
-- **err**/ **error** identifier ban is naming-heuristic; use specific names like `failureCategory` for allowed args.
+- The **err** / **error** identifier ban is naming-heuristic; use specific names like `failureCategory` for allowed args.
 
 ## Related docs
 
