@@ -13,7 +13,7 @@ Purpose: Understand **which IDE features are used**, **successful vs failed work
 
 Contracts:
 
-- **Allowlisted semantic events**: command IDs / feature areas, webview/dashboard opens, coarse success/failure for operations where safe to derive without logging arguments.
+- **Allowlisted semantic events**: command IDs / feature areas, webview/dashboard opens, coarse success/failure for operations where safe to derive without logging arguments. The **`main` enumeration of record** is **[`docs/telemetry-event-catalog.md`](../../docs/telemetry-event-catalog.md)** (maintainer-maintained catalog and review workflow). Planned instrumentation façade work ([M1.2 (#133)](https://github.com/alto9/kube9-vscode/issues/133)) MUST only emit cataloged entries from that document alongside their allowed payload shapes.
 - **Error signals**: enumerated error categories (aligned with extension error taxonomy), not raw stack traces with paths unless redacted upstream.
 - **Never send**: kubeconfig paths, cluster/context/namespace/resource names or UIDs, manifest/YAML/spec content, log lines from clusters, kube API response bodies, or free-form strings from user workspaces.
 

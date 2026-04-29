@@ -35,6 +35,7 @@ Fixes #(issue)
 
 ## Checklist
 
+- [ ] Telemetry: if adding/changing **product telemetry** ([`docs/telemetry-event-catalog.md`](../docs/telemetry-event-catalog.md)), catalog updated as needed, forbid-list / lint rules verified for new emit paths ([`docs/telemetry-lint-guardrails.md`](../docs/telemetry-lint-guardrails.md), [CONTRIBUTING](../CONTRIBUTING.md#product-telemetry-and-event-catalog-prs))
 - [ ] My code follows the code style of this project
 - [ ] I have updated the documentation accordingly
 - [ ] I have added tests to cover my changes
