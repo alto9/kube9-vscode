@@ -4,6 +4,7 @@
 
 - **Governance contracts:** [.forge/operations/observability.md](../.forge/operations/observability.md), [.forge/operations/security.md](../.forge/operations/security.md)
 - **Lint / forbid-list guardrails:** [telemetry-lint-guardrails.md](./telemetry-lint-guardrails.md) (runs via `npm run lint`)
+- **M1.4 QA checklist:** [product-telemetry-qa.md](./product-telemetry-qa.md) (forbid-list verification + telemetry-off smoke)
 - **Implementation:** [`src/telemetry/productTelemetry.ts`](../src/telemetry/productTelemetry.ts) (event names + bounded payload types), [`src/telemetry/vscodeExtensionTelemetry.ts`](../src/telemetry/vscodeExtensionTelemetry.ts) (transport when `telemetryInstrumentationConnectionString` is set and consent is on)
 
 ## Version
