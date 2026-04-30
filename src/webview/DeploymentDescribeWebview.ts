@@ -3,6 +3,7 @@ import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { transformDeploymentData, DeploymentDescribeData } from './deploymentDataTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Message sent from webview to extension.
@@ -118,6 +119,7 @@ export class DeploymentDescribeWebview {
         const title = `Deployment / ${deploymentName}`;
 
         // Create a new webview panel with the SHARED panel ID
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',  // Use the shared panel ID
             title,

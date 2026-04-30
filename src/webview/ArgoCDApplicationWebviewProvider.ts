@@ -5,6 +5,7 @@ import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { ArgoCDApplication, ArgoCDNotFoundError, ArgoCDPermissionError, SyncStatus, HealthStatus } from '../types/argocd';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Message types sent from webview to extension.
@@ -94,6 +95,7 @@ export class ArgoCDApplicationWebviewProvider {
         const title = `ArgoCD: ${applicationName}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('argocd_application');
         const panel = vscode.window.createWebviewPanel(
             'kube9.argocdApplication',
             title,

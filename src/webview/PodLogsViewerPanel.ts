@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import * as vscode from 'vscode';
 import { LogsProvider } from '../providers/LogsProvider';
 import { PreferencesManager } from '../utils/PreferencesManager';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InitialState, PodInfo } from '../types/messages';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
@@ -200,6 +201,7 @@ export class PodLogsViewerPanel {
     ): Promise<void> {
         const panelTitle = PodLogsViewerPanel.formatPanelTitle(podName, namespace, container);
 
+        notifyMajorWebviewOpened('pod_logs');
         const panel = vscode.window.createWebviewPanel(
             'kube9PodLogs',
             panelTitle,

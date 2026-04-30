@@ -8,6 +8,7 @@ import { WebviewMessage } from '../types/webviewMessages';
 import { getClusterTreeProvider, getYAMLEditorManager } from '../extension';
 import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { PodHealthAnalyzer } from '../kubernetes/PodHealthAnalyzer';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { calculateHealthStatus } from '../kubernetes/HealthCalculator';
 import { WorkloadType, WorkloadEntry } from '../types/workloadData';
 
@@ -99,6 +100,7 @@ export class NamespaceWebview {
             : `All Namespaces - ${namespaceContext.clusterName}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('namespace_explorer');
         const panel = vscode.window.createWebviewPanel(
             'kube9Namespace',
             title,

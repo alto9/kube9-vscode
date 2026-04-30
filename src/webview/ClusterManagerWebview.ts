@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ClusterCustomizationService, ClusterCustomizationConfig } from '../services/ClusterCustomizationService';
 import { KubeconfigParser, ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
 import { getHelpController } from '../extension';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Message sent from webview to extension requesting cluster list.
@@ -256,6 +257,7 @@ export class ClusterManagerWebview {
         this.extensionContext = extensionContext;
 
         // Create webview panel
+        notifyMajorWebviewOpened('cluster_manager');
         this.panel = vscode.window.createWebviewPanel(
             'kube9.clusterManager',
             'Cluster Organizer',

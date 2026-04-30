@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { OperatorStatusClient } from '../services/OperatorStatusClient';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Health report data structure sent to webview.
@@ -61,6 +62,7 @@ export class HealthReportPanel {
         }
 
         // Otherwise, create a new panel
+        notifyMajorWebviewOpened('operator_health_report');
         const panel = vscode.window.createWebviewPanel(
             'kube9.operatorHealthReport',
             'Kube9 Operator Health',

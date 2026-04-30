@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { registerInstrumentedKube9Command } from '../telemetry/instrumentKube9Command';
 
 export class HelpController {
   private static readonly DOCS_URL = 'https://alto9.github.io/kube9/';
@@ -8,9 +9,9 @@ export class HelpController {
   
   public registerCommands(): void {
     this.context.subscriptions.push(
-      vscode.commands.registerCommand('kube9.openDocumentation', this.openDocumentation.bind(this)),
-      vscode.commands.registerCommand('kube9.reportIssue', this.reportIssue.bind(this)),
-      vscode.commands.registerCommand('kube9.viewKeyboardShortcuts', this.viewKeyboardShortcuts.bind(this))
+      registerInstrumentedKube9Command('kube9.openDocumentation', this.openDocumentation.bind(this)),
+      registerInstrumentedKube9Command('kube9.reportIssue', this.reportIssue.bind(this)),
+      registerInstrumentedKube9Command('kube9.viewKeyboardShortcuts', this.viewKeyboardShortcuts.bind(this))
     );
   }
   
@@ -97,7 +98,7 @@ interface HelpMenuOption extends vscode.QuickPickItem {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function registerHelpMenuCommand(context: vscode.ExtensionContext, _helpController: HelpController): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('kube9.showHelpMenu', async () => {
+    registerInstrumentedKube9Command('kube9.showHelpMenu', async () => {
       const selected = await vscode.window.showQuickPick<HelpMenuOption>([
         {
           label: '$(book) Documentation',
@@ -150,19 +151,19 @@ export function registerHelpMenuCommand(context: vscode.ExtensionContext, _helpC
  */
 export function registerContextMenuHelpCommands(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
-    vscode.commands.registerCommand('kube9.helpForPods', async () => {
+    registerInstrumentedKube9Command('kube9.helpForPods', async () => {
       await vscode.env.openExternal(
         vscode.Uri.parse('https://alto9.github.io/kube9/resources/pods/')
       );
     }),
     
-    vscode.commands.registerCommand('kube9.helpForDeployments', async () => {
+    registerInstrumentedKube9Command('kube9.helpForDeployments', async () => {
       await vscode.env.openExternal(
         vscode.Uri.parse('https://alto9.github.io/kube9/resources/deployments/')
       );
     }),
     
-    vscode.commands.registerCommand('kube9.helpForServices', async () => {
+    registerInstrumentedKube9Command('kube9.helpForServices', async () => {
       await vscode.env.openExternal(
         vscode.Uri.parse('https://alto9.github.io/kube9/resources/services/')
       );

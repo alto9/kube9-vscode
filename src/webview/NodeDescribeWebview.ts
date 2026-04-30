@@ -4,6 +4,7 @@ import { PodCommands } from '../kubectl/PodCommands';
 import { transformNodeData, NodeDescribeData } from './nodeDescribeTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Message sent from webview to extension.
@@ -107,6 +108,7 @@ export class NodeDescribeWebview {
         const title = `Node / ${nodeName}`;
 
         // Create a new webview panel with the SHARED panel ID
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',  // Use the shared panel ID
             title,

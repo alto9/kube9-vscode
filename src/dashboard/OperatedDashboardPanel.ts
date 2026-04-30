@@ -7,6 +7,7 @@ import { DashboardRefreshManager } from './RefreshManager';
 import { getOperatorDashboardStatus } from './OperatorStatusQuery';
 import { OperatorStatusClient } from '../services/OperatorStatusClient';
 import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Interface for storing panel information.
@@ -69,6 +70,7 @@ export class OperatedDashboardPanel {
         }
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('dashboard_operated');
         const panel = vscode.window.createWebviewPanel(
             'kube9OperatedDashboard',
             `Dashboard: ${clusterName}`,
