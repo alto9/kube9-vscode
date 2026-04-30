@@ -1,10 +1,82 @@
 {
-  "version": "1.5.8",
-  "description": "Canonical skill registry for agent and command execution. Agents and commands should resolve skill IDs from assignment maps below, then execute via each skill's script_path and usage. The Forge VSIX always contains the full workflow bundle; Forge: Initialize Cursor Agents installs a complete copy under ~/.cursor/ (nothing is omitted from that install—only unused on a given task). Forge: Initialize Project maintains .forge/ in the workspace and does not write <workspace>/.cursor/. Path resolution for script_path entries that start with .cursor/skills/: (1) ~/.cursor/skills/... using the same suffix after .cursor/skills/ (default after global init); (2) when working in the Forge repository, resources/workflow/skills/<skill-id>/scripts/... (same filenames as script_path); (3) optional <workspace>/.cursor/skills/... if your team maintains a repo-local copy.",
+  "version": "1.6.0",
+  "description": "Canonical skill registry for agent and workflow execution. Script skills: resolve IDs from assignment maps, then run script_path per usage. Orchestration skills (kind: orchestration): no script_path — follow ~/.cursor/skills/<id>/SKILL.md (or resources/workflow/skills/<id>/SKILL.md in the Forge repo). The Forge VSIX always contains the full workflow bundle; Forge: Initialize Cursor Agents installs a complete copy under ~/.cursor/. Forge: Initialize Project maintains .forge/ in the workspace and does not write <workspace>/.cursor/. Path resolution for script_path entries that start with .cursor/skills/: (1) ~/.cursor/skills/... using the same suffix after .cursor/skills/ (default after global init); (2) when working in the Forge repository, resources/workflow/skills/<skill-id>/scripts/... (same filenames as script_path); (3) optional <workspace>/.cursor/skills/... if your team maintains a repo-local copy.",
   "canonical_categories": [
     "git_flow"
   ],
   "skills": [
+    {
+      "id": "architect-this",
+      "status": "active",
+      "category": "git_flow",
+      "kind": "orchestration",
+      "primary_consumers": [
+        "architect"
+      ]
+    },
+    {
+      "id": "plan-roadmap",
+      "status": "active",
+      "category": "git_flow",
+      "kind": "orchestration",
+      "primary_consumers": [
+        "planner"
+      ]
+    },
+    {
+      "id": "refine-issue",
+      "status": "active",
+      "category": "git_flow",
+      "kind": "orchestration",
+      "primary_consumers": [
+        "tech_writer"
+      ]
+    },
+    {
+      "id": "build-from-github",
+      "status": "active",
+      "category": "git_flow",
+      "kind": "orchestration",
+      "primary_consumers": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "build-from-pr-review",
+      "status": "active",
+      "category": "git_flow",
+      "kind": "orchestration",
+      "primary_consumers": [
+        "engineer"
+      ]
+    },
+    {
+      "id": "review-pr",
+      "status": "active",
+      "category": "git_flow",
+      "kind": "orchestration",
+      "primary_consumers": [
+        "quality_assurance"
+      ]
+    },
+    {
+      "id": "ideate",
+      "status": "active",
+      "category": "git_flow",
+      "kind": "orchestration",
+      "primary_consumers": [
+        "architect"
+      ]
+    },
+    {
+      "id": "audit-forge",
+      "status": "active",
+      "category": "git_flow",
+      "kind": "orchestration",
+      "primary_consumers": [
+        "planner"
+      ]
+    },
     {
       "id": "create-issue-branch",
       "status": "active",
@@ -59,28 +131,6 @@
       "usage": ".cursor/skills/link-subissue-to-issue/scripts/link-subissue-to-issue.sh ([--replace-parent|-r] <owner/repo> <parent-issue-number> <child-issue-number> | [--replace-parent|-r] <parent-issue-number> <child-issue-number>)",
       "primary_consumers": [
         "tech_writer"
-      ]
-    },
-    {
-      "id": "commit",
-      "status": "active",
-      "category": "git_flow",
-      "retag": "commit-code",
-      "script_path": ".cursor/skills/commit/scripts/commit.sh",
-      "usage": ".cursor/skills/commit/scripts/commit.sh -m \"<message>\"",
-      "primary_consumers": [
-        "engineer"
-      ]
-    },
-    {
-      "id": "push-branch",
-      "status": "active",
-      "category": "git_flow",
-      "retag": "branch-push",
-      "script_path": ".cursor/skills/push-branch/scripts/push-branch.sh",
-      "usage": ".cursor/skills/push-branch/scripts/push-branch.sh",
-      "primary_consumers": [
-        "engineer"
       ]
     },
     {
@@ -161,9 +211,7 @@
       "assign-issue-to-me",
       "get-issue-branches",
       "gh-project-set-status",
-      "forge-post-workflow-retrospective",
-      "commit",
-      "push-branch"
+      "forge-post-workflow-retrospective"
     ],
     "quality_assurance": [
       "gh-pr-review",
@@ -172,6 +220,11 @@
     ]
   },
   "command_assignments": {
+    "ideate": [],
+    "audit-forge": [
+      "pull-milestones",
+      "pull-milestone-issues"
+    ],
     "architect-this": [],
     "plan-roadmap": [
       "pull-milestones",
@@ -194,6 +247,16 @@
     ]
   },
   "archived_legacy_removed": [
+    {
+      "id": "commit",
+      "replaced_by": "git commit (conventional commits per CONTRIBUTING)",
+      "reason": "Redundant with agent git operations; commit.sh removed."
+    },
+    {
+      "id": "push-branch",
+      "replaced_by": "git fetch and git push (-u origin HEAD when no upstream)",
+      "reason": "Redundant with agent git operations; push-branch.sh removed."
+    },
     {
       "id": "sync-roadmap-to-github",
       "replaced_by": "GitHub MCP / gh CLI",
