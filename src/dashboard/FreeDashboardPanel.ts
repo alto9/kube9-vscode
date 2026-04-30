@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { getDashboardHtml } from './dashboardHtml';
 import { DashboardDataProvider } from './DashboardDataProvider';
 import { DashboardRefreshManager } from './RefreshManager';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Interface for storing panel information.
@@ -60,6 +61,7 @@ export class FreeDashboardPanel {
         }
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('dashboard_free');
         const panel = vscode.window.createWebviewPanel(
             'kube9FreeDashboard',
             `Dashboard: ${clusterName}`,

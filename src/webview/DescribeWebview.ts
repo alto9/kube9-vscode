@@ -16,6 +16,7 @@ import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { NamespaceTreeItemConfig } from '../tree/items/NamespaceTreeItem';
 import { setNamespace } from '../utils/kubectlContext';
 
@@ -235,6 +236,7 @@ export class DescribeWebview {
         const title = `${resourceInfo.kind} / ${resourceInfo.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,
@@ -566,6 +568,7 @@ export class DescribeWebview {
         const title = `Pod / ${podConfig.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,
@@ -1127,6 +1130,7 @@ export class DescribeWebview {
         const title = `Namespace / ${namespaceConfig.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,
@@ -1329,6 +1333,7 @@ export class DescribeWebview {
         const title = `PersistentVolumeClaim / ${pvcConfig.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,
@@ -1554,6 +1559,7 @@ export class DescribeWebview {
         const title = `PersistentVolume / ${pvConfig.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,
@@ -1881,6 +1887,7 @@ export class DescribeWebview {
         const title = `Secret / ${secretConfig.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,
@@ -1949,6 +1956,7 @@ export class DescribeWebview {
         const title = `StorageClass / ${scConfig.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,
@@ -2399,6 +2407,7 @@ export class DescribeWebview {
         const title = `Service / ${serviceConfig.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,
@@ -2683,6 +2692,7 @@ export class DescribeWebview {
         const title = `ConfigMap / ${configMapConfig.name}`;
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('resource_describe');
         const panel = vscode.window.createWebviewPanel(
             'kube9Describe',
             title,

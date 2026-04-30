@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { IconProvider } from './IconProvider';
 import { GlobalState } from '../state/GlobalState';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * TutorialWebview displays the getting started tutorial in a webview.
@@ -29,6 +30,7 @@ export class TutorialWebview {
         }
 
         // Otherwise, create a new panel
+        notifyMajorWebviewOpened('tutorial');
         const panel = vscode.window.createWebviewPanel(
             'kube9Tutorial',
             'Kube9 Getting Started Tutorial',

@@ -59,6 +59,7 @@ import { HelmError, HelmErrorType } from './services/HelmError';
 import { OutputPanelLogger } from './errors/OutputPanelLogger';
 import { getContextInfo } from './utils/kubectlContext';
 import { HelpController, registerHelpMenuCommand, registerContextMenuHelpCommands } from './help/HelpController';
+import { registerInstrumentedKube9Command } from './telemetry/instrumentKube9Command';
 import { HelpStatusBar } from './help/HelpStatusBar';
 import { ProductTelemetryEventName } from './telemetry/productTelemetry';
 import { registerExtensionProductTelemetry } from './telemetry/vscodeExtensionTelemetry';
@@ -523,7 +524,7 @@ function registerCommands(): void {
     const context = getExtensionContext();
     
     // Register refresh clusters command
-    const refreshClustersCommand = vscode.commands.registerCommand('kube9.refreshClusters', async () => {
+    const refreshClustersCommand = registerInstrumentedKube9Command('kube9.refreshClusters', async () => {
         try {
             console.log('Refreshing clusters from kubeconfig...');
             
@@ -561,7 +562,7 @@ function registerCommands(): void {
     
     // Register open namespace command
     // Args: contextName, clusterName, namespace (undefined for "All Namespaces")
-    const openNamespaceCommand = vscode.commands.registerCommand(
+    const openNamespaceCommand = registerInstrumentedKube9Command(
         'kube9.openNamespace', 
         async (contextName: string, clusterName: string, namespace?: string) => {
             try {
@@ -598,7 +599,7 @@ function registerCommands(): void {
     disposables.push(openNamespaceCommand);
     
     // Register open Operator Health report command
-    const openOperatorHealthReportCommand = vscode.commands.registerCommand(
+    const openOperatorHealthReportCommand = registerInstrumentedKube9Command(
         'kube9.openOperatorHealthReport',
         async (contextName?: string) => {
             try {
@@ -648,7 +649,7 @@ function registerCommands(): void {
     disposables.push(openOperatorHealthReportCommand);
     
     // Register open Cluster Organizer command
-    const openClusterManagerCmd = vscode.commands.registerCommand(
+    const openClusterManagerCmd = registerInstrumentedKube9Command(
         'kube9.openClusterManager',
         async () => {
             try {
@@ -678,7 +679,7 @@ function registerCommands(): void {
     disposables.push(openClusterManagerCmd);
     
     // Register describe resource command
-    const describeResourceCmd = vscode.commands.registerCommand(
+    const describeResourceCmd = registerInstrumentedKube9Command(
         'kube9.describeResource',
         async (treeItem: ClusterTreeItem | string | undefined) => {
             try {
@@ -708,7 +709,7 @@ function registerCommands(): void {
     disposables.push(describeResourceCmd);
     
     // Register describe Pod command
-    const describePodCmd = vscode.commands.registerCommand(
+    const describePodCmd = registerInstrumentedKube9Command(
         'kube9.describePod',
         async (podConfig: PodTreeItemConfig) => {
             try {
@@ -728,7 +729,7 @@ function registerCommands(): void {
     disposables.push(describePodCmd);
     
     // Register describe Namespace command
-    const describeNamespaceCmd = vscode.commands.registerCommand(
+    const describeNamespaceCmd = registerInstrumentedKube9Command(
         'kube9.describeNamespace',
         async (namespaceConfig: NamespaceTreeItemConfig) => {
             try {
@@ -748,7 +749,7 @@ function registerCommands(): void {
     disposables.push(describeNamespaceCmd);
     
     // Register describe CronJob command
-    const describeCronJobCmd = vscode.commands.registerCommand(
+    const describeCronJobCmd = registerInstrumentedKube9Command(
         'kube9.describeCronJob',
         async (cronJobConfig: { name: string; namespace: string; kubeconfigPath: string; context: string }) => {
             try {
@@ -774,7 +775,7 @@ function registerCommands(): void {
     disposables.push(describeCronJobCmd);
     
     // Register describe ConfigMap command
-    const describeConfigMapCmd = vscode.commands.registerCommand(
+    const describeConfigMapCmd = registerInstrumentedKube9Command(
         'kube9.describeConfigMap',
         async (configMapConfig: ConfigMapTreeItemConfig) => {
             try {
@@ -794,7 +795,7 @@ function registerCommands(): void {
     disposables.push(describeConfigMapCmd);
     
     // Register describe resource (raw) command
-    const describeRawCmd = vscode.commands.registerCommand(
+    const describeRawCmd = registerInstrumentedKube9Command(
         'kube9.describeResourceRaw',
         async (treeItem: ClusterTreeItem) => {
             await describeRawCommand(treeItem);
@@ -804,7 +805,7 @@ function registerCommands(): void {
     disposables.push(describeRawCmd);
     
     // Register switch context command
-    const switchContextCmd = vscode.commands.registerCommand(
+    const switchContextCmd = registerInstrumentedKube9Command(
         'kube9.switchContext',
         async (item?: ClusterTreeItem) => {
             await switchContextCommand(item);
@@ -814,7 +815,7 @@ function registerCommands(): void {
     disposables.push(switchContextCmd);
     
     // Register set active namespace command
-    const setActiveNamespaceCmd = vscode.commands.registerCommand(
+    const setActiveNamespaceCmd = registerInstrumentedKube9Command(
         'kube9.setActiveNamespace',
         setActiveNamespaceCommand
     );
@@ -822,7 +823,7 @@ function registerCommands(): void {
     disposables.push(setActiveNamespaceCmd);
     
     // Register clear active namespace command
-    const clearActiveNamespaceCmd = vscode.commands.registerCommand(
+    const clearActiveNamespaceCmd = registerInstrumentedKube9Command(
         'kube9.clearActiveNamespace',
         clearActiveNamespaceCommand
     );
@@ -830,7 +831,7 @@ function registerCommands(): void {
     disposables.push(clearActiveNamespaceCmd);
     
     // Register view resource YAML command
-    const viewResourceYAMLCmd = vscode.commands.registerCommand(
+    const viewResourceYAMLCmd = registerInstrumentedKube9Command(
         'kube9.viewResourceYAML',
         async (treeItem: ClusterTreeItem) => {
             try {
@@ -867,7 +868,7 @@ function registerCommands(): void {
     disposables.push(viewResourceYAMLCmd);
     
     // Register view resource YAML from palette command
-    const viewResourceYAMLFromPaletteCmd = vscode.commands.registerCommand(
+    const viewResourceYAMLFromPaletteCmd = registerInstrumentedKube9Command(
         'kube9.viewResourceYAMLFromPalette',
         async () => {
             try {
@@ -904,7 +905,7 @@ function registerCommands(): void {
     disposables.push(viewResourceYAMLFromPaletteCmd);
     
     // Register delete resource command
-    const deleteResourceCmd = vscode.commands.registerCommand(
+    const deleteResourceCmd = registerInstrumentedKube9Command(
         'kube9.deleteResource',
         async (treeItem: ClusterTreeItem) => {
             try {
@@ -999,7 +1000,7 @@ function registerCommands(): void {
     disposables.push(deleteResourceCmd);
     
     // Register scale workload command
-    const scaleWorkloadCmd = vscode.commands.registerCommand(
+    const scaleWorkloadCmd = registerInstrumentedKube9Command(
         'kube9.scaleWorkload',
         async (treeItem: ClusterTreeItem) => {
             try {
@@ -1030,7 +1031,7 @@ function registerCommands(): void {
     disposables.push(scaleWorkloadCmd);
     
     // Register open dashboard command
-    const openDashboardCmd = vscode.commands.registerCommand(
+    const openDashboardCmd = registerInstrumentedKube9Command(
         'kube9.openDashboard',
         async (treeItem: ClusterTreeItem) => {
             try {
@@ -1101,7 +1102,7 @@ function registerCommands(): void {
     disposables.push(openDashboardCmd);
     
     // Register apply YAML command
-    const applyYAMLCmd = vscode.commands.registerCommand(
+    const applyYAMLCmd = registerInstrumentedKube9Command(
         'kube9.applyYAML',
         applyYAMLCommand
     );
@@ -1109,7 +1110,7 @@ function registerCommands(): void {
     disposables.push(applyYAMLCmd);
     
     // Register restart workload command
-    const restartWorkloadCmd = vscode.commands.registerCommand(
+    const restartWorkloadCmd = registerInstrumentedKube9Command(
         'kube9.restartWorkload',
         async (treeItem: ClusterTreeItem) => {
             // Extract resource information from tree item
@@ -1281,7 +1282,7 @@ function registerCommands(): void {
     disposables.push(restartWorkloadCmd);
     
     // Register open terminal command
-    const openTerminalCmd = vscode.commands.registerCommand(
+    const openTerminalCmd = registerInstrumentedKube9Command(
         'kube9.openTerminal',
         openTerminalCommand
     );
@@ -1289,7 +1290,7 @@ function registerCommands(): void {
     disposables.push(openTerminalCmd);
     
     // Register view pod logs command
-    const viewPodLogsCmd = vscode.commands.registerCommand(
+    const viewPodLogsCmd = registerInstrumentedKube9Command(
         'kube9.viewPodLogs',
         async (treeItem: ClusterTreeItem) => {
             try {
@@ -1334,7 +1335,7 @@ function registerCommands(): void {
     disposables.push(viewPodLogsCmd);
     
     // Register ArgoCD sync command
-    const syncApplicationCmd = vscode.commands.registerCommand(
+    const syncApplicationCmd = registerInstrumentedKube9Command(
         'kube9.argocd.sync',
         syncApplicationCommand
     );
@@ -1342,7 +1343,7 @@ function registerCommands(): void {
     disposables.push(syncApplicationCmd);
     
     // Register ArgoCD refresh command
-    const refreshApplicationCmd = vscode.commands.registerCommand(
+    const refreshApplicationCmd = registerInstrumentedKube9Command(
         'kube9.argocd.refresh',
         refreshApplicationCommand
     );
@@ -1350,7 +1351,7 @@ function registerCommands(): void {
     disposables.push(refreshApplicationCmd);
     
     // Register ArgoCD hard refresh command
-    const hardRefreshApplicationCmd = vscode.commands.registerCommand(
+    const hardRefreshApplicationCmd = registerInstrumentedKube9Command(
         'kube9.argocd.hardRefresh',
         hardRefreshApplicationCommand
     );
@@ -1358,7 +1359,7 @@ function registerCommands(): void {
     disposables.push(hardRefreshApplicationCmd);
     
     // Register ArgoCD view details command
-    const viewDetailsCmd = vscode.commands.registerCommand(
+    const viewDetailsCmd = registerInstrumentedKube9Command(
         'kube9.argocd.viewDetails',
         viewDetailsCommand
     );
@@ -1366,7 +1367,7 @@ function registerCommands(): void {
     disposables.push(viewDetailsCmd);
     
     // Register ArgoCD copy name command
-    const copyNameCmd = vscode.commands.registerCommand(
+    const copyNameCmd = registerInstrumentedKube9Command(
         'kube9.argocd.copyName',
         copyNameCommand
     );
@@ -1374,7 +1375,7 @@ function registerCommands(): void {
     disposables.push(copyNameCmd);
     
     // Register ArgoCD copy namespace command
-    const copyNamespaceCmd = vscode.commands.registerCommand(
+    const copyNamespaceCmd = registerInstrumentedKube9Command(
         'kube9.argocd.copyNamespace',
         copyNamespaceCommand
     );
@@ -1382,7 +1383,7 @@ function registerCommands(): void {
     disposables.push(copyNamespaceCmd);
     
     // Register cache statistics command
-    const showCacheStatsCmd = vscode.commands.registerCommand(
+    const showCacheStatsCmd = registerInstrumentedKube9Command(
         'kube9.showCacheStats',
         showCacheStatsCommand
     );
@@ -1394,63 +1395,63 @@ function registerCommands(): void {
         const eventsProvider = clusterTreeProvider.getEventsProvider();
         const eventsCommands = new EventsCommands(eventsProvider, clusterTreeProvider);
         
-        const filterNamespaceCmd = vscode.commands.registerCommand(
+        const filterNamespaceCmd = registerInstrumentedKube9Command(
             'kube9.events.filterNamespace',
             (category) => eventsCommands.filterNamespace(category)
         );
         context.subscriptions.push(filterNamespaceCmd);
         disposables.push(filterNamespaceCmd);
         
-        const filterTypeCmd = vscode.commands.registerCommand(
+        const filterTypeCmd = registerInstrumentedKube9Command(
             'kube9.events.filterType',
             (category) => eventsCommands.filterType(category)
         );
         context.subscriptions.push(filterTypeCmd);
         disposables.push(filterTypeCmd);
         
-        const filterTimeRangeCmd = vscode.commands.registerCommand(
+        const filterTimeRangeCmd = registerInstrumentedKube9Command(
             'kube9.events.filterTimeRange',
             (category) => eventsCommands.filterTimeRange(category)
         );
         context.subscriptions.push(filterTimeRangeCmd);
         disposables.push(filterTimeRangeCmd);
         
-        const filterResourceTypeCmd = vscode.commands.registerCommand(
+        const filterResourceTypeCmd = registerInstrumentedKube9Command(
             'kube9.events.filterResourceType',
             (category) => eventsCommands.filterResourceType(category)
         );
         context.subscriptions.push(filterResourceTypeCmd);
         disposables.push(filterResourceTypeCmd);
         
-        const searchCmd = vscode.commands.registerCommand(
+        const searchCmd = registerInstrumentedKube9Command(
             'kube9.events.search',
             (category) => eventsCommands.search(category)
         );
         context.subscriptions.push(searchCmd);
         disposables.push(searchCmd);
         
-        const clearFiltersCmd = vscode.commands.registerCommand(
+        const clearFiltersCmd = registerInstrumentedKube9Command(
             'kube9.events.clearFilters',
             (category) => eventsCommands.clearFilters(category)
         );
         context.subscriptions.push(clearFiltersCmd);
         disposables.push(clearFiltersCmd);
         
-        const refreshCmd = vscode.commands.registerCommand(
+        const refreshCmd = registerInstrumentedKube9Command(
             'kube9.events.refresh',
             (category) => eventsCommands.refresh(category)
         );
         context.subscriptions.push(refreshCmd);
         disposables.push(refreshCmd);
         
-        const toggleAutoRefreshCmd = vscode.commands.registerCommand(
+        const toggleAutoRefreshCmd = registerInstrumentedKube9Command(
             'kube9.events.toggleAutoRefresh',
             (category) => eventsCommands.toggleAutoRefresh(category)
         );
         context.subscriptions.push(toggleAutoRefreshCmd);
         disposables.push(toggleAutoRefreshCmd);
         
-        const showDetailsCmd = vscode.commands.registerCommand(
+        const showDetailsCmd = registerInstrumentedKube9Command(
             'kube9.events.showDetails',
             (event) => eventsCommands.showDetails(event)
         );
@@ -1461,7 +1462,7 @@ function registerCommands(): void {
     // Register command to open Events Viewer from tree category click
     // NOTE: This must be outside the clusterTreeProvider check since commands are registered
     // before the tree provider is initialized. Runtime check ensures provider exists when called.
-    const openEventsViewerCmd = vscode.commands.registerCommand(
+    const openEventsViewerCmd = registerInstrumentedKube9Command(
         'kube9.events.openViewer',
         async (clusterContext: string) => {
             try {
@@ -1484,7 +1485,7 @@ function registerCommands(): void {
     disposables.push(openEventsViewerCmd);
     
     // Register Helm Package Manager command
-    const openHelmPackageManagerCmd = vscode.commands.registerCommand(
+    const openHelmPackageManagerCmd = registerInstrumentedKube9Command(
         'kube9.helm.openPackageManager',
         async (item?: ClusterTreeItem) => {
             await openPackageManager(item);
@@ -1494,7 +1495,7 @@ function registerCommands(): void {
     disposables.push(openHelmPackageManagerCmd);
     
     // Register command to open Events Viewer from command palette
-    const openEventsViewerFromPaletteCmd = vscode.commands.registerCommand(
+    const openEventsViewerFromPaletteCmd = registerInstrumentedKube9Command(
         'kube9.openEventsViewer',
         async (clusterContext?: string) => {
             try {
@@ -1533,14 +1534,14 @@ function registerCommands(): void {
     disposables.push(openEventsViewerFromPaletteCmd);
     
     // Register port forward pod command
-    const portForwardPodCmd = vscode.commands.registerCommand(
+    const portForwardPodCmd = registerInstrumentedKube9Command(
         'kube9.portForwardPod',
         portForwardPodCommand
     );
     context.subscriptions.push(portForwardPodCmd);
     disposables.push(portForwardPodCmd);
 
-    const portForwardServiceCmd = vscode.commands.registerCommand(
+    const portForwardServiceCmd = registerInstrumentedKube9Command(
         'kube9.portForwardService',
         portForwardServiceCommand
     );
@@ -1548,7 +1549,7 @@ function registerCommands(): void {
     disposables.push(portForwardServiceCmd);
     
     // Register stop port forward command
-    const stopPortForwardCmd = vscode.commands.registerCommand(
+    const stopPortForwardCmd = registerInstrumentedKube9Command(
         'kube9.stopPortForward',
         stopPortForwardCommand
     );
@@ -1556,7 +1557,7 @@ function registerCommands(): void {
     disposables.push(stopPortForwardCmd);
     
     // Register stop all port forwards command
-    const stopAllPortForwardsCmd = vscode.commands.registerCommand(
+    const stopAllPortForwardsCmd = registerInstrumentedKube9Command(
         'kube9.stopAllPortForwards',
         stopAllPortForwardsCommand
     );
@@ -1564,7 +1565,7 @@ function registerCommands(): void {
     disposables.push(stopAllPortForwardsCmd);
     
     // Register show port forwards command
-    const showPortForwardsCmd = vscode.commands.registerCommand(
+    const showPortForwardsCmd = registerInstrumentedKube9Command(
         'kube9.showPortForwards',
         showPortForwardsCommand
     );
@@ -1572,7 +1573,7 @@ function registerCommands(): void {
     disposables.push(showPortForwardsCmd);
     
     // Register copy port forward URL command
-    const copyPortForwardURLCmd = vscode.commands.registerCommand(
+    const copyPortForwardURLCmd = registerInstrumentedKube9Command(
         'kube9.copyPortForwardURL',
         copyPortForwardURLCommand
     );
@@ -1580,7 +1581,7 @@ function registerCommands(): void {
     disposables.push(copyPortForwardURLCmd);
     
     // Register view port forward pod command
-    const viewPortForwardPodCmd = vscode.commands.registerCommand(
+    const viewPortForwardPodCmd = registerInstrumentedKube9Command(
         'kube9.viewPortForwardPod',
         viewPortForwardPodCommand
     );
@@ -1588,7 +1589,7 @@ function registerCommands(): void {
     disposables.push(viewPortForwardPodCmd);
     
     // Register restart port forward command
-    const restartPortForwardCmd = vscode.commands.registerCommand(
+    const restartPortForwardCmd = registerInstrumentedKube9Command(
         'kube9.restartPortForward',
         restartPortForwardCommand
     );
@@ -1596,7 +1597,7 @@ function registerCommands(): void {
     disposables.push(restartPortForwardCmd);
     
     // Register describe node command
-    const describeNodeCmd = vscode.commands.registerCommand(
+    const describeNodeCmd = registerInstrumentedKube9Command(
         'kube9.describeNode',
         async (nodeInfo, resourceData) => {
             try {
@@ -1626,7 +1627,7 @@ function registerCommands(): void {
     disposables.push(describeNodeCmd);
     
     // Register describe node (raw) command
-    const describeNodeRawCmd = vscode.commands.registerCommand(
+    const describeNodeRawCmd = registerInstrumentedKube9Command(
         'kube9.describeNodeRaw',
         async (treeItem: ClusterTreeItem) => {
             try {
@@ -1694,7 +1695,7 @@ function registerCommands(): void {
     disposables.push(describeNodeRawCmd);
     
     // Register reveal pod command
-    const revealPodCmd = vscode.commands.registerCommand(
+    const revealPodCmd = registerInstrumentedKube9Command(
         'kube9.revealPod',
         async (podName: string, namespace?: string) => {
             try {
@@ -1724,7 +1725,7 @@ function registerCommands(): void {
     errorCommands.register(context);
     
     // Register reveal ReplicaSet command
-    const revealReplicaSetCmd = vscode.commands.registerCommand(
+    const revealReplicaSetCmd = registerInstrumentedKube9Command(
         'kube9.revealReplicaSet',
         async (replicaSetName: string, deploymentName: string, namespace?: string) => {
             try {
@@ -1759,7 +1760,7 @@ function registerCommands(): void {
     disposables.push(revealReplicaSetCmd);
     
     // Register show tutorial command
-    const showTutorialCommand = vscode.commands.registerCommand(
+    const showTutorialCommand = registerInstrumentedKube9Command(
         'kube9.showTutorial',
         async () => {
             try {

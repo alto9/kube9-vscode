@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { registerInstrumentedKube9Command } from '../telemetry/instrumentKube9Command';
 import { ErrorTreeItem } from '../tree/ErrorTreeItem';
 import { OutputPanelLogger } from '../errors/OutputPanelLogger';
 
@@ -14,7 +15,7 @@ export class ErrorCommands {
    */
   public register(context: vscode.ExtensionContext): void {
     context.subscriptions.push(
-      vscode.commands.registerCommand(
+      registerInstrumentedKube9Command(
         'kube9.retryFailedOperation',
         this.retryFailedOperation,
         this
@@ -22,7 +23,7 @@ export class ErrorCommands {
     );
 
     context.subscriptions.push(
-      vscode.commands.registerCommand(
+      registerInstrumentedKube9Command(
         'kube9.viewErrorDetails',
         this.viewErrorDetails,
         this
@@ -30,7 +31,7 @@ export class ErrorCommands {
     );
 
     context.subscriptions.push(
-      vscode.commands.registerCommand(
+      registerInstrumentedKube9Command(
         'kube9.copyErrorDetails',
         this.copyErrorDetails,
         this

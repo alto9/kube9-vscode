@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { EventsProvider } from '../services/EventsProvider';
 import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from '../types/Events';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
 
@@ -94,6 +95,7 @@ export class EventViewerPanel {
         this.eventsProvider = eventsProvider;
 
         // Create webview panel
+        notifyMajorWebviewOpened('events_viewer');
         this.panel = vscode.window.createWebviewPanel(
             'kube9EventViewer',
             `Events: ${clusterContext}`,

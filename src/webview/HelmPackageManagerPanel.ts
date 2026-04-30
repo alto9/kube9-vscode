@@ -9,6 +9,7 @@ import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams, ListReleasesParams, UpgradeParams, UIState } from './helm-package-manager/types';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { getContextInfo } from '../utils/kubectlContext';
+import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Cache entry with TTL support.
@@ -97,6 +98,7 @@ export class HelmPackageManagerPanel {
         }
 
         // Create a new webview panel
+        notifyMajorWebviewOpened('helm_package_manager');
         const panel = vscode.window.createWebviewPanel(
             'helmPackageManager',
             panelTitle,

@@ -6,6 +6,10 @@
 import type { TelemetryReporter } from '@vscode/extension-telemetry';
 import * as vscode from 'vscode';
 import {
+    buildKube9TelemetryCommandAllowlistFromPackageJson,
+    setKube9CommandTelemetryAllowlist,
+} from './commandAllowlist';
+import {
     createProductTelemetry,
     ProductTelemetry,
     ProductTelemetryEventName,
@@ -18,6 +22,12 @@ const noopReporter: ProductTelemetryReporter = {
         /* consent off, missing AI resource, or tests */
     },
 };
+
+let delegatedProductTelemetry: ProductTelemetry = createProductTelemetry(noopReporter);
+
+export function getProductTelemetryFacade(): ProductTelemetry {
+    return delegatedProductTelemetry;
+}
 
 /** Application Insights connection string (see Azure Monitor). Omit until a backend resource exists. */
 const PACKAGE_JSON_TELEMETRY_KEY = 'telemetryInstrumentationConnectionString';
@@ -45,6 +55,12 @@ export function telemetryPropertiesToPayload(
     if (properties.errorBucket !== undefined) {
         payload.errorBucket = String(properties.errorBucket);
     }
+    if (properties.commandKey !== undefined) {
+        payload.commandKey = properties.commandKey;
+    }
+    if (properties.webviewSurface !== undefined) {
+        payload.webviewSurface = properties.webviewSurface;
+    }
     return payload;
 }
 
@@ -53,8 +69,20 @@ export function telemetryPropertiesToPayload(
  * or {@link PACKAGE_JSON_TELEMETRY_KEY} is absent/empty (no egress until configured).
  */
 export function registerExtensionProductTelemetry(context: vscode.ExtensionContext): ProductTelemetry {
+    setKube9CommandTelemetryAllowlist(
+        buildKube9TelemetryCommandAllowlistFromPackageJson(
+            context.extension.packageJSON as Record<string, unknown>
+        )
+    );
+
+    const buildNoOpTelemetry = (): ProductTelemetry => {
+        const pt = createProductTelemetry(noopReporter);
+        delegatedProductTelemetry = pt;
+        return pt;
+    };
+
     if (!vscode.env.isTelemetryEnabled) {
-        return createProductTelemetry(noopReporter);
+        return buildNoOpTelemetry();
     }
 
     const pj = context.extension.packageJSON as Record<string, unknown>;
@@ -62,7 +90,7 @@ export function registerExtensionProductTelemetry(context: vscode.ExtensionConte
     const cs = typeof connectionString === 'string' ? connectionString.trim() : '';
 
     if (!cs) {
-        return createProductTelemetry(noopReporter);
+        return buildNoOpTelemetry();
     }
 
     // Runtime dependency (lazy): avoids pulling Application Insights subgraph when consent is off
@@ -80,5 +108,7 @@ export function registerExtensionProductTelemetry(context: vscode.ExtensionConte
         },
     });
 
-    return createProductTelemetry(createVsCodeReporterBridge(reporter));
+    const productTelemetryInstance = createProductTelemetry(createVsCodeReporterBridge(reporter));
+    delegatedProductTelemetry = productTelemetryInstance;
+    return productTelemetryInstance;
 }
