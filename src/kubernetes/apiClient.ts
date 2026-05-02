@@ -1,14 +1,37 @@
 import * as k8s from '@kubernetes/client-node';
 
 /**
+ * Ensures KubeConfig has a current context that resolves to a cluster.
+ * client-node 1.4+ throws from makeApiClient when getCurrentCluster() is null,
+ * which happens with an empty/mismatched current-context while a kubeconfig file exists.
+ */
+function ensureKubeConfigHasActiveCluster(kubeConfig: k8s.KubeConfig): void {
+    if (kubeConfig.getCurrentCluster()) {
+        return;
+    }
+    for (const ctx of kubeConfig.getContexts()) {
+        if (ctx?.name && kubeConfig.getCluster(ctx.cluster)) {
+            kubeConfig.setCurrentContext(ctx.name);
+            if (kubeConfig.getCurrentCluster()) {
+                return;
+            }
+        }
+    }
+    kubeConfig.loadFromClusterAndUser(
+        { name: 'cluster', server: 'http://localhost:8080', skipTLSVerify: true },
+        { name: 'user' }
+    );
+}
+
+/**
  * Singleton API client for Kubernetes API operations.
  * Manages connections to Kubernetes clusters and provides access to different API groups.
- * 
+ *
  * This class replaces kubectl process spawning with direct API calls, enabling:
  * - Connection pooling for better performance
  * - Parallel operations
  * - Efficient resource management
- * 
+ *
  * The singleton pattern ensures a single instance manages all API connections,
  * reusing HTTP connections via the underlying Node.js HTTP Agent.
  */
@@ -32,6 +55,7 @@ export class KubernetesApiClient {
     constructor() {
         this.kubeConfig = new k8s.KubeConfig();
         this.kubeConfig.loadFromDefault();
+        ensureKubeConfigHasActiveCluster(this.kubeConfig);
 
         this.coreApi = this.kubeConfig.makeApiClient(k8s.CoreV1Api);
         this.appsApi = this.kubeConfig.makeApiClient(k8s.AppsV1Api);
