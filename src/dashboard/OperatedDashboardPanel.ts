@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { getOperatedDashboardHtml } from './operatedDashboardHtml';
 import { OperatorDashboardStatus } from './types';
-import { getAIRecommendations } from './AIRecommendationsQuery';
 import { DashboardDataProvider } from './DashboardDataProvider';
 import { DashboardRefreshManager } from './RefreshManager';
 import { getOperatorDashboardStatus } from './OperatorStatusQuery';
@@ -25,7 +24,7 @@ interface PanelInfo {
 /**
  * OperatedDashboardPanel manages webview panels for Operated Dashboards.
  * Supports multiple simultaneous panels (one per cluster).
- * Displays operator metrics and conditional content (AI recommendations or upsell CTA).
+ * Displays operator metrics and optional degraded-health messaging.
  */
 export class OperatedDashboardPanel {
     /**
@@ -187,35 +186,24 @@ export class OperatedDashboardPanel {
 
     /**
      * Determine which conditional content type to display based on operator status.
-     * Implements the logic from the free-operated-dashboard-spec:
-     * - degraded health -> degraded-warning
-     * - hasApiKey && mode=enabled -> ai-recommendations
-     * - otherwise -> no conditional content
-     * 
+     *
      * @param operatorStatus - The operator status for this cluster
-     * @returns The type of conditional content to display, or null if none
+     * @returns Conditional UI slot content type, or null for no extra panel
      */
     private static determineConditionalContentType(
         operatorStatus: OperatorDashboardStatus
-    ): 'ai-recommendations' | 'degraded-warning' | null {
-        // Check for degraded health first (highest priority)
+    ): 'degraded-warning' | null {
         if (operatorStatus.health === 'degraded') {
             return 'degraded-warning';
         }
-        
-        // Check if API key present AND mode is enabled
-        if (operatorStatus.hasApiKey && operatorStatus.mode === 'enabled') {
-            return 'ai-recommendations';
-        }
-        
-        // No conditional content to show
+
         return null;
     }
 
     /**
      * Send dashboard data with operator status re-check.
      * This method is called by the refresh manager to ensure operator status
-     * is re-queried on each refresh, allowing detection of API key configuration changes.
+     * is re-queried on each refresh so health and mode stay current.
      * 
      * @param panel - The webview panel
      * @param kubeconfigPath - Path to the kubeconfig file
@@ -248,7 +236,7 @@ export class OperatedDashboardPanel {
 
     /**
      * Send dashboard data to the webview.
-     * Fetches operator dashboard data and AI recommendations if API key is configured.
+     * Fetches cluster and operator dashboard metrics from the current context.
      * 
      * @param panel - The webview panel
      * @param kubeconfigPath - Path to the kubeconfig file
@@ -305,9 +293,7 @@ export class OperatedDashboardPanel {
                     lastCollectionTime: string;
                 };
                 lastUpdated: string;
-                hasApiKey: boolean;
                 conditionalContentType: string | null;
-                aiRecommendations?: Array<{id: string; type: string; severity: string; title: string; description: string}>;
             };
 
             // If operator data is available, use it
@@ -322,7 +308,6 @@ export class OperatedDashboardPanel {
                         lastCollectionTime: operatorData.operatorMetrics.lastCollectionTime.toISOString()
                     },
                     lastUpdated: operatorData.lastUpdated.toISOString(),
-                    hasApiKey: panelInfo?.operatorStatus.hasApiKey || false,
                     conditionalContentType: conditionalContentType
                 };
             } else {
@@ -372,17 +357,8 @@ export class OperatedDashboardPanel {
                         lastCollectionTime: collectionStats.lastSuccessTime || new Date().toISOString()
                     },
                     lastUpdated: new Date().toISOString(),
-                    hasApiKey: panelInfo?.operatorStatus.hasApiKey || false,
                     conditionalContentType: conditionalContentType
                 };
-            }
-
-            // Only query AI recommendations if we're showing that panel
-            if (conditionalContentType === 'ai-recommendations') {
-                const aiRecommendations = await getAIRecommendations(contextName);
-                if (aiRecommendations && aiRecommendations.recommendations.length > 0) {
-                    dashboardData.aiRecommendations = aiRecommendations.recommendations;
-                }
             }
 
             // Send data to webview

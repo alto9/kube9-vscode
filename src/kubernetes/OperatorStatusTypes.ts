@@ -1,11 +1,12 @@
 /**
  * Operator status mode as determined by the extension.
- * 
- * The extension maps operator presence and health to one of four status modes:
+ *
+ * The kube9 VS Code extension is open source and does not gate features on paid tiers.
+ *
  * - Basic: Operator not installed (ConfigMap does not exist)
- * - Operated: Operator installed in free tier mode
- * - Enabled: Operator installed in pro tier mode and properly registered
- * - Degraded: Operator installed but has issues (unhealthy, unregistered, or stale)
+ * - Operated: Operator installed and healthy
+ * - Enabled: Legacy status payload from older operators; treated like Operated for display
+ * - Degraded: Operator installed but unhealthy, stale status, or other issues
  */
 export enum OperatorStatusMode {
     /**
@@ -13,21 +14,21 @@ export enum OperatorStatusMode {
      */
     // eslint-disable-next-line @typescript-eslint/naming-convention
     Basic = 'basic',
-    
+
     /**
-     * Operator is installed but running in free tier (operated) mode.
+     * Operator is installed and reporting healthy status.
      */
     // eslint-disable-next-line @typescript-eslint/naming-convention
     Operated = 'operated',
-    
+
     /**
-     * Operator is installed and running in pro tier (enabled) mode with proper registration.
+     * Legacy mode value from older operator status JSON; handled the same as Operated.
      */
     // eslint-disable-next-line @typescript-eslint/naming-convention
     Enabled = 'enabled',
-    
+
     /**
-     * Operator is installed but has issues (unhealthy, unregistered, or stale status).
+     * Operator is installed but status is unhealthy, stale, or otherwise degraded.
      */
     // eslint-disable-next-line @typescript-eslint/naming-convention
     Degraded = 'degraded'
@@ -82,15 +83,12 @@ export interface ArgoCDStatus {
 
 /**
  * Operator status as returned by the kube9-operator-status ConfigMap.
- * Matches the operator's OperatorStatus interface.
+ * Aligns with the open-source kube9-operator status payload.
  */
 export interface OperatorStatus {
-    /** Operator mode: "operated" (free) or "enabled" (pro) */
+    /** Operator mode from the in-cluster operator */
     mode: 'operated' | 'enabled';
-    
-    /** User-facing tier name */
-    tier: 'free' | 'pro';
-    
+
     /** Operator version (semver) */
     version: string;
     
@@ -100,18 +98,21 @@ export interface OperatorStatus {
     /** ISO 8601 timestamp of last status update */
     lastUpdate: string;
     
-    /** Whether operator is registered with kube9-server (pro tier only) */
-    registered: boolean;
-    
-    /** Whether an API key is configured in the operator */
-    apiKeyConfigured: boolean;
+    /** Legacy field from older status payloads; ignored by the extension */
+    registered?: boolean;
+
+    /** Legacy field from older status payloads; ignored by the extension */
+    apiKeyConfigured?: boolean;
     
     /** Error message if unhealthy or degraded */
     error: string | null;
     
-    /** Optional: Server-provided cluster ID (pro tier only) */
+    /** Optional cluster identifier when present in status JSON */
     clusterId?: string;
     
+    /** Namespace where the operator runs (when present in status JSON) */
+    namespace?: string;
+
     /** Collection statistics */
     collectionStats: CollectionStats;
     

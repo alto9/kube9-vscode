@@ -51,7 +51,7 @@ export class ClusterTreeItem extends vscode.TreeItem {
     /**
      * Full operator status details from the kube9-operator-status ConfigMap.
      * Only relevant for cluster-type tree items.
-     * Contains detailed information about operator tier, version, health, and registration status.
+     * Contains version, health, and timestamps when available.
      * Used for displaying detailed tooltip information.
      */
     public operatorStatusDetails?: OperatorStatus;

@@ -9,10 +9,8 @@ interface HealthReportData {
     clusterContext: string;
     operatorStatus: {
         mode: 'basic' | 'operated' | 'enabled' | 'degraded';
-        tier?: 'free' | 'pro';
         version?: string;
         health?: 'healthy' | 'degraded' | 'unhealthy';
-        registered?: boolean;
         lastUpdate?: string;
         error?: string | null;
         clusterId?: string;
@@ -175,10 +173,8 @@ export class HealthReportPanel {
                 clusterContext: this._contextName,
                 operatorStatus: {
                     mode: cachedStatus.mode as 'basic' | 'operated' | 'enabled' | 'degraded',
-                    tier: cachedStatus.status?.tier,
                     version: cachedStatus.status?.version,
                     health: cachedStatus.status?.health,
-                    registered: cachedStatus.status?.registered,
                     lastUpdate: cachedStatus.status?.lastUpdate,
                     error: cachedStatus.status?.error ?? null,
                     clusterId: cachedStatus.status?.clusterId

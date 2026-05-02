@@ -28,6 +28,10 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
     const [url, setUrl] = useState('');
     const [errors, setErrors] = useState<string[]>([]);
     const [submitting, setSubmitting] = useState(false);
+    const [cancelHovered, setCancelHovered] = useState(false);
+    const [submitHovered, setSubmitHovered] = useState(false);
+    const [nameFocused, setNameFocused] = useState(false);
+    const [urlFocused, setUrlFocused] = useState(false);
 
     // Reset form when modal closes
     useEffect(() => {
@@ -257,11 +261,6 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
         opacity: 0.5,
         cursor: 'not-allowed'
     };
-
-    const [cancelHovered, setCancelHovered] = useState(false);
-    const [submitHovered, setSubmitHovered] = useState(false);
-    const [nameFocused, setNameFocused] = useState(false);
-    const [urlFocused, setUrlFocused] = useState(false);
 
     return (
         <div style={overlayStyle} onClick={handleOverlayClick}>

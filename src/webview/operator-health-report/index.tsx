@@ -21,10 +21,8 @@ interface HealthReportData {
  */
 interface OperatorStatusData {
     mode: 'basic' | 'operated' | 'enabled' | 'degraded';
-    tier?: 'free' | 'pro';
     version?: string;
     health?: 'healthy' | 'degraded' | 'unhealthy';
-    registered?: boolean;
     lastUpdate?: string;
     error?: string | null;
     clusterId?: string;
@@ -164,9 +162,9 @@ const BasicModeView: React.FC = () => {
                     <h3>Benefits of Installing Kube9 Operator:</h3>
                     <ul>
                         <li>Enhanced cluster monitoring and health reporting</li>
-                        <li>AI-powered insights and recommendations</li>
-                        <li>Advanced dashboards and visualizations</li>
-                        <li>Automated drift detection and compliance</li>
+                        <li>In-cluster assessments and structured status for this extension</li>
+                        <li>Dashboards and workload visibility tied to operator metrics</li>
+                        <li>Drift and configuration signals from collected cluster state</li>
                     </ul>
                 </div>
                 <button className="install-button">How to Install</button>
@@ -184,20 +182,17 @@ interface OperatorStatusViewProps {
 }
 
 /**
- * Component displayed when operator is installed (operated, enabled, or degraded mode).
+ * Component displayed when operator is installed.
  */
 const OperatorStatusView: React.FC<OperatorStatusViewProps> = ({ status, onCopyClusterId }) => {
     return (
         <div className="operator-status">
             <div className="status-grid">
                 <StatusCard
-                    label="Status Mode"
-                    value={getModeDisplay(status.mode, status.tier)}
+                    label="Status"
+                    value={getModeDisplay(status.mode)}
                     status={status.mode}
                 />
-                {status.tier && (
-                    <StatusCard label="Tier" value={status.tier.toUpperCase()} />
-                )}
                 {status.health && (
                     <StatusCard
                         label="Health"
@@ -206,13 +201,6 @@ const OperatorStatusView: React.FC<OperatorStatusViewProps> = ({ status, onCopyC
                     />
                 )}
                 {status.version && <StatusCard label="Version" value={status.version} />}
-                {status.registered !== undefined && (
-                    <StatusCard
-                        label="Registered"
-                        value={status.registered ? 'Yes' : 'No'}
-                        status={status.registered ? 'healthy' : 'degraded'}
-                    />
-                )}
                 {status.lastUpdate && (
                     <StatusCard label="Last Update" value={formatTimestamp(status.lastUpdate)} />
                 )}
@@ -267,20 +255,14 @@ const StatusCard: React.FC<StatusCardProps> = ({ label, value, status }) => {
     );
 };
 
-/**
- * Formats mode string for display.
- * @param mode - Operator mode
- * @param tier - Optional tier information
- * @returns Formatted mode display string
- */
-function getModeDisplay(mode: string, tier?: string): string {
+function getModeDisplay(mode: string): string {
     switch (mode) {
         case 'basic':
             return 'Basic (No Operator)';
         case 'operated':
-            return tier === 'free' ? 'Operated (Free Tier)' : 'Operated';
+            return 'Operator connected';
         case 'enabled':
-            return tier === 'pro' ? 'Enabled (Pro Tier)' : 'Enabled';
+            return 'Operator connected';
         case 'degraded':
             return 'Degraded';
         default:

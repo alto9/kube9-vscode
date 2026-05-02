@@ -31,6 +31,7 @@ import { OperatorStatusClient } from './services/OperatorStatusClient';
 import { OperatorStatusMode } from './kubernetes/OperatorStatusTypes';
 import { FreeDashboardPanel } from './dashboard/FreeDashboardPanel';
 import { OperatedDashboardPanel } from './dashboard/OperatedDashboardPanel';
+import { OperatorDashboardStatus } from './dashboard/types';
 import {
     syncApplicationCommand,
     refreshApplicationCommand,
@@ -1064,7 +1065,7 @@ function registerCommands(): void {
                 
                 // Open appropriate dashboard based on operator status
                 if (cachedStatus.mode === OperatorStatusMode.Basic) {
-                    // Open Free (Non-Operated) Dashboard
+                    // Standalone dashboard when the operator is not installed
                     await FreeDashboardPanel.show(
                         context,
                         kubeconfigPath,
@@ -1073,10 +1074,8 @@ function registerCommands(): void {
                     );
                 } else {
                     // Convert CachedOperatorStatus to OperatorDashboardStatus for dashboard
-                    const operatorStatus = {
+                    const operatorStatus: OperatorDashboardStatus = {
                         mode: cachedStatus.mode.toLowerCase() as 'basic' | 'operated' | 'enabled' | 'degraded',
-                        hasApiKey: cachedStatus.status?.apiKeyConfigured || false,
-                        tier: cachedStatus.status?.tier,
                         version: cachedStatus.status?.version,
                         health: cachedStatus.status?.health
                     };

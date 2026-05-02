@@ -190,8 +190,6 @@ export interface OperatorInstallationStatus {
     upgradeAvailable: boolean;
     /** Latest available version (if upgrade available) */
     latestVersion?: string;
-    /** Operator tier (free or pro) */
-    tier?: 'free' | 'pro';
 }
 
 /**

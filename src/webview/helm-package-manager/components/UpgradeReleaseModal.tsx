@@ -39,6 +39,8 @@ export const UpgradeReleaseModal: React.FC<UpgradeReleaseModalProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [valuesValid, setValuesValid] = useState(true);
+    const [cancelHovered, setCancelHovered] = useState(false);
+    const [upgradeHovered, setUpgradeHovered] = useState(false);
 
     /**
      * Reset form when modal closes.
@@ -374,9 +376,6 @@ export const UpgradeReleaseModal: React.FC<UpgradeReleaseModalProps> = ({
         opacity: 0.5,
         cursor: 'not-allowed'
     };
-
-    const [cancelHovered, setCancelHovered] = useState(false);
-    const [upgradeHovered, setUpgradeHovered] = useState(false);
 
     return (
         <div style={overlayStyle} onClick={handleOverlayClick}>

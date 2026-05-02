@@ -39,6 +39,10 @@ export const InstallChartModal: React.FC<InstallChartModalProps> = ({
     const [valuesValid, setValuesValid] = useState(true);
     const [installing, setInstalling] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [cancelHovered, setCancelHovered] = useState(false);
+    const [installHovered, setInstallHovered] = useState(false);
+    const [releaseNameFocused, setReleaseNameFocused] = useState(false);
+    const [namespaceFocused, setNamespaceFocused] = useState(false);
 
     // Reset form when modal closes
     useEffect(() => {
@@ -319,11 +323,6 @@ export const InstallChartModal: React.FC<InstallChartModalProps> = ({
         opacity: 0.5,
         cursor: 'not-allowed'
     };
-
-    const [cancelHovered, setCancelHovered] = useState(false);
-    const [installHovered, setInstallHovered] = useState(false);
-    const [releaseNameFocused, setReleaseNameFocused] = useState(false);
-    const [namespaceFocused, setNamespaceFocused] = useState(false);
 
     return (
         <div style={overlayStyle} onClick={handleOverlayClick}>

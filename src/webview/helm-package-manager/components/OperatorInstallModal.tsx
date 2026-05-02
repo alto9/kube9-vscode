@@ -18,8 +18,7 @@ interface OperatorInstallModalProps {
 }
 
 /**
- * OperatorInstallModal component for installing the Kube9 Operator.
- * Provides pre-filled defaults and optional Pro tier API key entry.
+ * OperatorInstallModal component for installing the Kube9 Operator via Helm.
  */
 export const OperatorInstallModal: React.FC<OperatorInstallModalProps> = ({
     open,
@@ -28,22 +27,17 @@ export const OperatorInstallModal: React.FC<OperatorInstallModalProps> = ({
 }) => {
     const [namespace, setNamespace] = useState('kube9-system');
     const [createNamespace, setCreateNamespace] = useState(true);
-    const [apiKey, setApiKey] = useState('');
-    const [showProSection, setShowProSection] = useState(false);
     const [installing, setInstalling] = useState(false);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState<string | null>(null);
     const [cancelHovered, setCancelHovered] = useState(false);
     const [installHovered, setInstallHovered] = useState(false);
-    const [expandHovered, setExpandHovered] = useState(false);
 
     // Reset form when modal closes
     useEffect(() => {
         if (!open) {
             setNamespace('kube9-system');
             setCreateNamespace(true);
-            setApiKey('');
-            setShowProSection(false);
             setInstalling(false);
             setProgress(0);
             setError(null);
@@ -108,8 +102,7 @@ export const OperatorInstallModal: React.FC<OperatorInstallModalProps> = ({
                 namespace: namespace.trim(),
                 createNamespace,
                 wait: true,
-                timeout: '5m',
-                values: apiKey.trim() ? `apiKey: ${apiKey.trim()}` : undefined
+                timeout: '5m'
             };
             
             // Send install command
@@ -141,28 +134,6 @@ export const OperatorInstallModal: React.FC<OperatorInstallModalProps> = ({
      */
     const handleCreateNamespaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setCreateNamespace(e.target.checked);
-    };
-
-    /**
-     * Handle API key input change.
-     */
-    const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setApiKey(e.target.value);
-    };
-
-    /**
-     * Handle external link click.
-     */
-    const handleGetApiKeyClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-        e.preventDefault();
-        if (vscode) {
-            vscode.postMessage({ 
-                command: 'openExternalLink', 
-                url: 'https://portal.kube9.dev' 
-            });
-        } else {
-            window.open('https://portal.kube9.dev', '_blank');
-        }
     };
 
     /**
@@ -304,58 +275,6 @@ export const OperatorInstallModal: React.FC<OperatorInstallModalProps> = ({
         height: '16px'
     };
 
-    const proSectionStyle: React.CSSProperties = {
-        border: '1px solid var(--vscode-panel-border)',
-        borderRadius: '4px',
-        padding: '12px',
-        marginTop: '8px'
-    };
-
-    const expandButtonStyle: React.CSSProperties = {
-        width: '100%',
-        padding: '8px 12px',
-        fontSize: '13px',
-        fontFamily: 'var(--vscode-font-family)',
-        fontWeight: 500,
-        backgroundColor: 'transparent',
-        color: 'var(--vscode-foreground)',
-        border: 'none',
-        borderRadius: '2px',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        textAlign: 'left'
-    };
-
-    const expandButtonHoverStyle: React.CSSProperties = {
-        backgroundColor: 'var(--vscode-list-hoverBackground)'
-    };
-
-    const proContentStyle: React.CSSProperties = {
-        marginTop: '12px',
-        paddingTop: '12px',
-        borderTop: '1px solid var(--vscode-panel-border)'
-    };
-
-    const listStyle: React.CSSProperties = {
-        fontSize: '13px',
-        color: 'var(--vscode-foreground)',
-        fontFamily: 'var(--vscode-font-family)',
-        margin: '8px 0',
-        paddingLeft: '20px'
-    };
-
-    const linkStyle: React.CSSProperties = {
-        fontSize: '12px',
-        color: 'var(--vscode-textLink-foreground)',
-        fontFamily: 'var(--vscode-font-family)',
-        textDecoration: 'none',
-        cursor: 'pointer',
-        marginTop: '4px',
-        display: 'inline-block'
-    };
-
     const progressBarContainerStyle: React.CSSProperties = {
         width: '100%',
         height: '24px',
@@ -481,58 +400,6 @@ export const OperatorInstallModal: React.FC<OperatorInstallModalProps> = ({
                             Create namespace if it doesn't exist
                         </label>
                     </div>
-                </div>
-
-                <div style={proSectionStyle}>
-                    <button
-                        style={expandHovered ? { ...expandButtonStyle, ...expandButtonHoverStyle } : expandButtonStyle}
-                        onClick={() => setShowProSection(!showProSection)}
-                        onMouseEnter={() => setExpandHovered(true)}
-                        onMouseLeave={() => setExpandHovered(false)}
-                        disabled={installing}
-                    >
-                        <span>⭐ Pro Tier</span>
-                        <span>{showProSection ? '▼' : '▶'}</span>
-                    </button>
-
-                    {showProSection && (
-                        <div style={proContentStyle}>
-                            <p style={{ fontSize: '13px', color: 'var(--vscode-foreground)', margin: '0 0 8px 0', fontFamily: 'var(--vscode-font-family)' }}>
-                                Enable advanced features with a Pro API key:
-                            </p>
-                            <ul style={listStyle}>
-                                <li>AI-powered cluster insights</li>
-                                <li>Predictive resource recommendations</li>
-                                <li>Advanced security scanning</li>
-                                <li>Priority support</li>
-                            </ul>
-
-                            <div style={inputGroupStyle}>
-                                <label style={labelStyle}>API Key (Optional)</label>
-                                <input
-                                    type="password"
-                                    placeholder="kdy_prod_..."
-                                    value={apiKey}
-                                    onChange={handleApiKeyChange}
-                                    style={inputStyle}
-                                    disabled={installing}
-                                />
-                                <a
-                                    href="#"
-                                    style={linkStyle}
-                                    onClick={handleGetApiKeyClick}
-                                    onMouseEnter={(e) => {
-                                        e.currentTarget.style.textDecoration = 'underline';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.currentTarget.style.textDecoration = 'none';
-                                    }}
-                                >
-                                    Get your API key →
-                                </a>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {installing && (

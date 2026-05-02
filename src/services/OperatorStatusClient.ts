@@ -66,8 +66,8 @@ function getOutputChannel(): vscode.OutputChannel {
  * Client for querying and caching operator status from the kube9-operator-status ConfigMap.
  * 
  * This client queries the ConfigMap using dynamically resolved namespace (via OperatorNamespaceResolver)
- * and caches results for 5 minutes to minimize kubectl calls. Status is determined based on operator
- * presence, mode, tier, health, and registration state.
+ * and caches results for 5 minutes to minimize kubectl calls. Status is determined from operator
+ * presence, mode, health, and freshness.
  */
 export class OperatorStatusClient {
     /**
@@ -369,25 +369,14 @@ export class OperatorStatusClient {
             return OperatorStatusMode.Degraded;
         }
 
-        // Check enabled mode (pro tier)
-        if (status.mode === 'enabled') {
-            if (status.tier === 'pro' && status.registered && status.health === 'healthy') {
-                return OperatorStatusMode.Enabled;
-            }
-            // Enabled mode but not properly registered or healthy - degraded
-            return OperatorStatusMode.Degraded;
+        // Healthy operator: operated and legacy enabled payloads are equivalent for the OSS extension
+        if (
+            (status.mode === 'operated' || status.mode === 'enabled') &&
+            status.health === 'healthy'
+        ) {
+            return OperatorStatusMode.Operated;
         }
 
-        // Check operated mode (free tier)
-        if (status.mode === 'operated') {
-            if (status.tier === 'free' && status.health === 'healthy') {
-                return OperatorStatusMode.Operated;
-            }
-            // Operated mode but not healthy - degraded
-            return OperatorStatusMode.Degraded;
-        }
-
-        // Unknown mode - treat as degraded
         return OperatorStatusMode.Degraded;
     }
 
@@ -406,9 +395,6 @@ export class OperatorStatusClient {
         if (status.mode === undefined || status.mode === null) {
             missingFields.push('mode');
         }
-        if (status.tier === undefined || status.tier === null) {
-            missingFields.push('tier');
-        }
         if (status.version === undefined || status.version === null || status.version === '') {
             missingFields.push('version');
         }
@@ -418,10 +404,7 @@ export class OperatorStatusClient {
         if (status.lastUpdate === undefined || status.lastUpdate === null || status.lastUpdate === '') {
             missingFields.push('lastUpdate');
         }
-        if (status.registered === undefined || status.registered === null) {
-            missingFields.push('registered');
-        }
-        
+
         if (missingFields.length > 0) {
             return `Missing required fields: ${missingFields.join(', ')}`;
         }

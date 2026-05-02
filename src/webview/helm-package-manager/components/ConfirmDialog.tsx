@@ -36,6 +36,9 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     onConfirm,
     onCancel
 }) => {
+    const [cancelHovered, setCancelHovered] = React.useState(false);
+    const [confirmHovered, setConfirmHovered] = React.useState(false);
+
     /**
      * Handle Escape key press to close dialog.
      */
@@ -152,9 +155,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     const confirmButtonHoverStyle: React.CSSProperties = {
         backgroundColor: 'var(--vscode-button-hoverBackground)'
     };
-
-    const [cancelHovered, setCancelHovered] = React.useState(false);
-    const [confirmHovered, setConfirmHovered] = React.useState(false);
 
     return (
         <div style={overlayStyle} onClick={handleOverlayClick}>

@@ -84,16 +84,14 @@ suite('OperatorStatusQuery Test Suite', () => {
             assert.strictEqual(getStatusCallCount, 1, 'Should call getStatus once');
         });
 
-        test('should return correct status for operated mode without API key', async () => {
+        test('should return correct status for operated mode', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'operated',
-                tier: 'free',
                 version: '1.0.0',
                 health: 'healthy',
                 lastUpdate: new Date().toISOString(),
-                registered: false,
-                apiKeyConfigured: false,
                 error: null,
+                namespace: 'kube9-system',
                 collectionStats: {
                     totalSuccessCount: 0,
                     totalFailureCount: 0,
@@ -111,23 +109,18 @@ suite('OperatorStatusQuery Test Suite', () => {
 
             assert.notStrictEqual(result, null, 'Should not return null');
             assert.strictEqual(result?.mode, 'operated', 'Mode should be operated');
-            assert.strictEqual(result?.hasApiKey, false, 'hasApiKey should be false');
-            assert.strictEqual(result?.tier, 'free', 'Tier should be free');
             assert.strictEqual(result?.version, '1.0.0', 'Version should match');
             assert.strictEqual(result?.health, 'healthy', 'Health should be healthy');
         });
 
-        test('should return correct status for enabled mode with API key', async () => {
+        test('should pass through legacy enabled extension mode from cache', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'enabled',
-                tier: 'pro',
                 version: '2.0.0',
                 health: 'healthy',
                 lastUpdate: new Date().toISOString(),
-                registered: true,
-                apiKeyConfigured: true,
                 error: null,
-                clusterId: 'cluster-123',
+                namespace: 'kube9-system',
                 collectionStats: {
                     totalSuccessCount: 0,
                     totalFailureCount: 0,
@@ -144,9 +137,7 @@ suite('OperatorStatusQuery Test Suite', () => {
             const result = await OperatorStatusQuery.getOperatorDashboardStatus(TEST_CONTEXT);
 
             assert.notStrictEqual(result, null, 'Should not return null');
-            assert.strictEqual(result?.mode, 'enabled', 'Mode should be enabled');
-            assert.strictEqual(result?.hasApiKey, true, 'hasApiKey should be true');
-            assert.strictEqual(result?.tier, 'pro', 'Tier should be pro');
+            assert.strictEqual(result?.mode, 'enabled', 'Mode should reflect cached extension mode');
             assert.strictEqual(result?.version, '2.0.0', 'Version should match');
             assert.strictEqual(result?.health, 'healthy', 'Health should be healthy');
         });
@@ -154,13 +145,11 @@ suite('OperatorStatusQuery Test Suite', () => {
         test('should return correct status for degraded mode', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'operated',
-                tier: 'free',
                 version: '1.0.0',
                 health: 'degraded',
                 lastUpdate: new Date().toISOString(),
-                registered: false,
-                apiKeyConfigured: false,
                 error: 'Operator is experiencing issues',
+                namespace: 'kube9-system',
                 collectionStats: {
                     totalSuccessCount: 0,
                     totalFailureCount: 0,
@@ -178,20 +167,17 @@ suite('OperatorStatusQuery Test Suite', () => {
 
             assert.notStrictEqual(result, null, 'Should not return null');
             assert.strictEqual(result?.mode, 'degraded', 'Mode should be degraded');
-            assert.strictEqual(result?.hasApiKey, false, 'hasApiKey should be false');
             assert.strictEqual(result?.health, 'degraded', 'Health should be degraded');
         });
 
-        test('should handle enabled mode without registration', async () => {
+        test('should handle legacy enabled payload shape', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'enabled',
-                tier: 'pro',
                 version: '2.0.0',
                 health: 'healthy',
                 lastUpdate: new Date().toISOString(),
-                registered: false,
-                apiKeyConfigured: false,
                 error: null,
+                namespace: 'kube9-system',
                 collectionStats: {
                     totalSuccessCount: 0,
                     totalFailureCount: 0,
@@ -209,19 +195,18 @@ suite('OperatorStatusQuery Test Suite', () => {
 
             assert.notStrictEqual(result, null, 'Should not return null');
             assert.strictEqual(result?.mode, 'enabled', 'Mode should be enabled');
-            assert.strictEqual(result?.hasApiKey, false, 'hasApiKey should be false when not registered');
         });
 
-        test('should handle operated mode with registration', async () => {
+        test('should handle operated mode with optional legacy registration fields', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'operated',
-                tier: 'free',
                 version: '1.0.0',
                 health: 'healthy',
                 lastUpdate: new Date().toISOString(),
                 registered: true,
                 apiKeyConfigured: false,
                 error: null,
+                namespace: 'kube9-system',
                 collectionStats: {
                     totalSuccessCount: 0,
                     totalFailureCount: 0,
@@ -239,19 +224,16 @@ suite('OperatorStatusQuery Test Suite', () => {
 
             assert.notStrictEqual(result, null, 'Should not return null');
             assert.strictEqual(result?.mode, 'operated', 'Mode should be operated');
-            assert.strictEqual(result?.hasApiKey, false, 'hasApiKey should be false when not in enabled mode');
         });
 
         test('should handle unhealthy operator status', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'operated',
-                tier: 'free',
                 version: '1.0.0',
                 health: 'unhealthy',
                 lastUpdate: new Date().toISOString(),
-                registered: false,
-                apiKeyConfigured: false,
                 error: 'Critical error detected',
+                namespace: 'kube9-system',
                 collectionStats: {
                     totalSuccessCount: 0,
                     totalFailureCount: 0,
@@ -319,13 +301,11 @@ suite('OperatorStatusQuery Test Suite', () => {
         test('should handle multiple sequential calls efficiently', async () => {
             const operatorStatus: OperatorStatus = {
                 mode: 'operated',
-                tier: 'free',
                 version: '1.0.0',
                 health: 'healthy',
                 lastUpdate: new Date().toISOString(),
-                registered: false,
-                apiKeyConfigured: false,
                 error: null,
+                namespace: 'kube9-system',
                 collectionStats: {
                     totalSuccessCount: 0,
                     totalFailureCount: 0,

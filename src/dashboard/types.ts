@@ -9,30 +9,11 @@
  */
 export interface OperatorDashboardStatus {
     /** 
-     * Operator status mode.
-     * - basic: Operator not installed
-     * - operated: Operator installed in free tier
-     * - enabled: Operator installed in pro tier with API key
-     * - degraded: Operator installed but has issues
+     * Operator status mode derived by the extension (see {@link OperatorStatusMode}).
      */
     mode: 'basic' | 'operated' | 'enabled' | 'degraded';
     
-    /** 
-     * Whether the operator has an API key configured.
-     * Read from operator's ConfigMap. Extension cannot set this.
-     */
-    hasApiKey: boolean;
-    
-    /** 
-     * Operator tier (free or pro).
-     * Undefined if operator not installed (basic mode).
-     */
-    tier?: 'free' | 'pro';
-    
-    /** 
-     * Operator version string.
-     * Undefined if operator not installed (basic mode).
-     */
+    /** Operator version string when installed */
     version?: string;
     
     /** 
@@ -44,7 +25,7 @@ export interface OperatorDashboardStatus {
 
 /**
  * Workload counts for all Kubernetes workload types.
- * Used by both Free and Operated dashboards.
+ * Used by standalone and operator-backed dashboards.
  */
 export interface WorkloadCounts {
     /** Number of Deployments across all namespaces */
@@ -71,7 +52,7 @@ export interface WorkloadCounts {
 
 /**
  * Node information for cluster dashboard.
- * Used by both Free and Operated dashboards.
+ * Used by standalone and operator-backed dashboards.
  */
 export interface NodeInfo {
     /** Total number of nodes in the cluster */

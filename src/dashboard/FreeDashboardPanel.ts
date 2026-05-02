@@ -17,8 +17,7 @@ interface PanelInfo {
 }
 
 /**
- * FreeDashboardPanel manages webview panels for Free (Non-Operated) Dashboards.
- * Supports multiple simultaneous panels (one per cluster).
+ * Dashboard shown when the Kube9 operator is not installed (standalone kubectl/extension metrics).
  */
 export class FreeDashboardPanel {
     /**

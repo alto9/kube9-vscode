@@ -1718,7 +1718,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     operatorStatusText = 'operated';
                     break;
                 case OperatorStatusMode.Enabled:
-                    operatorStatusText = 'enabled';
+                    operatorStatusText = 'operated';
                     break;
                 case OperatorStatusMode.Degraded:
                     operatorStatusText = 'degraded';
@@ -1729,11 +1729,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             // Additional operator details (if available)
             if (item.operatorStatusDetails) {
                 const details = item.operatorStatusDetails;
-
-                // Tier
-                if (details.tier) {
-                    parts.push(`Tier: ${details.tier}`);
-                }
 
                 // Version
                 if (details.version) {

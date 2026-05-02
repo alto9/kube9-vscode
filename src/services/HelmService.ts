@@ -828,6 +828,74 @@ export class HelmService {
     }
 
     /**
+     * Parses Helm's `helm list` / release-summary chart field into repository and base chart name.
+     * Examples: `kube9-operator-1.2.0` → `{ chartBaseName: 'kube9-operator' }`;
+     * `kube9/kube9-operator-1.2.0` → `{ repository: 'kube9', chartBaseName: 'kube9-operator' }`.
+     */
+    private parseHelmListChartField(chart: string): { repository?: string; chartBaseName: string } {
+        let chartName = chart.trim();
+
+        const versionMatch = chartName.match(/^(.+)-(\d+\.\d+\.\d+.*)$/);
+        if (versionMatch) {
+            chartName = versionMatch[1];
+        }
+
+        const parts = chartName.split('/');
+        if (parts.length > 1) {
+            return { repository: parts[0], chartBaseName: parts.slice(1).join('/') };
+        }
+        return { repository: undefined, chartBaseName: chartName };
+    }
+
+    /**
+     * Converts a chart string from the UI (often `chart-version` from `helm list`) into a reference
+     * Helm CLI accepts: `repo/chart`, `repo/sub/chart`, or an absolute URL (`https://…`, `oci://…`).
+     */
+    private async resolveUpgradeChartRef(chart: string): Promise<string> {
+        const trimmed = chart.trim();
+        if (!trimmed) {
+            throw new Error('Chart reference is required');
+        }
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) {
+            return trimmed;
+        }
+
+        const { repository, chartBaseName } = this.parseHelmListChartField(trimmed);
+
+        if (repository) {
+            return `${repository}/${chartBaseName}`;
+        }
+
+        const results = await this.searchCharts(chartBaseName);
+        const wanted = chartBaseName.toLowerCase();
+        const exactMatches = results.filter(
+            r =>
+                r.chart.toLowerCase() === wanted ||
+                r.name.toLowerCase() === wanted ||
+                r.name.toLowerCase().endsWith(`/${wanted}`)
+        );
+
+        if (exactMatches.length === 1) {
+            return exactMatches[0].name;
+        }
+        if (exactMatches.length > 1) {
+            const kube9 = exactMatches.find(r => r.name.startsWith('kube9/'));
+            if (kube9 && chartBaseName.toLowerCase().includes('kube9')) {
+                return kube9.name;
+            }
+            throw new Error(
+                `Ambiguous chart "${chartBaseName}" matches multiple repositories: ${exactMatches.map(r => r.name).join(', ')}.`
+            );
+        }
+        if (results.length === 1) {
+            return results[0].name;
+        }
+        throw new Error(
+            `Could not resolve chart "${trimmed}" to repo/name form. Add the Helm repository or use a full reference (e.g. kube9/kube9-operator).`
+        );
+    }
+
+    /**
      * Gets upgrade information for a Helm release.
      * Fetches current values and available chart versions.
      * 
@@ -846,28 +914,12 @@ export class HelmService {
             '--all'
         ]).catch(() => ''); // Return empty string if no values
 
-        // Extract chart name from chart string
-        // Chart format can be: "repo/chart-name-version" or "chart-name-version" or "repo/chart-name"
-        let chartName = chart;
-        let repository: string | undefined;
-
-        // Remove version suffix if present (format: "chart-name-version")
-        const versionMatch = chart.match(/^(.+)-(\d+\.\d+\.\d+.*)$/);
-        if (versionMatch) {
-            chartName = versionMatch[1];
-        }
-
-        // Check if chart includes repository (format: "repo/chart-name")
-        const parts = chartName.split('/');
-        if (parts.length > 1) {
-            repository = parts[0];
-            chartName = parts[1];
-        }
+        const { repository, chartBaseName } = this.parseHelmListChartField(chart);
 
         // Search for available versions
         let availableVersions: string[] = [];
         try {
-            const searchQuery = repository ? `${repository}/${chartName}` : chartName;
+            const searchQuery = repository ? `${repository}/${chartBaseName}` : chartBaseName;
             const searchResults = await this.searchCharts(searchQuery, repository);
             
             // Extract unique versions from search results
@@ -912,10 +964,12 @@ export class HelmService {
      * @throws Error if upgrade fails
      */
     public async upgradeRelease(params: UpgradeParams): Promise<void> {
+        const chartRef = await this.resolveUpgradeChartRef(params.chart);
+
         const args = [
             'upgrade',
             params.releaseName,
-            params.chart,
+            chartRef,
             '--namespace', params.namespace
         ];
 
@@ -1076,13 +1130,11 @@ export class HelmService {
 
             let operatorNamespace: string | undefined;
             let operatorVersion: string | undefined;
-            let tier: 'free' | 'pro' | undefined;
 
             if (operatorRelease) {
                 // Found via Helm release
                 operatorNamespace = operatorRelease.namespace;
                 operatorVersion = operatorRelease.version;
-                tier = await this.detectOperatorTier(operatorRelease);
             } else {
                 // Not found in Helm releases - check for deployment directly
                 // This handles cases where operator was installed via kubectl apply or other methods
@@ -1137,15 +1189,6 @@ export class HelmService {
                                 try {
                                     const releaseDetails = await this.getReleaseDetails(helmReleaseName, helmReleaseNamespace);
                                     operatorVersion = releaseDetails.version;
-                                    tier = await this.detectOperatorTier({
-                                        name: helmReleaseName,
-                                        namespace: helmReleaseNamespace,
-                                        chart: releaseDetails.chart,
-                                        version: releaseDetails.version,
-                                        status: releaseDetails.status,
-                                        revision: releaseDetails.revision,
-                                        updated: releaseDetails.updated
-                                    });
                                 } catch (helmError) {
                                     // Fall through to deployment inspection
                                 }
@@ -1156,26 +1199,15 @@ export class HelmService {
                                 // Extract version from image tag (e.g., kube9-operator:v1.2.3)
                                 // Containers are in spec.template.spec.containers, not spec.containers
                                 const containers = deploymentDetails.deployment.spec?.template?.spec?.containers || [];
-                                const operatorContainer = containers.find(c => 
+                                const operatorContainer = containers.find(c =>
                                     c.image?.includes('kube9-operator')
                                 );
-                                
+
                                 if (operatorContainer?.image) {
                                     const imageTagMatch = operatorContainer.image.match(/[:]v?(\d+\.\d+\.\d+)/);
                                     if (imageTagMatch) {
                                         operatorVersion = imageTagMatch[1];
                                     }
-                                }
-                            }
-                            
-                            // Try to get tier from labels or annotations if not already set
-                            if (!tier) {
-                                const labels = deploymentDetails.deployment.metadata?.labels || {};
-                                
-                                if (labels['kube9.io/tier'] === 'pro' || annotations['kube9.io/tier'] === 'pro') {
-                                    tier = 'pro';
-                                } else if (labels['kube9.io/tier'] === 'free' || annotations['kube9.io/tier'] === 'free') {
-                                    tier = 'free';
                                 }
                             }
                         }
@@ -1225,8 +1257,7 @@ export class HelmService {
                 version: operatorVersion,
                 namespace: operatorNamespace,
                 upgradeAvailable,
-                latestVersion,
-                tier
+                latestVersion
             };
 
             // Cache the result
@@ -1265,20 +1296,6 @@ export class HelmService {
             // Log warning but don't throw - repository operations shouldn't block status check
             console.warn('Failed to ensure kube9 repository:', error);
         }
-    }
-
-    /**
-     * Detects the operator tier (free or pro) from release information.
-     * This is a placeholder implementation that can be enhanced later.
-     * 
-     * @param _release The operator release information (unused in current implementation)
-     * @returns Operator tier or undefined if unable to determine
-     */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    private async detectOperatorTier(_release: HelmRelease): Promise<'free' | 'pro' | undefined> {
-        // TODO: Implement tier detection by checking release values or ConfigMap
-        // For now, return undefined
-        return undefined;
     }
 
     /**

@@ -1141,20 +1141,14 @@ export class HelmPackageManagerPanel {
                             throw new Error(errorDetails);
                         }
 
-                        // Release is deployed successfully
-                        const hasApiKey = params.values && params.values.includes('apiKey:');
-                        const successMessage = hasApiKey
-                            ? 'Kube9 Operator installed successfully! Pro features enabled!'
-                            : 'Kube9 Operator installed successfully! Add an API key to enable Pro features.';
-
-                        vscode.window.showInformationMessage(successMessage);
+                        vscode.window.showInformationMessage('Kube9 Operator installed successfully.');
                         await this.handleGetOperatorStatus();
 
                         this.sendMessage({
                             type: 'operationComplete',
                             operation: 'installOperator',
                             success: true,
-                            message: successMessage
+                            message: 'Kube9 Operator installed successfully.'
                         });
                     } catch (error) {
                         // Handle HelmError with structured error info
