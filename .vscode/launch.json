@@ -24,7 +24,7 @@
         "--extensionDevelopmentPath=${workspaceFolder}"
       ],
       "env": {
-        "KUBECONFIG": "${workspaceFolder}/../kube9-localcluster/out/kubeconfig"
+        "KUBECONFIG": "${workspaceFolder}/../kube9-minikube/out/kubeconfig"
       },
       "outFiles": [
         "${workspaceFolder}/out/**/*.js"

@@ -67,7 +67,7 @@ When using kube9-vscode:
 
 ### Webview Security
 - Free tier webviews use Content Security Policy (CSP)
-- Pro tier webviews load from kube9-server (HTTPS only)
+- Pro tier webviews load from kube9-api (HTTPS only)
 - No arbitrary code execution in webviews
 
 ### Operator Security (Pro Tier)

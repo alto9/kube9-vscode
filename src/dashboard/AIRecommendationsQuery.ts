@@ -29,7 +29,7 @@ interface AIRecommendationsRaw {
  * Recommendations are only available when the operator has an API key configured.
  * 
  * This function queries the kube9-ai-recommendations ConfigMap which is maintained
- * by the operator and synchronized from the kube9-server AI service.
+ * by the operator and synchronized from the kube9-api AI service.
  * 
  * @param clusterContext The Kubernetes context name for the cluster
  * @returns Promise resolving to AIRecommendationsData or null if not available

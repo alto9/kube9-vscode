@@ -188,7 +188,7 @@ This clean separation means:
 
 **4. Insight Lifecycle**
 ```
-1. Operator polls kube9-server every hour
+1. Operator polls kube9-api every hour
 2. Receives insights with obfuscated names
 3. De-obfuscates using local mapping
 4. Stores in SQLite database (/data/kube9.db)

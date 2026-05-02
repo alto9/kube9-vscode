@@ -208,7 +208,7 @@ npm test -- --grep "ClusterTreeProvider"
 ### Testing with Kubernetes
 
 You'll need a Kubernetes cluster for testing. Options:
-- **[kube9-localcluster](https://github.com/alto9/kube9-localcluster)** — Recommended for Kube9 development: isolated Minikube profile, scenarios, and `out/kubeconfig`. Use the **Extension (Demo Cluster)** launch config (expects sibling clone `../kube9-localcluster/out/kubeconfig`) or set `KUBECONFIG` yourself.
+- **[kube9-minikube](https://github.com/alto9/kube9-minikube)** — Recommended for Kube9 development: isolated Minikube profile, scenarios, and `out/kubeconfig`. Use the **Extension (Demo Cluster)** launch config (expects sibling clone `../kube9-minikube/out/kubeconfig`) or set `KUBECONFIG` yourself.
 - **minikube / kind / Docker Desktop Kubernetes** — Generic local clusters
 - **Cloud cluster** — GKE, EKS, AKS
 
