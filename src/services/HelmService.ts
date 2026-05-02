@@ -431,15 +431,24 @@ export class HelmService {
 
     /**
      * Searches for Helm charts across configured repositories.
-     * 
+     *
      * @param query Search query string
      * @param repository Optional repository name to limit search to
+     * @param options When `allVersions` is true, runs `helm search repo --versions` so every published chart version is returned (otherwise Helm returns only the latest version per chart).
      * @returns Promise resolving to array of chart search results
      * @throws Error if command fails
      */
-    public async searchCharts(query: string, repository?: string): Promise<ChartSearchResult[]> {
-        const args = ['search', 'repo', query, '--output', 'json'];
-        
+    public async searchCharts(
+        query: string,
+        repository?: string,
+        options?: { allVersions?: boolean }
+    ): Promise<ChartSearchResult[]> {
+        const args = ['search', 'repo', query];
+        if (options?.allVersions) {
+            args.push('--versions');
+        }
+        args.push('--output', 'json');
+
         if (repository) {
             args.push('--regexp', `^${repository}/`);
         }
@@ -848,6 +857,46 @@ export class HelmService {
     }
 
     /**
+     * Pulls chart version suffix from Helm's chart column (e.g. `kube9/kube9-operator-2.0.0` → `2.0.0`).
+     */
+    private extractChartVersionFromReleaseChartField(chart: string): string | undefined {
+        const trimmed = chart.trim();
+        const m = trimmed.match(/^(.+)-(\d+\.\d+\.\d+(?:[-+][^\s/]*)?)$/);
+        return m?.[2]?.trim();
+    }
+
+    /** Numeric semver-like segments before `-`/`+` pre-release/metadata (Helm chart versions). */
+    private parseChartVersionNumericParts(version: string): number[] | null {
+        const core = version.trim().split(/[-+]/, 1)[0];
+        if (!core) {
+            return null;
+        }
+        const parts = core.split('.').map(p => parseInt(p, 10));
+        if (parts.length === 0 || parts.some(Number.isNaN)) {
+            return null;
+        }
+        return parts;
+    }
+
+    /** Negative if a < b, positive if a > b; NaN if either side is not comparable. */
+    private compareChartVersions(a: string, b: string): number {
+        const pa = this.parseChartVersionNumericParts(a);
+        const pb = this.parseChartVersionNumericParts(b);
+        if (!pa || !pb) {
+            return NaN;
+        }
+        const len = Math.max(pa.length, pb.length);
+        for (let i = 0; i < len; i++) {
+            const da = pa[i] ?? 0;
+            const db = pb[i] ?? 0;
+            if (da !== db) {
+                return da - db;
+            }
+        }
+        return 0;
+    }
+
+    /**
      * Converts a chart string from the UI (often `chart-version` from `helm list`) into a reference
      * Helm CLI accepts: `repo/chart`, `repo/sub/chart`, or an absolute URL (`https://…`, `oci://…`).
      */
@@ -902,10 +951,16 @@ export class HelmService {
      * @param releaseName Release name
      * @param namespace Release namespace
      * @param chart Chart name (e.g., "bitnami/postgresql" or "postgresql-12.1.0")
+     * @param installedChartVersionHint Chart version currently installed (from `helm list`), when known
      * @returns Promise resolving to upgrade information
      * @throws Error if release not found or command fails
      */
-    public async getUpgradeInfo(releaseName: string, namespace: string, chart: string): Promise<UpgradeInfo> {
+    public async getUpgradeInfo(
+        releaseName: string,
+        namespace: string,
+        chart: string,
+        installedChartVersionHint?: string
+    ): Promise<UpgradeInfo> {
         // Fetch current values
         const currentValues = await this.executeCommand([
             'get', 'values',
@@ -916,43 +971,81 @@ export class HelmService {
 
         const { repository, chartBaseName } = this.parseHelmListChartField(chart);
 
-        // Search for available versions
+        const installed =
+            (installedChartVersionHint && installedChartVersionHint.trim()) ||
+            this.extractChartVersionFromReleaseChartField(chart);
+
         let availableVersions: string[] = [];
+        let upgradeVersionsHint: string | undefined;
+
         try {
+            // Refresh index so newly published chart versions appear without a manual `helm repo update`.
+            if (repository) {
+                try {
+                    await this.updateRepository(repository);
+                } catch {
+                    // Continue with whatever index is already on disk
+                }
+            }
+
             const searchQuery = repository ? `${repository}/${chartBaseName}` : chartBaseName;
-            const searchResults = await this.searchCharts(searchQuery, repository);
-            
-            // Extract unique versions from search results
+            const searchResults = await this.searchCharts(searchQuery, repository, {
+                allVersions: true,
+            });
+
             const versions = new Set<string>();
             searchResults.forEach(result => {
                 if (result.version) {
                     versions.add(result.version);
                 }
             });
-            
-            // Sort versions (newest first) - simple semantic version sorting
-            availableVersions = Array.from(versions).sort((a, b) => {
-                // Simple version comparison - split by dots and compare numerically
-                const aParts = a.split('.').map(Number);
-                const bParts = b.split('.').map(Number);
-                for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
-                    const aPart = aParts[i] || 0;
-                    const bPart = bParts[i] || 0;
-                    if (aPart !== bPart) {
-                        return bPart - aPart; // Descending order
-                    }
+
+            let list = Array.from(versions);
+
+            const baselineParsed = installed ? this.parseChartVersionNumericParts(installed) : null;
+
+            if (installed && baselineParsed) {
+                list = list.filter(v => {
+                    const cmp = this.compareChartVersions(v, installed);
+                    return !Number.isNaN(cmp) && cmp > 0;
+                });
+                if (list.length === 0 && versions.size > 0) {
+                    const repoHint = repository ? `\`helm repo update ${repository}\`` : '`helm repo update` for this chart repo';
+                    upgradeVersionsHint =
+                        `No chart versions newer than ${installed} were found in local Helm indexes. If a newer release was just published, run ${repoHint} and open this dialog again.`;
                 }
-                return 0;
+            } else if (!installed) {
+                upgradeVersionsHint =
+                    'Could not detect the installed chart version for this release, so upgrade targets were not listed.';
+                list = [];
+            } else {
+                upgradeVersionsHint =
+                    'Could not interpret the installed chart version for this release, so upgrade targets were not listed.';
+                list = [];
+            }
+
+            availableVersions = list.sort((a, b) => {
+                const cmp = this.compareChartVersions(a, b);
+                if (Number.isNaN(cmp)) {
+                    return b.localeCompare(a);
+                }
+                return -cmp;
             });
+
+            if (availableVersions.length === 0 && !upgradeVersionsHint && versions.size === 0) {
+                upgradeVersionsHint =
+                    'No chart versions were returned by Helm search. Confirm the chart repository is added and the chart name matches.';
+            }
         } catch (error) {
-            // If search fails, return empty versions array
-            // This is not a critical error - user can still upgrade without version selection
             console.warn('Failed to fetch available versions:', error);
+            upgradeVersionsHint =
+                'Helm search failed while resolving upgrade versions. Check Helm CLI output and repository configuration.';
         }
 
         return {
             currentValues: currentValues.trim(),
-            availableVersions
+            availableVersions,
+            upgradeVersionsHint,
         };
     }
 

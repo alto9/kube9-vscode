@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { HelmRelease, UpgradeParams, ExtensionToWebviewMessage } from '../types';
+import { HelmRelease, UpgradeParams, ExtensionToWebviewMessage, UpgradeInfo } from '../types';
 import { YAMLEditor } from './YAMLEditor';
 import { getVSCodeAPI } from '../vscodeApi';
 
@@ -41,6 +41,7 @@ export const UpgradeReleaseModal: React.FC<UpgradeReleaseModalProps> = ({
     const [valuesValid, setValuesValid] = useState(true);
     const [cancelHovered, setCancelHovered] = useState(false);
     const [upgradeHovered, setUpgradeHovered] = useState(false);
+    const [upgradeVersionsHint, setUpgradeVersionsHint] = useState<string>('');
 
     /**
      * Reset form when modal closes.
@@ -56,6 +57,9 @@ export const UpgradeReleaseModal: React.FC<UpgradeReleaseModalProps> = ({
             setError(null);
             setLoading(false);
             setValuesValid(true);
+            setUpgradeVersionsHint('');
+            setCancelHovered(false);
+            setUpgradeHovered(false);
         }
     }, [open]);
 
@@ -80,12 +84,15 @@ export const UpgradeReleaseModal: React.FC<UpgradeReleaseModalProps> = ({
             const message = event.data as ExtensionToWebviewMessage;
 
             if (message.type === 'upgradeInfoLoaded') {
-                const upgradeInfo = message.data as { currentValues: string; availableVersions: string[] };
+                const upgradeInfo = message.data as UpgradeInfo;
                 setCurrentValues(upgradeInfo.currentValues || '');
                 setAvailableVersions(upgradeInfo.availableVersions || []);
+                setUpgradeVersionsHint(upgradeInfo.upgradeVersionsHint?.trim() || '');
                 if (upgradeInfo.availableVersions && upgradeInfo.availableVersions.length > 0) {
-                    // Select first available version by default
+                    // Select newest upgrade candidate by default
                     setSelectedVersion(upgradeInfo.availableVersions[0]);
+                } else {
+                    setSelectedVersion('');
                 }
                 setLoading(false);
                 setError(null);
@@ -127,7 +134,8 @@ export const UpgradeReleaseModal: React.FC<UpgradeReleaseModalProps> = ({
             command: 'getUpgradeInfo',
             name: releaseToFetch.name,
             namespace: releaseToFetch.namespace,
-            chart: releaseToFetch.chart
+            chart: releaseToFetch.chart,
+            installedChartVersion: releaseToFetch.version,
         });
     }, []);
 
@@ -414,6 +422,17 @@ export const UpgradeReleaseModal: React.FC<UpgradeReleaseModalProps> = ({
                                     </select>
                                 </div>
                             </div>
+                            {upgradeVersionsHint ? (
+                                <div
+                                    style={{
+                                        ...versionValueStyle,
+                                        marginTop: '6px',
+                                        whiteSpace: 'pre-wrap',
+                                    }}
+                                >
+                                    {upgradeVersionsHint}
+                                </div>
+                            ) : null}
                         </div>
 
                         <div style={inputGroupStyle}>

@@ -172,8 +172,10 @@ export interface ReleaseRevision {
 export interface UpgradeInfo {
     /** Current values YAML */
     currentValues: string;
-    /** Available chart versions */
+    /** Chart versions strictly newer than the installed release (from Helm repo indexes). */
     availableVersions: string[];
+    /** Explains empty lists or stale indexes when present */
+    upgradeVersionsHint?: string;
 }
 
 /**
@@ -269,6 +271,8 @@ export interface WebviewToExtensionMessage {
     query?: string;
     repository?: string;
     chart?: string;
+    /** Installed Helm chart version (from release row); used to filter upgrade candidates */
+    installedChartVersion?: string;
     namespace?: string;
     revision?: number;
     params?: unknown;

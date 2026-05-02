@@ -257,7 +257,12 @@ export class HelmPackageManagerPanel {
 
                         case 'getUpgradeInfo':
                             if (message.name && message.namespace && message.chart) {
-                                await this.handleGetUpgradeInfo(message.name, message.namespace, message.chart);
+                                await this.handleGetUpgradeInfo(
+                                    message.name,
+                                    message.namespace,
+                                    message.chart,
+                                    message.installedChartVersion
+                                );
                             } else {
                                 this.sendError('Release name, namespace, and chart are required');
                             }
@@ -1266,14 +1271,25 @@ export class HelmPackageManagerPanel {
     /**
      * Handle getUpgradeInfo command.
      * Fetches upgrade information (current values and available versions) for a release.
-     * 
+     *
      * @param releaseName Release name
      * @param namespace Release namespace
      * @param chart Chart name
+     * @param installedChartVersion Current chart version from listing when known
      */
-    private async handleGetUpgradeInfo(releaseName: string, namespace: string, chart: string): Promise<void> {
+    private async handleGetUpgradeInfo(
+        releaseName: string,
+        namespace: string,
+        chart: string,
+        installedChartVersion?: string
+    ): Promise<void> {
         try {
-            const upgradeInfo = await this.helmService.getUpgradeInfo(releaseName, namespace, chart);
+            const upgradeInfo = await this.helmService.getUpgradeInfo(
+                releaseName,
+                namespace,
+                chart,
+                installedChartVersion
+            );
             
             this.sendMessage({
                 type: 'upgradeInfoLoaded',
