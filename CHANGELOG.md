@@ -1,3 +1,18 @@
+# [1.35.0](https://github.com/alto9/kube9-vscode/compare/v1.34.1...v1.35.0) (2026-05-02)
+
+
+### Bug Fixes
+
+* update Slack notification payload to include repository name in release messages ([6f3a0c8](https://github.com/alto9/kube9-vscode/commit/6f3a0c83dd62b73044d0b220dfd1bcc7ce03e28d))
+
+
+### Features
+
+* **telemetry:** add forbid-list ESLint guardrails for façade ([#138](https://github.com/alto9/kube9-vscode/issues/138)) ([9225488](https://github.com/alto9/kube9-vscode/commit/9225488336e846e2b2b0fca71ecaa24ad86a45ac))
+* **telemetry:** add typed product telemetry façade ([#139](https://github.com/alto9/kube9-vscode/issues/139)) ([9ec64da](https://github.com/alto9/kube9-vscode/commit/9ec64dac9354a667cf86fa59225b9d4674c60d63))
+* **telemetry:** instrument kube9 commands and major webviews ([dacaee3](https://github.com/alto9/kube9-vscode/commit/dacaee3aaf52c52700ae7c8a601444026e3c19bb)), closes [alto9/kube9-vscode#134](https://github.com/alto9/kube9-vscode/issues/134)
+* **telemetry:** wire VS Code TelemetryReporter with consent-aware façade ([1a16fb9](https://github.com/alto9/kube9-vscode/commit/1a16fb9d59baccd28add6e0935c47de3b97fc745)), closes [#140](https://github.com/alto9/kube9-vscode/issues/140)
+
 ## [1.34.1](https://github.com/alto9/kube9-vscode/compare/v1.34.0...v1.34.1) (2026-04-26)
 
 # [1.34.0](https://github.com/alto9/kube9-vscode/compare/v1.33.2...v1.34.0) (2026-04-15)
