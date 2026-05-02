@@ -31,6 +31,7 @@ import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
 import { ArgoCDCategory } from './categories/ArgoCDCategory';
 import { ReportsCategory } from './categories/ReportsCategory';
 import { OperatorSubcategory } from './categories/reports/OperatorSubcategory';
+import { WellArchitectedFrameworkCategory } from './categories/reports/WellArchitectedFrameworkCategory';
 import { EventsCategory } from './categories/EventsCategory';
 import { EventsProvider } from '../services/EventsProvider';
 import { ArgoCDService } from '../services/ArgoCDService';
@@ -548,7 +549,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'reports' ||
                type === 'events' ||
                type === 'operatorSubcategory' ||
-               type === 'operatorHealth';
+               type === 'operatorHealth' ||
+               type === 'wellArchitectedSubcategory' ||
+               type === 'wellArchitectedReport';
     }
 
     /**
@@ -800,8 +803,16 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     categoryElement.resourceData
                 );
                 break;
+
+            case 'wellArchitectedSubcategory':
+                items = WellArchitectedFrameworkCategory.getReportItems(categoryElement.resourceData);
+                break;
             
             case 'operatorHealth':
+                items = [];
+                break;
+
+            case 'wellArchitectedReport':
                 items = [];
                 break;
             

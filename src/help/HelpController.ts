@@ -63,6 +63,9 @@ What you expected to happen.
       'cluster-manager': `${HelpController.DOCS_URL}features/cluster-manager/`,
       'yaml-editor': `${HelpController.DOCS_URL}features/yaml-editor/`,
       'describe-webview': `${HelpController.DOCS_URL}features/describe-view/`,
+      'helm-package-manager': HelpController.DOCS_URL,
+      'operator-health-report': HelpController.DOCS_URL,
+      'well-architected-assessment': HelpController.DOCS_URL,
       'default': HelpController.DOCS_URL
     };
     

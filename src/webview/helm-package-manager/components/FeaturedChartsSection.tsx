@@ -61,7 +61,7 @@ export const FeaturedChartsSection: React.FC<FeaturedChartsSectionProps> = ({
 
     return (
         <section className="featured-charts-section" style={sectionStyle}>
-            <h2 style={headingStyle}>🌟 Featured Charts</h2>
+            <h2 style={headingStyle}>Featured Charts</h2>
             <div style={chartsGridStyle}>
                 {/* Operator Card as first tile */}
                 <OperatorCard

@@ -87,7 +87,7 @@ export const InstalledReleasesSection: React.FC<InstalledReleasesSectionProps> =
     return (
         <section className="installed-releases-section" style={sectionStyle}>
             <div className="section-header" style={headerStyle}>
-                <h2 style={titleStyle}>📦 Installed Releases</h2>
+                <h2 style={titleStyle}>Installed Releases</h2>
             </div>
             <ReleaseFiltersComponent
                 filters={filters}

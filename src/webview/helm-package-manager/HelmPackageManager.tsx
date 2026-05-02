@@ -28,7 +28,6 @@ export const HelmPackageManager: React.FC = () => {
             name: 'Trivy Operator',
             chart: 'aqua/trivy-operator',
             description: 'Security scanning operator for Kubernetes that scans container images and Kubernetes resources for vulnerabilities and misconfigurations.',
-            version: '0.1.5',
             installed: false
         }
     ];
@@ -405,7 +404,7 @@ export const HelmPackageManager: React.FC = () => {
                         releaseName: chart.name.toLowerCase().replace(/\s+/g, '-'),
                         namespace: 'trivy-system',
                         createNamespace: true,
-                        version: chart.version,
+                        ...(chart.version ? { version: chart.version } : {}),
                         wait: true
                     };
                     

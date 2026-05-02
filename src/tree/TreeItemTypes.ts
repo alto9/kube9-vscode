@@ -36,6 +36,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - reports: Reports category
  * - events: Events category (appears when operator is installed)
  * - operatorSubcategory: Kube9 Operator subcategory (under Reports)
+ * - wellArchitectedSubcategory: Well Architected Assessment (under Kube9 Operator)
  * 
  * Individual resource types (items within categories):
  * - deployment: Individual deployment item
@@ -53,6 +54,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - argocdApplication: Individual ArgoCD Application item (under ArgoCD)
  * - crd: Individual Custom Resource Definition item
  * - operatorHealth: Individual operator health report item (under Kube9 Operator)
+ * - wellArchitectedReport: Pillar-specific Well-Architected assessment report (under Well Architected Assessment)
  */
 export type TreeItemType = 
     | 'cluster' 
@@ -98,8 +100,10 @@ export type TreeItemType =
     | 'reports'
     | 'events'
     | 'operatorSubcategory'
+    | 'wellArchitectedSubcategory'
     | 'crd'
-    | 'operatorHealth';
+    | 'operatorHealth'
+    | 'wellArchitectedReport';
 
 /**
  * Re-export ClusterStatus for convenience.

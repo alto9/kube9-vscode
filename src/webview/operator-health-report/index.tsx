@@ -1,10 +1,13 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { WebviewHeader } from '../components/WebviewHeader';
 import './styles.css';
 
-// Acquire VS Code API
 declare const acquireVsCodeApi: () => any;
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
+if (vscode) {
+    (window as unknown as { vscodeApi: typeof vscode }).vscodeApi = vscode;
+}
 
 /**
  * Health report data structure sent from HealthReportPanel.
@@ -12,8 +15,29 @@ const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : un
 interface HealthReportData {
     clusterContext: string;
     operatorStatus: OperatorStatusData;
+    assessment: AssessmentSummary | null;
     timestamp: number;
     cacheAge: number;
+}
+
+/** Mirrors operator status `assessment` field from ConfigMap */
+interface AssessmentSummary {
+    lastScheduledCompletedAt: string | null;
+    lastScheduledOutcome: 'none' | 'success' | 'failed';
+    lastScheduledRunState: string | null;
+    lastScheduledRunId: string | null;
+    lastScheduledTotals: {
+        totalChecks: number;
+        completedChecks: number;
+        passedChecks: number;
+        failedChecks: number;
+        warningChecks: number;
+    };
+    lastScheduledError: string | null;
+    schedulingEnabled?: boolean;
+    scheduleIntervalSeconds?: number | null;
+    scheduledAssessmentMode?: 'full' | 'pillar' | null;
+    scheduledAssessmentPillar?: string | null;
 }
 
 /**
@@ -82,68 +106,65 @@ const OperatorHealthReport: React.FC = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="health-report">
-                <div className="loading-container">
-                    <p>Loading operator status...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="health-report">
-                <div className="error-container">
-                    <div className="error-message">Unable to fetch operator status: {error}</div>
-                    <button onClick={handleRefresh} className="refresh-button">
-                        Retry
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (!data) {
-        return (
-            <div className="health-report">
-                <div className="error-container">
-                    <div className="error-message">No data available</div>
-                </div>
-            </div>
-        );
-    }
+    const headerActions = [
+        {
+            label: 'Refresh',
+            onClick: handleRefresh,
+            disabled: loading
+        }
+    ];
 
     return (
         <div className="health-report">
-            <header className="report-header">
-                <h1>Kube9 Operator Health</h1>
-                <button onClick={handleRefresh} className="refresh-button">
-                    Refresh
-                </button>
-            </header>
+            <WebviewHeader
+                title="Kube9 Operator Health"
+                helpContext="operator-health-report"
+                actions={headerActions}
+            />
+            <div className="health-report-body">
+                {loading && (
+                    <div className="loading-container">
+                        <p>Loading operator status...</p>
+                    </div>
+                )}
 
-            {/* Stale status warning */}
-            {data.cacheAge > 5 * 60 * 1000 && (
-                <div className="warning-banner">
-                    ⚠️ Status data is stale (last updated {formatCacheAge(data.cacheAge)})
-                </div>
-            )}
+                {!loading && error && (
+                    <div className="error-container">
+                        <div className="error-message">Unable to fetch operator status: {error}</div>
+                    </div>
+                )}
 
-            <div className="cluster-info">
-                <strong>Cluster:</strong> {data.clusterContext}
-            </div>
+                {!loading && !error && !data && (
+                    <div className="error-container">
+                        <div className="error-message">No data available</div>
+                    </div>
+                )}
 
-            {/* Render different UI based on mode */}
-            {data.operatorStatus.mode === 'basic' ? (
-                <BasicModeView />
-            ) : (
-                <OperatorStatusView status={data.operatorStatus} onCopyClusterId={handleCopyClusterId} />
-            )}
+                {!loading && !error && data && (
+                    <>
+                        {data.cacheAge > 5 * 60 * 1000 && (
+                            <div className="warning-banner">
+                                ⚠️ Status data is stale (last updated {formatCacheAge(data.cacheAge)})
+                            </div>
+                        )}
 
-            <div className="timestamp">
-                Last checked: {new Date(data.timestamp).toLocaleString()}
+                        <div className="cluster-info">
+                            <strong>Cluster:</strong> {data.clusterContext}
+                        </div>
+
+                        {data.operatorStatus.mode === 'basic' ? (
+                            <BasicModeView />
+                        ) : (
+                            <OperatorStatusView
+                                status={data.operatorStatus}
+                                assessment={data.assessment}
+                                onCopyClusterId={handleCopyClusterId}
+                            />
+                        )}
+
+                        <div className="timestamp">Last checked: {new Date(data.timestamp).toLocaleString()}</div>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -173,18 +194,108 @@ const BasicModeView: React.FC = () => {
     );
 };
 
+function formatAssessmentInterval(seconds: number): string {
+    if (seconds < 60) {
+        return `${seconds} second${seconds === 1 ? '' : 's'}`;
+    }
+    if (seconds < 3600) {
+        const m = Math.round(seconds / 60);
+        return `${m} minute${m === 1 ? '' : 's'}`;
+    }
+    if (seconds < 86400) {
+        const h = Math.round(seconds / 3600);
+        return `${h} hour${h === 1 ? '' : 's'}`;
+    }
+    const d = Math.round(seconds / 86400);
+    return `${d} day${d === 1 ? '' : 's'}`;
+}
+
+function formatAssessmentNextRun(a: AssessmentSummary): string {
+    if (!a.schedulingEnabled) {
+        return 'Scheduled assessments are disabled in the operator (ASSESSMENT_ENABLED).';
+    }
+    const interval = a.scheduleIntervalSeconds;
+    if (interval === null || interval === undefined || interval <= 0) {
+        return 'Interval is not available. Upgrade kube9-operator to a version that publishes scheduleIntervalSeconds in status.';
+    }
+    const human = formatAssessmentInterval(interval);
+    if (a.lastScheduledOutcome === 'none' || !a.lastScheduledCompletedAt) {
+        return `No completed run reported yet from this operator process. After the first run, expect about every ${human} (collection scheduler may add jitter).`;
+    }
+    const last = new Date(a.lastScheduledCompletedAt).getTime();
+    if (Number.isNaN(last)) {
+        return 'Could not parse last run time from status.';
+    }
+    const next = new Date(last + interval * 1000);
+    return `Approximate next run: ${next.toLocaleString()} — based on last completion plus ${human}. Actual time may vary slightly.`;
+}
+
+const AssessmentScheduleSection: React.FC<{ assessment: AssessmentSummary }> = ({ assessment }) => {
+    const a = assessment;
+    const lastRunDisplay =
+        a.lastScheduledCompletedAt && a.lastScheduledOutcome !== 'none'
+            ? `${new Date(a.lastScheduledCompletedAt).toLocaleString()} (${a.lastScheduledOutcome})`
+            : 'No run recorded yet (operator may not have completed a scheduled tick in this process).';
+
+    const scopeLabel =
+        a.scheduledAssessmentMode === 'pillar' && a.scheduledAssessmentPillar
+            ? `Pillar: ${a.scheduledAssessmentPillar}`
+            : a.scheduledAssessmentMode === 'full'
+              ? 'Full framework'
+              : '—';
+
+    const totals = a.lastScheduledTotals;
+
+    return (
+        <section className="assessment-schedule-section" aria-labelledby="assessment-schedule-heading">
+            <h3 id="assessment-schedule-heading" className="assessment-schedule-title">
+                Well-Architected assessment (scheduled)
+            </h3>
+            <div className="assessment-summary-grid">
+                <div className="assessment-summary-card">
+                    <div className="assessment-card-label">Last run</div>
+                    <div className="assessment-card-value">{lastRunDisplay}</div>
+                </div>
+                <div className="assessment-summary-card">
+                    <div className="assessment-card-label">Run state</div>
+                    <div className="assessment-card-value">{a.lastScheduledRunState ?? '—'}</div>
+                </div>
+                <div className="assessment-summary-card">
+                    <div className="assessment-card-label">Scope</div>
+                    <div className="assessment-card-value">{scopeLabel}</div>
+                </div>
+                <div className="assessment-summary-card">
+                    <div className="assessment-card-label">Totals</div>
+                    <div className="assessment-card-value">
+                        {totals.passedChecks} passed · {totals.failedChecks} failed · {totals.warningChecks} warn ·{' '}
+                        {totals.totalChecks} total
+                    </div>
+                </div>
+            </div>
+            {a.lastScheduledOutcome === 'failed' && a.lastScheduledError ? (
+                <div className="assessment-tick-error">Last assessment tick error: {a.lastScheduledError}</div>
+            ) : null}
+            <div className="assessment-next-run">
+                <h4>Next scheduled run</h4>
+                <div>{formatAssessmentNextRun(a)}</div>
+            </div>
+        </section>
+    );
+};
+
 /**
  * Props for OperatorStatusView component.
  */
 interface OperatorStatusViewProps {
     status: OperatorStatusData;
+    assessment: AssessmentSummary | null;
     onCopyClusterId: (clusterId: string) => void;
 }
 
 /**
  * Component displayed when operator is installed.
  */
-const OperatorStatusView: React.FC<OperatorStatusViewProps> = ({ status, onCopyClusterId }) => {
+const OperatorStatusView: React.FC<OperatorStatusViewProps> = ({ status, assessment, onCopyClusterId }) => {
     return (
         <div className="operator-status">
             <div className="status-grid">
@@ -223,11 +334,7 @@ const OperatorStatusView: React.FC<OperatorStatusViewProps> = ({ status, onCopyC
                 </div>
             )}
 
-            {/* Placeholder for future metrics */}
-            <div className="future-metrics">
-                <h3>Additional Metrics</h3>
-                <p className="placeholder-text">More operator metrics coming soon...</p>
-            </div>
+            {assessment && <AssessmentScheduleSection assessment={assessment} />}
         </div>
     );
 };

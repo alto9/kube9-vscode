@@ -18,14 +18,6 @@ export const FeaturedChartCard: React.FC<FeaturedChartCardProps> = ({
     chart,
     onInstall
 }) => {
-    // Get icon based on chart name
-    const getChartIcon = (chartName: string): string => {
-        const name = chartName.toLowerCase();
-        if (name.includes('trivy')) {
-            return '🔒'; // Security icon for Trivy
-        }
-        return '📦'; // Default package icon
-    };
     const cardStyle: React.CSSProperties = {
         padding: '16px',
         backgroundColor: 'var(--vscode-editor-background)',
@@ -41,14 +33,7 @@ export const FeaturedChartCard: React.FC<FeaturedChartCardProps> = ({
 
     const headerStyle: React.CSSProperties = {
         display: 'flex',
-        alignItems: 'flex-start',
-        gap: '16px'
-    };
-
-    const logoStyle: React.CSSProperties = {
-        fontSize: '28px',
-        lineHeight: '1',
-        flexShrink: 0
+        alignItems: 'flex-start'
     };
 
     const headerContentStyle: React.CSSProperties = {
@@ -129,11 +114,12 @@ export const FeaturedChartCard: React.FC<FeaturedChartCardProps> = ({
     return (
         <div style={cardStyle}>
             <div style={headerStyle}>
-                <div style={logoStyle}>{getChartIcon(chart.name)}</div>
                 <div style={headerContentStyle}>
                     <h3 style={titleStyle}>{chart.name}</h3>
                     <p style={descriptionStyle}>{chart.description}</p>
-                    <div style={versionStyle}>Version: {chart.version}</div>
+                    <div style={versionStyle}>
+                        {chart.version ? `Version: ${chart.version}` : 'Installs latest chart from repository'}
+                    </div>
                 </div>
             </div>
             <div style={actionsStyle}>

@@ -1,0 +1,166 @@
+:root {
+    --font-family: var(--vscode-font-family);
+    --font-size: 13px;
+    --foreground: var(--vscode-foreground);
+    --description: var(--vscode-descriptionForeground);
+    --background: var(--vscode-editor-background);
+    --border: var(--vscode-panel-border);
+    --pass: var(--vscode-testing-iconPassed);
+    --fail: var(--vscode-testing-iconFailed);
+    --warn: var(--vscode-editorWarning-foreground);
+    --skip: var(--vscode-descriptionForeground);
+    --btn-bg: var(--vscode-button-background);
+    --btn-fg: var(--vscode-button-foreground);
+    --btn-hover: var(--vscode-button-hoverBackground);
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    color: var(--foreground);
+    background: var(--background);
+    margin: 0;
+    line-height: 1.5;
+}
+
+#root {
+    min-height: 0;
+}
+
+.waf-report {
+    box-sizing: border-box;
+}
+
+.waf-report-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: 16px 24px 28px;
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.cluster-line {
+    color: var(--description);
+    margin-bottom: 16px;
+}
+
+.checks-section {
+    width: 100%;
+    min-width: 0;
+}
+
+.table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    background: var(--vscode-editor-inactiveSelectionBackground, rgba(128, 128, 128, 0.15));
+    font-weight: 600;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.status-passing {
+    color: var(--pass);
+}
+
+.status-failing {
+    color: var(--fail);
+}
+
+.status-warning {
+    color: var(--warn);
+}
+
+.status-skipped,
+.status-error,
+.status-timeout {
+    color: var(--description);
+}
+
+.check-detail-row td {
+    background: var(--vscode-editor-inactiveSelectionBackground, rgba(128, 128, 128, 0.12));
+    border-bottom: 1px solid var(--border);
+    padding: 0;
+}
+
+.check-detail-inner {
+    padding: 10px 12px 12px;
+}
+
+.detail-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--description);
+    margin-bottom: 4px;
+}
+
+.check-reason p,
+.check-remediation p {
+    margin: 0 0 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--foreground);
+}
+
+.check-remediation p:last-child {
+    margin-bottom: 0;
+}
+
+/* Normalize common operator spellings */
+.status-pass,
+.status-fail {
+    color: var(--description);
+}
+
+.error-banner {
+    padding: 12px;
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    background: var(--vscode-inputValidation-errorBackground);
+    border-radius: 4px;
+    margin-bottom: 16px;
+}
+
+.stub-note {
+    color: var(--description);
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.loading-container,
+.error-container {
+    padding: 24px;
+}

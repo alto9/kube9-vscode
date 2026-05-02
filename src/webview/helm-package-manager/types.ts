@@ -58,7 +58,8 @@ export interface FeaturedChart {
     name: string;
     chart: string;
     description: string;
-    version: string;
+    /** When omitted, install uses the latest chart version from the repository. */
+    version?: string;
     installed: boolean;
     upgradeAvailable?: string;
 }

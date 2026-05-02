@@ -9,16 +9,13 @@ import { TreeItemData } from '../TreeItemTypes';
  */
 export class ReportsCategory {
     /**
-     * Retrieves the 1 reports subcategory for the Reports category.
-     * Returns subcategory tree items in the correct order.
-     * 
+     * Retrieves reports subcategories for the Reports category.
+     *
      * @param resourceData Cluster context and cluster information
-     * @returns Array of 1 reports subcategory tree item
+     * @returns Subcategory tree items (Kube9 Operator and nested reports)
      */
     public static getReportsSubcategories(resourceData: TreeItemData): ClusterTreeItem[] {
-        return [
-            this.createOperatorSubcategory(resourceData)
-        ];
+        return [this.createOperatorSubcategory(resourceData)];
     }
 
     /**

@@ -4,6 +4,12 @@ import { TutorialWebview } from './webview/TutorialWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DescribeWebview, ConfigMapTreeItemConfig } from './webview/DescribeWebview';
 import { HealthReportPanel } from './webview/HealthReportPanel';
+import { WellArchitectedAssessmentPanel } from './webview/WellArchitectedAssessmentPanel';
+import {
+    WELL_ARCHITECTED_PILLARS,
+    parseWellArchitectedReportId,
+    wellArchitectedReportIdForPillar,
+} from './tree/categories/reports/WellArchitectedFrameworkCategory';
 import { ClusterManagerWebview } from './webview/ClusterManagerWebview';
 import { NodeDescribeWebview } from './webview/NodeDescribeWebview';
 import { CronJobDescribeWebview } from './webview/CronJobDescribeWebview';
@@ -648,6 +654,62 @@ function registerCommands(): void {
     
     context.subscriptions.push(openOperatorHealthReportCommand);
     disposables.push(openOperatorHealthReportCommand);
+
+    const openWellArchitectedAssessmentCommand = registerInstrumentedKube9Command(
+        'kube9.openWellArchitectedAssessmentReport',
+        async (contextName?: string, reportId?: string) => {
+            try {
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
+
+                if (!kubeconfigPath) {
+                    vscode.window.showWarningMessage('No cluster selected');
+                    return;
+                }
+
+                if (!contextName) {
+                    const contextInfo = await getContextInfo();
+                    contextName = contextInfo.contextName;
+                }
+
+                if (!contextName) {
+                    vscode.window.showWarningMessage('No cluster context available');
+                    return;
+                }
+
+                let resolvedReportId = reportId;
+                if (!resolvedReportId) {
+                    const choice = await vscode.window.showQuickPick(
+                        WELL_ARCHITECTED_PILLARS.map((p) => ({ label: p.label, id: p.id })),
+                        { placeHolder: 'Choose a Well-Architected pillar' }
+                    );
+                    if (!choice) {
+                        return;
+                    }
+                    resolvedReportId = wellArchitectedReportIdForPillar(choice.id);
+                } else if (!parseWellArchitectedReportId(resolvedReportId)) {
+                    vscode.window.showErrorMessage(`Unknown assessment report: ${resolvedReportId}`);
+                    return;
+                }
+
+                const operatorStatusClient = new OperatorStatusClient();
+                await WellArchitectedAssessmentPanel.createOrShow(
+                    context,
+                    operatorStatusClient,
+                    kubeconfigPath,
+                    contextName,
+                    resolvedReportId
+                );
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Well-Architected assessment report:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open assessment report: ${errorMessage}`);
+            }
+        }
+    );
+
+    context.subscriptions.push(openWellArchitectedAssessmentCommand);
+    disposables.push(openWellArchitectedAssessmentCommand);
     
     // Register open Cluster Organizer command
     const openClusterManagerCmd = registerInstrumentedKube9Command(

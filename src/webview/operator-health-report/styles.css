@@ -77,7 +77,7 @@ body {
 }
 
 #root {
-    min-height: 100vh;
+    min-height: 0;
 }
 
 /* ==========================================================================
@@ -85,57 +85,18 @@ body {
    ========================================================================== */
 
 .health-report {
-    padding: var(--spacing-xl);
     font-family: var(--font-family);
     color: var(--foreground);
     background-color: var(--background);
-    min-height: 100vh;
     box-sizing: border-box;
 }
 
-/* ==========================================================================
-   Header Styles
-   ========================================================================== */
-
-.report-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: var(--spacing-xl);
-    padding-bottom: var(--spacing-lg);
-    border-bottom: 1px solid var(--border);
-}
-
-.report-header h1 {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
-    color: var(--foreground);
-}
-
-.refresh-button {
-    padding: var(--spacing-sm) var(--spacing-lg);
-    background-color: var(--button-primary-bg);
-    color: var(--button-primary-fg);
-    border: none;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: var(--font-size);
-    font-family: var(--font-family);
-}
-
-.refresh-button:hover {
-    background-color: var(--button-primary-hover);
-}
-
-.refresh-button:focus {
-    outline: 1px solid var(--focus-border);
-    outline-offset: 2px;
-}
-
-.refresh-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.health-report-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding: var(--spacing-xl);
+    box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -348,28 +309,77 @@ body {
 }
 
 /* ==========================================================================
-   Future Metrics Placeholder
+   Well-Architected scheduled assessment (from operator status)
    ========================================================================== */
 
-.future-metrics {
-    background-color: var(--background);
-    padding: var(--spacing-lg);
-    border-radius: var(--radius-lg);
-    border: 1px dashed var(--border);
+.assessment-schedule-section {
     margin-bottom: var(--spacing-xl);
+    margin-top: var(--spacing-md);
 }
 
-.future-metrics h3 {
+.assessment-schedule-title {
     margin: 0 0 var(--spacing-md) 0;
-    color: var(--foreground);
     font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--foreground);
 }
 
-.placeholder-text {
+.assessment-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.assessment-summary-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    background-color: var(--background);
+}
+
+.assessment-card-label {
+    font-size: var(--font-size-xs);
     color: var(--description-foreground);
-    font-style: italic;
-    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: var(--spacing-xs);
+}
+
+.assessment-card-value {
     font-size: var(--font-size);
+    font-weight: 500;
+    color: var(--foreground);
+    line-height: 1.45;
+}
+
+.assessment-tick-error {
+    padding: var(--spacing-md);
+    border: 1px solid var(--error-border);
+    background-color: var(--error-bg);
+    color: var(--error-fg);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-lg);
+    font-size: var(--font-size);
+}
+
+.assessment-next-run {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md) var(--spacing-lg);
+    color: var(--foreground);
+}
+
+.assessment-next-run h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: var(--font-size);
+    font-weight: 600;
+}
+
+.assessment-next-run > div {
+    font-size: var(--font-size-sm);
+    line-height: 1.5;
+    color: var(--foreground);
 }
 
 /* ==========================================================================
@@ -460,14 +470,8 @@ body {
    ========================================================================== */
 
 @media (max-width: 768px) {
-    .health-report {
+    .health-report-body {
         padding: var(--spacing-lg);
-    }
-
-    .report-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--spacing-md);
     }
 
     .status-grid {

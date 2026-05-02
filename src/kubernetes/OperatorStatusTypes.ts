@@ -51,6 +51,37 @@ export interface CollectionStats {
     lastSuccessTime: string | null;
 }
 
+/** Per-check result row from the last scheduled Well-Architected assessment (operator status). */
+export interface AssessmentCheckStatusSummary {
+    checkId: string;
+    checkName: string;
+    pillar: string;
+    status: string;
+    message?: string | null;
+    remediation?: string | null;
+}
+
+/** Summary of scheduled in-cluster assessments published by kube9-operator. */
+export interface AssessmentStatusSummary {
+    lastScheduledCompletedAt: string | null;
+    lastScheduledOutcome: 'none' | 'success' | 'failed';
+    lastScheduledRunState: string | null;
+    lastScheduledRunId: string | null;
+    lastScheduledTotals: {
+        totalChecks: number;
+        completedChecks: number;
+        passedChecks: number;
+        failedChecks: number;
+        warningChecks: number;
+    };
+    lastScheduledError: string | null;
+    lastScheduledChecks?: AssessmentCheckStatusSummary[];
+    schedulingEnabled?: boolean;
+    scheduleIntervalSeconds?: number | null;
+    scheduledAssessmentMode?: 'full' | 'pillar' | null;
+    scheduledAssessmentPillar?: string | null;
+}
+
 /**
  * ArgoCD Status
  * Represents the current state of ArgoCD detection in the cluster
@@ -118,5 +149,8 @@ export interface OperatorStatus {
     
     /** Optional: ArgoCD awareness information */
     argocd?: ArgoCDStatus;
+
+    /** Optional: last scheduled Well-Architected assessment (newer operators) */
+    assessment?: AssessmentStatusSummary;
 }
 

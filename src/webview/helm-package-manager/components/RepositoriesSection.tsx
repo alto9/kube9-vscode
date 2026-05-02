@@ -119,7 +119,7 @@ export const RepositoriesSection: React.FC<RepositoriesSectionProps> = ({
         <>
             <section className="repositories-section" style={sectionStyle}>
                 <div style={headerStyle}>
-                    <h2 style={titleStyle}>📚 Repositories</h2>
+                    <h2 style={titleStyle}>Repositories</h2>
                     <button
                         style={isAddButtonHovered ? { ...addButtonStyle, ...addButtonHoverStyle } : addButtonStyle}
                         onClick={handleAddRepositoryClick}

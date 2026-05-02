@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import { OperatorStatusClient } from '../services/OperatorStatusClient';
+import type { AssessmentStatusSummary } from '../kubernetes/OperatorStatusTypes';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
+import { getHelpController } from '../extension';
+import { WebviewHelpHandler } from './WebviewHelpHandler';
+import { getReportWebviewHtml } from './reportWebviewHtml';
 
 /**
  * Health report data structure sent to webview.
@@ -15,6 +19,8 @@ interface HealthReportData {
         error?: string | null;
         clusterId?: string;
     };
+    /** Last scheduled assessment summary from operator status ConfigMap, when present */
+    assessment: AssessmentStatusSummary | null;
     timestamp: number;
     cacheAge: number;
 }
@@ -69,7 +75,8 @@ export class HealthReportPanel {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: [
-                    vscode.Uri.joinPath(context.extensionUri, 'media')
+                    vscode.Uri.joinPath(context.extensionUri, 'media'),
+                    vscode.Uri.joinPath(context.extensionUri, 'node_modules', '@vscode', 'codicons')
                 ]
             }
         );
@@ -106,7 +113,10 @@ export class HealthReportPanel {
         this._contextName = contextName;
 
         // Set the webview's initial HTML content
-        this._panel.webview.html = this.getWebviewContent(extensionContext.extensionUri);
+        this._panel.webview.html = this.getWebviewContent(extensionContext.extensionUri, extensionContext);
+
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(this._panel.webview);
 
         // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(
@@ -179,6 +189,7 @@ export class HealthReportPanel {
                     error: cachedStatus.status?.error ?? null,
                     clusterId: cachedStatus.status?.clusterId
                 },
+                assessment: cachedStatus.status?.assessment ?? null,
                 timestamp: Date.now(),
                 cacheAge
             };
@@ -207,7 +218,7 @@ export class HealthReportPanel {
      * @param extensionUri - The URI of the extension
      * @returns HTML content string
      */
-    private getWebviewContent(extensionUri: vscode.Uri): string {
+    private getWebviewContent(extensionUri: vscode.Uri, extensionContext: vscode.ExtensionContext): string {
         const webview = this._panel.webview;
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'media', 'operator-health-report', 'main.js')
@@ -216,22 +227,14 @@ export class HealthReportPanel {
             vscode.Uri.joinPath(extensionUri, 'media', 'operator-health-report', 'styles.css')
         );
         const nonce = this._getNonce();
-        const cspSource = webview.cspSource;
 
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource};">
-    <link href="${stylesUri}" rel="stylesheet">
-    <title>Kube9 Operator Health</title>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return getReportWebviewHtml(webview, extensionContext, {
+            scriptUri,
+            stylesUri,
+            pageTitle: 'Kube9 Operator Health',
+            nonce,
+            shellClass: 'health-report'
+        });
     }
 
     /**

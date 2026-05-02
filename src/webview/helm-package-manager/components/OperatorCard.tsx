@@ -44,14 +44,7 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
 
     const headerStyle: React.CSSProperties = {
         display: 'flex',
-        alignItems: 'flex-start',
-        gap: '16px'
-    };
-
-    const logoStyle: React.CSSProperties = {
-        fontSize: '28px',
-        lineHeight: '1',
-        flexShrink: 0
+        alignItems: 'flex-start'
     };
 
     const headerContentStyle: React.CSSProperties = {
@@ -200,7 +193,6 @@ export const OperatorCard: React.FC<OperatorCardProps> = ({
     return (
         <div style={cardStyle}>
             <div style={headerStyle}>
-                <div style={logoStyle}>🎯</div>
                 <div style={headerContentStyle}>
                     <h3 style={titleStyle}>Kube9 Operator</h3>
                     <p style={descriptionStyle}>

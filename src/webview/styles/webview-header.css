@@ -32,6 +32,8 @@ body {
 .pod-describe-container,
 .event-viewer-app,
 .helm-package-manager,
+.health-report,
+.waf-report,
 .argocd-application-view,
 .pod-logs-container {
     margin: 0;
@@ -42,10 +44,18 @@ body {
     flex-direction: column;
 }
 
+.health-report,
+.waf-report {
+    overflow: hidden;
+    min-height: 0;
+}
+
 /* Ensure nested containers don't add top padding/margin */
 .pod-describe-container > .container,
 .event-viewer-app > *:first-child,
-.helm-package-manager > *:first-child {
+.helm-package-manager > *:first-child,
+.health-report > *:first-child,
+.waf-report > *:first-child {
     margin-top: 0;
     padding-top: 0;
 }
