@@ -7,7 +7,6 @@
       "children": [
         ".forge/project.json",
         ".forge/knowledge_map.json",
-        ".forge/skill_registry.json",
         ".forge/schemas/project.schema.json",
         ".forge/schemas/vision.schema.json",
         ".forge/schemas/features.schema.json",
