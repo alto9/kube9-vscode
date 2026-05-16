@@ -228,6 +228,12 @@ npm run package
 - Verify enhanced metrics views appear
 - Test operator-provided data display
 
+### Releasing
+
+**Versioning** uses [semantic-release](https://semantic-release.gitbook.io/) on every push to `main` or `master` (see `.github/workflows/release.yml`). That creates semver tags and GitHub Releases from [Conventional Commits](https://www.conventionalcommits.org/).
+
+**Marketplace publish** (VS Code Marketplace and Open VSX) is intentionally **manual**: use GitHub **Actions → Release → Run workflow** and pick the branch to ship. Automated runs still package and attach the VSIX to the GitHub Release so QA can consume builds before you publish externally.
+
 ### Local cluster (kube9-minikube)
 
 Cluster creation and demo scenarios live in the **[kube9-minikube](https://github.com/alto9/kube9-minikube)** repository (not in this repo). Clone it next to `kube9-vscode`, then:
