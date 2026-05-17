@@ -4,7 +4,8 @@
 
 - **Cluster Context**: active kubeconfig context selected by user.
 - **Namespace Scope**: active namespace for scoped resource actions.
-- **Kubernetes Resource**: tree-addressable workload/config/storage/network object.
+- **Kubernetes Resource**: tree-addressable built-in or custom workload/config/storage/network object.
+- **Resource Detail Surface**: read-only inspection model for a resource, combining metadata, status, relationships, events, and YAML according to kind and scope.
 - **YAML Session**: editable or read-only document bound to a resource identifier.
 - **Port Forward Session**: managed kubectl port-forward process with lifecycle state.
 - **ArgoCD Application**: detected/surfaced GitOps application with sync and health state.
@@ -16,3 +17,4 @@
 2. Destructive actions require explicit user intent.
 3. Read-only permission states must block write operations.
 4. Resource views should degrade gracefully when optional integrations are unavailable.
+5. Resource identity and scope must remain consistent across tree items, command routing, detail providers, and YAML views.

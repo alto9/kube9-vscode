@@ -4,6 +4,7 @@
 
 - Core interactions use `@kubernetes/client-node` clients (`CoreV1`, `AppsV1`, `BatchV1`, `NetworkingV1`, `StorageV1`, `AuthorizationV1`, `ApiextensionsV1`, `Version`, `RbacAuthorizationV1`).
 - Context switching rebinds API clients to the selected kubeconfig context.
+- Resource detail providers may compose typed Kubernetes API clients, dynamic custom-resource access, discovery metadata, and events. They must preserve Kubernetes scope rules instead of assuming every resource is namespaced.
 
 ## CLI-backed Contracts
 

@@ -11,3 +11,5 @@
 
 - Flows should remain functional when operator-powered enhancements are absent.
 - Namespace/context switches must be reflected across tree and status indicators promptly.
+- Left-click and context-menu Describe entry points for the same resource kind must route to the same detail surface and preserve context, namespace, name, and scope.
+- Structured detail pages should degrade to missing-permission, missing-resource, or unsupported-kind states instead of showing placeholder content for resources the extension claims to support.
