@@ -1,6 +1,6 @@
 # Release Process
 
-kube9 uses [Conventional Commits](https://www.conventionalcommits.org/) and [semantic-release](https://semantic-release.gitbook.io/) to compute versions, update the changelog, create git tags and GitHub releases, and publish the VSIX. **Publishing is manual:** merging to `main` runs CI only; a maintainer runs the Release workflow when ready to ship.
+kube9 uses [Conventional Commits](https://www.conventionalcommits.org/) and [semantic-release](https://semantic-release.gitbook.io/) to compute versions, update the changelog, create git tags and GitHub releases, and publish the VSIX. **Publishing is manual:** merging to `main` runs CI only; a maintainer runs **Cut Release** when ready to ship.
 
 ## Pre-Publish Checklist
 
@@ -20,7 +20,7 @@ Before your first release, verify the following are configured:
 
 ### Maintainer checklist before clicking "Run workflow"
 
-- Confirm the **latest commit on the branch you are releasing** has a **green CI** run (or rely on the Release workflow’s own build and test steps).
+- Confirm the **latest commit on the branch you are releasing** has a **green CI** run (or rely on **Cut Release**’s own build and test steps).
 - Confirm repository **Actions** allows **workflow_dispatch** for this workflow (org/repo policy).
 - Confirm these **secrets** exist for Actions (manual runs use the same secrets as before):
   - `GH_APP_ID` and `GH_APP_PRIVATE_KEY` (GitHub App used so semantic-release can push version commits and tags)
@@ -80,18 +80,18 @@ semantic-release analyzes commits (see `.releaserc.json` for exact rules). In ge
 - **chore**, **ci**, **docs** (per this repo’s `releaseRules`): Patch bump
 - **style**, **refactor**, **test**, **build**: Depends on analyzer defaults and custom rules; see `.releaserc.json`
 
-### Deploy (Production) workflow
+### Cut Release workflow
 
-The **[.github/workflows/deploy-production.yml](.github/workflows/deploy-production.yml)** workflow runs **only** when started manually (**`workflow_dispatch`**):
+There is **no staging environment** for this repo: CI on PRs and **`main`** validates builds.
 
-1. **Checkout `main`**, **build**, **test**
+The **[.github/workflows/cut-release.yml](.github/workflows/cut-release.yml)** workflow runs **only** when started manually (**`workflow_dispatch`**):
+
+1. **Checkout the default branch**, **build**, **test**
 2. **Package** (pre-release `.vsix`)
 3. **semantic-release** (GitHub App token) — **fails** if no new tag
 4. **Checkout the new tag**, **re-package** with released version
 5. **Publish** to VS Code Marketplace and Open VSX
 6. **Slack** notification (optional)
-
-**[Deploy (Staging)](.github/workflows/deploy-staging.yml)** runs after **CI** on **`main`** (or manually): uploads a `.vsix` **artifact** for validation (not marketplace publish).
 
 ## Required Secrets
 
@@ -133,7 +133,7 @@ To run semantic-release locally (requires appropriate credentials and a clean gi
 npm run release
 ```
 
-Avoid ad-hoc `npm version` unless you have a specific reason; the normal path is the Actions workflow.
+Avoid ad-hoc `npm version` unless you have a specific reason; the normal path is **Cut Release** in Actions.
 
 ## Skipping Releases
 
@@ -174,7 +174,7 @@ git commit -m "docs: update README [skip release]"
 ```bash
 git commit -m "fix(ui): resolve cluster view refresh issue"
 git push origin main
-# After CI passes, run the Release workflow in Actions → Release → Run workflow (branch: main)
+# After CI passes, run Cut Release in Actions → Cut Release → Run workflow
 # → e.g. 0.1.0 → 0.1.1
 ```
 
@@ -183,7 +183,7 @@ git push origin main
 ```bash
 git commit -m "feat(dashboard): add namespace resource metrics"
 git push origin main
-# Run Release workflow when ready → e.g. 0.1.0 → 0.2.0
+# Run Cut Release when ready → e.g. 0.1.0 → 0.2.0
 ```
 
 ### Major release (breaking change)
@@ -193,7 +193,7 @@ git commit -m "feat!: redesign cluster connection API
 
 BREAKING CHANGE: Cluster connection method has changed"
 git push origin main
-# Run Release workflow when ready → e.g. 0.1.0 → 1.0.0
+# Run Cut Release when ready → e.g. 0.1.0 → 1.0.0
 ```
 
 ## First-Time Publishing Verification
@@ -215,6 +215,5 @@ Before the first publish to marketplace:
 ## Configuration Files
 
 - `.releaserc.json`: Semantic-release configuration
-- `.github/workflows/deploy-production.yml`: GitHub Actions — **Deploy (Production)** (manual dispatch)
-- `.github/workflows/deploy-staging.yml`: **Deploy (Staging)** — VSIX artifact after CI
+- `.github/workflows/cut-release.yml`: GitHub Actions — **Cut Release** (manual `workflow_dispatch`)
 - `CHANGELOG.md`: Auto-generated changelog

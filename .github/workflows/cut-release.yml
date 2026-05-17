@@ -1,12 +1,12 @@
-# Run semantic-release on main, then publish the tagged VSIX to the VS Code and Open VSX marketplaces.
-# Fails if no new version tag is created.
-name: Deploy (Production)
+# Manual release: semantic-release on the default branch, then publish VSIX to VS Code + Open VSX.
+# No staging environment — CI on PRs/main validates builds. Fails if semantic-release creates no new tag.
+name: Cut Release
 
 on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-vscode-production
+  group: cut-release-vscode
   cancel-in-progress: false
 
 jobs:
@@ -89,7 +89,7 @@ jobs:
           echo "New tag: ${NEW_TAG}"
 
   publish:
-    name: Publish extension
+    name: Publish to marketplaces
     needs: release
     runs-on: ubuntu-latest
     environment: production
@@ -115,7 +115,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Package extension (post-release versions)
+      - name: Package extension (post-release)
         run: |
           rm -f *.vsix
           npm run package
