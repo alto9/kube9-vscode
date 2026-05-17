@@ -12,4 +12,4 @@
 
 ## CI Release Environment
 
-CI builds and tests on every push to the default branches; it does **not** publish. The separate **Release** workflow builds, tests, packages, runs semantic-release (version, tag, GitHub release), and publishes to marketplaces when a maintainer runs it manually from the Actions tab.
+CI builds and tests on every push to the default branches; it does **not** publish. **[Cut Release](../../.github/workflows/cut-release.yml)** builds, tests, packages, runs semantic-release (version, tag, GitHub release), and publishes to marketplaces when a maintainer runs it manually from the Actions tab.

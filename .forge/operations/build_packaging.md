@@ -16,4 +16,4 @@
 
 ## Packaging Contract
 
-Release artifacts are VSIX packages built from current repository state. Versioning and publishing run in the **Release** GitHub Actions workflow, which maintainers start manually (`workflow_dispatch`) after merges to `main`; semantic-release updates the version and changelog before marketplaces publish.
+Release artifacts are VSIX packages built from current repository state. Versioning and publishing run in **[Cut Release](../../.github/workflows/cut-release.yml)** (`workflow_dispatch`), which maintainers start manually after merges to `main`; semantic-release updates the version and changelog before marketplaces publish.
