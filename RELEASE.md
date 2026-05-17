@@ -80,21 +80,18 @@ semantic-release analyzes commits (see `.releaserc.json` for exact rules). In ge
 - **chore**, **ci**, **docs** (per this repo’s `releaseRules`): Patch bump
 - **style**, **refactor**, **test**, **build**: Depends on analyzer defaults and custom rules; see `.releaserc.json`
 
-### Release Workflow
+### Deploy (Production) workflow
 
-The [.github/workflows/release.yml](.github/workflows/release.yml) workflow runs **only** when started manually:
+The **[.github/workflows/deploy-production.yml](.github/workflows/deploy-production.yml)** workflow runs **only** when started manually (**`workflow_dispatch`**):
 
-1. **Build**: Compiles the extension
-2. **Test**: Runs unit tests
-3. **Package extension (pre-release)**: Creates initial `.vsix` file with current version
-4. **Release**: Runs semantic-release which:
-   - Analyzes commits since last release
-   - Determines next version
-   - Updates version in `package.json`
-   - Updates `CHANGELOG.md`
-   - Creates a git tag and GitHub release with `.vsix` attached
-5. **Re-package extension (post-release)**: Creates `.vsix` file with the new version
-6. **Publish**: Publishes extension to marketplaces using the versioned `.vsix` file
+1. **Checkout `main`**, **build**, **test**
+2. **Package** (pre-release `.vsix`)
+3. **semantic-release** (GitHub App token) — **fails** if no new tag
+4. **Checkout the new tag**, **re-package** with released version
+5. **Publish** to VS Code Marketplace and Open VSX
+6. **Slack** notification (optional)
+
+**[Deploy (Staging)](.github/workflows/deploy-staging.yml)** runs after **CI** on **`main`** (or manually): uploads a `.vsix` **artifact** for validation (not marketplace publish).
 
 ## Required Secrets
 
@@ -218,5 +215,6 @@ Before the first publish to marketplace:
 ## Configuration Files
 
 - `.releaserc.json`: Semantic-release configuration
-- `.github/workflows/release.yml`: GitHub Actions workflow (manual dispatch)
+- `.github/workflows/deploy-production.yml`: GitHub Actions — **Deploy (Production)** (manual dispatch)
+- `.github/workflows/deploy-staging.yml`: **Deploy (Staging)** — VSIX artifact after CI
 - `CHANGELOG.md`: Auto-generated changelog

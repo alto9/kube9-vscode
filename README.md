@@ -230,7 +230,7 @@ npm run package
 
 ### Releasing
 
-**Versioning** uses [semantic-release](https://semantic-release.gitbook.io/) on every push to `main` or `master` (see `.github/workflows/release.yml`). That creates semver tags and GitHub Releases from [Conventional Commits](https://www.conventionalcommits.org/).
+**Versioning** uses [semantic-release](https://semantic-release.gitbook.io/) when you run **[Deploy (Production)](.github/workflows/deploy-production.yml)** (manual). Tags and GitHub Releases follow [Conventional Commits](https://www.conventionalcommits.org/). **[Deploy (Staging)](.github/workflows/deploy-staging.yml)** packages a VSIX after **CI** on **`main`** (or manually).
 
 **Marketplace publish** (VS Code Marketplace and Open VSX) is intentionally **manual**: use GitHub **Actions → Release → Run workflow** and pick the branch to ship. Automated runs still package and attach the VSIX to the GitHub Release so QA can consume builds before you publish externally.
 

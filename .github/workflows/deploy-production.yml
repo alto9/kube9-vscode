@@ -1,39 +1,30 @@
-# Versions and changelog: semantic-release on every push to the default branch (and manual dispatch).
-# Marketplace publish (VSCE / Open VSX): only when this workflow is started manually —
-# semantic-release still runs first so semver and release notes stay in sync before you publish binaries.
-#
-# Typical flow after merge: automated run bumps version/tag + GitHub Release.
-# Ship to VS Code Marketplace: Actions → Release → Run workflow (choose branch) when ready.
-#
-# Release-bot commits use [skip ci] (.releaserc.json).
-name: Release
+# Run semantic-release on main, then publish the tagged VSIX to the VS Code and Open VSX marketplaces.
+# Fails if no new version tag is created.
+name: Deploy (Production)
 
 on:
-  push:
-    branches:
-      - main
-      - master
   workflow_dispatch:
 
 concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}
+  group: deploy-vscode-production
   cancel-in-progress: false
 
 jobs:
   release:
-    name: Release
+    name: Version and tag (semantic-release)
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
     permissions:
       contents: write
       issues: write
       pull-requests: write
       id-token: write
-
     steps:
-      - name: Checkout code
+      - name: Checkout default branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -47,11 +38,16 @@ jobs:
           repositories: |
             kube9-vscode
 
+      - name: Capture existing tags (before semantic-release)
+        run: |
+          git fetch --tags origin
+          git tag -l | sort -u > tags-before.txt
+
       - name: Use Node.js 22.x
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
-          cache: 'npm'
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -67,27 +63,69 @@ jobs:
         run: npm run package
 
       - name: Run semantic-release
-        id: semantic-release
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: npx semantic-release
 
-      - name: Re-package extension (post-release)
-        if: success() && hashFiles('.semantic-release-success') != ''
+      - name: Sync default branch after release
+        run: |
+          git fetch origin "${{ github.event.repository.default_branch }}" --tags
+          git checkout "${{ github.event.repository.default_branch }}"
+          git pull --ff-only "origin/${{ github.event.repository.default_branch }}" || true
+
+      - name: Detect newly created version tag
+        id: meta
+        run: |
+          set -euo pipefail
+          git fetch --tags origin
+          sort -u tags-before.txt > tags-before-sorted.txt
+          git tag -l | sort -u > tags-after.txt
+          NEW_TAG=$(comm -13 tags-before-sorted.txt tags-after.txt | head -n1 || true)
+          if [[ -z "${NEW_TAG}" ]]; then
+            echo "::error::semantic-release did not create a new tag. Nothing to publish."
+            exit 1
+          fi
+          echo "tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+          echo "New tag: ${NEW_TAG}"
+
+  publish:
+    name: Publish extension
+    needs: release
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ needs.release.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package extension (post-release versions)
         run: |
           rm -f *.vsix
           npm run package
 
       - name: Publish to VS Code Marketplace
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          success() &&
-          hashFiles('.semantic-release-success') != ''
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           if [ -z "$VSCE_PAT" ]; then
-            echo "VSCE_PAT is not set. Add it as a repository secret to publish." >&2
+            echo "VSCE_PAT is not set. Add it as an environment or repository secret." >&2
             exit 1
           fi
           PACKAGE_NAME=$(node -p "require('./package.json').name")
@@ -101,10 +139,6 @@ jobs:
           npx --yes @vscode/vsce publish --packagePath "$VSIX_FILE" --pat "$VSCE_PAT"
 
       - name: Publish to Open VSX marketplace
-        if: >-
-          github.event_name == 'workflow_dispatch' &&
-          success() &&
-          hashFiles('.semantic-release-success') != ''
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
         run: |
@@ -118,7 +152,7 @@ jobs:
           npx --yes ovsx publish --packagePath "$VSIX_FILE" --pat "$OVSX_PAT"
 
       - name: Fetch latest GitHub release for Slack
-        if: always() && hashFiles('.semantic-release-success') != ''
+        if: success()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -126,7 +160,7 @@ jobs:
             --jq '{tag_name: .tag_name, body: (.body // ""), html_url: .html_url}' > release-meta.json
 
       - name: Build Slack payload
-        if: always() && hashFiles('.semantic-release-success') != ''
+        if: success()
         run: |
           jq -n --arg repo "${{ github.event.repository.name }}" --slurpfile meta release-meta.json '
             ($meta[0]) as $m |
@@ -142,14 +176,14 @@ jobs:
                 {
                   type: "section",
                   text: {
-                    type: "mrkdown",
+                    type: "mrkdwn",
                     text: (if ($bodySafe | length) > 0 then $bodySafe else "_No release notes provided._" end)
                   }
                 },
                 {
                   type: "context",
                   elements: [
-                    {type: "mrkdown", text: ("<" + $m.html_url + "|View release on GitHub>")}
+                    {type: "mrkdwn", text: ("<" + $m.html_url + "|View release on GitHub>")}
                   ]
                 }
               ]
@@ -157,7 +191,7 @@ jobs:
           ' > slack-payload.json
 
       - name: Post release to Slack
-        if: always() && hashFiles('.semantic-release-success') != ''
+        if: success()
         continue-on-error: true
         uses: slackapi/slack-github-action@v3.0.1
         with:
