@@ -35,6 +35,7 @@ export class StatefulSetDescribeWebview {
         kubeconfigPath: string,
         contextName: string
     ): Promise<void> {
+        DescribeWebview.releaseSharedDescribeMessageBindings();
         StatefulSetDescribeWebview.currentName = statefulSetName;
         StatefulSetDescribeWebview.currentNamespace = namespace;
         StatefulSetDescribeWebview.kubeconfigPath = kubeconfigPath;

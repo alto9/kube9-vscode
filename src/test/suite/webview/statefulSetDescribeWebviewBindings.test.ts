@@ -13,6 +13,15 @@ async function flushAsyncWork(): Promise<void> {
     await new Promise<void>(resolve => setImmediate(resolve));
 }
 
+async function flushUntil(predicate: () => boolean, maxTicks = 80): Promise<void> {
+    for (let i = 0; i < maxTicks; i++) {
+        if (predicate()) {
+            return;
+        }
+        await flushAsyncWork();
+    }
+}
+
 function stsPanel(): vscode.WebviewPanel | undefined {
     return (
         StatefulSetDescribeWebview as unknown as {
@@ -218,5 +227,69 @@ suite('StatefulSetDescribeWebview panel bindings', () => {
         prePanel.dispose();
         await flushAsyncWork();
         assert.strictEqual(stsPanel(), undefined);
+    });
+
+    test('reusing a real Describe panel clears Describe bindings before StatefulSet handlers run', async () => {
+        const prePanel = vscode.window.createWebviewPanel('kube9Describe', 'stub', vscode.ViewColumn.One, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        DescribeWebview.setSharedPanel(prePanel);
+
+        const dw = DescribeWebview as unknown as {
+            setupMessageHandling(p: vscode.WebviewPanel, c: vscode.ExtensionContext): void;
+            currentPodConfig?: { name: string; namespace: string; context: string };
+            describeMessageSubscription?: vscode.Disposable;
+        };
+        dw.currentPodConfig = { name: 'nginx-fake', namespace: 'ns1', context: 'ctx-a' };
+        dw.setupMessageHandling(prePanel, mockContext);
+        assert.ok(dw.describeMessageSubscription, 'Describe should register a message subscription');
+
+        let podRefreshHits = 0;
+        const origLoadPod = DescribeWebview as unknown as {
+            loadPodData(
+                podConfig: { name: string; namespace: string; context: string },
+                panel: vscode.WebviewPanel
+            ): Promise<void>;
+        };
+        const realLoadPod = origLoadPod.loadPodData.bind(DescribeWebview);
+        origLoadPod.loadPodData = async (podConfig, panel) => {
+            podRefreshHits += 1;
+            return realLoadPod(podConfig, panel);
+        };
+
+        let stsDetailHits = 0;
+        WorkloadCommands.getStatefulSetDetails = async () => {
+            stsDetailHits += 1;
+            return {
+                statefulSet: MIN_STS_TEMPLATE(),
+                error: undefined
+            } as Awaited<ReturnType<typeof WorkloadCommands.getStatefulSetDetails>>;
+        };
+
+        try {
+            await StatefulSetDescribeWebview.show(mockContext, 'web', 'ns1', '/kc', 'ctx-a');
+
+            assert.strictEqual(
+                dw.describeMessageSubscription,
+                undefined,
+                'Describe subscription must be released when StatefulSet takes the shared panel'
+            );
+            assert.strictEqual(
+                dw.currentPodConfig,
+                undefined,
+                'Stale Describe resource config must be cleared for StatefulSet'
+            );
+
+            const wv = prePanel.webview as unknown as MockWebviewWithFire;
+            const stsLoadsBeforeRefresh = stsDetailHits;
+            wv._fireMessage({ command: 'refresh' });
+            await flushUntil(() => stsDetailHits > stsLoadsBeforeRefresh);
+
+            assert.strictEqual(podRefreshHits, 0, 'Leaked Describe refresh must not load Pod data');
+            assert.ok(stsDetailHits > stsLoadsBeforeRefresh, 'Refresh should reload StatefulSet data');
+        } finally {
+            origLoadPod.loadPodData = realLoadPod;
+        }
     });
 });

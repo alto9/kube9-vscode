@@ -226,6 +226,13 @@ export class DescribeWebview {
     private static currentCRDConfig: CRDTreeItemConfig | undefined;
 
     /**
+     * Active {@link vscode.Webview.onDidReceiveMessage} subscription for the shared Describe panel.
+     * Replaced on each {@link DescribeWebview.setupMessageHandling} and released when the panel is
+     * yielded to a structured detail webview or disposed.
+     */
+    private static describeMessageSubscription: vscode.Disposable | undefined;
+
+    /**
      * Clears which resource the shared Describe panel is bound to.
      * Call before assigning a new active config when switching kinds so
      * refresh/viewYaml handlers do not match a stale type first.
@@ -240,6 +247,16 @@ export class DescribeWebview {
         DescribeWebview.currentConfigMapConfig = undefined;
         DescribeWebview.currentStorageClassConfig = undefined;
         DescribeWebview.currentCRDConfig = undefined;
+    }
+
+    /**
+     * Drops Describe-side message handlers and resource bindings when the shared Describe webview
+     * is taken over by a structured detail view (StatefulSet, Deployment, etc.).
+     */
+    public static releaseSharedDescribeMessageBindings(): void {
+        DescribeWebview.describeMessageSubscription?.dispose();
+        DescribeWebview.describeMessageSubscription = undefined;
+        DescribeWebview.clearAllDescribeResourceConfigs();
     }
 
     /**
@@ -286,6 +303,7 @@ export class DescribeWebview {
         // Handle panel disposal - clear shared state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
             },
             null,
@@ -655,8 +673,8 @@ export class DescribeWebview {
         // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentPodConfig = undefined;
             },
             null,
             context.subscriptions
@@ -729,9 +747,13 @@ export class DescribeWebview {
      */
     private static setupMessageHandling(
         panel: vscode.WebviewPanel,
-        context: vscode.ExtensionContext
+        _context: vscode.ExtensionContext
     ): void {
-        panel.webview.onDidReceiveMessage(
+        void _context;
+        DescribeWebview.describeMessageSubscription?.dispose();
+        DescribeWebview.describeMessageSubscription = undefined;
+
+        DescribeWebview.describeMessageSubscription = panel.webview.onDidReceiveMessage(
             async (message) => {
                 switch (message.command) {
                     case 'refresh':
@@ -882,9 +904,7 @@ export class DescribeWebview {
                     default:
                         console.warn('Unknown message command:', message.command);
                 }
-            },
-            null,
-            context.subscriptions
+            }
         );
     }
 
@@ -1222,8 +1242,8 @@ export class DescribeWebview {
         // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentNamespaceConfig = undefined;
             },
             null,
             context.subscriptions
@@ -1429,8 +1449,8 @@ export class DescribeWebview {
         // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentPVCConfig = undefined;
             },
             null,
             context.subscriptions
@@ -1655,8 +1675,8 @@ export class DescribeWebview {
         // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentPVConfig = undefined;
             },
             null,
             context.subscriptions
@@ -1983,8 +2003,8 @@ export class DescribeWebview {
         // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentSecretConfig = undefined;
             },
             null,
             context.subscriptions
@@ -2052,8 +2072,8 @@ export class DescribeWebview {
         // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentStorageClassConfig = undefined;
             },
             null,
             context.subscriptions
@@ -2104,8 +2124,8 @@ export class DescribeWebview {
 
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentCRDConfig = undefined;
             },
             null,
             context.subscriptions
@@ -2688,8 +2708,8 @@ export class DescribeWebview {
         // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentServiceConfig = undefined;
             },
             null,
             context.subscriptions
@@ -2973,8 +2993,8 @@ export class DescribeWebview {
         // Handle panel disposal - clear all describe webview state
         panel.onDidDispose(
             () => {
+                DescribeWebview.releaseSharedDescribeMessageBindings();
                 DescribeWebview.currentPanel = undefined;
-                DescribeWebview.currentConfigMapConfig = undefined;
             },
             null,
             context.subscriptions
