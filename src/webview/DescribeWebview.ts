@@ -19,6 +19,7 @@ import { getHelpController } from '../extension';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { NamespaceTreeItemConfig } from '../tree/items/NamespaceTreeItem';
 import { setNamespace } from '../utils/kubectlContext';
+import { resolveSpecializedDescribeFromTreeItem } from './describeTreeRouting';
 
 /**
  * Resource information for the Describe webview.
@@ -407,6 +408,45 @@ export class DescribeWebview {
         if (!treeItem || !treeItem.resourceData) {
             vscode.window.showErrorMessage('Unable to describe: missing resource data');
             return;
+        }
+
+        const specialized = resolveSpecializedDescribeFromTreeItem(treeItem);
+        if (specialized) {
+            if (specialized.kind === 'skip') {
+                vscode.window.showErrorMessage('Unable to describe: namespace is required');
+                return;
+            }
+            if (specialized.kind === 'pod') {
+                await DescribeWebview.showPodDescribe(context, specialized.podConfig);
+                return;
+            }
+            if (specialized.kind === 'namespace') {
+                await DescribeWebview.showNamespaceDescribe(context, specialized.namespaceConfig);
+                return;
+            }
+            if (specialized.kind === 'cronjob') {
+                const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+                const { CronJobDescribeWebview } = await import('./CronJobDescribeWebview');
+                await CronJobDescribeWebview.show(
+                    context,
+                    specialized.name,
+                    specialized.namespace,
+                    kubeconfigPath,
+                    specialized.context
+                );
+                return;
+            }
+            if (specialized.kind === 'node') {
+                const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+                const { NodeDescribeWebview } = await import('./NodeDescribeWebview');
+                await NodeDescribeWebview.show(
+                    context,
+                    specialized.name,
+                    kubeconfigPath,
+                    specialized.context
+                );
+                return;
+            }
         }
 
         // Extract kind from contextValue (e.g., "Pod" from "resource:Pod")
