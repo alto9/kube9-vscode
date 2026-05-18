@@ -44,6 +44,7 @@ export class KubernetesApiClient {
     private storageApi: k8s.StorageV1Api;
     private authorizationApi: k8s.AuthorizationV1Api;
     private apiextensionsApi: k8s.ApiextensionsV1Api;
+    private customObjectsApi: k8s.CustomObjectsApi;
     private versionApi: k8s.VersionApi;
     private rbacApi: k8s.RbacAuthorizationV1Api;
 
@@ -64,6 +65,7 @@ export class KubernetesApiClient {
         this.storageApi = this.kubeConfig.makeApiClient(k8s.StorageV1Api);
         this.authorizationApi = this.kubeConfig.makeApiClient(k8s.AuthorizationV1Api);
         this.apiextensionsApi = this.kubeConfig.makeApiClient(k8s.ApiextensionsV1Api);
+        this.customObjectsApi = this.kubeConfig.makeApiClient(k8s.CustomObjectsApi);
         this.versionApi = this.kubeConfig.makeApiClient(k8s.VersionApi);
         this.rbacApi = this.kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api);
     }
@@ -84,6 +86,7 @@ export class KubernetesApiClient {
         this.storageApi = this.kubeConfig.makeApiClient(k8s.StorageV1Api);
         this.authorizationApi = this.kubeConfig.makeApiClient(k8s.AuthorizationV1Api);
         this.apiextensionsApi = this.kubeConfig.makeApiClient(k8s.ApiextensionsV1Api);
+        this.customObjectsApi = this.kubeConfig.makeApiClient(k8s.CustomObjectsApi);
         this.versionApi = this.kubeConfig.makeApiClient(k8s.VersionApi);
         this.rbacApi = this.kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api);
     }
@@ -174,6 +177,13 @@ export class KubernetesApiClient {
      */
     public get apiextensions(): k8s.ApiextensionsV1Api {
         return this.apiextensionsApi;
+    }
+
+    /**
+     * Gets the CustomObjects API client for arbitrary custom resources.
+     */
+    public get customObjects(): k8s.CustomObjectsApi {
+        return this.customObjectsApi;
     }
 
     /**
