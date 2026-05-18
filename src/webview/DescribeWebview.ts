@@ -14,6 +14,7 @@ import { StorageClassDescribeProvider } from '../providers/StorageClassDescribeP
 import { CRDDescribeProvider } from '../providers/CRDDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
+import { StatefulSetDescribeWebview } from './StatefulSetDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
@@ -470,6 +471,16 @@ export class DescribeWebview {
                 kubeconfigPath,
                 contextName
             );
+            return;
+        }
+
+        if (kind === 'StatefulSet') {
+            if (!namespace) {
+                vscode.window.showErrorMessage('Unable to describe StatefulSet: namespace is required');
+                return;
+            }
+            const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+            await StatefulSetDescribeWebview.show(context, name, namespace, kubeconfigPath, contextName);
             return;
         }
 

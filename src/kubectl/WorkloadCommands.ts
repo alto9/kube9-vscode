@@ -143,6 +143,38 @@ export interface DeploymentEventsResult {
 }
 
 /**
+ * Result of a StatefulSet details query.
+ */
+export interface StatefulSetDetailsResult {
+    statefulSet?: k8s.V1StatefulSet;
+    error?: KubectlError;
+}
+
+/**
+ * Result of listing events for a StatefulSet.
+ */
+export interface StatefulSetEventsResult {
+    events: k8s.CoreV1Event[];
+    error?: KubectlError;
+}
+
+/**
+ * Full Pod objects returned for a label selector (describe views).
+ */
+export interface V1PodsResult {
+    pods: k8s.V1Pod[];
+    error?: KubectlError;
+}
+
+/**
+ * PVC list for a namespace.
+ */
+export interface PersistentVolumeClaimsResult {
+    items: k8s.V1PersistentVolumeClaim[];
+    error?: KubectlError;
+}
+
+/**
  * Result of a ReplicaSets query operation.
  */
 export interface ReplicaSetsResult {
@@ -595,6 +627,157 @@ export class WorkloadCommands {
             
             return {
                 events: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Fetches a single StatefulSet by name.
+     */
+    public static async getStatefulSetDetails(
+        statefulSetName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<StatefulSetDetailsResult> {
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+
+            const resource = await apiClient.apps.readNamespacedStatefulSet({
+                name: statefulSetName,
+                namespace
+            });
+
+            return {
+                statefulSet: resource,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(
+                `StatefulSet details query failed for ${statefulSetName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`
+            );
+            return {
+                statefulSet: undefined,
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Lists namespace events involving this StatefulSet.
+     */
+    public static async getStatefulSetEvents(
+        statefulSetName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<StatefulSetEventsResult> {
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+
+            const response = await apiClient.core.listNamespacedEvent({
+                namespace,
+                timeoutSeconds: 10
+            });
+
+            const allEvents = response.items || [];
+            const filteredEvents = allEvents.filter(
+                event =>
+                    event.involvedObject?.kind === 'StatefulSet' &&
+                    event.involvedObject?.name === statefulSetName
+            );
+
+            const sortedEvents = filteredEvents.sort((a, b) => {
+                const aTimestamp = a.lastTimestamp || a.firstTimestamp || '';
+                const bTimestamp = b.lastTimestamp || b.firstTimestamp || '';
+                if (aTimestamp > bTimestamp) {
+                    return -1;
+                }
+                if (aTimestamp < bTimestamp) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            return {
+                events: sortedEvents,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(
+                `StatefulSet events query failed for ${statefulSetName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`
+            );
+            return {
+                events: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Returns full Pod objects for a namespaced label selector (used by StatefulSet describe).
+     */
+    public static async getV1PodsForLabelSelector(
+        namespace: string,
+        labelSelector: string,
+        _kubeconfigPath: string,
+        contextName: string
+    ): Promise<V1PodsResult> {
+        try {
+            if (!labelSelector) {
+                return { pods: [] };
+            }
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+
+            const v1Pods = await fetchPods({
+                namespace,
+                labelSelector,
+                timeout: 10
+            });
+
+            return { pods: v1Pods };
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(`Pod query failed for labelSelector in ${namespace}: ${kubectlError.getDetails()}`);
+            return {
+                pods: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Lists PVCs in a namespace (filtered client-side for StatefulSetordinal claims).
+     */
+    public static async listNamespacedPersistentVolumeClaims(
+        namespace: string,
+        _kubeconfigPath: string,
+        contextName: string
+    ): Promise<PersistentVolumeClaimsResult> {
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+
+            const response = await apiClient.core.listNamespacedPersistentVolumeClaim({
+                namespace,
+                timeoutSeconds: 10
+            });
+
+            return {
+                items: response.items || [],
+                error: undefined
+            };
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(`PVC list failed for ${namespace}: ${kubectlError.getDetails()}`);
+            return {
+                items: [],
                 error: kubectlError
             };
         }
