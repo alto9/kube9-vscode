@@ -530,12 +530,12 @@
         },
         {
           "command": "kube9.describeResource",
-          "when": "view == kube9ClusterView && viewItem =~ /^resource/",
+          "when": "view == kube9ClusterView && (viewItem =~ /^resource/ || viewItem == namespace:active || viewItem == namespace:inactive)",
           "group": "kube9@1"
         },
         {
           "command": "kube9.describeResourceRaw",
-          "when": "view == kube9ClusterView && viewItem =~ /^resource/",
+          "when": "view == kube9ClusterView && (viewItem =~ /^resource/ || viewItem == namespace:active || viewItem == namespace:inactive)",
           "group": "kube9@1.5"
         },
         {
