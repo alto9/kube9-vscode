@@ -225,6 +225,23 @@ export class DescribeWebview {
     private static currentCRDConfig: CRDTreeItemConfig | undefined;
 
     /**
+     * Clears which resource the shared Describe panel is bound to.
+     * Call before assigning a new active config when switching kinds so
+     * refresh/viewYaml handlers do not match a stale type first.
+     */
+    private static clearAllDescribeResourceConfigs(): void {
+        DescribeWebview.currentPodConfig = undefined;
+        DescribeWebview.currentNamespaceConfig = undefined;
+        DescribeWebview.currentPVCConfig = undefined;
+        DescribeWebview.currentPVConfig = undefined;
+        DescribeWebview.currentSecretConfig = undefined;
+        DescribeWebview.currentServiceConfig = undefined;
+        DescribeWebview.currentConfigMapConfig = undefined;
+        DescribeWebview.currentStorageClassConfig = undefined;
+        DescribeWebview.currentCRDConfig = undefined;
+    }
+
+    /**
      * Show the Describe webview for a resource.
      * Creates a new panel if none exists, or reuses and updates the existing panel.
      * 
@@ -2040,6 +2057,7 @@ export class DescribeWebview {
         crdConfig: CRDTreeItemConfig
     ): Promise<void> {
         DescribeWebview.extensionContext = context;
+        DescribeWebview.clearAllDescribeResourceConfigs();
         DescribeWebview.currentCRDConfig = crdConfig;
 
         if (!DescribeWebview.crdProvider) {
@@ -2087,8 +2105,9 @@ export class DescribeWebview {
         if (!DescribeWebview.currentPanel) {
             return;
         }
-        DescribeWebview.currentPanel.title = `CRD / ${crdConfig.kindLabel}`;
+        DescribeWebview.clearAllDescribeResourceConfigs();
         DescribeWebview.currentCRDConfig = crdConfig;
+        DescribeWebview.currentPanel.title = `CRD / ${crdConfig.kindLabel}`;
         DescribeWebview.currentPanel.webview.html = DescribeWebview.getCRDWebviewContent(
             DescribeWebview.currentPanel.webview,
             crdConfig
