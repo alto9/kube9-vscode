@@ -426,8 +426,8 @@ export class DescribeWebview {
             }
             if (specialized.kind === 'cronjob') {
                 const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
-                const { CronJobDescribeWebview } = await import('./CronJobDescribeWebview');
-                await CronJobDescribeWebview.show(
+                const cronJobDescribeModule = await import('./CronJobDescribeWebview');
+                await cronJobDescribeModule.CronJobDescribeWebview.show(
                     context,
                     specialized.name,
                     specialized.namespace,
@@ -438,8 +438,8 @@ export class DescribeWebview {
             }
             if (specialized.kind === 'node') {
                 const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
-                const { NodeDescribeWebview } = await import('./NodeDescribeWebview');
-                await NodeDescribeWebview.show(
+                const nodeDescribeModule = await import('./NodeDescribeWebview');
+                await nodeDescribeModule.NodeDescribeWebview.show(
                     context,
                     specialized.name,
                     kubeconfigPath,
