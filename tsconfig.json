@@ -34,6 +34,7 @@
     "src/webview/service-describe",
     "src/webview/configmap-describe",
     "src/webview/storageclass-describe",
+    "src/webview/crd-describe",
     "src/webview/operator-health-report",
     "src/webview/well-architected-assessment-report",
     "src/webview/helm-package-manager",

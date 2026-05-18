@@ -11,6 +11,7 @@ import { SecretDescribeProvider } from '../providers/SecretDescribeProvider';
 import { ServiceDescribeProvider } from '../providers/ServiceDescribeProvider';
 import { ConfigMapDescribeProvider } from '../providers/ConfigMapDescribeProvider';
 import { StorageClassDescribeProvider } from '../providers/StorageClassDescribeProvider';
+import { CRDDescribeProvider } from '../providers/CRDDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
@@ -93,12 +94,20 @@ export interface ConfigMapTreeItemConfig {
     context: string;
 }
 
-/**
- * StorageClass configuration passed from tree item to describe webview.
- */
 interface StorageClassTreeItemConfig {
     name: string;
     metadata?: Record<string, unknown>;
+    context: string;
+}
+
+/**
+ * CustomResourceDefinition tree item → describe webview.
+ */
+interface CRDTreeItemConfig {
+    /** `metadata.name` (e.g. applications.argoproj.io) */
+    name: string;
+    /** Tree label (CRD `.spec.names.kind`) */
+    kindLabel: string;
     context: string;
 }
 
@@ -210,6 +219,27 @@ export class DescribeWebview {
      * Used for refresh operations.
      */
     private static currentStorageClassConfig: StorageClassTreeItemConfig | undefined;
+
+    private static crdProvider: CRDDescribeProvider | undefined;
+
+    private static currentCRDConfig: CRDTreeItemConfig | undefined;
+
+    /**
+     * Clears which resource the shared Describe panel is bound to.
+     * Call before assigning a new active config when switching kinds so
+     * refresh/viewYaml handlers do not match a stale type first.
+     */
+    private static clearAllDescribeResourceConfigs(): void {
+        DescribeWebview.currentPodConfig = undefined;
+        DescribeWebview.currentNamespaceConfig = undefined;
+        DescribeWebview.currentPVCConfig = undefined;
+        DescribeWebview.currentPVConfig = undefined;
+        DescribeWebview.currentSecretConfig = undefined;
+        DescribeWebview.currentServiceConfig = undefined;
+        DescribeWebview.currentConfigMapConfig = undefined;
+        DescribeWebview.currentStorageClassConfig = undefined;
+        DescribeWebview.currentCRDConfig = undefined;
+    }
 
     /**
      * Show the Describe webview for a resource.
@@ -527,6 +557,23 @@ export class DescribeWebview {
             return;
         }
 
+        if (kind === 'crd') {
+            const crdApiName = treeItem.resourceData?.resourceName;
+            if (!crdApiName) {
+                vscode.window.showErrorMessage(
+                    'Unable to describe CRD: missing API resource name. Refresh the Custom Resources list and try again.'
+                );
+                return;
+            }
+            const kindLabel = typeof treeItem.label === 'string' ? treeItem.label : 'CustomResourceDefinition';
+            await DescribeWebview.showCRDDescribe(context, {
+                name: crdApiName,
+                kindLabel,
+                context: contextName
+            });
+            return;
+        }
+
         // Show the Describe webview for other resource types
         DescribeWebview.show(context, {
             kind,
@@ -718,6 +765,11 @@ export class DescribeWebview {
                                 DescribeWebview.currentStorageClassConfig,
                                 panel
                             );
+                        } else if (DescribeWebview.currentCRDConfig) {
+                            await DescribeWebview.loadCRDData(
+                                DescribeWebview.currentCRDConfig,
+                                panel
+                            );
                         }
                         break;
 
@@ -739,6 +791,8 @@ export class DescribeWebview {
                             await DescribeWebview.openConfigMapYamlEditor();
                         } else if (DescribeWebview.currentStorageClassConfig) {
                             await DescribeWebview.openStorageClassYamlEditor();
+                        } else if (DescribeWebview.currentCRDConfig) {
+                            await DescribeWebview.openCRDYamlEditor();
                         }
                         break;
 
@@ -969,6 +1023,8 @@ export class DescribeWebview {
             contextName = DescribeWebview.currentPVConfig.context;
         } else if (DescribeWebview.currentStorageClassConfig) {
             contextName = DescribeWebview.currentStorageClassConfig.context;
+        } else if (DescribeWebview.currentCRDConfig) {
+            contextName = DescribeWebview.currentCRDConfig.context;
         } else if (DescribeWebview.currentPVCConfig) {
             contextName = DescribeWebview.currentPVCConfig.context;
         } else if (DescribeWebview.currentPodConfig) {
@@ -1991,6 +2047,191 @@ export class DescribeWebview {
             null,
             context.subscriptions
         );
+    }
+
+    /**
+     * Describe view for a cluster CustomResourceDefinition (CRD metadata name).
+     */
+    public static async showCRDDescribe(
+        context: vscode.ExtensionContext,
+        crdConfig: CRDTreeItemConfig
+    ): Promise<void> {
+        DescribeWebview.extensionContext = context;
+        DescribeWebview.clearAllDescribeResourceConfigs();
+        DescribeWebview.currentCRDConfig = crdConfig;
+
+        if (!DescribeWebview.crdProvider) {
+            DescribeWebview.crdProvider = new CRDDescribeProvider(getKubernetesApiClient());
+        }
+
+        if (DescribeWebview.currentPanel) {
+            await DescribeWebview.updateCRDPanel(crdConfig);
+            DescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        const title = `CRD / ${crdConfig.kindLabel}`;
+        notifyMajorWebviewOpened('resource_describe');
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+
+        DescribeWebview.currentPanel = panel;
+        panel.webview.html = DescribeWebview.getCRDWebviewContent(panel.webview, crdConfig);
+        DescribeWebview.setupMessageHandling(panel, context);
+
+        const helpHandler = new WebviewHelpHandler(getHelpController());
+        helpHandler.setupHelpMessageHandler(panel.webview);
+
+        await DescribeWebview.loadCRDData(crdConfig, panel);
+
+        panel.onDidDispose(
+            () => {
+                DescribeWebview.currentPanel = undefined;
+                DescribeWebview.currentCRDConfig = undefined;
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    private static async updateCRDPanel(crdConfig: CRDTreeItemConfig): Promise<void> {
+        if (!DescribeWebview.currentPanel) {
+            return;
+        }
+        DescribeWebview.clearAllDescribeResourceConfigs();
+        DescribeWebview.currentCRDConfig = crdConfig;
+        DescribeWebview.currentPanel.title = `CRD / ${crdConfig.kindLabel}`;
+        DescribeWebview.currentPanel.webview.html = DescribeWebview.getCRDWebviewContent(
+            DescribeWebview.currentPanel.webview,
+            crdConfig
+        );
+        await DescribeWebview.loadCRDData(crdConfig, DescribeWebview.currentPanel);
+    }
+
+    private static async loadCRDData(
+        crdConfig: CRDTreeItemConfig,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        if (!DescribeWebview.crdProvider) {
+            return;
+        }
+
+        try {
+            const data = await DescribeWebview.crdProvider.getCRDDetails(
+                crdConfig.name,
+                crdConfig.context
+            );
+            panel.webview.postMessage({
+                command: 'updateCRDDescribeData',
+                data
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                command: 'showError',
+                data: {
+                    message: errorMessage
+                }
+            });
+        }
+    }
+
+    private static getCRDWebviewContent(webview: vscode.Webview, crdConfig: CRDTreeItemConfig): string {
+        if (!DescribeWebview.extensionContext) {
+            return DescribeWebview.getCRDFallbackHtml(crdConfig);
+        }
+
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'crd-describe', 'index.js')
+        );
+
+        let headerCss = '';
+        try {
+            const headerCssPath = path.join(
+                DescribeWebview.extensionContext.extensionPath,
+                'src',
+                'webview',
+                'styles',
+                'webview-header.css'
+            );
+            headerCss = fs.readFileSync(headerCssPath, 'utf8');
+        } catch (err) {
+            console.error('Failed to load header CSS:', err);
+        }
+
+        const nonce = getNonce();
+        const escaped = DescribeWebview.escapeHtml(crdConfig.kindLabel);
+        const cspSource = webview.cspSource;
+
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <title>CRD / ${escaped}</title>
+    <style>
+        ${headerCss}
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script nonce="${nonce}" src="${scriptUri}"></script>
+</body>
+</html>`;
+    }
+
+    private static getCRDFallbackHtml(crdConfig: CRDTreeItemConfig): string {
+        const escaped = DescribeWebview.escapeHtml(crdConfig.kindLabel);
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CRD / ${escaped}</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="error">Failed to load webview bundle. Ensure <code>dist/media/crd-describe/index.js</code> exists (run webpack production build).</div>
+</body>
+</html>`;
+    }
+
+    private static async openCRDYamlEditor(): Promise<void> {
+        if (!DescribeWebview.currentCRDConfig) {
+            vscode.window.showErrorMessage('No CustomResourceDefinition is currently being displayed');
+            return;
+        }
+        try {
+            const cfg = DescribeWebview.currentCRDConfig;
+            const resource = {
+                kind: 'CustomResourceDefinition',
+                name: cfg.name,
+                namespace: undefined,
+                apiVersion: 'apiextensions.k8s.io/v1',
+                cluster: cfg.context
+            };
+            const yamlEditorManager = getYAMLEditorManager();
+            await yamlEditorManager.openYAMLEditor(resource);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open YAML editor for CRD:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+        }
     }
 
     /**
