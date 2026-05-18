@@ -1,4 +1,5 @@
 import { CronJobDescribeWebview } from './CronJobDescribeWebview';
+import { DaemonSetDescribeWebview } from './DaemonSetDescribeWebview';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { DescribeWebview } from './DescribeWebview';
 import { NodeDescribeWebview } from './NodeDescribeWebview';
@@ -15,4 +16,5 @@ export function releaseExclusiveDescribePanelBindings(): void {
     CronJobDescribeWebview.releaseMessageBindings();
     NodeDescribeWebview.releaseMessageBindings();
     StatefulSetDescribeWebview.releaseMessageBindings();
+    DaemonSetDescribeWebview.releaseMessageBindings();
 }

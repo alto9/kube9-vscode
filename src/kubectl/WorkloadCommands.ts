@@ -220,6 +220,44 @@ export interface DaemonSetsResult {
 }
 
 /**
+ * Result of a single DaemonSet read operation.
+ */
+export interface DaemonSetDetailsResult {
+    /**
+     * Complete V1DaemonSet object, undefined if query failed.
+     */
+    daemonSet?: k8s.V1DaemonSet;
+    /**
+     * Error information if the query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Events scoped to a DaemonSet and its Pods.
+ */
+export interface DaemonSetEventsResult {
+    events: k8s.CoreV1Event[];
+    error?: KubectlError;
+}
+
+/**
+ * Cluster nodes for DaemonSet node coverage (optional; may fail under RBAC).
+ */
+export interface ClusterNodesResult {
+    nodes: k8s.V1Node[];
+    error?: KubectlError;
+}
+
+/**
+ * Full Pod objects for DaemonSet describe (richer than PodInfo).
+ */
+export interface DaemonSetPodsFullResult {
+    pods: k8s.V1Pod[];
+    error?: KubectlError;
+}
+
+/**
  * Result of a cronjob query operation.
  */
 export interface CronJobsResult {
@@ -667,6 +705,40 @@ export class WorkloadCommands {
     }
 
     /**
+     * Reads a single namespaced DaemonSet.
+     */
+    public static async getDaemonSetDetails(
+        daemonSetName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<DaemonSetDetailsResult> {
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+
+            const v1DaemonSet = await apiClient.apps.readNamespacedDaemonSet({
+                name: daemonSetName,
+                namespace
+            });
+
+            return {
+                daemonSet: v1DaemonSet,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(
+                `DaemonSet details query failed for ${daemonSetName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`
+            );
+            return {
+                daemonSet: undefined,
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
      * Lists namespace events involving this StatefulSet.
      */
     public static async getStatefulSetEvents(
@@ -720,6 +792,61 @@ export class WorkloadCommands {
     }
 
     /**
+     * Lists namespace events involving the DaemonSet or one of its Pods.
+     */
+    public static async getDaemonSetEvents(
+        daemonSetName: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string,
+        relatedPodNames: string[]
+    ): Promise<DaemonSetEventsResult> {
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+
+            const response = await apiClient.core.listNamespacedEvent({
+                namespace,
+                timeoutSeconds: 10
+            });
+
+            const allEvents = response.items || [];
+            const podSet = new Set(relatedPodNames);
+            const filteredEvents = allEvents.filter(event =>
+                (event.involvedObject?.kind === 'DaemonSet' &&
+                    event.involvedObject?.name === daemonSetName) ||
+                (event.involvedObject?.kind === 'Pod' && podSet.has(event.involvedObject?.name || ''))
+            );
+
+            const sortedEvents = filteredEvents.sort((a, b) => {
+                const aTimestamp = a.lastTimestamp || a.firstTimestamp || '';
+                const bTimestamp = b.lastTimestamp || b.firstTimestamp || '';
+                if (aTimestamp > bTimestamp) {
+                    return -1;
+                }
+                if (aTimestamp < bTimestamp) {
+                    return 1;
+                }
+                return 0;
+            });
+
+            return {
+                events: sortedEvents,
+                error: undefined
+            };
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(
+                `DaemonSet events query failed for ${daemonSetName} in namespace ${namespace} in context ${contextName}: ${kubectlError.getDetails()}`
+            );
+            return {
+                events: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
      * Returns full Pod objects for a namespaced label selector (used by StatefulSet describe).
      */
     public static async getV1PodsForLabelSelector(
@@ -745,6 +872,67 @@ export class WorkloadCommands {
         } catch (error: unknown) {
             const kubectlError = KubectlError.fromExecError(error, contextName);
             console.log(`Pod query failed for labelSelector in ${namespace}: ${kubectlError.getDetails()}`);
+            return {
+                pods: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Lists cluster nodes for DaemonSet scheduling coverage (may fail if nodes cannot be listed).
+     */
+    public static async listClusterNodes(
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<ClusterNodesResult> {
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            const response = await apiClient.core.listNode({
+                timeoutSeconds: 10
+            });
+            return {
+                nodes: response.items || [],
+                error: undefined
+            };
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(`Node list failed for context ${contextName}: ${kubectlError.getDetails()}`);
+            return {
+                nodes: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Lists Pods for a DaemonSet using its label selector (full objects for describe UI).
+     */
+    public static async listPodsForDaemonSetFull(
+        kubeconfigPath: string,
+        contextName: string,
+        daemonSetName: string,
+        namespace: string,
+        labelSelector: string
+    ): Promise<DaemonSetPodsFullResult> {
+        if (!labelSelector) {
+            return { pods: [] };
+        }
+        try {
+            const apiClient = getKubernetesApiClient();
+            apiClient.setContext(contextName);
+            const v1Pods = await fetchPods({
+                namespace,
+                labelSelector,
+                timeout: 10
+            });
+            return { pods: v1Pods };
+        } catch (error: unknown) {
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(
+                `Full pod list failed for daemonset ${daemonSetName} in namespace ${namespace}: ${kubectlError.getDetails()}`
+            );
             return {
                 pods: [],
                 error: kubectlError

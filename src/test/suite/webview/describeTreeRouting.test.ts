@@ -178,4 +178,16 @@ suite('describeTreeRouting (context-menu Describe parity)', () => {
 
         assert.strictEqual(resolveSpecializedDescribeFromTreeItem(item), undefined);
     });
+
+    test('DaemonSet is not specialized here', () => {
+        const item = new ClusterTreeItem(
+            'ds1',
+            'daemonset',
+            vscode.TreeItemCollapsibleState.None,
+            baseResourceData({ namespace: 'ns', resourceName: 'ds1' })
+        );
+        item.contextValue = 'resource:DaemonSet';
+
+        assert.strictEqual(resolveSpecializedDescribeFromTreeItem(item), undefined);
+    });
 });

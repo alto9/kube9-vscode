@@ -398,6 +398,15 @@ export function extractPodTemplateInfoFromPodSpec(podSpec?: k8s.V1PodSpec): PodT
 }
 
 /**
+ * Builds pod template describe data from a Pod template spec (Deployment, DaemonSet, etc.).
+ */
+export function buildPodTemplateInfoFromTemplateSpec(
+    template: k8s.V1PodTemplateSpec | undefined
+): PodTemplateInfo {
+    return extractPodTemplateInfoFromPodSpec(template?.spec);
+}
+
+/**
  * Extracts pod template information.
  */
 function extractPodTemplate(deployment: k8s.V1Deployment): PodTemplateInfo {
