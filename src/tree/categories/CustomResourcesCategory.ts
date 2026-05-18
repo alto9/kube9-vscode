@@ -52,12 +52,18 @@ export class CustomResourcesCategory {
         const crdItems = result.crds.map(crdInfo => {
             // Label is the kind name (e.g., "MyCustomResource")
             const label = crdInfo.kind;
+
+            const itemResourceData: TreeItemData = {
+                ...resourceData,
+                /** metadata.name / kubectl resource id (group-suffixed plural) */
+                resourceName: crdInfo.name
+            };
             
             const item = new ClusterTreeItem(
                 label,
                 'crd',
                 vscode.TreeItemCollapsibleState.None,
-                resourceData
+                itemResourceData
             );
 
             // Set description to show group and version (e.g., "apps.example.com/v1")
