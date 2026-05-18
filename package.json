@@ -535,7 +535,7 @@
         },
         {
           "command": "kube9.describeResourceRaw",
-          "when": "view == kube9ClusterView && (viewItem =~ /^resource/ || viewItem == namespace:active || viewItem == namespace:inactive)",
+          "when": "view == kube9ClusterView && viewItem =~ /^resource/",
           "group": "kube9@1.5"
         },
         {
