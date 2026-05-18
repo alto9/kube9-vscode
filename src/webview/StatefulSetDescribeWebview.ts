@@ -19,11 +19,14 @@ interface WebviewMessage {
  */
 export class StatefulSetDescribeWebview {
     private static currentPanel: vscode.WebviewPanel | undefined;
-    private static extensionContext: vscode.ExtensionContext | undefined;
     private static currentName: string | undefined;
     private static currentNamespace: string | undefined;
     private static kubeconfigPath: string | undefined;
     private static contextName: string | undefined;
+    /** Owned subscription for STS messages; swapped whenever HTML/handlers refresh on a reused panel. */
+    private static messageSubscription: vscode.Disposable | undefined;
+    /** Owned subscription clearing STS bindings when this panel closes (including shared Describe reuse). */
+    private static panelDisposeSubscription: vscode.Disposable | undefined;
 
     public static async show(
         context: vscode.ExtensionContext,
@@ -32,7 +35,6 @@ export class StatefulSetDescribeWebview {
         kubeconfigPath: string,
         contextName: string
     ): Promise<void> {
-        StatefulSetDescribeWebview.extensionContext = context;
         StatefulSetDescribeWebview.currentName = statefulSetName;
         StatefulSetDescribeWebview.currentNamespace = namespace;
         StatefulSetDescribeWebview.kubeconfigPath = kubeconfigPath;
@@ -50,6 +52,7 @@ export class StatefulSetDescribeWebview {
             StatefulSetDescribeWebview.currentPanel.webview.html = StatefulSetDescribeWebview.getWebviewContent(
                 StatefulSetDescribeWebview.currentPanel.webview
             );
+            StatefulSetDescribeWebview.attachPanelBindings(StatefulSetDescribeWebview.currentPanel);
             await StatefulSetDescribeWebview.refreshData();
             StatefulSetDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
             return;
@@ -64,6 +67,7 @@ export class StatefulSetDescribeWebview {
             StatefulSetDescribeWebview.currentPanel.webview.html = StatefulSetDescribeWebview.getWebviewContent(
                 StatefulSetDescribeWebview.currentPanel.webview
             );
+            StatefulSetDescribeWebview.attachPanelBindings(StatefulSetDescribeWebview.currentPanel);
             await StatefulSetDescribeWebview.refreshData();
             StatefulSetDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
             DescribeWebview.setSharedPanel(StatefulSetDescribeWebview.currentPanel);
@@ -81,21 +85,39 @@ export class StatefulSetDescribeWebview {
         DescribeWebview.setSharedPanel(panel);
 
         panel.webview.html = StatefulSetDescribeWebview.getWebviewContent(panel.webview);
-        StatefulSetDescribeWebview.setupMessageHandlers(panel, context);
+        StatefulSetDescribeWebview.attachPanelBindings(panel);
         await StatefulSetDescribeWebview.refreshData();
+    }
 
-        panel.onDidDispose(
-            () => {
+    /**
+     * (Re)attach webview subscriptions after replacing HTML when reusing {@link DescribeWebview}'s shared panel
+     * or this class's singleton panel so message commands target the StatefulSet handlers.
+     */
+    private static attachPanelBindings(panel: vscode.WebviewPanel): void {
+        StatefulSetDescribeWebview.detachPanelSubscriptions();
+        StatefulSetDescribeWebview.setupMessageHandlers(panel);
+
+        StatefulSetDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
+            if (StatefulSetDescribeWebview.currentPanel === panel) {
                 StatefulSetDescribeWebview.currentPanel = undefined;
                 StatefulSetDescribeWebview.currentName = undefined;
                 StatefulSetDescribeWebview.currentNamespace = undefined;
                 StatefulSetDescribeWebview.kubeconfigPath = undefined;
                 StatefulSetDescribeWebview.contextName = undefined;
-                DescribeWebview.setSharedPanel(undefined);
-            },
-            null,
-            context.subscriptions
-        );
+                if (DescribeWebview.getSharedPanel() === panel) {
+                    DescribeWebview.setSharedPanel(undefined);
+                }
+            }
+            StatefulSetDescribeWebview.messageSubscription?.dispose();
+            StatefulSetDescribeWebview.messageSubscription = undefined;
+        });
+    }
+
+    private static detachPanelSubscriptions(): void {
+        StatefulSetDescribeWebview.messageSubscription?.dispose();
+        StatefulSetDescribeWebview.messageSubscription = undefined;
+        StatefulSetDescribeWebview.panelDisposeSubscription?.dispose();
+        StatefulSetDescribeWebview.panelDisposeSubscription = undefined;
     }
 
     private static clearCache(contextName: string, namespace: string, name: string): void {
@@ -203,79 +225,75 @@ export class StatefulSetDescribeWebview {
         }
     }
 
-    private static setupMessageHandlers(panel: vscode.WebviewPanel, context: vscode.ExtensionContext): void {
-        panel.webview.onDidReceiveMessage(
-            async (message: WebviewMessage) => {
-                switch (message.command) {
-                    case 'refresh': {
-                        const ctx = StatefulSetDescribeWebview.contextName;
-                        const ns = StatefulSetDescribeWebview.currentNamespace;
-                        const n = StatefulSetDescribeWebview.currentName;
-                        if (ctx && ns && n) {
-                            StatefulSetDescribeWebview.clearCache(ctx, ns, n);
-                        }
-                        await StatefulSetDescribeWebview.refreshData();
-                        break;
+    private static setupMessageHandlers(panel: vscode.WebviewPanel): void {
+        StatefulSetDescribeWebview.messageSubscription = panel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
+            switch (message.command) {
+                case 'refresh': {
+                    const ctx = StatefulSetDescribeWebview.contextName;
+                    const ns = StatefulSetDescribeWebview.currentNamespace;
+                    const n = StatefulSetDescribeWebview.currentName;
+                    if (ctx && ns && n) {
+                        StatefulSetDescribeWebview.clearCache(ctx, ns, n);
                     }
-                    case 'viewYaml': {
-                        const n = StatefulSetDescribeWebview.currentName;
-                        const ns = StatefulSetDescribeWebview.currentNamespace;
-                        const cluster = StatefulSetDescribeWebview.contextName;
-                        if (!n || !ns || !cluster) {
-                            vscode.window.showErrorMessage('StatefulSet context not available');
-                            break;
-                        }
-                        try {
-                            const { getYAMLEditorManager } = await import('../extension');
-                            const yamlEditorManager = getYAMLEditorManager();
-                            await yamlEditorManager.openYAMLEditor({
-                                kind: 'StatefulSet',
-                                name: n,
-                                namespace: ns,
-                                apiVersion: 'apps/v1',
-                                cluster
-                            });
-                        } catch (e) {
-                            const msg = e instanceof Error ? e.message : String(e);
-                            vscode.window.showErrorMessage(`Failed to open YAML: ${msg}`);
-                        }
-                        break;
-                    }
-                    case 'navigateToPod': {
-                        const podName = message.podName;
-                        const ns = message.namespace || StatefulSetDescribeWebview.currentNamespace;
-                        if (!podName) {
-                            vscode.window.showErrorMessage('Pod name is required');
-                            break;
-                        }
-                        try {
-                            await vscode.commands.executeCommand('kube9.revealPod', podName, ns || 'default');
-                        } catch (e) {
-                            const msg = e instanceof Error ? e.message : String(e);
-                            vscode.window.showErrorMessage(`Failed to reveal pod: ${msg}`);
-                        }
-                        break;
-                    }
-                    case 'copyValue': {
-                        const value = message.value || message.content;
-                        if (value) {
-                            try {
-                                await vscode.env.clipboard.writeText(value);
-                                vscode.window.showInformationMessage('Copied to clipboard');
-                            } catch (e) {
-                                const msg = e instanceof Error ? e.message : String(e);
-                                vscode.window.showErrorMessage(`Failed to copy: ${msg}`);
-                            }
-                        }
-                        break;
-                    }
-                    default:
-                        console.log('Unknown StatefulSet describe message:', message.command);
+                    await StatefulSetDescribeWebview.refreshData();
+                    break;
                 }
-            },
-            null,
-            context.subscriptions
-        );
+                case 'viewYaml': {
+                    const n = StatefulSetDescribeWebview.currentName;
+                    const ns = StatefulSetDescribeWebview.currentNamespace;
+                    const cluster = StatefulSetDescribeWebview.contextName;
+                    if (!n || !ns || !cluster) {
+                        vscode.window.showErrorMessage('StatefulSet context not available');
+                        break;
+                    }
+                    try {
+                        const { getYAMLEditorManager } = await import('../extension');
+                        const yamlEditorManager = getYAMLEditorManager();
+                        await yamlEditorManager.openYAMLEditor({
+                            kind: 'StatefulSet',
+                            name: n,
+                            namespace: ns,
+                            apiVersion: 'apps/v1',
+                            cluster
+                        });
+                    } catch (e) {
+                        const msg = e instanceof Error ? e.message : String(e);
+                        vscode.window.showErrorMessage(`Failed to open YAML: ${msg}`);
+                    }
+                    break;
+                }
+                case 'navigateToPod': {
+                    const podName = message.podName;
+                    const ns = message.namespace || StatefulSetDescribeWebview.currentNamespace;
+                    if (!podName) {
+                        vscode.window.showErrorMessage('Pod name is required');
+                        break;
+                    }
+                    try {
+                        await vscode.commands.executeCommand('kube9.revealPod', podName, ns || 'default');
+                    } catch (e) {
+                        const msg = e instanceof Error ? e.message : String(e);
+                        vscode.window.showErrorMessage(`Failed to reveal pod: ${msg}`);
+                    }
+                    break;
+                }
+                case 'copyValue': {
+                    const value = message.value || message.content;
+                    if (value) {
+                        try {
+                            await vscode.env.clipboard.writeText(value);
+                            vscode.window.showInformationMessage('Copied to clipboard');
+                        } catch (e) {
+                            const msg = e instanceof Error ? e.message : String(e);
+                            vscode.window.showErrorMessage(`Failed to copy: ${msg}`);
+                        }
+                    }
+                    break;
+                }
+                default:
+                    console.log('Unknown StatefulSet describe message:', message.command);
+            }
+        });
     }
 
     private static getWebviewContent(webview: vscode.Webview): string {
