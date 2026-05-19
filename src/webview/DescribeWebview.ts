@@ -15,6 +15,7 @@ import { CRDDescribeProvider } from '../providers/CRDDescribeProvider';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
 import { DeploymentDescribeWebview } from './DeploymentDescribeWebview';
 import { StatefulSetDescribeWebview } from './StatefulSetDescribeWebview';
+import { DaemonSetDescribeWebview } from './DaemonSetDescribeWebview';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
@@ -539,6 +540,16 @@ export class DescribeWebview {
             }
             const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
             await StatefulSetDescribeWebview.show(context, name, namespace, kubeconfigPath, contextName);
+            return;
+        }
+
+        if (kind === 'DaemonSet') {
+            if (!namespace) {
+                vscode.window.showErrorMessage('Unable to describe DaemonSet: namespace is required');
+                return;
+            }
+            const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+            await DaemonSetDescribeWebview.show(context, name, namespace, kubeconfigPath, contextName);
             return;
         }
 

@@ -8,6 +8,7 @@ import { HelmPackageManagerPanel } from '../webview/HelmPackageManagerPanel';
 import { NodeDescribeWebview } from '../webview/NodeDescribeWebview';
 import { DeploymentDescribeWebview } from '../webview/DeploymentDescribeWebview';
 import { StatefulSetDescribeWebview } from '../webview/StatefulSetDescribeWebview';
+import { DaemonSetDescribeWebview } from '../webview/DaemonSetDescribeWebview';
 import { TutorialWebview } from '../webview/TutorialWebview';
 import { ClusterManagerWebview } from '../webview/ClusterManagerWebview';
 import { ArgoCDApplicationWebviewProvider } from '../webview/ArgoCDApplicationWebviewProvider';
@@ -51,6 +52,7 @@ export async function closeWebviewsForContext(contextName: string): Promise<void
             { name: 'TutorialWebview', getPanel: () => (TutorialWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
             { name: 'DeploymentDescribeWebview', getPanel: () => (DeploymentDescribeWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
             { name: 'StatefulSetDescribeWebview', getPanel: () => (StatefulSetDescribeWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
+            { name: 'DaemonSetDescribeWebview', getPanel: () => (DaemonSetDescribeWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel },
             { name: 'NodeDescribeWebview', getPanel: () => (NodeDescribeWebview as unknown as { currentPanel?: vscode.WebviewPanel }).currentPanel }
         ];
 
