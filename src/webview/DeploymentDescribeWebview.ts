@@ -3,6 +3,7 @@ import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { transformDeploymentData, DeploymentDescribeData } from './deploymentDataTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
+import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
@@ -53,6 +54,17 @@ export class DeploymentDescribeWebview {
      */
     private static contextName: string | undefined;
 
+    private static messageSubscription: vscode.Disposable | undefined;
+    private static panelDisposeSubscription: vscode.Disposable | undefined;
+
+    /** Drops Deployment message handlers when another describe view takes the shared panel. */
+    public static releaseMessageBindings(): void {
+        DeploymentDescribeWebview.messageSubscription?.dispose();
+        DeploymentDescribeWebview.messageSubscription = undefined;
+        DeploymentDescribeWebview.panelDisposeSubscription?.dispose();
+        DeploymentDescribeWebview.panelDisposeSubscription = undefined;
+    }
+
     /**
      * Show the Deployment Describe webview for a deployment.
      * Creates a new panel if none exists, or reuses and updates the existing panel.
@@ -70,6 +82,8 @@ export class DeploymentDescribeWebview {
         kubeconfigPath: string,
         contextName: string
     ): Promise<void> {
+        releaseExclusiveDescribePanelBindings();
+
         // Store the extension context for later use
         DeploymentDescribeWebview.extensionContext = context;
         DeploymentDescribeWebview.currentDeploymentName = deploymentName;
@@ -92,6 +106,7 @@ export class DeploymentDescribeWebview {
             DeploymentDescribeWebview.currentPanel.webview.html = DeploymentDescribeWebview.getWebviewContent(
                 DeploymentDescribeWebview.currentPanel.webview
             );
+            DeploymentDescribeWebview.attachPanelBindings(DeploymentDescribeWebview.currentPanel);
             await DeploymentDescribeWebview.refreshDeploymentData();
             DeploymentDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
             return;
@@ -108,6 +123,7 @@ export class DeploymentDescribeWebview {
             DeploymentDescribeWebview.currentPanel.webview.html = DeploymentDescribeWebview.getWebviewContent(
                 DeploymentDescribeWebview.currentPanel.webview
             );
+            DeploymentDescribeWebview.attachPanelBindings(DeploymentDescribeWebview.currentPanel);
             await DeploymentDescribeWebview.refreshDeploymentData();
             DeploymentDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
             // Register our panel as the shared panel
@@ -139,26 +155,29 @@ export class DeploymentDescribeWebview {
             panel.webview
         );
 
-        // Set up message handlers
-        DeploymentDescribeWebview.setupMessageHandlers(panel, context);
+        DeploymentDescribeWebview.attachPanelBindings(panel);
 
         // Fetch and display initial data
         await DeploymentDescribeWebview.refreshDeploymentData();
+    }
 
-        // Handle panel disposal
-        panel.onDidDispose(
-            () => {
+    private static attachPanelBindings(panel: vscode.WebviewPanel): void {
+        DeploymentDescribeWebview.releaseMessageBindings();
+        DeploymentDescribeWebview.setupMessageHandlers(panel);
+
+        DeploymentDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
+            if (DeploymentDescribeWebview.currentPanel === panel) {
                 DeploymentDescribeWebview.currentPanel = undefined;
                 DeploymentDescribeWebview.currentDeploymentName = undefined;
                 DeploymentDescribeWebview.currentNamespace = undefined;
                 DeploymentDescribeWebview.kubeconfigPath = undefined;
                 DeploymentDescribeWebview.contextName = undefined;
-                // Clear the shared panel reference
-                DescribeWebview.setSharedPanel(undefined);
-            },
-            null,
-            context.subscriptions
-        );
+                if (DescribeWebview.getSharedPanel() === panel) {
+                    DescribeWebview.setSharedPanel(undefined);
+                }
+            }
+            DeploymentDescribeWebview.releaseMessageBindings();
+        });
     }
 
     /**
@@ -303,11 +322,8 @@ export class DeploymentDescribeWebview {
      * @param panel The webview panel
      * @param context The VS Code extension context
      */
-    private static setupMessageHandlers(
-        panel: vscode.WebviewPanel,
-        context: vscode.ExtensionContext
-    ): void {
-        panel.webview.onDidReceiveMessage(
+    private static setupMessageHandlers(panel: vscode.WebviewPanel): void {
+        DeploymentDescribeWebview.messageSubscription = panel.webview.onDidReceiveMessage(
             async (message: WebviewMessage) => {
                 switch (message.command) {
                     case 'refresh': {
@@ -370,9 +386,7 @@ export class DeploymentDescribeWebview {
                         console.log('Unknown message command:', message.command);
                     }
                 }
-            },
-            null,
-            context.subscriptions
+            }
         );
     }
 

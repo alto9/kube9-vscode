@@ -250,7 +250,7 @@ export function transformDeploymentData(
         labels: metadata?.labels || {},
         selectors: spec?.selector?.matchLabels || {},
         annotations: metadata?.annotations || {},
-        events: transformEvents(events)
+        events: transformKubernetesEvents(events)
     };
 }
 
@@ -368,10 +368,9 @@ function extractStrategy(deployment: k8s.V1Deployment): DeploymentStrategy {
 }
 
 /**
- * Extracts pod template information.
+ * Extracts pod template information from a Pod spec (Deployment, StatefulSet, etc.).
  */
-function extractPodTemplate(deployment: k8s.V1Deployment): PodTemplateInfo {
-    const podSpec = deployment.spec?.template?.spec;
+export function extractPodTemplateInfoFromPodSpec(podSpec?: k8s.V1PodSpec): PodTemplateInfo {
     if (!podSpec) {
         return {
             containers: [],
@@ -387,7 +386,7 @@ function extractPodTemplate(deployment: k8s.V1Deployment): PodTemplateInfo {
             }
         };
     }
-    
+
     return {
         containers: (podSpec.containers || []).map(extractContainerInfo),
         initContainers: (podSpec.initContainers || []).map(extractContainerInfo),
@@ -396,6 +395,13 @@ function extractPodTemplate(deployment: k8s.V1Deployment): PodTemplateInfo {
         serviceAccount: podSpec.serviceAccountName || 'default',
         securityContext: extractPodSecurityContext(podSpec.securityContext)
     };
+}
+
+/**
+ * Extracts pod template information.
+ */
+function extractPodTemplate(deployment: k8s.V1Deployment): PodTemplateInfo {
+    return extractPodTemplateInfoFromPodSpec(deployment.spec?.template?.spec);
 }
 
 /**
@@ -746,7 +752,7 @@ function transformReplicaSets(
 /**
  * Transforms events into DeploymentEvent array, filtering to last hour and grouping by reason.
  */
-function transformEvents(events: k8s.CoreV1Event[]): DeploymentEvent[] {
+export function transformKubernetesEvents(events: k8s.CoreV1Event[]): DeploymentEvent[] {
     const now = Date.now();
     const oneHourAgo = now - (60 * 60 * 1000);
     

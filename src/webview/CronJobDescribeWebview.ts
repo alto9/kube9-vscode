@@ -4,6 +4,7 @@ import { transformCronJobData } from './cronJobDataTransformer';
 import { CronJobDescribeData } from '../providers/CronJobDescribeProvider';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
+import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
@@ -54,6 +55,17 @@ export class CronJobDescribeWebview {
      */
     private static contextName: string | undefined;
 
+    private static messageSubscription: vscode.Disposable | undefined;
+    private static panelDisposeSubscription: vscode.Disposable | undefined;
+
+    /** Drops CronJob message handlers when another describe view takes the shared panel. */
+    public static releaseMessageBindings(): void {
+        CronJobDescribeWebview.messageSubscription?.dispose();
+        CronJobDescribeWebview.messageSubscription = undefined;
+        CronJobDescribeWebview.panelDisposeSubscription?.dispose();
+        CronJobDescribeWebview.panelDisposeSubscription = undefined;
+    }
+
     /**
      * Show the CronJob Describe webview for a cronjob.
      * Creates a new panel if none exists, or reuses and updates the existing panel.
@@ -72,6 +84,8 @@ export class CronJobDescribeWebview {
         kubeconfigPath: string,
         contextName: string
     ): Promise<void> {
+        releaseExclusiveDescribePanelBindings();
+
         // Store the extension context for later use
         CronJobDescribeWebview.extensionContext = context;
         CronJobDescribeWebview.currentCronJobName = cronjobName;
@@ -90,6 +104,7 @@ export class CronJobDescribeWebview {
             CronJobDescribeWebview.currentPanel.webview.html = CronJobDescribeWebview.getWebviewContent(
                 CronJobDescribeWebview.currentPanel.webview
             );
+            CronJobDescribeWebview.attachPanelBindings(CronJobDescribeWebview.currentPanel);
             await CronJobDescribeWebview.refreshCronJobData();
             CronJobDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
             return;
@@ -106,6 +121,7 @@ export class CronJobDescribeWebview {
             CronJobDescribeWebview.currentPanel.webview.html = CronJobDescribeWebview.getWebviewContent(
                 CronJobDescribeWebview.currentPanel.webview
             );
+            CronJobDescribeWebview.attachPanelBindings(CronJobDescribeWebview.currentPanel);
             await CronJobDescribeWebview.refreshCronJobData();
             CronJobDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
             // Register our panel as the shared panel
@@ -137,26 +153,29 @@ export class CronJobDescribeWebview {
             panel.webview
         );
 
-        // Set up message handlers
-        CronJobDescribeWebview.setupMessageHandlers(panel, context);
+        CronJobDescribeWebview.attachPanelBindings(panel);
 
         // Fetch and display initial data
         await CronJobDescribeWebview.refreshCronJobData();
+    }
 
-        // Handle panel disposal
-        panel.onDidDispose(
-            () => {
+    private static attachPanelBindings(panel: vscode.WebviewPanel): void {
+        CronJobDescribeWebview.releaseMessageBindings();
+        CronJobDescribeWebview.setupMessageHandlers(panel);
+
+        CronJobDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
+            if (CronJobDescribeWebview.currentPanel === panel) {
                 CronJobDescribeWebview.currentPanel = undefined;
                 CronJobDescribeWebview.currentCronJobName = undefined;
                 CronJobDescribeWebview.currentNamespace = undefined;
                 CronJobDescribeWebview.kubeconfigPath = undefined;
                 CronJobDescribeWebview.contextName = undefined;
-                // Clear the shared panel reference
-                DescribeWebview.setSharedPanel(undefined);
-            },
-            null,
-            context.subscriptions
-        );
+                if (DescribeWebview.getSharedPanel() === panel) {
+                    DescribeWebview.setSharedPanel(undefined);
+                }
+            }
+            CronJobDescribeWebview.releaseMessageBindings();
+        });
     }
 
     /**
@@ -272,11 +291,8 @@ export class CronJobDescribeWebview {
      * @param panel The webview panel
      * @param context The VS Code extension context
      */
-    private static setupMessageHandlers(
-        panel: vscode.WebviewPanel,
-        context: vscode.ExtensionContext
-    ): void {
-        panel.webview.onDidReceiveMessage(
+    private static setupMessageHandlers(panel: vscode.WebviewPanel): void {
+        CronJobDescribeWebview.messageSubscription = panel.webview.onDidReceiveMessage(
             async (message: WebviewMessage) => {
                 switch (message.command) {
                     case 'refresh': {
@@ -319,9 +335,7 @@ export class CronJobDescribeWebview {
                         console.log('Unknown message command:', message.command);
                     }
                 }
-            },
-            null,
-            context.subscriptions
+            }
         );
     }
 
