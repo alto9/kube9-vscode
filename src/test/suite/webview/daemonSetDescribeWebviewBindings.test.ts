@@ -245,7 +245,7 @@ suite('DaemonSetDescribeWebview panel bindings', () => {
                         selector: { matchLabels: { app: 'web' } },
                         template: { spec: { containers: [{ name: 'nginx', image: 'nginx' }] } }
                     },
-                    status: {}
+                    status: { replicas: 1 }
                 },
                 error: undefined
             } as Awaited<ReturnType<typeof WorkloadCommands.getStatefulSetDetails>>;
