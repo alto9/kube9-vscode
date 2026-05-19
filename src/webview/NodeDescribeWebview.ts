@@ -4,6 +4,7 @@ import { PodCommands } from '../kubectl/PodCommands';
 import { transformNodeData, NodeDescribeData } from './nodeDescribeTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
+import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
@@ -49,6 +50,17 @@ export class NodeDescribeWebview {
      */
     private static contextName: string | undefined;
 
+    private static messageSubscription: vscode.Disposable | undefined;
+    private static panelDisposeSubscription: vscode.Disposable | undefined;
+
+    /** Drops Node message handlers when another describe view takes the shared panel. */
+    public static releaseMessageBindings(): void {
+        NodeDescribeWebview.messageSubscription?.dispose();
+        NodeDescribeWebview.messageSubscription = undefined;
+        NodeDescribeWebview.panelDisposeSubscription?.dispose();
+        NodeDescribeWebview.panelDisposeSubscription = undefined;
+    }
+
     /**
      * Show the Node Describe webview for a node.
      * Creates a new panel if none exists, or reuses and updates the existing panel.
@@ -65,6 +77,8 @@ export class NodeDescribeWebview {
         kubeconfigPath: string,
         contextName: string
     ): Promise<void> {
+        releaseExclusiveDescribePanelBindings();
+
         // Store the extension context for later use
         NodeDescribeWebview.extensionContext = context;
         NodeDescribeWebview.currentNodeName = nodeName;
@@ -82,6 +96,7 @@ export class NodeDescribeWebview {
             NodeDescribeWebview.currentPanel.webview.html = NodeDescribeWebview.getWebviewContent(
                 NodeDescribeWebview.currentPanel.webview
             );
+            NodeDescribeWebview.attachPanelBindings(NodeDescribeWebview.currentPanel);
             await NodeDescribeWebview.refreshNodeData();
             NodeDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
             return;
@@ -97,6 +112,7 @@ export class NodeDescribeWebview {
             NodeDescribeWebview.currentPanel.webview.html = NodeDescribeWebview.getWebviewContent(
                 NodeDescribeWebview.currentPanel.webview
             );
+            NodeDescribeWebview.attachPanelBindings(NodeDescribeWebview.currentPanel);
             await NodeDescribeWebview.refreshNodeData();
             NodeDescribeWebview.currentPanel.reveal(vscode.ViewColumn.One);
             // Register our panel as the shared panel
@@ -128,25 +144,28 @@ export class NodeDescribeWebview {
             panel.webview
         );
 
-        // Set up message handlers
-        NodeDescribeWebview.setupMessageHandlers(panel, context);
+        NodeDescribeWebview.attachPanelBindings(panel);
 
         // Fetch and display initial data
         await NodeDescribeWebview.refreshNodeData();
+    }
 
-        // Handle panel disposal
-        panel.onDidDispose(
-            () => {
+    private static attachPanelBindings(panel: vscode.WebviewPanel): void {
+        NodeDescribeWebview.releaseMessageBindings();
+        NodeDescribeWebview.setupMessageHandlers(panel);
+
+        NodeDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
+            if (NodeDescribeWebview.currentPanel === panel) {
                 NodeDescribeWebview.currentPanel = undefined;
                 NodeDescribeWebview.currentNodeName = undefined;
                 NodeDescribeWebview.kubeconfigPath = undefined;
                 NodeDescribeWebview.contextName = undefined;
-                // Clear the shared panel reference
-                DescribeWebview.setSharedPanel(undefined);
-            },
-            null,
-            context.subscriptions
-        );
+                if (DescribeWebview.getSharedPanel() === panel) {
+                    DescribeWebview.setSharedPanel(undefined);
+                }
+            }
+            NodeDescribeWebview.releaseMessageBindings();
+        });
     }
 
     /**
@@ -251,11 +270,8 @@ export class NodeDescribeWebview {
      * @param panel The webview panel
      * @param context The VS Code extension context
      */
-    private static setupMessageHandlers(
-        panel: vscode.WebviewPanel,
-        context: vscode.ExtensionContext
-    ): void {
-        panel.webview.onDidReceiveMessage(
+    private static setupMessageHandlers(panel: vscode.WebviewPanel): void {
+        NodeDescribeWebview.messageSubscription = panel.webview.onDidReceiveMessage(
             async (message: WebviewMessage) => {
                 switch (message.command) {
                     case 'refresh': {
@@ -301,9 +317,7 @@ export class NodeDescribeWebview {
                         console.log('Unknown message command:', message.command);
                     }
                 }
-            },
-            null,
-            context.subscriptions
+            }
         );
     }
 

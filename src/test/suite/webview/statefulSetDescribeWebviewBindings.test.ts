@@ -4,6 +4,7 @@ import * as k8s from '@kubernetes/client-node';
 import { getResourceCache } from '../../../kubernetes/cache';
 import { KubectlError, KubectlErrorType } from '../../../kubernetes/KubectlError';
 import { WorkloadCommands } from '../../../kubectl/WorkloadCommands';
+import { DeploymentDescribeWebview } from '../../../webview/DeploymentDescribeWebview';
 import { DescribeWebview } from '../../../webview/DescribeWebview';
 import { StatefulSetDescribeWebview } from '../../../webview/StatefulSetDescribeWebview';
 
@@ -290,6 +291,79 @@ suite('StatefulSetDescribeWebview panel bindings', () => {
             assert.ok(stsDetailHits > stsLoadsBeforeRefresh, 'Refresh should reload StatefulSet data');
         } finally {
             origLoadPod.loadPodData = realLoadPod;
+        }
+    });
+
+    test('reusing panel after Deployment describe clears Deployment refresh handlers', async () => {
+        const prePanel = vscode.window.createWebviewPanel('kube9Describe', 'stub', vscode.ViewColumn.One, {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        });
+        DescribeWebview.setSharedPanel(prePanel);
+
+        let deploymentDetailHits = 0;
+        const origGetDeployment = WorkloadCommands.getDeploymentDetails;
+        const origGetRs = WorkloadCommands.getRelatedReplicaSets;
+        const origGetEvents = WorkloadCommands.getDeploymentEvents;
+
+        WorkloadCommands.getDeploymentDetails = async () => {
+            deploymentDetailHits += 1;
+            return {
+                deployment: {
+                    metadata: { name: 'nginx', namespace: 'ns1', uid: 'dep-uid' },
+                    spec: {
+                        replicas: 1,
+                        selector: { matchLabels: { app: 'nginx' } },
+                        template: { spec: { containers: [{ name: 'nginx', image: 'nginx' }] } }
+                    },
+                    status: {}
+                },
+                error: undefined
+            } as Awaited<ReturnType<typeof WorkloadCommands.getDeploymentDetails>>;
+        };
+        WorkloadCommands.getRelatedReplicaSets = async () => ({ replicaSets: [] });
+        WorkloadCommands.getDeploymentEvents = async () => ({ events: [] });
+
+        try {
+            await DeploymentDescribeWebview.show(mockContext, 'nginx', 'ns1', '/kc', 'ctx-a');
+            assert.strictEqual(deploymentDetailHits, 1);
+
+            await StatefulSetDescribeWebview.show(mockContext, 'web', 'ns1', '/kc', 'ctx-a');
+
+            const dw = DeploymentDescribeWebview as unknown as {
+                messageSubscription?: vscode.Disposable;
+            };
+            assert.strictEqual(
+                dw.messageSubscription,
+                undefined,
+                'Deployment subscription must be released when StatefulSet takes the shared panel'
+            );
+
+            let stsDetailHits = 0;
+            WorkloadCommands.getStatefulSetDetails = async () => {
+                stsDetailHits += 1;
+                return {
+                    statefulSet: MIN_STS_TEMPLATE(),
+                    error: undefined
+                } as Awaited<ReturnType<typeof WorkloadCommands.getStatefulSetDetails>>;
+            };
+
+            const wv = prePanel.webview as unknown as MockWebviewWithFire;
+            const deploymentHitsBeforeRefresh = deploymentDetailHits;
+            const stsHitsBeforeRefresh = stsDetailHits;
+            wv._fireMessage({ command: 'refresh' });
+            await flushUntil(() => stsDetailHits > stsHitsBeforeRefresh);
+
+            assert.strictEqual(
+                deploymentDetailHits,
+                deploymentHitsBeforeRefresh,
+                'Leaked Deployment refresh must not fetch deployment data after StatefulSet takeover'
+            );
+            assert.ok(stsDetailHits > stsHitsBeforeRefresh, 'Refresh should reload StatefulSet data');
+        } finally {
+            WorkloadCommands.getDeploymentDetails = origGetDeployment;
+            WorkloadCommands.getRelatedReplicaSets = origGetRs;
+            WorkloadCommands.getDeploymentEvents = origGetEvents;
         }
     });
 });

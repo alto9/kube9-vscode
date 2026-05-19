@@ -21,7 +21,7 @@ export interface StatefulSetRolloutInfo {
     partition: number | null;
 }
 
-/** One row per desired ordinal (0 … replicas-1). */
+/** One row per desired ordinal (respects spec.ordinals.start when set). */
 export interface StatefulSetOrdinalPodRow {
     ordinal: number;
     expectedPodName: string;
@@ -112,6 +112,19 @@ export interface StatefulSetDescribeData {
         pvcs?: string;
         events?: string;
     };
+}
+
+/** First ordinal index for this StatefulSet (defaults to 0). */
+export function statefulSetOrdinalStart(statefulSet: k8s.V1StatefulSet): number {
+    const start = statefulSet.spec?.ordinals?.start;
+    return start !== undefined && start !== null ? start : 0;
+}
+
+/** Ordered list of ordinal indices for desired replicas. */
+export function statefulSetDesiredOrdinals(statefulSet: k8s.V1StatefulSet): number[] {
+    const desired = statefulSet.spec?.replicas ?? 0;
+    const start = statefulSetOrdinalStart(statefulSet);
+    return Array.from({ length: desired }, (_, i) => start + i);
 }
 
 function extractOrdinalFromPodName(statefulSetName: string, podName: string): number | null {
@@ -251,7 +264,7 @@ function buildOrdinalPodRows(
     pods: k8s.V1Pod[]
 ): StatefulSetOrdinalPodRow[] {
     const name = statefulSet.metadata?.name || '';
-    const desired = statefulSet.spec?.replicas ?? 0;
+    const ordinals = statefulSetDesiredOrdinals(statefulSet);
     const podByOrdinal = new Map<number, k8s.V1Pod>();
 
     for (const pod of pods) {
@@ -263,7 +276,7 @@ function buildOrdinalPodRows(
     }
 
     const rows: StatefulSetOrdinalPodRow[] = [];
-    for (let i = 0; i < desired; i++) {
+    for (const i of ordinals) {
         const expectedPodName = `${name}-${i}`;
         const pod = podByOrdinal.get(i);
         if (!pod) {
@@ -325,7 +338,7 @@ function buildOrdinalPvcRows(
     pvcs: k8s.V1PersistentVolumeClaim[]
 ): OrdinalPvcRow[] {
     const stsName = statefulSet.metadata?.name || '';
-    const desired = statefulSet.spec?.replicas ?? 0;
+    const ordinals = statefulSetDesiredOrdinals(statefulSet);
     const templates = statefulSet.spec?.volumeClaimTemplates || [];
     const pvcByName = new Map<string, k8s.V1PersistentVolumeClaim>();
     for (const p of pvcs) {
@@ -338,7 +351,7 @@ function buildOrdinalPvcRows(
     const rows: OrdinalPvcRow[] = [];
     for (const t of templates) {
         const tname = t.metadata?.name || '';
-        for (let i = 0; i < desired; i++) {
+        for (const i of ordinals) {
             const pvcName = `${tname}-${stsName}-${i}`;
             const pvc = pvcByName.get(pvcName);
             rows.push({

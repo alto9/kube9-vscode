@@ -3,6 +3,7 @@ import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { transformStatefulSetData, StatefulSetDescribeData } from './statefulSetDataTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
+import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 interface WebviewMessage {
@@ -35,7 +36,7 @@ export class StatefulSetDescribeWebview {
         kubeconfigPath: string,
         contextName: string
     ): Promise<void> {
-        DescribeWebview.releaseSharedDescribeMessageBindings();
+        releaseExclusiveDescribePanelBindings();
         StatefulSetDescribeWebview.currentName = statefulSetName;
         StatefulSetDescribeWebview.currentNamespace = namespace;
         StatefulSetDescribeWebview.kubeconfigPath = kubeconfigPath;
@@ -112,6 +113,11 @@ export class StatefulSetDescribeWebview {
             StatefulSetDescribeWebview.messageSubscription?.dispose();
             StatefulSetDescribeWebview.messageSubscription = undefined;
         });
+    }
+
+    /** Drops StatefulSet message handlers when another describe view takes the shared panel. */
+    public static releaseMessageBindings(): void {
+        StatefulSetDescribeWebview.detachPanelSubscriptions();
     }
 
     private static detachPanelSubscriptions(): void {
