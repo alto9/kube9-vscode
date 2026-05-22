@@ -5,6 +5,7 @@
 - Tree item context menus (resource actions, ArgoCD actions, port-forwarding).
 - Command palette commands for global actions.
 - Webview UI events (details panes, logs, Helm manager, events viewer).
+- Argo CD Application webview: graph **overflow** actions per resource kind (and header actions on the Application root) post through the same validation and disabled-state rules as tree-driven actions.
 - YAML text editors with save/apply behavior.
 
 ## Input Rules

@@ -1,18 +1,30 @@
 # External Systems
 
-## Primary Systems
+## Kubernetes API
 
-- **Kubernetes API servers** reachable through user kubeconfig contexts.
-- **kubectl** local executable for command paths and process-backed operations.
-- **helm** local executable for chart/release management.
-- **ArgoCD** optional in-cluster CRDs/controllers.
-- **kube9-operator** optional in-cluster status and reporting source.
+Primary integration for cluster tree, resource describe, YAML, workload commands, and Argo CD Application CRD read/patch.
 
-## Optional Telemetry And Analytics Egress
+- Client: `@kubernetes/client-node` with context from active kubeconfig.
+- Supplemental: `kubectl` for selected flows (Argo CD Application get/patch today; port-forward when used for Argo CD REST).
 
-- **VS Code / Microsoft extension telemetry machinery** where the extension adopts official APIs (`vscode-extension-telemetry` or successors), subject to Cursor/VS Code user telemetry settings—used only for allowlisted semantic events described in `.forge/operations/observability.md`. This path may coexist with GA4 below; duplication of the same semantic event should be minimized in implementation.
-- **Google Analytics (GA4)** — **approved product-analytics backend** for cross-surface rollups (**kube9-vscode** and other **kube9-desktop** clients). Events use the same allowlisted schema and forbid-list as `.forge/operations/observability.md`; implementation may use GA4 client SDKs, **Measurement Protocol**, or platform-recommended integration per app type. Property ID, credentials, and consent UX are implementation details (not stored in Forge). If Google’s terms or regional requirements change materially, update this section.
+## kube9-operator (optional)
 
-## Boundary Statement
+When operated mode is available, the extension reads **detection metadata** from the operator status ConfigMap (`status.argocd`: detected, namespace, version, lastChecked). Application queries still use the Application CRD in the detected namespace unless a future contract adds operator-mediated snapshots.
 
-Core extension operations are local-first and cluster-native; no mandatory external SaaS dependency is required for baseline cluster management. Product telemetry egress is optional and supplementary to that core stance.
+The operator peer today calls Argo CD **`GET /api/v1/applications`** for drift/status cycles only. It does **not** publish resource-tree or per-resource graph DTOs to the extension. Resource graph topology for kube9-vscode is **extension-local** unless a later cross-repo contract adds operator export.
+
+## Argo CD
+
+Two distinct integration surfaces:
+
+| Surface | Role | Required for graph? |
+|---------|------|---------------------|
+| **Application CRD** (`argoproj.io/v1alpha1`, `Application`) | List/get apps, `status.resources`, sync/refresh via annotation patch | Yes (baseline nodes and status) |
+| **Argo CD API server** (REST, v1) | `resource-tree` and other UI-parity topology | No (optional enrichment) |
+
+Argo CD server URL and API token are **user- or environment-supplied** when REST enrichment is enabled (settings, port-forward to `argocd-server`, or cluster ingress). They are not inferred from the Application CRD alone.
+
+## Out of scope (this repo)
+
+- **kube9-web**, **kube9-desktop**, **kube9-api** — reference UX only; no delivery contract in kube9-vscode for this initiative.
+- **Argo CD CLI** (`argocd`) — not a required dependency; REST or CRD paths cover extension needs.

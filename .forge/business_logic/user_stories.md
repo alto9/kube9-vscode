@@ -9,6 +9,18 @@
 - As a GitOps user, I can view and act on ArgoCD applications from the same extension.
 - As a service developer, I can create and manage port forwards from resource context menus.
 
+## ArgoCD Application Resource Graph
+
+- As a GitOps engineer, when I open an ArgoCD Application from the cluster tree, **Graph** is the **default tab** and **Details** is my **secondary tab** for metadata, app-level controls, and tabular drift review; the graph shows the Application as the root and arranges managed resources by dependency relationships when the topology source supports them.
+- As a GitOps engineer, when **resource-tree** topology is unavailable, I still get a **limited topology** graph from Application CR data with clear indication that dependency edges may be incomplete.
+- As a GitOps engineer, I can read **sync status** and **health status** on every graph tile at a glance, using the same status semantics as elsewhere in the extension's ArgoCD surfaces.
+- As a GitOps engineer, I can pan and zoom the graph and fit the view so I can explore large applications without losing context.
+- As a GitOps engineer, I can run **application-level sync, refresh, and hard refresh** from the Application root node using the same flows already available for ArgoCD applications.
+- As a GitOps engineer, I can **restart rollout** on a Deployment node from the graph when I need to recycle pods without leaving the application detail panel.
+- As a GitOps engineer, I can **navigate to a managed resource in the cluster tree** or open its describe/detail surface from graph nodes where the extension supports that kind.
+- As a GitOps engineer, after I sync or refresh an application, the graph **updates in place** with refreshed sync and health on affected nodes without requiring me to close and reopen the panel.
+- As a GitOps engineer working on a large application, I can still use the graph when node count is high because the experience avoids unusable clutter through progressive disclosure or grouping rather than failing silently.
+
 ## Enhancement Stories
 
 - As a user with kube9-operator installed, I get richer status/reporting surfaces.

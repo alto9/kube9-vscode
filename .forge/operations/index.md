@@ -1,10 +1,10 @@
-# Operations Overview
+# Operations
 
-This directory defines build, release, deployment/distribution, observability, and security expectations for the extension.
+How kube9-vscode is built, distributed, observed, and secured.
 
-## Related Documents
+## Documents
 
-- [build_packaging.md](./build_packaging.md)
-- [deployment_environments.md](./deployment_environments.md)
-- [observability.md](./observability.md)
-- [security.md](./security.md)
+- [Build and packaging](build_packaging.md) — toolchain, webview build split, Argo CD webview esbuild entry, graph dependencies, CSS order, bundle size
+- [Deployment environments](deployment_environments.md) — extension host, marketplaces, CI release
+
+Observability and security contracts are not yet authored in this repo; telemetry flows through `@vscode/extension-telemetry` in the extension host.

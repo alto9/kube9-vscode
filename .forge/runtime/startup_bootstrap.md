@@ -1,15 +1,18 @@
 # Startup And Bootstrap
 
-## Activation Flow
+## Activation
 
-1. Extension activates from startup/view event.
-2. Global state and tutorial completion context are initialized.
-3. Kubeconfig parsing runs and discovers contexts.
-4. Core managers are created (tree provider, status bars, YAML/editor services, port-forward manager).
-5. Commands are registered before tree interactions are expected.
-6. Optional dependency checks (for example Helm CLI) run non-blocking.
+The extension activates on VS Code startup events defined in `package.json` (commands, views, etc.). Core services (tree provider, kubectl client factory, Argo CD service) register during activation.
 
-## Startup Requirements
+## Webview Bootstrap
 
-- Activation must be resilient to missing kubeconfig or unavailable clusters.
-- Partial feature readiness is acceptable; extension should stay usable for available flows.
+Webviews are **not** started at extension activation. Each panel is created on demand when the user opens a resource or Argo CD application from the cluster tree.
+
+Argo CD application webview bootstrap sequence:
+
+1. Extension creates or reveals `WebviewPanel` (`retainContextWhenHidden: true`). If the panel already exists for the same `context:namespace:applicationName`, it is **revealed** and data is **reloaded** for that tuple.
+2. HTML loads shared header CSS, React Flow base CSS, application CSS, then `main.js`.
+3. React app mounts and posts `{ type: 'ready' }` to the extension.
+4. Extension loads application (and, when implemented, graph) data and posts initial DTO messages (`applicationData`, and `graphData` when the resource graph is active).
+
+Data may arrive before or after `ready`; the webview must handle both orderings.

@@ -1,16 +1,14 @@
-# Runtime Overview
+# Runtime
 
-Kube9 VS Code is a VS Code extension runtime with activation-driven startup, command registration, tree provider orchestration, and managed disposal on deactivation.
+How kube9-vscode starts, executes work, and shuts down.
 
-## Runtime Shape
+## Process Model
 
-- **Entry**: `dist/extension.js` compiled from `src/extension.ts`
-- **Activation events**: startup and kube9 cluster view opening
-- **Core long-lived services**: tree provider, status bars, YAML manager, port-forward manager, caches, help controller
+The extension runs in the **VS Code extension host** (Node). User-facing panels are **isolated webviews** (browser context) that communicate with the host over `postMessage`. Kubernetes and Argo CD I/O happen only in the extension host; webviews receive DTOs and dispatch action requests.
 
-## Related Documents
+## Documents
 
-- [configuration.md](./configuration.md)
-- [startup_bootstrap.md](./startup_bootstrap.md)
-- [lifecycle_shutdown.md](./lifecycle_shutdown.md)
-- [execution_model.md](./execution_model.md)
+- [Configuration](configuration.md) — settings and kubeconfig context selection
+- [Startup and bootstrap](startup_bootstrap.md) — activation and service wiring
+- [Execution model](execution_model.md) — webview messaging, Argo CD graph protocol, operation polling
+- [Lifecycle and shutdown](lifecycle_shutdown.md) — webview panel reuse, disposal, in-flight operation cleanup

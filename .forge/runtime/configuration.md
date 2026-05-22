@@ -2,16 +2,12 @@
 
 ## Extension Settings
 
-- `kube9.debugMode`
-- `kube9.operatorNamespace` (global or per-cluster override)
-- timeout settings for connection and API requests
-- error presentation throttling/detail toggles
+User-facing settings live in `package.json` `contributes.configuration` (errors, telemetry, feature toggles). Changes apply without restart where VS Code supports it.
 
-## External Inputs
+## Kubernetes Context
 
-- `KUBECONFIG` / default kubeconfig location
-- availability of local CLIs (`kubectl`, optional `helm`)
+The active kubeconfig context drives all cluster-scoped operations. Webview panels store the context they were opened with (`context:namespace:applicationName` key) so actions and refreshes target the correct cluster even if the user switches context elsewhere in the IDE.
 
-## Configuration Principle
+## Argo CD Application Webview
 
-Configuration is user-local and editor-scoped; core behavior assumes no remote Kube9 backend dependency for standard Kubernetes operations.
+No separate webview-local configuration file. Graph layout defaults (direction, spacing) are code constants unless a future setting is added under `kube9.argocd.*`.

@@ -8,8 +8,64 @@
 - **Resource Detail Surface**: read-only inspection model for a resource, combining metadata, status, relationships, events, and YAML according to kind and scope.
 - **YAML Session**: editable or read-only document bound to a resource identifier.
 - **Port Forward Session**: managed kubectl port-forward process with lifecycle state.
-- **ArgoCD Application**: detected/surfaced GitOps application with sync and health state.
+- **ArgoCD Application**: GitOps application surfaced from the cluster tree with application-level sync and health state, Git source metadata, and managed-resource inventory.
+- **ArgoCD Managed Resource**: a Kubernetes object tracked in an Application's managed set, with resource-level sync and health signals distinct from the Application root.
+- **Application Resource Graph**: primary detail surface for an ArgoCD Application; a directed dependency graph whose root is the Application and whose child nodes are managed resources linked by parent/child relationships.
+- **Resource Graph Node**: one tile in the Application Resource Graph representing either the Application root or a single managed resource; carries kind, name, scope, sync status, health status, and eligible actions.
+- **Kind Capability**: declarative rule that maps a resource kind (and optionally API group) to the user actions allowed on matching graph nodes.
 - **Operator Status**: optional in-cluster signal indicating operated capabilities.
+
+## ArgoCD Application Detail Model
+
+Opening an ArgoCD Application from the cluster tree presents the **Application Resource Graph** as the **default** detail tab. **Details** is the **secondary tab**, consolidating former Overview metadata (project, Git source, revision, destination, app-level sync and health) and the tabular drift resource list. The graph stays the primary exploratory surface; Details does not replace topology.
+
+### Topology source (tiered)
+
+Dependency accuracy follows a **tiered topology** model:
+
+- **Full topology** uses Argo CD **resource-tree** responses when the API server is reachable and authorized: nodes and **parentRefs** determine edges, matching native Argo CD UI behavior.
+- **Limited topology** applies when resource-tree is unavailable or denied: nodes come from the Application custom resource (**`status.resources`**) with best-effort edges (logical grouping under the Application root, optional Kubernetes owner-reference enrichment when cluster reads are allowed). The product surfaces **limited topology** so users are not misled into treating shallow layout as full dependency truth.
+- RBAC and connectivity needs for resource-tree are **additional** to CRD read/list permissions; blocked resource-tree still permits limited topology when the Application CR is readable.
+
+### Graph structure
+
+- The **root node** is always the Application itself.
+- **Child nodes** represent managed resources and reflect dependency topology (not a flat inventory table).
+- **Edges** express parent/child or dependency relationships between nodes; direction flows left to right in the layout.
+- Each node has a **stable identity** within an Application (kind, API group/version, namespace when namespaced, name) so status refreshes and in-flight operations can merge updates without reordering unrelated nodes.
+
+### Status on nodes
+
+Each Resource Graph Node exposes two Argo CD status dimensions on its tile:
+
+| Dimension | Meaning | Typical values |
+|-----------|---------|----------------|
+| **Sync status** | Whether live cluster state matches desired Git/manifest state for that node | Synced, OutOfSync, Unknown |
+| **Health status** | Argo CD health assessment for that node | Healthy, Degraded, Progressing, Suspended, Missing, Unknown |
+
+The Application root node uses **application-level** sync and health. Managed-resource nodes use **resource-level** sync and health from the Application's managed set.
+
+**ReadyState clarification:** User-facing readiness on graph tiles is **Argo CD sync and health** only for the initial capability set. **Kubernetes Ready** replica counts or pod-ready conditions **do not** appear on tiles until a later workload drill-down story expressly adds them.
+
+### Kind capabilities (initial registry)
+
+Actions are resolved through **Kind Capability** rules (the **Kind Capability Registry**), not ad hoc per-tile logic.
+
+| Node role / kind | Allowed actions |
+|------------------|-----------------|
+| **Application (root)** | Sync, refresh, hard refresh (existing application-level flows) |
+| **Deployment** | Restart rollout (rollout restart of managed pods) |
+| **Service, ConfigMap, and other supported kinds** | Navigate to cluster tree resource; open describe/detail where the extension supports that kind |
+| **Unsupported or read-only kinds** | View status only; no destructive or mutating actions |
+
+The registry is extensible: new kinds add capability entries without changing the graph interaction model.
+
+### Action scope and safety
+
+- Graph actions execute against the **currently selected cluster context**.
+- Mutating actions (sync, restart rollout) require **explicit user intent** via menu or command invocation.
+- Actions target the **specific node** the user selected; they do not implicitly cascade to unrelated nodes unless the underlying operation naturally affects dependents (for example, sync at Application root).
+- Read-only or insufficient RBAC must block write actions while preserving read-only graph inspection where permitted.
 
 ## Core Invariants
 
@@ -17,4 +73,8 @@
 2. Destructive actions require explicit user intent.
 3. Read-only permission states must block write operations.
 4. Resource views should degrade gracefully when optional integrations are unavailable.
-5. Resource identity and scope must remain consistent across tree items, command routing, detail providers, and YAML views.
+5. Resource identity and scope must remain consistent across tree items, command routing, detail providers, YAML views, and Resource Graph Nodes.
+6. The Application Resource Graph must remain usable when dependency topology is partial; missing edges or unknown parentage must not prevent rendering available nodes and status.
+7. Application-level sync, refresh, and hard refresh flows remain available from the Application root node and are not replaced by the graph.
+8. Graph presentation and actions must not require the user to leave VS Code or open the native Argo CD server UI.
+9. **Extension-local graph assembly** for the first delivery: the extension owns graph DTO assembly and refresh paths; kube9-operator does not supply resource-tree snapshots today and is **not** required for this capability set. A future operator-mediated snapshot may align later without changing Kind Capability Registry rules stated here.
