@@ -4,7 +4,9 @@ import * as path from 'path';
 import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { ArgoCDNotFoundError, ArgoCDPermissionError } from '../types/argocd';
-import type { ApplicationResourceGraph, TopologySource } from '../types/applicationResourceGraph';
+import type { ApplicationKey, ApplicationResourceGraph, TopologySource } from '../types/applicationResourceGraph';
+import { buildCrdFlatApplicationResourceGraph } from '../services/ApplicationResourceGraphAssembler';
+import { mergeApplicationResourceGraphSnapshots } from '../services/ApplicationResourceGraphMerger';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import {
@@ -27,6 +29,8 @@ interface PanelInfo {
     namespace: string;
     /** Kubernetes context */
     context: string;
+    /** Previous graph snapshot for merge-on-refresh */
+    lastGraph?: ApplicationResourceGraph;
 }
 
 /**
@@ -234,6 +238,15 @@ export class ArgoCDApplicationWebviewProvider {
                 type: 'applicationData',
                 data: application
             } satisfies ExtensionToWebviewMessage);
+
+            await ArgoCDApplicationWebviewProvider.rebuildAndPostResourceGraph(
+                argoCDService,
+                applicationName,
+                namespace,
+                context,
+                panel,
+                { application }
+            );
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             let userFriendlyMessage = errorMessage;
@@ -307,8 +320,20 @@ export class ArgoCDApplicationWebviewProvider {
         );
     }
 
+    private static panelKey(context: string, namespace: string, applicationName: string): string {
+        return `${context}:${namespace}:${applicationName}`;
+    }
+
+    private static applicationKey(
+        context: string,
+        namespace: string,
+        applicationName: string
+    ): ApplicationKey {
+        return { context, namespace, name: applicationName };
+    }
+
     /**
-     * Stub until #158 wires automatic graph rebuild and post on refresh flows.
+     * Rebuild the resource graph from Application CRD data and post it to the webview.
      */
     private static async rebuildAndPostResourceGraph(
         argoCDService: ArgoCDService,
@@ -316,15 +341,47 @@ export class ArgoCDApplicationWebviewProvider {
         namespace: string,
         context: string,
         panel: vscode.WebviewPanel,
-        options?: { bypassCache?: boolean }
+        options?: { bypassCache?: boolean; application?: Awaited<ReturnType<ArgoCDService['getApplication']>> }
     ): Promise<void> {
-        void argoCDService;
-        void applicationName;
-        void namespace;
-        void context;
-        void panel;
-        void options;
-        console.log('ArgoCD resource graph rebuild not yet implemented (#158)');
+        const panelKey = ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName);
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+
+        try {
+            if (options?.bypassCache) {
+                argoCDService.invalidateCache(context);
+            }
+
+            const application =
+                options?.application ??
+                (await argoCDService.getApplication(applicationName, namespace, context));
+
+            const applicationKey = ArgoCDApplicationWebviewProvider.applicationKey(
+                context,
+                namespace,
+                applicationName
+            );
+            const { graph: incoming } = buildCrdFlatApplicationResourceGraph({
+                application,
+                applicationKey
+            });
+
+            const { graph } = mergeApplicationResourceGraphSnapshots(panelInfo?.lastGraph, incoming);
+
+            if (panelInfo) {
+                panelInfo.lastGraph = graph;
+            }
+
+            ArgoCDApplicationWebviewProvider.postResourceGraph(panel, graph, {
+                topologySource: 'crd_flat',
+                refreshedAt: new Date().toISOString(),
+                truncated: graph.truncated
+            });
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.warn(
+                `Failed to rebuild resource graph for ${applicationName} in ${namespace} (${context}): ${errorMessage}`
+            );
+        }
     }
 
     /**
