@@ -9,10 +9,12 @@ import { buildCrdFlatApplicationResourceGraph } from '../services/ApplicationRes
 import { mergeApplicationResourceGraphSnapshots } from '../services/ApplicationResourceGraphMerger';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
+import { OPERATION_TIMEOUT } from '../types/argocd';
 import {
     buildResourceGraphMessage,
     isWebviewMessage,
     type ExtensionToWebviewMessage,
+    type OperationPhase,
     type ResourceActionWebviewMessage,
     type WebviewToExtensionMessage
 } from '../types/argocdWebviewProtocol';
@@ -31,6 +33,10 @@ interface PanelInfo {
     context: string;
     /** Previous graph snapshot for merge-on-refresh */
     lastGraph?: ApplicationResourceGraph;
+    /** Cancels in-flight operation polling for this panel */
+    operationCancellation?: vscode.CancellationTokenSource;
+    /** True while sync or refresh polling is active */
+    operationInProgress?: boolean;
 }
 
 /**
@@ -137,6 +143,7 @@ export class ArgoCDApplicationWebviewProvider {
         // Handle panel disposal
         panel.onDidDispose(
             () => {
+                ArgoCDApplicationWebviewProvider.cancelPanelOperation(panelKey);
                 ArgoCDApplicationWebviewProvider.openPanels.delete(panelKey);
             },
             null,
@@ -210,6 +217,33 @@ export class ArgoCDApplicationWebviewProvider {
 </html>`;
     }
 
+    private static async postApplicationSnapshot(
+        argoCDService: ArgoCDService,
+        applicationName: string,
+        namespace: string,
+        context: string,
+        panel: vscode.WebviewPanel,
+        application?: Awaited<ReturnType<ArgoCDService['getApplication']>>
+    ): Promise<void> {
+        const resolvedApplication =
+            application ??
+            (await argoCDService.getApplication(applicationName, namespace, context));
+
+        panel.webview.postMessage({
+            type: 'applicationData',
+            data: resolvedApplication
+        } satisfies ExtensionToWebviewMessage);
+
+        await ArgoCDApplicationWebviewProvider.rebuildAndPostResourceGraph(
+            argoCDService,
+            applicationName,
+            namespace,
+            context,
+            panel,
+            { application: resolvedApplication }
+        );
+    }
+
     /**
      * Load application data from ArgoCDService and send it to the webview.
      * 
@@ -227,25 +261,12 @@ export class ArgoCDApplicationWebviewProvider {
         panel: vscode.WebviewPanel
     ): Promise<void> {
         try {
-            const application = await argoCDService.getApplication(
-                applicationName,
-                namespace,
-                context
-            );
-
-            // Send application data to webview
-            panel.webview.postMessage({
-                type: 'applicationData',
-                data: application
-            } satisfies ExtensionToWebviewMessage);
-
-            await ArgoCDApplicationWebviewProvider.rebuildAndPostResourceGraph(
+            await ArgoCDApplicationWebviewProvider.postApplicationSnapshot(
                 argoCDService,
                 applicationName,
                 namespace,
                 context,
-                panel,
-                { application }
+                panel
             );
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -330,6 +351,191 @@ export class ArgoCDApplicationWebviewProvider {
         applicationName: string
     ): ApplicationKey {
         return { context, namespace, name: applicationName };
+    }
+
+    private static cancelPanelOperation(panelKey: string): void {
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+        if (panelInfo?.operationCancellation) {
+            panelInfo.operationCancellation.cancel();
+            panelInfo.operationCancellation.dispose();
+            panelInfo.operationCancellation = undefined;
+        }
+        if (panelInfo) {
+            panelInfo.operationInProgress = false;
+        }
+    }
+
+    private static beginPanelOperation(panelKey: string): vscode.CancellationToken {
+        ArgoCDApplicationWebviewProvider.cancelPanelOperation(panelKey);
+        const source = new vscode.CancellationTokenSource();
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+        if (panelInfo) {
+            panelInfo.operationCancellation = source;
+            panelInfo.operationInProgress = true;
+        }
+        return source.token;
+    }
+
+    private static endPanelOperation(panelKey: string): void {
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+        if (panelInfo?.operationCancellation) {
+            panelInfo.operationCancellation.dispose();
+            panelInfo.operationCancellation = undefined;
+        }
+        if (panelInfo) {
+            panelInfo.operationInProgress = false;
+        }
+    }
+
+    private static postOperationProgress(
+        panel: vscode.WebviewPanel,
+        phase: OperationPhase,
+        message?: string
+    ): void {
+        panel.webview.postMessage({
+            type: 'operationProgress',
+            phase,
+            ...(message !== undefined ? { message } : {})
+        } satisfies ExtensionToWebviewMessage);
+    }
+
+    private static async reloadApplicationAfterTerminalOperation(
+        argoCDService: ArgoCDService,
+        applicationName: string,
+        namespace: string,
+        context: string,
+        panel: vscode.WebviewPanel
+    ): Promise<void> {
+        argoCDService.invalidateCache(context);
+        await ArgoCDApplicationWebviewProvider.postApplicationSnapshot(
+            argoCDService,
+            applicationName,
+            namespace,
+            context,
+            panel
+        );
+    }
+
+    private static formatOperationErrorMessage(
+        error: unknown,
+        applicationName: string,
+        namespace: string,
+        context: string,
+        operationLabel: string
+    ): string {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        if (error instanceof ArgoCDNotFoundError) {
+            return `Application not found: ${applicationName} in namespace ${namespace}. It may have been deleted.`;
+        }
+        if (error instanceof ArgoCDPermissionError) {
+            return `Permission denied: Cannot ${operationLabel.toLowerCase()} application ${applicationName}. Check your RBAC permissions.`;
+        }
+        if (error instanceof KubectlError) {
+            switch (error.type) {
+                case KubectlErrorType.PermissionDenied:
+                    return `Permission denied: Cannot ${operationLabel.toLowerCase()} application ${applicationName}. Check your RBAC permissions.`;
+                case KubectlErrorType.ConnectionFailed:
+                    return `Cannot connect to cluster '${context}'. The cluster may be unreachable.`;
+                case KubectlErrorType.Timeout:
+                    return `Connection to cluster '${context}' timed out. Please try again.`;
+                default:
+                    return `${operationLabel} failed: ${error.getUserMessage()}`;
+            }
+        }
+
+        return errorMessage;
+    }
+
+    private static showOperationFailureNotification(
+        error: unknown,
+        userFriendlyMessage: string,
+        operationLabel: string
+    ): void {
+        if (
+            error instanceof KubectlError &&
+            (error.type === KubectlErrorType.ConnectionFailed || error.type === KubectlErrorType.Timeout)
+        ) {
+            vscode.window.showWarningMessage(`${operationLabel} failed: ${userFriendlyMessage}`);
+            return;
+        }
+
+        vscode.window.showErrorMessage(`${operationLabel} failed: ${userFriendlyMessage}`);
+    }
+
+    private static async runTrackOperation(
+        argoCDService: ArgoCDService,
+        applicationName: string,
+        namespace: string,
+        context: string,
+        panel: vscode.WebviewPanel,
+        cancellationToken: vscode.CancellationToken,
+        operationLabel: string
+    ): Promise<'success' | 'failure' | 'cancelled'> {
+        try {
+            const result = await argoCDService.trackOperation(
+                applicationName,
+                namespace,
+                context,
+                OPERATION_TIMEOUT,
+                (phase, message) => {
+                    const webviewPhase: OperationPhase =
+                        phase === 'Terminating' ? 'Running' : phase;
+                    ArgoCDApplicationWebviewProvider.postOperationProgress(
+                        panel,
+                        webviewPhase,
+                        message
+                    );
+                },
+                cancellationToken
+            );
+
+            if (result.success) {
+                await ArgoCDApplicationWebviewProvider.reloadApplicationAfterTerminalOperation(
+                    argoCDService,
+                    applicationName,
+                    namespace,
+                    context,
+                    panel
+                );
+                return 'success';
+            }
+
+            const failureMessage = result.message || `${operationLabel} failed`;
+            panel.webview.postMessage({
+                type: 'error',
+                message: failureMessage
+            } satisfies ExtensionToWebviewMessage);
+            vscode.window.showErrorMessage(`${operationLabel} failed: ${failureMessage}`);
+            return 'failure';
+        } catch (error) {
+            if (error instanceof vscode.CancellationError) {
+                return 'cancelled';
+            }
+
+            const userFriendlyMessage = ArgoCDApplicationWebviewProvider.formatOperationErrorMessage(
+                error,
+                applicationName,
+                namespace,
+                context,
+                operationLabel
+            );
+            ArgoCDApplicationWebviewProvider.postOperationProgress(
+                panel,
+                'Error',
+                userFriendlyMessage
+            );
+            panel.webview.postMessage({
+                type: 'error',
+                message: userFriendlyMessage
+            } satisfies ExtensionToWebviewMessage);
+            ArgoCDApplicationWebviewProvider.showOperationFailureNotification(
+                error,
+                userFriendlyMessage,
+                operationLabel
+            );
+            return 'failure';
+        }
     }
 
     /**
@@ -505,72 +711,71 @@ export class ArgoCDApplicationWebviewProvider {
         context: string,
         panel: vscode.WebviewPanel
     ): Promise<void> {
-        // Show syncing state in webview
-        panel.webview.postMessage({
-            type: 'operationProgress',
-            phase: 'Running',
-            message: 'Syncing application...'
-        } satisfies ExtensionToWebviewMessage);
+        const panelKey = ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName);
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+
+        if (panelInfo?.operationInProgress) {
+            panel.webview.postMessage({
+                type: 'error',
+                message: 'A sync operation is already in progress.'
+            } satisfies ExtensionToWebviewMessage);
+            return;
+        }
+
+        ArgoCDApplicationWebviewProvider.postOperationProgress(
+            panel,
+            'Running',
+            'Syncing application...'
+        );
+        const cancellationToken = ArgoCDApplicationWebviewProvider.beginPanelOperation(panelKey);
 
         try {
-            // Execute sync
             await argoCDService.syncApplication(applicationName, namespace, context);
 
-            // Invalidate cache to ensure fresh data
-            argoCDService.invalidateCache(context);
-
-            // Reload application data
-            await ArgoCDApplicationWebviewProvider.loadApplicationData(
+            const outcome = await ArgoCDApplicationWebviewProvider.runTrackOperation(
                 argoCDService,
                 applicationName,
                 namespace,
                 context,
-                panel
+                panel,
+                cancellationToken,
+                'Sync'
             );
 
-            // Show success notification
-            vscode.window.showInformationMessage(
-                `Successfully synced ArgoCD Application: ${applicationName}`
-            );
+            if (outcome === 'success') {
+                vscode.window.showInformationMessage(
+                    `Successfully synced ArgoCD Application: ${applicationName}`
+                );
+            }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            let userFriendlyMessage = errorMessage;
-
-            // Handle specific error types with user-friendly messages
-            if (error instanceof ArgoCDNotFoundError) {
-                userFriendlyMessage = `Application not found: ${applicationName} in namespace ${namespace}. It may have been deleted.`;
-            } else if (error instanceof ArgoCDPermissionError) {
-                userFriendlyMessage = `Permission denied: Cannot sync application ${applicationName}. Check your RBAC permissions.`;
-            } else if (error instanceof KubectlError) {
-                switch (error.type) {
-                    case KubectlErrorType.PermissionDenied:
-                        userFriendlyMessage = `Permission denied: Cannot sync application ${applicationName}. Check your RBAC permissions.`;
-                        break;
-                    case KubectlErrorType.ConnectionFailed:
-                        userFriendlyMessage = `Cannot connect to cluster '${context}'. The cluster may be unreachable.`;
-                        break;
-                    case KubectlErrorType.Timeout:
-                        userFriendlyMessage = `Connection to cluster '${context}' timed out. Please try again.`;
-                        break;
-                    default:
-                        userFriendlyMessage = `Sync failed: ${error.getUserMessage()}`;
-                        break;
-                }
+            if (error instanceof vscode.CancellationError) {
+                return;
             }
 
-            // Send error to webview
+            const userFriendlyMessage = ArgoCDApplicationWebviewProvider.formatOperationErrorMessage(
+                error,
+                applicationName,
+                namespace,
+                context,
+                'Sync'
+            );
+
+            ArgoCDApplicationWebviewProvider.postOperationProgress(
+                panel,
+                'Error',
+                userFriendlyMessage
+            );
             panel.webview.postMessage({
                 type: 'error',
                 message: userFriendlyMessage
             } satisfies ExtensionToWebviewMessage);
-
-            // Show error notification
-            if (error instanceof KubectlError && 
-                (error.type === KubectlErrorType.ConnectionFailed || error.type === KubectlErrorType.Timeout)) {
-                vscode.window.showWarningMessage(`Sync failed: ${userFriendlyMessage}`);
-            } else {
-                vscode.window.showErrorMessage(`Sync failed: ${userFriendlyMessage}`);
-            }
+            ArgoCDApplicationWebviewProvider.showOperationFailureNotification(
+                error,
+                userFriendlyMessage,
+                'Sync'
+            );
+        } finally {
+            ArgoCDApplicationWebviewProvider.endPanelOperation(panelKey);
         }
     }
 
@@ -598,12 +803,10 @@ export class ArgoCDApplicationWebviewProvider {
 
     /**
      * Handle refresh action from webview.
-     * 
-     * @param argoCDService The ArgoCD service instance
-     * @param applicationName The name of the application
-     * @param namespace The namespace containing the application
-     * @param context The Kubernetes context name
-     * @param panel The webview panel
+     *
+     * Refresh patches the Application CRD like sync. When the CRD still reports
+     * `lastOperation.phase` as Running or Terminating, poll until terminal; otherwise
+     * a single reload is sufficient.
      */
     private static async handleRefresh(
         argoCDService: ArgoCDService,
@@ -612,76 +815,80 @@ export class ArgoCDApplicationWebviewProvider {
         context: string,
         panel: vscode.WebviewPanel
     ): Promise<void> {
-        try {
-            // Execute refresh
-            await argoCDService.refreshApplication(applicationName, namespace, context);
+        const panelKey = ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName);
 
-            // Invalidate cache to ensure fresh data
+        try {
+            await argoCDService.refreshApplication(applicationName, namespace, context);
             argoCDService.invalidateCache(context);
 
-            // Reload application data
-            await ArgoCDApplicationWebviewProvider.loadApplicationData(
-                argoCDService,
+            const application = await argoCDService.getApplication(applicationName, namespace, context);
+            const phase = application.lastOperation?.phase;
+            const needsTracking = phase === 'Running' || phase === 'Terminating';
+
+            if (!needsTracking) {
+                await ArgoCDApplicationWebviewProvider.postApplicationSnapshot(
+                    argoCDService,
+                    applicationName,
+                    namespace,
+                    context,
+                    panel,
+                    application
+                );
+                vscode.window.showInformationMessage(
+                    `Successfully refreshed ArgoCD Application: ${applicationName}`
+                );
+                return;
+            }
+
+            const cancellationToken = ArgoCDApplicationWebviewProvider.beginPanelOperation(panelKey);
+            try {
+                const outcome = await ArgoCDApplicationWebviewProvider.runTrackOperation(
+                    argoCDService,
+                    applicationName,
+                    namespace,
+                    context,
+                    panel,
+                    cancellationToken,
+                    'Refresh'
+                );
+
+                if (outcome === 'success') {
+                    vscode.window.showInformationMessage(
+                        `Successfully refreshed ArgoCD Application: ${applicationName}`
+                    );
+                }
+            } finally {
+                ArgoCDApplicationWebviewProvider.endPanelOperation(panelKey);
+            }
+        } catch (error) {
+            if (error instanceof vscode.CancellationError) {
+                return;
+            }
+
+            const userFriendlyMessage = ArgoCDApplicationWebviewProvider.formatOperationErrorMessage(
+                error,
                 applicationName,
                 namespace,
                 context,
-                panel
+                'Refresh'
             );
 
-            // Show success notification
-            vscode.window.showInformationMessage(
-                `Successfully refreshed ArgoCD Application: ${applicationName}`
-            );
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            let userFriendlyMessage = errorMessage;
-
-            // Handle specific error types with user-friendly messages
-            if (error instanceof ArgoCDNotFoundError) {
-                userFriendlyMessage = `Application not found: ${applicationName} in namespace ${namespace}. It may have been deleted.`;
-            } else if (error instanceof ArgoCDPermissionError) {
-                userFriendlyMessage = `Permission denied: Cannot refresh application ${applicationName}. Check your RBAC permissions.`;
-            } else if (error instanceof KubectlError) {
-                switch (error.type) {
-                    case KubectlErrorType.PermissionDenied:
-                        userFriendlyMessage = `Permission denied: Cannot refresh application ${applicationName}. Check your RBAC permissions.`;
-                        break;
-                    case KubectlErrorType.ConnectionFailed:
-                        userFriendlyMessage = `Cannot connect to cluster '${context}'. The cluster may be unreachable.`;
-                        break;
-                    case KubectlErrorType.Timeout:
-                        userFriendlyMessage = `Connection to cluster '${context}' timed out. Please try again.`;
-                        break;
-                    default:
-                        userFriendlyMessage = `Refresh failed: ${error.getUserMessage()}`;
-                        break;
-                }
-            }
-
-            // Send error to webview
             panel.webview.postMessage({
                 type: 'error',
                 message: userFriendlyMessage
             } satisfies ExtensionToWebviewMessage);
-
-            // Show error notification
-            if (error instanceof KubectlError && 
-                (error.type === KubectlErrorType.ConnectionFailed || error.type === KubectlErrorType.Timeout)) {
-                vscode.window.showWarningMessage(`Refresh failed: ${userFriendlyMessage}`);
-            } else {
-                vscode.window.showErrorMessage(`Refresh failed: ${userFriendlyMessage}`);
-            }
+            ArgoCDApplicationWebviewProvider.showOperationFailureNotification(
+                error,
+                userFriendlyMessage,
+                'Refresh'
+            );
         }
     }
 
     /**
      * Handle hard refresh action from webview.
-     * 
-     * @param argoCDService The ArgoCD service instance
-     * @param applicationName The name of the application
-     * @param namespace The namespace containing the application
-     * @param context The Kubernetes context name
-     * @param panel The webview panel
+     *
+     * Uses the same post-patch polling rules as refresh when an operation is still active.
      */
     private static async handleHardRefresh(
         argoCDService: ArgoCDService,
@@ -690,7 +897,8 @@ export class ArgoCDApplicationWebviewProvider {
         context: string,
         panel: vscode.WebviewPanel
     ): Promise<void> {
-        // Show confirmation dialog
+        const panelKey = ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName);
+
         const confirm = await vscode.window.showWarningMessage(
             `Hard refresh will clear cache and may take longer. Continue for ${applicationName}?`,
             'Continue',
@@ -702,64 +910,70 @@ export class ArgoCDApplicationWebviewProvider {
         }
 
         try {
-            // Execute hard refresh
             await argoCDService.hardRefreshApplication(applicationName, namespace, context);
-
-            // Invalidate cache to ensure fresh data
             argoCDService.invalidateCache(context);
 
-            // Reload application data
-            await ArgoCDApplicationWebviewProvider.loadApplicationData(
-                argoCDService,
+            const application = await argoCDService.getApplication(applicationName, namespace, context);
+            const phase = application.lastOperation?.phase;
+            const needsTracking = phase === 'Running' || phase === 'Terminating';
+
+            if (!needsTracking) {
+                await ArgoCDApplicationWebviewProvider.postApplicationSnapshot(
+                    argoCDService,
+                    applicationName,
+                    namespace,
+                    context,
+                    panel,
+                    application
+                );
+                vscode.window.showInformationMessage(
+                    `Successfully hard refreshed ArgoCD Application: ${applicationName}`
+                );
+                return;
+            }
+
+            const cancellationToken = ArgoCDApplicationWebviewProvider.beginPanelOperation(panelKey);
+            try {
+                const outcome = await ArgoCDApplicationWebviewProvider.runTrackOperation(
+                    argoCDService,
+                    applicationName,
+                    namespace,
+                    context,
+                    panel,
+                    cancellationToken,
+                    'Hard refresh'
+                );
+
+                if (outcome === 'success') {
+                    vscode.window.showInformationMessage(
+                        `Successfully hard refreshed ArgoCD Application: ${applicationName}`
+                    );
+                }
+            } finally {
+                ArgoCDApplicationWebviewProvider.endPanelOperation(panelKey);
+            }
+        } catch (error) {
+            if (error instanceof vscode.CancellationError) {
+                return;
+            }
+
+            const userFriendlyMessage = ArgoCDApplicationWebviewProvider.formatOperationErrorMessage(
+                error,
                 applicationName,
                 namespace,
                 context,
-                panel
+                'Hard refresh'
             );
 
-            // Show success notification
-            vscode.window.showInformationMessage(
-                `Successfully hard refreshed ArgoCD Application: ${applicationName}`
-            );
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            let userFriendlyMessage = errorMessage;
-
-            // Handle specific error types with user-friendly messages
-            if (error instanceof ArgoCDNotFoundError) {
-                userFriendlyMessage = `Application not found: ${applicationName} in namespace ${namespace}. It may have been deleted.`;
-            } else if (error instanceof ArgoCDPermissionError) {
-                userFriendlyMessage = `Permission denied: Cannot hard refresh application ${applicationName}. Check your RBAC permissions.`;
-            } else if (error instanceof KubectlError) {
-                switch (error.type) {
-                    case KubectlErrorType.PermissionDenied:
-                        userFriendlyMessage = `Permission denied: Cannot hard refresh application ${applicationName}. Check your RBAC permissions.`;
-                        break;
-                    case KubectlErrorType.ConnectionFailed:
-                        userFriendlyMessage = `Cannot connect to cluster '${context}'. The cluster may be unreachable.`;
-                        break;
-                    case KubectlErrorType.Timeout:
-                        userFriendlyMessage = `Connection to cluster '${context}' timed out. Please try again.`;
-                        break;
-                    default:
-                        userFriendlyMessage = `Hard refresh failed: ${error.getUserMessage()}`;
-                        break;
-                }
-            }
-
-            // Send error to webview
             panel.webview.postMessage({
                 type: 'error',
                 message: userFriendlyMessage
             } satisfies ExtensionToWebviewMessage);
-
-            // Show error notification
-            if (error instanceof KubectlError && 
-                (error.type === KubectlErrorType.ConnectionFailed || error.type === KubectlErrorType.Timeout)) {
-                vscode.window.showWarningMessage(`Hard refresh failed: ${userFriendlyMessage}`);
-            } else {
-                vscode.window.showErrorMessage(`Hard refresh failed: ${userFriendlyMessage}`);
-            }
+            ArgoCDApplicationWebviewProvider.showOperationFailureNotification(
+                error,
+                userFriendlyMessage,
+                'Hard refresh'
+            );
         }
     }
 

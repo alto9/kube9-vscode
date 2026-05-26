@@ -248,6 +248,42 @@ export class EventEmitter<T> {
     }
 }
 
+export class CancellationError extends Error {
+    constructor() {
+        super('Cancelled');
+        this.name = 'CancellationError';
+    }
+}
+
+export interface CancellationToken {
+    readonly isCancellationRequested: boolean;
+    onCancellationRequested: Event<unknown>;
+}
+
+export class CancellationTokenSource {
+    private _isCancelled = false;
+    private readonly _emitter = new EventEmitter<unknown>();
+
+    get token(): CancellationToken {
+        return {
+            isCancellationRequested: this._isCancelled,
+            onCancellationRequested: this._emitter.event
+        };
+    }
+
+    cancel(): void {
+        if (!this._isCancelled) {
+            this._isCancelled = true;
+            this._emitter.fire(undefined);
+        }
+    }
+
+    dispose(): void {
+        this.cancel();
+        this._emitter.dispose();
+    }
+}
+
 /**
  * Mock TreeDataProvider interface
  */
@@ -872,6 +908,8 @@ const vscodeModule = {
     Range,
     Selection,
     EventEmitter,
+    CancellationError,
+    CancellationTokenSource,
     window,
     workspace,
     commands,
@@ -903,6 +941,8 @@ if (typeof module !== 'undefined' && module.exports) {
         Range,
         Selection,
         EventEmitter,
+        CancellationError,
+        CancellationTokenSource,
         window,
         workspace,
         commands,
