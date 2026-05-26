@@ -16,6 +16,7 @@ import {
     type ResourceGraphEdge,
     type ResourceGraphNode
 } from '../types/applicationResourceGraph';
+import { truncateApplicationResourceGraph } from './ApplicationResourceGraphTruncation';
 
 export interface CrdFlatGraphAssemblyResult {
     graph: ApplicationResourceGraph;
@@ -137,7 +138,7 @@ export function buildCrdFlatApplicationResourceGraph(
         relationship: 'manages' as const
     }));
 
-    const graph: ApplicationResourceGraph = {
+    const graph: ApplicationResourceGraph = truncateApplicationResourceGraph({
         applicationKey,
         nodes,
         edges,
@@ -145,7 +146,7 @@ export function buildCrdFlatApplicationResourceGraph(
         topologyMode: topologyModeFromSource(TOPOLOGY_SOURCE),
         structureVersion: computeStructureVersion({ nodes, edges }),
         observedAt
-    };
+    });
 
     return { graph, assemblyWarnings };
 }
