@@ -3,31 +3,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
-import { ArgoCDApplication, ArgoCDNotFoundError, ArgoCDPermissionError, SyncStatus, HealthStatus } from '../types/argocd';
+import { ArgoCDNotFoundError, ArgoCDPermissionError } from '../types/argocd';
+import type { ApplicationResourceGraph, TopologySource } from '../types/applicationResourceGraph';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
-
-/**
- * Message types sent from webview to extension.
- */
-interface WebviewMessage {
-    type: 'sync' | 'refresh' | 'hardRefresh' | 'viewInTree' | 'navigateToResource' | 'ready';
-    kind?: string;
-    name?: string;
-    namespace?: string;
-}
-
-/**
- * Message types sent from extension to webview.
- */
-interface ExtensionMessage {
-    type: 'applicationData' | 'updateStatus' | 'operationProgress' | 'error';
-    data?: ArgoCDApplication;
-    syncStatus?: SyncStatus;
-    healthStatus?: HealthStatus;
-    phase?: string;
-    message?: string;
-}
+import {
+    buildResourceGraphMessage,
+    isWebviewMessage,
+    type ExtensionToWebviewMessage,
+    type ResourceActionWebviewMessage,
+    type WebviewToExtensionMessage
+} from '../types/argocdWebviewProtocol';
 
 /**
  * Information stored with each webview panel.
@@ -247,7 +233,7 @@ export class ArgoCDApplicationWebviewProvider {
             panel.webview.postMessage({
                 type: 'applicationData',
                 data: application
-            } as ExtensionMessage);
+            } satisfies ExtensionToWebviewMessage);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             let userFriendlyMessage = errorMessage;
@@ -293,8 +279,52 @@ export class ArgoCDApplicationWebviewProvider {
             panel.webview.postMessage({
                 type: 'error',
                 message: userFriendlyMessage
-            } as ExtensionMessage);
+            } satisfies ExtensionToWebviewMessage);
         }
+    }
+
+    /**
+     * Post a resource graph snapshot to the webview.
+     */
+    public static postResourceGraph(
+        panel: vscode.WebviewPanel,
+        graph: ApplicationResourceGraph,
+        meta: {
+            topologySource: TopologySource;
+            refreshedAt: string;
+            truncated?: boolean;
+            totalManagedCount?: number;
+        }
+    ): void {
+        panel.webview.postMessage(
+            buildResourceGraphMessage({
+                graph,
+                topologySource: meta.topologySource,
+                refreshedAt: meta.refreshedAt,
+                truncated: meta.truncated,
+                totalManagedCount: meta.totalManagedCount
+            })
+        );
+    }
+
+    /**
+     * Stub until #158 wires automatic graph rebuild and post on refresh flows.
+     */
+    private static async rebuildAndPostResourceGraph(
+        argoCDService: ArgoCDService,
+        applicationName: string,
+        namespace: string,
+        context: string,
+        panel: vscode.WebviewPanel,
+        options?: { bypassCache?: boolean }
+    ): Promise<void> {
+        void argoCDService;
+        void applicationName;
+        void namespace;
+        void context;
+        void panel;
+        void options;
+        console.log('ArgoCD resource graph rebuild not yet implemented (#158)');
     }
 
     /**
@@ -318,7 +348,14 @@ export class ArgoCDApplicationWebviewProvider {
         extensionContext: vscode.ExtensionContext
     ): void {
         panel.webview.onDidReceiveMessage(
-            async (message: WebviewMessage) => {
+            async (rawMessage: unknown) => {
+                if (!isWebviewMessage(rawMessage)) {
+                    console.warn('Ignoring invalid ArgoCD webview message:', rawMessage);
+                    return;
+                }
+
+                const message: WebviewToExtensionMessage = rawMessage;
+
                 switch (message.type) {
                     case 'sync':
                         await ArgoCDApplicationWebviewProvider.handleSync(
@@ -358,14 +395,30 @@ export class ArgoCDApplicationWebviewProvider {
                         break;
                     
                     case 'navigateToResource':
-                        if (message.kind && message.name && message.namespace) {
-                            await ArgoCDApplicationWebviewProvider.handleNavigateToResource(
-                                treeProvider,
-                                message.kind,
-                                message.name,
-                                message.namespace
-                            );
-                        }
+                        await ArgoCDApplicationWebviewProvider.handleNavigateToResource(
+                            treeProvider,
+                            message.kind,
+                            message.name,
+                            message.namespace
+                        );
+                        break;
+
+                    case 'graphRefresh':
+                        await ArgoCDApplicationWebviewProvider.rebuildAndPostResourceGraph(
+                            argoCDService,
+                            applicationName,
+                            namespace,
+                            context,
+                            panel,
+                            { bypassCache: message.bypassCache }
+                        );
+                        break;
+
+                    case 'resourceAction':
+                        await ArgoCDApplicationWebviewProvider.handleResourceAction(
+                            panel,
+                            message
+                        );
                         break;
                     
                     case 'ready':
@@ -400,7 +453,7 @@ export class ArgoCDApplicationWebviewProvider {
             type: 'operationProgress',
             phase: 'Running',
             message: 'Syncing application...'
-        } as ExtensionMessage);
+        } satisfies ExtensionToWebviewMessage);
 
         try {
             // Execute sync
@@ -452,7 +505,7 @@ export class ArgoCDApplicationWebviewProvider {
             panel.webview.postMessage({
                 type: 'error',
                 message: userFriendlyMessage
-            } as ExtensionMessage);
+            } satisfies ExtensionToWebviewMessage);
 
             // Show error notification
             if (error instanceof KubectlError && 
@@ -462,6 +515,28 @@ export class ArgoCDApplicationWebviewProvider {
                 vscode.window.showErrorMessage(`Sync failed: ${userFriendlyMessage}`);
             }
         }
+    }
+
+    /**
+     * Handle resource graph tile actions until #160 implements the action registry.
+     */
+    private static async handleResourceAction(
+        panel: vscode.WebviewPanel,
+        message: ResourceActionWebviewMessage
+    ): Promise<void> {
+        panel.webview.postMessage({
+            type: 'resourceActionResult',
+            actionId: message.actionId,
+            success: false,
+            message: 'Not implemented',
+            nodeRef: {
+                kind: message.kind,
+                name: message.name,
+                namespace: message.namespace,
+                ...(message.group !== undefined ? { group: message.group } : {}),
+                ...(message.version !== undefined ? { version: message.version } : {})
+            }
+        } satisfies ExtensionToWebviewMessage);
     }
 
     /**
@@ -530,7 +605,7 @@ export class ArgoCDApplicationWebviewProvider {
             panel.webview.postMessage({
                 type: 'error',
                 message: userFriendlyMessage
-            } as ExtensionMessage);
+            } satisfies ExtensionToWebviewMessage);
 
             // Show error notification
             if (error instanceof KubectlError && 
@@ -619,7 +694,7 @@ export class ArgoCDApplicationWebviewProvider {
             panel.webview.postMessage({
                 type: 'error',
                 message: userFriendlyMessage
-            } as ExtensionMessage);
+            } satisfies ExtensionToWebviewMessage);
 
             // Show error notification
             if (error instanceof KubectlError && 

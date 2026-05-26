@@ -86,6 +86,12 @@ function App(): React.JSX.Element {
                     }
                     break;
 
+                case 'resourceGraph':
+                case 'resourceActionProgress':
+                case 'resourceActionResult':
+                    // Graph UI handlers land in M12; protocol types accepted for compile-time parity.
+                    break;
+
                 case 'error':
                     setError(message.message || 'Unknown error');
                     setLoading(false);
