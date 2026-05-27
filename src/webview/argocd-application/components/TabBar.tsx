@@ -1,6 +1,7 @@
 import React from 'react';
 
-export type TabType = 'overview' | 'driftDetails';
+export type { TabType } from '../utils/tabMigration';
+import type { TabType } from '../utils/tabMigration';
 
 interface TabBarProps {
     activeTab: TabType;
@@ -8,7 +9,7 @@ interface TabBarProps {
 }
 
 /**
- * Tab bar component for switching between Overview and Drift Details tabs.
+ * Tab bar component for switching between Graph and Details tabs.
  */
 export function TabBar({ activeTab, onTabChange }: TabBarProps): React.JSX.Element {
     const tabStyle: React.CSSProperties = {
@@ -35,16 +36,16 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps): React.JSX.Eleme
             marginBottom: '20px'
         }}>
             <button
-                style={activeTab === 'overview' ? activeTabStyle : tabStyle}
-                onClick={() => onTabChange('overview')}
+                style={activeTab === 'graph' ? activeTabStyle : tabStyle}
+                onClick={() => onTabChange('graph')}
             >
-                Overview
+                Graph
             </button>
             <button
-                style={activeTab === 'driftDetails' ? activeTabStyle : tabStyle}
-                onClick={() => onTabChange('driftDetails')}
+                style={activeTab === 'details' ? activeTabStyle : tabStyle}
+                onClick={() => onTabChange('details')}
             >
-                Drift Details
+                Details
             </button>
         </div>
     );

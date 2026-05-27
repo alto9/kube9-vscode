@@ -3,7 +3,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArgoCDApplicationView } from './ArgoCDApplicationView';
 import { TabType } from './components/TabBar';
+import { migratePersistedTab } from './utils/tabMigration';
 import { ArgoCDApplication } from '../../types/argocd';
+import type { ApplicationResourceGraph } from '../../types/applicationResourceGraph';
 
 // Acquire VS Code API
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -14,7 +16,7 @@ if (vscode) {
 }
 
 interface WebviewState {
-    selectedTab?: TabType;
+    selectedTab?: TabType | 'overview' | 'driftDetails';
 }
 
 /**
@@ -24,7 +26,8 @@ function App(): React.JSX.Element {
     const [application, setApplication] = React.useState<ArgoCDApplication | null>(null);
     const [error, setError] = React.useState<string | null>(null);
     const [loading, setLoading] = React.useState<boolean>(true);
-    const [activeTab, setActiveTab] = React.useState<TabType>('overview');
+    const [activeTab, setActiveTab] = React.useState<TabType>('graph');
+    const [resourceGraph, setResourceGraph] = React.useState<ApplicationResourceGraph | null>(null);
     const [syncing, setSyncing] = React.useState<boolean>(false);
     const [refreshing, setRefreshing] = React.useState<boolean>(false);
 
@@ -33,7 +36,7 @@ function App(): React.JSX.Element {
         if (vscode) {
             const previousState = vscode.getState() as WebviewState | undefined;
             if (previousState?.selectedTab) {
-                setActiveTab(previousState.selectedTab);
+                setActiveTab(migratePersistedTab(previousState.selectedTab));
             }
         }
     }, []);
@@ -88,6 +91,9 @@ function App(): React.JSX.Element {
                     break;
 
                 case 'resourceGraph':
+                    setResourceGraph(message.graph);
+                    break;
+
                 case 'resourceActionProgress':
                 case 'resourceActionResult':
                     // Graph UI handlers land in M12; protocol types accepted for compile-time parity.
@@ -166,6 +172,7 @@ function App(): React.JSX.Element {
             onHardRefresh={handleHardRefresh}
             onViewInTree={handleViewInTree}
             onNavigateToResource={handleNavigateToResource}
+            resourceGraph={resourceGraph}
         />
     );
 }
