@@ -177,6 +177,10 @@ export class ArgoCDApplicationWebviewProvider {
             vscode.Uri.joinPath(extensionContext.extensionUri, 'src', 'webview', 'styles', 'webview-header.css')
         );
 
+        const reactFlowStyleUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'style.css')
+        );
+
         // Read CSS file
         let cssContent = '';
         try {
@@ -206,6 +210,7 @@ export class ArgoCDApplicationWebviewProvider {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource};">
     <link href="${headerStyleUri}" rel="stylesheet">
+    <link href="${reactFlowStyleUri}" rel="stylesheet">
     <title>ArgoCD Application</title>
     <style>
         ${cssContent}
