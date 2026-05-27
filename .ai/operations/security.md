@@ -4,7 +4,7 @@
 
 - Local-first model: kubeconfig and command execution remain on the user machine.
 - Kubernetes API authn/authz relies on existing kubeconfig credentials and RBAC.
-- Optional product telemetry pipeline: **never required** for core cluster management tasks. Telemetry, when present, participates in IDE-aligned consent flows and observes the allowlisted-data rules in `.forge/operations/observability.md` (no cluster data, manifests, kubeconfig-derived identifiers, resource names as telemetry payloads).
+- Optional product telemetry pipeline: **never required** for core cluster management tasks. Telemetry, when present, participates in IDE-aligned consent flows and observes the allowlisted-data rules in `.ai/operations/observability.md` (no cluster data, manifests, kubeconfig-derived identifiers, resource names as telemetry payloads).
 - Sensitive operations are gated by explicit command intent and permission checks.
 
 ## Telemetry And Trust

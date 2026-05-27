@@ -1,0 +1,10 @@
+{
+  "name": "kube9-vscode",
+  "description": "VS Code extension for local-first Kubernetes management with tree navigation, resource inspection/detail views, YAML workflows, logs/events, port-forwarding, Helm tooling, and ArgoCD integration—the primary kube9-desktop IDE surface. Product roadmap includes optional privacy-preserving usage/reliability telemetry (see .ai contracts), never required for baseline cluster workflows.",
+  "type": "opensource",
+  "metadata_path": ".ai",
+  "code_path": ".",
+  "github_url": "https://github.com/alto9/kube9-vscode",
+  "github_board": "https://github.com/orgs/alto9/projects/9",
+  "github_board_type": "scrum"
+}

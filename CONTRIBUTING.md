@@ -119,7 +119,7 @@ We welcome feature suggestions! Use the [feature request template](.github/ISSUE
 If your change introduces or modifies **product telemetry** (allowlisted semantic events, VS Code telemetry API usage dedicated to aggregated product insight, or payload types for same):
 
 1. Update **[`docs/telemetry-event-catalog.md`](docs/telemetry-event-catalog.md)** in the **same PR** whenever you add/remove/rename an event key or allowed field.
-2. Treat **[`.forge/operations/observability.md`](.forge/operations/observability.md)** **Never send** list as authoritative: no kubeconfig paths, cluster/resource-identifying strings, manifests, logs, API bodies, or unconstrained user/workspace strings. Automated guardrails for the façade tree are described in **[`docs/telemetry-lint-guardrails.md`](docs/telemetry-lint-guardrails.md)** (see also `npm run lint`).
+2. Treat **[`.ai/operations/observability.md`](.ai/operations/observability.md)** **Never send** list as authoritative: no kubeconfig paths, cluster/resource-identifying strings, manifests, logs, API bodies, or unconstrained user/workspace strings. Automated guardrails for the façade tree are described in **[`docs/telemetry-lint-guardrails.md`](docs/telemetry-lint-guardrails.md)** (see also `npm run lint`).
 3. Request review from **at least one maintainer** familiar with telemetry governance (forbid-list compliance, enumerated payloads only).
 4. Do not mark events as shipped in the catalog unless corresponding emit code merges in the **same revision**—otherwise label as **Proposed** in [`docs/telemetry-event-catalog.md`](docs/telemetry-event-catalog.md).
 
@@ -177,7 +177,7 @@ kube9-vscode/
 │   ├── webview/            # Webview panels
 │   ├── yaml/               # YAML editor functionality
 │   └── ...
-├── ai/                     # Forge design documentation
+├── ai/                     # LLM design documentation
 │   ├── features/           # Feature definitions
 │   ├── specs/             # Technical specifications
 │   └── ...
@@ -339,21 +339,6 @@ For integration tests that require a real Kubernetes cluster:
 - [ ] No console.logs or debug code
 - [ ] Commit messages follow conventional commits
 - [ ] PR description is clear and complete
-
-## Design Documentation
-
-This project uses [Forge](https://github.com/alto9/forge) for structured context engineering:
-
-- **Features** (`ai/features/`) - Feature definitions with Gherkin scenarios
-- **Specs** (`ai/specs/`) - Technical specifications
-- **Sessions** (`ai/sessions/`) - Design session tracking
-- **Contexts** (`ai/contexts/`) - Implementation guidance
-
-When implementing features:
-1. Check `ai/features/` for feature definitions
-2. Review `ai/specs/` for technical details
-3. Follow patterns in existing code
-4. Update documentation if needed
 
 ## Questions?
 

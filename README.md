@@ -177,7 +177,7 @@ kube9-vscode/
 │   │   └── KubernetesService.ts
 │   ├── webviews/              # Local HTML generators
 │   └── utils/
-├── ai/                        # Forge context files
+├── ai/                        # LLMs context files
 │   ├── contexts/
 │   ├── decisions/
 │   ├── features/
@@ -286,13 +286,6 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - How to submit pull requests
 - Our development workflow
 
-This project uses the [Forge methodology](https://github.com/alto9/forge) for context engineering:
-
-1. Check `ai/tasks/` for current priorities
-2. Review `ai/decisions/` for architectural context
-3. Follow specifications in `ai/specs/`
-4. Update progress in `ai/tasks/`
-
 ### Quick Start for Contributors
 
 ```bash
@@ -314,8 +307,7 @@ Kube9 may collect **optional product telemetry** so we can understand **which ID
 
 - **Your consent**: When telemetry is active, it follows **VS Code and marketplace telemetry settings**; your global IDE choices remain authoritative.
 - **What we allow**: Only **allowlisted semantic events** (for example command or feature identifiers, webview or dashboard opens, and coarse outcomes where those can be derived **without** logging arguments). Error-related telemetry uses **enumerated categories** aligned with the extension’s error taxonomy—not raw cluster content.
-- **What we never send as telemetry**: kubeconfig paths; cluster, context, namespace, or resource names or UIDs; manifest or YAML/spec content; log lines from clusters; Kubernetes API response bodies; or free-form strings from your workspace paths or documents. **Cluster-identifying data is not included** in product telemetry payloads (see `.forge/operations/observability.md` and `.forge/operations/security.md` in this repository).
-- **Planned backend**: The Forge contract describes a shared analytics backend (for example GA4) for **enumerated fields only**; local output channels and logs remain the default for troubleshooting.
+- **What we never send as telemetry**: kubeconfig paths; cluster, context, namespace, or resource names or UIDs; manifest or YAML/spec content; log lines from clusters; Kubernetes API response bodies; or free-form strings from your workspace paths or documents. **Cluster-identifying data is not included** in product telemetry payloads (see `.ai/operations/observability.md` and `.ai/operations/security.md` in this repository).
 - **Event catalog**: The maintained list of telemetry events and fields is tracked with the M1.1 governance work—for example [issue #137](https://github.com/alto9/kube9-vscode/issues/137)—and will be linked here once published.
 
 Until explicit telemetry is shipped in this extension, the above describes **intended behavior** under the project contracts; treat wording as “when enabled” if you are validating against a build that has not yet implemented instrumentation.

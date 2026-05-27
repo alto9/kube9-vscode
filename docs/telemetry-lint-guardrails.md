@@ -1,6 +1,6 @@
 # Telemetry lint guardrails (forbid-list)
 
-Automated checks enforce a **minimal** subset of [.forge/operations/observability.md](../.forge/operations/observability.md) **Never send** rules inside the telemetry façade tree:
+Automated checks enforce a **minimal** subset of [.ai/operations/observability.md](../.ai/operations/observability.md) **Never send** rules inside the telemetry façade tree:
 
 - No **template literals with `${…}` interpolation** as arguments to any function call in `src/telemetry/**/*.ts` (avoids accidental cluster names, paths, or workspace text in payloads).
 - No passing **`error` / `err` identifiers** or **`new Error(...)`** as call arguments in those files (raw exceptions can carry paths and stack details).

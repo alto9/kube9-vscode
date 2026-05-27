@@ -1,0 +1,79 @@
+{
+  "knowledge_map": [
+    {
+      "name": "vision",
+      "primary_doc": ".ai/vision.json",
+      "description": "Top-level product direction and purpose. This is the root of the conceptual map.",
+      "children": [
+        ".ai/project.json",
+        ".ai/knowledge_map.json",
+        {
+          "name": "runtime",
+          "primary_doc": ".ai/runtime/index.md",
+          "description": "How the application starts, runs, and shuts down.",
+          "children": [
+            ".ai/runtime/configuration.md",
+            ".ai/runtime/startup_bootstrap.md",
+            ".ai/runtime/lifecycle_shutdown.md",
+            ".ai/runtime/execution_model.md"
+          ]
+        },
+        {
+          "name": "business_logic",
+          "primary_doc": ".ai/business_logic/index.md",
+          "description": "Core domain behavior and rules, independent of UI and infrastructure.",
+          "children": [
+            ".ai/business_logic/domain_model.md",
+            ".ai/business_logic/user_stories.md",
+            ".ai/business_logic/error_state.md",
+            ".ai/business_logic/error_handling.md"
+          ]
+        },
+        {
+          "name": "data",
+          "primary_doc": ".ai/data/index.md",
+          "description": "How data is modeled, persisted, serialized, and kept consistent.",
+          "children": [
+            ".ai/data/data_model.md",
+            ".ai/data/persistence_abstractions.md",
+            ".ai/data/serialization.md",
+            ".ai/data/consistency.md"
+          ]
+        },
+        {
+          "name": "interface",
+          "primary_doc": ".ai/interface/index.md",
+          "description": "How users interact with the system through inputs, presentation, and flow.",
+          "children": [
+            ".ai/interface/input_handling.md",
+            ".ai/interface/presentation.md",
+            ".ai/interface/interaction_flow.md",
+            ".ai/interface/accessibility.md"
+          ]
+        },
+        {
+          "name": "integration",
+          "primary_doc": ".ai/integration/index.md",
+          "description": "How the application connects to external APIs, services, and boundaries.",
+          "children": [
+            ".ai/integration/api_contracts.md",
+            ".ai/integration/external_systems.md",
+            ".ai/integration/messaging_async.md",
+            ".ai/integration/authorization.md"
+          ]
+        },
+        {
+          "name": "operations",
+          "primary_doc": ".ai/operations/index.md",
+          "description": "How the application is built, deployed, observed, and secured.",
+          "children": [
+            ".ai/operations/build_packaging.md",
+            ".ai/operations/deployment_environments.md",
+            ".ai/operations/observability.md",
+            ".ai/operations/security.md"
+          ]
+        }
+      ]
+    }
+  ]
+}

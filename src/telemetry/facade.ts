@@ -1,7 +1,7 @@
 /**
  * Product telemetry façade — instrumentation for allowlisted semantic events MUST route through this module.
  *
- * Governance: [.forge/operations/observability.md](../../.forge/operations/observability.md) (Never send list),
+ * Governance: [.ai/operations/observability.md](../../.ai/operations/observability.md) (Never send list),
  * enumeration: [docs/telemetry-event-catalog.md](../../docs/telemetry-event-catalog.md).
  *
  * ESLint --rulesdir rule kube9-telemetry-payload-guard applies to TypeScript files under src/telemetry; extend overrides in

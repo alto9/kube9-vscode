@@ -20,11 +20,11 @@ Contracts:
 Operational expectations:
 
 - Participate where practical in **VS Code / marketplace telemetry conventions** so users’ global consent settings remain authoritative.
-- **Google Analytics (GA4)** is the planned **shared backend** for product analytics across IDE extension and desktop surfaces; dashboards and funnel analysis live there subject to `.forge/integration/external_systems.md`—still only allowlisted, non-identifying fields.
+- **Google Analytics (GA4)** is the planned **shared backend** for product analytics across IDE extension and desktop surfaces; dashboards and funnel analysis live there subject to `.ai/integration/external_systems.md`—still only allowlisted, non-identifying fields.
 - **Local diagnostics** remain the default for troubleshooting; product telemetry complements aggregate product insight, not per-user debugging.
 
 ## Operational Principle
 
 Diagnostics should be rich enough for troubleshooting while keeping end-user messaging concise and action-oriented.
 
-Product telemetry (when shipped) must stay **minimal, enumerated, and reviewable**, consistent with `.forge/operations/security.md`.
+Product telemetry (when shipped) must stay **minimal, enumerated, and reviewable**, consistent with `.ai/operations/security.md`.

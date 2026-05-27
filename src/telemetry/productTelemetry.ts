@@ -2,8 +2,8 @@
  * Product telemetry façade — single choke point for allowlisted product events from
  * extension TypeScript.
  *
- * Contract: [.forge/operations/observability.md](../../.forge/operations/observability.md),
- * [.forge/operations/security.md](../../.forge/operations/security.md).
+ * Contract: [.ai/operations/observability.md](../../.ai/operations/observability.md),
+ * [.ai/operations/security.md](../../.ai/operations/security.md).
  *
  * Use only {@link ProductTelemetryEventName} and bounded {@link ProductTelemetryProperties};
  * never pass kubeconfig or cluster identifiers, resource names, manifests, kubectl

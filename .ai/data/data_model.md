@@ -83,6 +83,7 @@ The **Application resource graph** is a derived, directed view model for React F
 | `structureVersion` | string | Fingerprint that changes when the **set of node ids** or **edge endpoints** changes. Used with polling merge (see [consistency.md](./consistency.md)). Attribute-only sync/health updates do not bump it. |
 | `layoutHint` | optional object | Non-authoritative hints from the assembler (for example `{ "algorithm": "dagre-lr", "version": "1" }`). Webview ignores when `structureVersion` changes or may omit hints entirely. |
 | `observedAt` | ISO 8601 string | When this graph snapshot was assembled |
+| `truncated` | boolean (optional) | `true` when the host omitted managed nodes because the application exceeded the product node cap; Application root is always present. Omitted or `false` when the full managed set is included. |
 
 ### ResourceGraphNode
 

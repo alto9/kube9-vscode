@@ -1,6 +1,6 @@
 # Product telemetry QA (M1.4)
 
-Maintainer QA sign-off for **forbid-list verification** and **telemetry-disabled smoke**, per milestone intent. **Authoritative contracts** remain in [.forge/operations/observability.md](../.forge/operations/observability.md) and [.forge/operations/security.md](../.forge/operations/security.md); this document is the **executable checklist** only.
+Maintainer QA sign-off for **forbid-list verification** and **telemetry-disabled smoke**, per milestone intent. **Authoritative contracts** remain in [.ai/operations/observability.md](../.ai/operations/observability.md) and [.ai/operations/security.md](../.ai/operations/security.md); this document is the **executable checklist** only.
 
 | Reference | Purpose |
 |-----------|---------|

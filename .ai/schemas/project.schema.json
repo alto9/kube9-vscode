@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "forge/project.schema.json",
-  "title": "Forge Project Schema",
+  "$id": "ai/project.schema.json",
+  "title": "AI Project Schema",
   "type": "object",
   "additionalProperties": false,
   "required": [

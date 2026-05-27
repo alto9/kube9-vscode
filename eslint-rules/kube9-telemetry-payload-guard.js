@@ -1,6 +1,6 @@
 /**
  * ESLint rule (legacy --rulesdir): blocks common forbid-list footguns in src/telemetry (TypeScript sources).
- * Spec: docs/telemetry-lint-guardrails.md and .forge/operations/observability.md (Never send).
+ * Spec: docs/telemetry-lint-guardrails.md and .ai/operations/observability.md (Never send).
  */
 "use strict";
 
@@ -23,7 +23,7 @@ module.exports = {
       noTemplateInterpolation:
         "Telemetry calls must not use template interpolation in arguments (risk of cluster/workspace leakage). Use static allowlisted literals or safe primitive props — see docs/telemetry-lint-guardrails.md.",
       noErrorIdentifier:
-        "Do not pass exception objects into telemetry; map to enumerated error categories per .forge/operations/observability.md.",
+        "Do not pass exception objects into telemetry; map to enumerated error categories per .ai/operations/observability.md.",
       noErrorNew:
         "Do not construct or pass Error instances into telemetry payloads.",
     },
