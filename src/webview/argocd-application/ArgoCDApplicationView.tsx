@@ -3,9 +3,10 @@ import { WebviewHeader, WebviewHeaderAction } from '../components/WebviewHeader'
 import { TabBar, TabType } from './components/TabBar';
 import { LoadingState } from './components/LoadingState';
 import { ErrorState } from './components/ErrorState';
-import { OverviewTab } from './components/OverviewTab';
-import { DriftDetailsTab } from './components/DriftDetailsTab';
+import { DetailsTab } from './components/DetailsTab';
+import { GraphTab } from './components/GraphTab';
 import { ArgoCDApplication } from '../../types/argocd';
+import type { ApplicationResourceGraph } from '../../types/applicationResourceGraph';
 
 interface ArgoCDApplicationViewProps {
     application: ArgoCDApplication | null;
@@ -20,6 +21,7 @@ interface ArgoCDApplicationViewProps {
     onHardRefresh: () => void;
     onViewInTree: () => void;
     onNavigateToResource: (kind: string, name: string, namespace: string) => void;
+    resourceGraph: ApplicationResourceGraph | null;
 }
 
 /**
@@ -38,7 +40,8 @@ export function ArgoCDApplicationView({
     onRefresh,
     onHardRefresh,
     onViewInTree,
-    onNavigateToResource
+    onNavigateToResource,
+    resourceGraph
 }: ArgoCDApplicationViewProps): React.JSX.Element {
     // Show loading state
     if (loading) {
@@ -96,8 +99,12 @@ export function ArgoCDApplicationView({
                 <div style={{ padding: '0 20px' }}>
                     <TabBar activeTab={activeTab} onTabChange={onTabChange} />
 
-                {activeTab === 'overview' && application && (
-                    <OverviewTab
+                {activeTab === 'graph' && application && (
+                    <GraphTab application={application} resourceGraph={resourceGraph} />
+                )}
+
+                {activeTab === 'details' && application && (
+                    <DetailsTab
                         application={application}
                         syncing={syncing}
                         refreshing={refreshing}
@@ -105,13 +112,7 @@ export function ArgoCDApplicationView({
                         onRefresh={onRefresh}
                         onHardRefresh={onHardRefresh}
                         onViewInTree={onViewInTree}
-                    />
-                )}
-
-                {activeTab === 'driftDetails' && application && (
-                    <DriftDetailsTab
-                        application={application}
-                        onNavigate={onNavigateToResource}
+                        onNavigateToResource={onNavigateToResource}
                     />
                 )}
                 </div>
