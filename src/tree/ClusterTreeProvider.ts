@@ -1947,9 +1947,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         clusterItem: ClusterTreeItem,
         podName: string,
         namespace: string
-    ): Promise<void> {
+    ): Promise<boolean> {
         if (!this.treeView || !clusterItem.resourceData) {
-            return;
+            return false;
         }
 
         try {
@@ -1959,7 +1959,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             if (!workloadsCategory) {
                 vscode.window.showInformationMessage(`Pod '${podName}' not found in tree view (Workloads category not found)`);
-                return;
+                return false;
             }
 
             // Get workload subcategories (Deployments, StatefulSets, DaemonSets, CronJobs)
@@ -1993,17 +1993,19 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                         
                         // Focus the tree view
                         await vscode.commands.executeCommand('kube9ClusterView.focus');
-                        return;
+                        return true;
                     }
                 }
             }
-
+            
             // Pod not found
             vscode.window.showInformationMessage(`Pod '${podName}' not found in tree view`);
+            return false;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('Error finding pod:', errorMessage);
             vscode.window.showInformationMessage(`Pod '${podName}' not found in tree view`);
+            return false;
         }
     }
 
@@ -2151,6 +2153,155 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             vscode.window.showInformationMessage(
                 `ReplicaSet '${replicaSetName}' not found in tree view`
             );
+        }
+    }
+
+    /**
+     * Returns true when the tree provider's active kubectl context matches the given name.
+     */
+    public async isCurrentContext(contextName: string): Promise<boolean> {
+        if (!this.kubeconfig?.currentContext) {
+            return false;
+        }
+        return this.kubeconfig.currentContext === contextName;
+    }
+
+    /**
+     * Reveal a resource in the cluster tree by kind, name, and namespace.
+     *
+     * @returns true when the resource was found and revealed.
+     */
+    public async revealTreeResource(kind: string, name: string, namespace: string): Promise<boolean> {
+        if (!this.treeView) {
+            return false;
+        }
+
+        if (!this.kubeconfig) {
+            return false;
+        }
+
+        const clusterItem = await this.resolveClusterItemForReveal();
+        if (!clusterItem) {
+            return false;
+        }
+
+        if (kind === 'Pod') {
+            return this.findAndRevealPod(clusterItem, name, namespace);
+        }
+
+        const workloadKindToSubcategory: Record<string, TreeItemType> = {
+            Deployment: 'deployments',
+            StatefulSet: 'statefulsets',
+            DaemonSet: 'daemonsets',
+            CronJob: 'cronjobs'
+        };
+        const workloadSubcategory = workloadKindToSubcategory[kind];
+        if (workloadSubcategory) {
+            return this.findAndRevealNamedResource(
+                clusterItem,
+                'workloads',
+                workloadSubcategory,
+                name,
+                namespace
+            );
+        }
+
+        const topLevelCategoryByKind: Record<string, { category: TreeItemType; subcategory: TreeItemType }> = {
+            Service: { category: 'networking', subcategory: 'services' },
+            ConfigMap: { category: 'configuration', subcategory: 'configmaps' },
+            Secret: { category: 'configuration', subcategory: 'secrets' }
+        };
+        const categoryMapping = topLevelCategoryByKind[kind];
+        if (categoryMapping) {
+            return this.findAndRevealNamedResource(
+                clusterItem,
+                categoryMapping.category,
+                categoryMapping.subcategory,
+                name,
+                namespace
+            );
+        }
+
+        return false;
+    }
+
+    private async resolveClusterItemForReveal(): Promise<ClusterTreeItem | undefined> {
+        const currentContext = this.kubeconfig?.currentContext;
+        if (!currentContext) {
+            return undefined;
+        }
+
+        const clusterItem = this.clusterItemsCache.get(currentContext);
+        if (clusterItem) {
+            return clusterItem;
+        }
+
+        const rootItems = await this.getClusters();
+        return rootItems.find(
+            (item) =>
+                item.type === 'cluster' && item.resourceData?.context?.name === currentContext
+        );
+    }
+
+    private itemMatchesResource(
+        item: ClusterTreeItem,
+        resourceName: string,
+        namespace: string
+    ): boolean {
+        const itemName =
+            item.resourceData?.resourceName ||
+            (typeof item.label === 'string' ? item.label : item.label?.toString() || '');
+        const itemNamespace = item.resourceData?.namespace || '';
+        return itemName === resourceName && itemNamespace === namespace;
+    }
+
+    private async findAndRevealNamedResource(
+        clusterItem: ClusterTreeItem,
+        categoryType: TreeItemType,
+        subcategoryType: TreeItemType,
+        resourceName: string,
+        namespace: string
+    ): Promise<boolean> {
+        if (!this.treeView || !clusterItem.resourceData) {
+            return false;
+        }
+
+        try {
+            const categories = this.getCategories(clusterItem);
+            const category = categories.find((cat) => cat.type === categoryType);
+            if (!category) {
+                return false;
+            }
+
+            const subcategories = await this.getCategoryChildren(category);
+            const subcategory = subcategories.find((sub) => sub.type === subcategoryType);
+            if (!subcategory) {
+                return false;
+            }
+
+            const resources = await this.getCategoryChildren(subcategory);
+            const matchingResource = resources.find((resource) =>
+                this.itemMatchesResource(resource, resourceName, namespace)
+            );
+
+            if (!matchingResource) {
+                return false;
+            }
+
+            await this.treeView.reveal(matchingResource, {
+                select: true,
+                focus: true,
+                expand: true
+            });
+            await vscode.commands.executeCommand('kube9ClusterView.focus');
+            return true;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(
+                `Error revealing ${subcategoryType} resource ${resourceName}:`,
+                errorMessage
+            );
+            return false;
         }
     }
 

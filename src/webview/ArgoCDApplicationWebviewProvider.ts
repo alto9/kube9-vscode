@@ -18,6 +18,7 @@ import {
     type ResourceActionWebviewMessage,
     type WebviewToExtensionMessage
 } from '../types/argocdWebviewProtocol';
+import { dispatchResourceAction } from '../services/KindCapabilityRegistry';
 
 /**
  * Information stored with each webview panel.
@@ -680,6 +681,8 @@ export class ArgoCDApplicationWebviewProvider {
                     case 'resourceAction':
                         await ArgoCDApplicationWebviewProvider.handleResourceAction(
                             panel,
+                            treeProvider,
+                            context,
                             message
                         );
                         break;
@@ -780,25 +783,23 @@ export class ArgoCDApplicationWebviewProvider {
     }
 
     /**
-     * Handle resource graph tile actions until #160 implements the action registry.
+     * Dispatch resource graph tile actions through the kind capability registry.
      */
     private static async handleResourceAction(
         panel: vscode.WebviewPanel,
+        treeProvider: ClusterTreeProvider,
+        context: string,
         message: ResourceActionWebviewMessage
     ): Promise<void> {
-        panel.webview.postMessage({
-            type: 'resourceActionResult',
-            actionId: message.actionId,
-            success: false,
-            message: 'Not implemented',
-            nodeRef: {
-                kind: message.kind,
-                name: message.name,
-                namespace: message.namespace,
-                ...(message.group !== undefined ? { group: message.group } : {}),
-                ...(message.version !== undefined ? { version: message.version } : {})
-            }
-        } satisfies ExtensionToWebviewMessage);
+        await dispatchResourceAction(
+            {
+                panel,
+                treeProvider,
+                context,
+                kubeconfigPath: treeProvider.getKubeconfigPath() ?? ''
+            },
+            message
+        );
     }
 
     /**
