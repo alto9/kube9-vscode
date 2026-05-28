@@ -42,6 +42,8 @@
     --error-fg: var(--vscode-errorForeground);
     --warning-bg: var(--vscode-inputValidation-warningBackground);
     --warning-border: var(--vscode-inputValidation-warningBorder);
+    --info-bg: var(--vscode-inputValidation-infoBackground);
+    --info-border: var(--vscode-inputValidation-infoBorder);
     
     /* Focus */
     --focus-border: var(--vscode-focusBorder);
@@ -667,6 +669,51 @@ body {
 
 .argocd-graph-canvas .react-flow {
     background: var(--background);
+}
+
+.argocd-graph-affordances {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 8px 0;
+    pointer-events: none;
+}
+
+.argocd-graph-affordance {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0;
+    padding: 6px 10px;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+    line-height: 1.4;
+    color: var(--foreground);
+}
+
+.argocd-graph-affordance .codicon {
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-size: 14px;
+}
+
+.argocd-graph-affordance--limited {
+    border: 1px solid var(--info-border);
+    background: var(--info-bg);
+}
+
+.argocd-graph-affordance--limited .codicon {
+    color: var(--vscode-inputValidation-infoBorder);
+}
+
+.argocd-graph-affordance--truncated {
+    border: 1px solid var(--warning-border);
+    background: var(--warning-bg);
+}
+
+.argocd-graph-affordance--truncated .codicon {
+    color: var(--vscode-inputValidation-warningBorder);
 }
 
 .argocd-graph-action-notice {
