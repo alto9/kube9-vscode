@@ -163,6 +163,17 @@ body {
     opacity: 0.6;
 }
 
+.argocd-status-badge-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    align-items: center;
+}
+
+.argocd-status-badge-group .argocd-status-badge .codicon {
+    font-size: 12px;
+}
+
 /* ==========================================================================
    Section Styles (Metadata, Sync Status, Health Status, Source)
    ========================================================================== */
@@ -658,15 +669,44 @@ body {
     background: var(--background);
 }
 
+.argocd-graph-action-notice {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin: 0 8px 6px;
+    padding: 6px 10px;
+    border: 1px solid var(--warning-border);
+    border-radius: var(--radius-md);
+    background: var(--warning-bg);
+    color: var(--foreground);
+    font-size: var(--font-size-sm);
+}
+
+.argocd-graph-action-notice__dismiss {
+    border: none;
+    background: transparent;
+    color: var(--foreground);
+    cursor: pointer;
+    padding: 2px;
+    line-height: 1;
+}
+
 .argocd-graph-node {
-    width: 180px;
-    min-height: 56px;
+    width: 220px;
+    min-height: 72px;
     padding: 8px 10px;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--vscode-editorWidget-background);
     color: var(--foreground);
     box-sizing: border-box;
+    outline: none;
+}
+
+.argocd-graph-node:focus-visible {
+    outline: 2px solid var(--focus-border);
+    outline-offset: 2px;
 }
 
 .argocd-graph-node--root {
@@ -674,11 +714,32 @@ body {
     border-color: var(--vscode-focusBorder);
 }
 
+.argocd-graph-node--selected {
+    box-shadow: 0 0 0 2px var(--focus-border);
+}
+
+.argocd-graph-node__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    min-height: 20px;
+}
+
+.argocd-graph-node__header .codicon:first-child {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: var(--description-foreground);
+}
+
 .argocd-graph-node__kind {
+    flex: 1;
     font-size: var(--font-size-xs);
     color: var(--description-foreground);
     text-transform: uppercase;
     letter-spacing: 0.02em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .argocd-graph-node__label {
@@ -688,6 +749,84 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.argocd-graph-node__badges {
+    margin-top: 6px;
+}
+
+.argocd-graph-node__overflow {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.argocd-graph-node__overflow-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--foreground);
+    cursor: pointer;
+}
+
+.argocd-graph-node__overflow-trigger:hover:not(:disabled) {
+    background: var(--vscode-toolbar-hoverBackground);
+}
+
+.argocd-graph-node__overflow-trigger:focus-visible {
+    outline: 1px solid var(--focus-border);
+    outline-offset: 1px;
+}
+
+.argocd-graph-node__overflow-trigger:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.argocd-graph-node__overflow-menu {
+    position: absolute;
+    top: calc(100% + 2px);
+    right: 0;
+    z-index: 10;
+    min-width: 200px;
+    padding: 4px 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--vscode-menu-background, var(--vscode-editorWidget-background));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.24);
+}
+
+.argocd-graph-node__overflow-busy {
+    padding: 6px 12px;
+    font-size: var(--font-size-xs);
+    color: var(--description-foreground);
+}
+
+.argocd-graph-node__overflow-item {
+    display: block;
+    width: 100%;
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: var(--vscode-menu-foreground, var(--foreground));
+    font-family: var(--font-family);
+    font-size: var(--font-size-sm);
+    text-align: left;
+    cursor: pointer;
+}
+
+.argocd-graph-node__overflow-item:hover:not(:disabled) {
+    background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+}
+
+.argocd-graph-node__overflow-item:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .argocd-graph-node__handle {

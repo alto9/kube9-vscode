@@ -8,7 +8,8 @@ import {
 } from '@xyflow/react';
 import type { ApplicationResourceGraph } from '../../../types/applicationResourceGraph';
 import { ArgoCDApplication } from '../../../types/argocd';
-import { PlaceholderNode } from '../graph/PlaceholderNode';
+import { ResourceGraphNodeTile } from '../graph/ResourceGraphNodeTile';
+import { GraphInteractionProvider, type GraphInteractionContextValue } from '../graph/GraphInteractionContext';
 import {
     createEmptyLayoutCache,
     mergeGraphFlowState,
@@ -19,10 +20,11 @@ import type { GraphNodeData } from '../graph/types';
 interface GraphTabProps {
     application: ArgoCDApplication;
     resourceGraph: ApplicationResourceGraph | null;
+    graphInteraction: GraphInteractionContextValue;
 }
 
 const nodeTypes = {
-    placeholder: PlaceholderNode
+    resourceGraph: ResourceGraphNodeTile
 };
 
 const placeholderStyle: React.CSSProperties = {
@@ -42,6 +44,7 @@ const placeholderStyle: React.CSSProperties = {
 interface GraphCanvasProps {
     application: ArgoCDApplication;
     resourceGraph: ApplicationResourceGraph;
+    graphInteraction: GraphInteractionContextValue;
 }
 
 function GraphToolbar({
@@ -86,7 +89,7 @@ function GraphToolbar({
     );
 }
 
-function GraphCanvas({ application, resourceGraph }: GraphCanvasProps): React.JSX.Element {
+function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanvasProps): React.JSX.Element {
     const { zoomIn, zoomOut, fitView } = useReactFlow();
     const layoutCacheRef = React.useRef<GraphLayoutCache>(createEmptyLayoutCache());
     const [nodes, setNodes] = React.useState<Node<GraphNodeData>[]>([]);
@@ -123,6 +126,19 @@ function GraphCanvas({ application, resourceGraph }: GraphCanvasProps): React.JS
 
     return (
         <div className="argocd-graph-tab" data-testid="graph-tab-canvas">
+            {graphInteraction.actionNotice && (
+                <div className="argocd-graph-action-notice" role="status">
+                    <span>{graphInteraction.actionNotice}</span>
+                    <button
+                        type="button"
+                        className="argocd-graph-action-notice__dismiss"
+                        aria-label="Dismiss"
+                        onClick={graphInteraction.onDismissActionNotice}
+                    >
+                        <span className="codicon codicon-close" aria-hidden="true" />
+                    </button>
+                </div>
+            )}
             <GraphToolbar
                 onZoomIn={() => zoomIn({ duration: 150 })}
                 onZoomOut={() => zoomOut({ duration: 150 })}
@@ -135,7 +151,7 @@ function GraphCanvas({ application, resourceGraph }: GraphCanvasProps): React.JS
                     nodeTypes={nodeTypes}
                     nodesDraggable={false}
                     nodesConnectable={false}
-                    elementsSelectable={false}
+                    elementsSelectable
                     panOnDrag
                     zoomOnScroll
                     fitView={false}
@@ -155,7 +171,7 @@ function GraphCanvas({ application, resourceGraph }: GraphCanvasProps): React.JS
 /**
  * Interactive React Flow canvas for the Argo CD Application resource graph.
  */
-export function GraphTab({ application, resourceGraph }: GraphTabProps): React.JSX.Element {
+export function GraphTab({ application, resourceGraph, graphInteraction }: GraphTabProps): React.JSX.Element {
     if (!resourceGraph) {
         return (
             <div style={placeholderStyle} data-testid="graph-tab-placeholder">
@@ -166,8 +182,14 @@ export function GraphTab({ application, resourceGraph }: GraphTabProps): React.J
     }
 
     return (
-        <ReactFlowProvider>
-            <GraphCanvas application={application} resourceGraph={resourceGraph} />
-        </ReactFlowProvider>
+        <GraphInteractionProvider value={graphInteraction}>
+            <ReactFlowProvider>
+                <GraphCanvas
+                    application={application}
+                    resourceGraph={resourceGraph}
+                    graphInteraction={graphInteraction}
+                />
+            </ReactFlowProvider>
+        </GraphInteractionProvider>
     );
 }

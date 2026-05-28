@@ -1,5 +1,10 @@
 import React from 'react';
-import { ArgoCDResource, HealthStatusCode } from '../../../types/argocd';
+import { ArgoCDResource } from '../../../types/argocd';
+import {
+    healthStatusBadgeClass,
+    syncStatusBadgeClass,
+    syncStatusIconClass
+} from '../graph/syncHealthBadgeClasses';
 
 interface ResourceRowProps {
     resource: ArgoCDResource;
@@ -12,90 +17,10 @@ interface ResourceRowProps {
  * Expandable table row component displaying resource details.
  */
 export function ResourceRow({ resource, isExpanded, onToggle, onNavigate }: ResourceRowProps): React.JSX.Element {
-    const getSyncStatusBadgeStyle = (status: string): React.CSSProperties => {
-        const baseStyle: React.CSSProperties = {
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '2px 8px',
-            borderRadius: '10px',
-            fontSize: '11px',
-            fontWeight: 500
-        };
-
-        if (status === 'OutOfSync') {
-            return {
-                ...baseStyle,
-                backgroundColor: 'var(--vscode-testing-iconQueued)',
-                color: 'var(--vscode-foreground)'
-            };
-        } else {
-            return {
-                ...baseStyle,
-                backgroundColor: 'var(--vscode-testing-iconPassed)',
-                color: 'var(--vscode-foreground)'
-            };
-        }
-    };
-
-    const getHealthStatusBadgeStyle = (status?: HealthStatusCode): React.CSSProperties => {
-        const baseStyle: React.CSSProperties = {
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '2px 8px',
-            borderRadius: '10px',
-            fontSize: '11px',
-            fontWeight: 500
-        };
-
-        if (!status) {
-            return {
-                ...baseStyle,
-                backgroundColor: 'var(--vscode-descriptionForeground)',
-                color: 'var(--vscode-foreground)',
-                opacity: 0.6
-            };
-        }
-
-        switch (status) {
-            case 'Healthy':
-                return {
-                    ...baseStyle,
-                    backgroundColor: 'var(--vscode-testing-iconPassed)',
-                    color: 'var(--vscode-foreground)'
-                };
-            case 'Degraded':
-            case 'Missing':
-                return {
-                    ...baseStyle,
-                    backgroundColor: 'var(--vscode-testing-iconFailed)',
-                    color: 'var(--vscode-foreground)'
-                };
-            case 'Progressing':
-                return {
-                    ...baseStyle,
-                    backgroundColor: 'var(--vscode-testing-iconQueued)',
-                    color: 'var(--vscode-foreground)'
-                };
-            default:
-                return {
-                    ...baseStyle,
-                    backgroundColor: 'var(--vscode-descriptionForeground)',
-                    color: 'var(--vscode-foreground)',
-                    opacity: 0.6
-                };
-        }
-    };
-
-    const getSyncStatusIcon = (status: string): string => {
-        return status === 'OutOfSync' ? 'codicon-warning' : 'codicon-check';
-    };
-
     const rowStyle: React.CSSProperties = {
         borderBottom: '1px solid var(--vscode-panel-border)',
-        backgroundColor: resource.syncStatus === 'OutOfSync' 
-            ? 'var(--vscode-testing-iconQueued)' 
+        backgroundColor: resource.syncStatus === 'OutOfSync'
+            ? 'var(--vscode-testing-iconQueued)'
             : 'transparent',
         opacity: resource.syncStatus === 'OutOfSync' ? 0.15 : 1,
         cursor: 'pointer'
@@ -141,7 +66,7 @@ export function ResourceRow({ resource, isExpanded, onToggle, onNavigate }: Reso
         <>
             <tr style={rowStyle} onClick={onToggle}>
                 <td style={expandCellStyle}>
-                    <span 
+                    <span
                         className={isExpanded ? 'codicon codicon-chevron-down' : 'codicon codicon-chevron-right'}
                         style={{ fontSize: '14px' }}
                     ></span>
@@ -152,18 +77,18 @@ export function ResourceRow({ resource, isExpanded, onToggle, onNavigate }: Reso
                 </td>
                 <td style={cellStyle}>{resource.namespace}</td>
                 <td style={cellStyle}>
-                    <div style={getSyncStatusBadgeStyle(resource.syncStatus)}>
-                        <span className={getSyncStatusIcon(resource.syncStatus)} style={{ fontSize: '12px' }}></span>
+                    <span className={`argocd-status-badge ${syncStatusBadgeClass(resource.syncStatus)}`}>
+                        <span className={`codicon ${syncStatusIconClass(resource.syncStatus)}`} style={{ fontSize: '12px' }} />
                         <span>{resource.syncStatus}</span>
-                    </div>
+                    </span>
                 </td>
                 <td style={cellStyle}>
                     {resource.healthStatus ? (
-                        <div style={getHealthStatusBadgeStyle(resource.healthStatus)}>
+                        <span className={`argocd-status-badge ${healthStatusBadgeClass(resource.healthStatus)}`}>
                             <span>{resource.healthStatus}</span>
-                        </div>
+                        </span>
                     ) : (
-                        <span style={{ color: 'var(--vscode-descriptionForeground)', opacity: 0.6 }}>—</span>
+                        <span className={`argocd-status-badge ${healthStatusBadgeClass(undefined)}`}>—</span>
                     )}
                 </td>
             </tr>
@@ -177,4 +102,3 @@ export function ResourceRow({ resource, isExpanded, onToggle, onNavigate }: Reso
         </>
     );
 }
-

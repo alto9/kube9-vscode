@@ -8,7 +8,7 @@ export function mapGraphDtoToFlow(graph: ApplicationResourceGraph): {
 } {
     const nodes: Node<GraphNodeData>[] = graph.nodes.map((dto) => ({
         id: dto.id,
-        type: 'placeholder',
+        type: 'resourceGraph',
         position: { x: 0, y: 0 },
         data: { dto },
         draggable: false,

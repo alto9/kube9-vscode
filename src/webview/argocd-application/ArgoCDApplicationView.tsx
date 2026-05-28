@@ -7,6 +7,7 @@ import { DetailsTab } from './components/DetailsTab';
 import { GraphTab } from './components/GraphTab';
 import { ArgoCDApplication } from '../../types/argocd';
 import type { ApplicationResourceGraph } from '../../types/applicationResourceGraph';
+import type { GraphInteractionContextValue } from './graph/GraphInteractionContext';
 
 interface ArgoCDApplicationViewProps {
     application: ArgoCDApplication | null;
@@ -22,6 +23,7 @@ interface ArgoCDApplicationViewProps {
     onViewInTree: () => void;
     onNavigateToResource: (kind: string, name: string, namespace: string) => void;
     resourceGraph: ApplicationResourceGraph | null;
+    graphInteraction: GraphInteractionContextValue;
 }
 
 /**
@@ -41,7 +43,8 @@ export function ArgoCDApplicationView({
     onHardRefresh,
     onViewInTree,
     onNavigateToResource,
-    resourceGraph
+    resourceGraph,
+    graphInteraction
 }: ArgoCDApplicationViewProps): React.JSX.Element {
     // Show loading state
     if (loading) {
@@ -100,7 +103,11 @@ export function ArgoCDApplicationView({
                     <TabBar activeTab={activeTab} onTabChange={onTabChange} />
 
                 {activeTab === 'graph' && application && (
-                    <GraphTab application={application} resourceGraph={resourceGraph} />
+                    <GraphTab
+                        application={application}
+                        resourceGraph={resourceGraph}
+                        graphInteraction={graphInteraction}
+                    />
                 )}
 
                 {activeTab === 'details' && application && (
