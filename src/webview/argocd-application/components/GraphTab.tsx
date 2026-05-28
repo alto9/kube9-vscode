@@ -114,7 +114,7 @@ function GraphCanvas({ application, resourceGraph }: GraphCanvasProps): React.JS
     );
 
     React.useEffect(() => {
-        applyGraph(resourceGraph, { autoFit: true });
+        applyGraph(resourceGraph);
     }, [applyGraph, resourceGraph]);
 
     const handleFitView = React.useCallback(() => {
