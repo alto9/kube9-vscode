@@ -6,6 +6,7 @@ import { TabType } from './components/TabBar';
 import { migratePersistedTab } from './utils/tabMigration';
 import { ArgoCDApplication } from '../../types/argocd';
 import type { ApplicationResourceGraph } from '../../types/applicationResourceGraph';
+import { useGraphInteractionState } from './graph/useGraphInteractionState';
 
 // Acquire VS Code API
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
@@ -30,6 +31,16 @@ function App(): React.JSX.Element {
     const [resourceGraph, setResourceGraph] = React.useState<ApplicationResourceGraph | null>(null);
     const [syncing, setSyncing] = React.useState<boolean>(false);
     const [refreshing, setRefreshing] = React.useState<boolean>(false);
+    const [appOperationRunning, setAppOperationRunning] = React.useState<boolean>(false);
+
+    const graphInteractionState = useGraphInteractionState(vscode, {
+        menusDisabled: syncing || refreshing || appOperationRunning
+    });
+    const {
+        handleResourceActionProgress,
+        handleResourceActionResult,
+        ...graphInteraction
+    } = graphInteractionState;
 
     // Restore state from VS Code API
     React.useEffect(() => {
@@ -76,15 +87,15 @@ function App(): React.JSX.Element {
                     break;
 
                 case 'operationProgress':
-                    // Track operation progress for button states
                     if (message.phase === 'Running') {
+                        setAppOperationRunning(true);
                         if (message.message?.toLowerCase().includes('sync')) {
                             setSyncing(true);
                         } else if (message.message?.toLowerCase().includes('refresh')) {
                             setRefreshing(true);
                         }
                     } else if (message.phase === 'Succeeded' || message.phase === 'Failed' || message.phase === 'Error') {
-                        // Reset operation states when operation completes
+                        setAppOperationRunning(false);
                         setSyncing(false);
                         setRefreshing(false);
                     }
@@ -95,8 +106,11 @@ function App(): React.JSX.Element {
                     break;
 
                 case 'resourceActionProgress':
+                    handleResourceActionProgress(message);
+                    break;
+
                 case 'resourceActionResult':
-                    // Graph UI handlers land in M12; protocol types accepted for compile-time parity.
+                    handleResourceActionResult(message);
                     break;
 
                 case 'error':
@@ -117,7 +131,7 @@ function App(): React.JSX.Element {
         return () => {
             window.removeEventListener('message', handleMessage);
         };
-    }, [application]);
+    }, [application, handleResourceActionProgress, handleResourceActionResult]);
 
     // Action handlers
     const handleSync = (): void => {
@@ -173,6 +187,7 @@ function App(): React.JSX.Element {
             onViewInTree={handleViewInTree}
             onNavigateToResource={handleNavigateToResource}
             resourceGraph={resourceGraph}
+            graphInteraction={graphInteraction}
         />
     );
 }
