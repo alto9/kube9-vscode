@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { ArgoCDNotFoundError, ArgoCDPermissionError } from '../types/argocd';
@@ -181,27 +179,9 @@ export class ArgoCDApplicationWebviewProvider {
             vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'style.css')
         );
 
-        // Read CSS file
-        let cssContent = '';
-        try {
-            const cssPath = path.join(extensionContext.extensionPath, 'src', 'webview', 'argocd-application', 'styles.css');
-            cssContent = fs.readFileSync(cssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load CSS file:', error);
-            // Fallback to minimal styles if CSS file cannot be loaded
-            cssContent = `
-                body {
-                    font-family: var(--vscode-font-family);
-                    color: var(--vscode-foreground);
-                    background-color: var(--vscode-editor-background);
-                    padding: 0;
-                    margin: 0;
-                }
-                #root {
-                    min-height: 100vh;
-                }
-            `;
-        }
+        const applicationStyleUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'styles.css')
+        );
 
         return `<!DOCTYPE html>
 <html lang="en">
@@ -211,10 +191,8 @@ export class ArgoCDApplicationWebviewProvider {
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource};">
     <link href="${headerStyleUri}" rel="stylesheet">
     <link href="${reactFlowStyleUri}" rel="stylesheet">
+    <link href="${applicationStyleUri}" rel="stylesheet">
     <title>ArgoCD Application</title>
-    <style>
-        ${cssContent}
-    </style>
 </head>
 <body>
     <div id="root"></div>

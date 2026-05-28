@@ -41,7 +41,7 @@ The webview HTML is assembled in `ArgoCDApplicationWebviewProvider.getWebviewCon
 
 1. **`webview-header.css`** (linked shared header styles)
 2. **React Flow base stylesheet** — `@xyflow/react/dist/style.css`, copied or linked from `media/argocd-application/` at build time (do not rely on bundler-injected CSS alone; CSP and load order are explicit in HTML)
-3. **Application styles** — `src/webview/argocd-application/styles.css`, inlined in a `<style>` block (graph tile, theme tokens, layout chrome)
+3. **Application styles** — `src/webview/argocd-application/styles.css` copied to `media/argocd-application/styles.css` by `build:webview` and linked from HTML (graph tile, theme tokens, layout chrome)
 4. **Script last** — `media/argocd-application/main.js`
 
 Graph-specific overrides (node tiles, edge dash patterns, toolbar) belong in application styles, not in forked React Flow CSS.
