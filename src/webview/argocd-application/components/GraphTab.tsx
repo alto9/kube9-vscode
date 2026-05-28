@@ -16,6 +16,7 @@ import {
     type GraphLayoutCache
 } from '../graph/mergeGraphFlowState';
 import type { GraphNodeData } from '../graph/types';
+import { GraphTopologyAffordances } from '../graph/GraphTopologyAffordances';
 
 interface GraphTabProps {
     application: ArgoCDApplication;
@@ -144,6 +145,7 @@ function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanv
                 onZoomOut={() => zoomOut({ duration: 150 })}
                 onFitView={handleFitView}
             />
+            <GraphTopologyAffordances resourceGraph={resourceGraph} />
             <div className="argocd-graph-canvas">
                 <ReactFlow
                     nodes={nodes}
