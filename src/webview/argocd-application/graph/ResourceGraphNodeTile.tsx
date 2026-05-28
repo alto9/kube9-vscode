@@ -10,20 +10,36 @@ function buildAccessibleName(kindLabel: string, label: string, syncStatus: strin
     return `${kindLabel} ${label} ${syncStatus} ${healthStatus}`;
 }
 
-function GraphOverflowMenu({
-    actions,
-    disabled,
-    busyMessage,
-    onSelect
-}: {
-    actions: GraphOverflowAction[];
-    disabled: boolean;
-    busyMessage?: string;
-    onSelect: (action: GraphOverflowAction) => void;
-}): React.JSX.Element | null {
+export interface GraphOverflowMenuHandle {
+    open: () => void;
+}
+
+const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
+    {
+        actions,
+        disabled,
+        busyMessage,
+        onSelect
+    }: {
+        actions: GraphOverflowAction[];
+        disabled: boolean;
+        busyMessage?: string;
+        onSelect: (action: GraphOverflowAction) => void;
+    },
+    ref: React.Ref<GraphOverflowMenuHandle>
+): React.JSX.Element | null {
     const [open, setOpen] = React.useState(false);
     const menuRef = React.useRef<HTMLDivElement>(null);
     const buttonRef = React.useRef<HTMLButtonElement>(null);
+
+    React.useImperativeHandle(ref, () => ({
+        open: () => {
+            if (!disabled && actions.length > 0) {
+                setOpen(true);
+                buttonRef.current?.focus();
+            }
+        }
+    }), [actions.length, disabled]);
 
     React.useEffect(() => {
         if (!open) {
@@ -60,6 +76,7 @@ function GraphOverflowMenu({
                 aria-label="Resource actions"
                 aria-haspopup="menu"
                 aria-expanded={open}
+                tabIndex={-1}
                 disabled={disabled}
                 onClick={(event) => {
                     event.stopPropagation();
@@ -95,7 +112,7 @@ function GraphOverflowMenu({
             )}
         </div>
     );
-}
+});
 
 export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNodeData>>): React.JSX.Element {
     const { dto } = data;
@@ -113,10 +130,21 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
         dto.status.healthStatus
     );
 
+    const overflowMenuRef = React.useRef<GraphOverflowMenuHandle>(null);
+
     const handleTileKeyDown = (event: React.KeyboardEvent): void => {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             event.currentTarget.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            return;
+        }
+        if (
+            overflowActions.length > 0 &&
+            !menusDisabled &&
+            (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))
+        ) {
+            event.preventDefault();
+            overflowMenuRef.current?.open();
         }
     };
 
@@ -128,12 +156,7 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
         if (!dto.resourceKey) {
             return;
         }
-        interaction.postResourceAction(
-            action.actionId,
-            dto.resourceKey.kind,
-            dto.resourceKey.name,
-            dto.resourceKey.namespace
-        );
+        interaction.postResourceAction(action.actionId, dto.resourceKey);
     };
 
     return (
@@ -160,6 +183,7 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
                 <span className="argocd-graph-node__kind">{dto.kindLabel}</span>
                 {overflowActions.length > 0 && (
                     <GraphOverflowMenu
+                        ref={overflowMenuRef}
                         actions={overflowActions}
                         disabled={menusDisabled}
                         busyMessage={nodeBusy ? 'Action in progress…' : undefined}

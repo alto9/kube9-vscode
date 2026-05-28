@@ -71,13 +71,11 @@ export function useGraphInteractionState(
             postViewInTree: () => {
                 vscode?.postMessage({ type: 'viewInTree' });
             },
-            postResourceAction: (actionId, kind, name, namespace) => {
+            postResourceAction: (actionId, resourceKey) => {
                 if (!vscode) {
                     return;
                 }
-                vscode.postMessage(
-                    buildResourceActionPayload(actionId, { kind, name, namespace })
-                );
+                vscode.postMessage(buildResourceActionPayload(actionId, resourceKey));
             }
         }),
         [actionNotice, busyNodeKeys, options.menusDisabled, vscode]

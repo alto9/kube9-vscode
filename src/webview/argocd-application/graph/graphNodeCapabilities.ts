@@ -12,18 +12,20 @@ export interface GraphOverflowAction {
     messageType: GraphOverflowMessageType;
 }
 
-/** Kinds that expose navigate-to-tree in the graph overflow menu (webview registry). */
+/**
+ * Kinds that expose navigate-to-tree in the graph overflow menu (webview registry).
+ * Must match `NAVIGATE_TREE_SUPPORTED_KINDS` in `KindCapabilityRegistry.ts` and
+ * `ClusterTreeProvider.revealTreeResource` mappings.
+ */
 export const GRAPH_NAVIGATE_TREE_KINDS = new Set([
     'Deployment',
     'StatefulSet',
     'DaemonSet',
     'CronJob',
-    'Job',
     'Pod',
     'Service',
     'ConfigMap',
-    'Secret',
-    'Ingress'
+    'Secret'
 ]);
 
 export function getOverflowActions(role: ResourceGraphNodeRole, kind: string): GraphOverflowAction[] {

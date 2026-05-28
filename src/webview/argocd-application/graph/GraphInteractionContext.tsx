@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ManagedResourceKey } from '../../../types/applicationResourceGraph';
 
 export interface GraphInteractionContextValue {
     menusDisabled: boolean;
@@ -6,7 +7,7 @@ export interface GraphInteractionContextValue {
     actionNotice: string | null;
     onDismissActionNotice: () => void;
     postViewInTree: () => void;
-    postResourceAction: (actionId: string, kind: string, name: string, namespace: string) => void;
+    postResourceAction: (actionId: string, resourceKey: ManagedResourceKey) => void;
 }
 
 const GraphInteractionContext = React.createContext<GraphInteractionContextValue | null>(null);

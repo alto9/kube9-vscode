@@ -3,8 +3,10 @@ import {
     ACTION_DEPLOYMENT_RESTART_ROLLOUT,
     ACTION_RESOURCE_NAVIGATE_TREE,
     buildResourceActionPayload,
-    getOverflowActions
+    getOverflowActions,
+    GRAPH_NAVIGATE_TREE_KINDS
 } from '../../../webview/argocd-application/graph/graphNodeCapabilities';
+import { NAVIGATE_TREE_SUPPORTED_KINDS } from '../../../services/KindCapabilityRegistry';
 import {
     healthStatusBadgeClass,
     syncStatusBadgeClass
@@ -30,6 +32,21 @@ suite('argocd graph node capabilities', () => {
         assert.deepStrictEqual(actions, []);
     });
 
+    test('Job and Ingress do not expose navigate until host and tree support them', () => {
+        for (const kind of ['Job', 'Ingress'] as const) {
+            const actions = getOverflowActions('managed_resource', kind);
+            const actionIds = actions.map((action) => action.actionId);
+            assert.ok(!actionIds.includes(ACTION_RESOURCE_NAVIGATE_TREE), kind);
+        }
+    });
+
+    test('webview navigate kinds match host NAVIGATE_TREE_SUPPORTED_KINDS', () => {
+        assert.deepStrictEqual(
+            [...GRAPH_NAVIGATE_TREE_KINDS].sort(),
+            [...NAVIGATE_TREE_SUPPORTED_KINDS].sort()
+        );
+    });
+
     test('badge mapping uses expected classes for drift and unknown health', () => {
         assert.strictEqual(syncStatusBadgeClass('OutOfSync'), 'out-of-sync');
         assert.strictEqual(healthStatusBadgeClass('Degraded'), 'degraded');
@@ -48,5 +65,15 @@ suite('argocd graph node capabilities', () => {
         assert.strictEqual(payload.kind, 'Service');
         assert.strictEqual(payload.name, 'guestbook-ui');
         assert.strictEqual(payload.namespace, 'guestbook');
+    });
+
+    test('resourceAction payload includes apiGroup when present on resource key', () => {
+        const payload = buildResourceActionPayload(ACTION_RESOURCE_NAVIGATE_TREE, {
+            kind: 'Ingress',
+            name: 'guestbook',
+            namespace: 'guestbook',
+            apiGroup: 'networking.k8s.io'
+        });
+        assert.strictEqual(payload.group, 'networking.k8s.io');
     });
 });
