@@ -1,8 +1,8 @@
 import React from 'react';
 import type { ApplicationResourceGraph } from '../../../types/applicationResourceGraph';
 import {
+    getLimitedTopologyAffordanceMessage,
     GRAPH_TRUNCATION_AFFORDANCE_MESSAGE,
-    LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE,
     shouldShowLimitedTopologyAffordance,
     shouldShowTruncationAffordance
 } from './graphTopologyAffordanceRules';
@@ -16,6 +16,7 @@ export function GraphTopologyAffordances({
 }: GraphTopologyAffordancesProps): React.JSX.Element | null {
     const showLimited = shouldShowLimitedTopologyAffordance(resourceGraph);
     const showTruncated = shouldShowTruncationAffordance(resourceGraph);
+    const limitedMessage = getLimitedTopologyAffordanceMessage(resourceGraph);
 
     if (!showLimited && !showTruncated) {
         return null;
@@ -30,7 +31,7 @@ export function GraphTopologyAffordances({
                     data-testid="graph-limited-topology-affordance"
                 >
                     <span className="codicon codicon-info" aria-hidden="true" />
-                    <span>{LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE}</span>
+                    <span>{limitedMessage}</span>
                 </p>
             )}
             {showTruncated && (

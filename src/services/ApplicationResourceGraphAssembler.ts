@@ -19,8 +19,10 @@ import {
     type ResourceGraphNode
 } from '../types/applicationResourceGraph';
 import { truncateApplicationResourceGraph } from './ApplicationResourceGraphTruncation';
+import type { ResourceOwnerRefsResult, KubernetesOwnerReference } from './ManagedResourceOwnerRefReader';
 
 const CRD_FLAT_TOPOLOGY_SOURCE = 'crd_flat' as const;
+const OWNER_REF_TOPOLOGY_SOURCE = 'kubernetes_owner_ref' as const;
 
 export interface CrdFlatGraphAssemblyResult {
     graph: ApplicationResourceGraph;
@@ -38,6 +40,10 @@ export interface BuildResourceTreeApplicationResourceGraphInput {
     applicationKey: ApplicationKey;
     resourceTree: ArgoCDResourceTreeResponse;
     observedAt?: string;
+}
+
+export interface BuildOwnerRefApplicationResourceGraphInput extends BuildCrdFlatApplicationResourceGraphInput {
+    ownerRefsByResource: ResourceOwnerRefsResult[];
 }
 
 const RESOURCE_TREE_TOPOLOGY_SOURCE = 'argocd_resource_tree' as const;
@@ -377,6 +383,155 @@ export function buildCrdFlatApplicationResourceGraph(
         edges,
         topologySource: CRD_FLAT_TOPOLOGY_SOURCE,
         topologyMode: topologyModeFromSource(CRD_FLAT_TOPOLOGY_SOURCE),
+        structureVersion: computeStructureVersion({ nodes, edges }),
+        observedAt
+    });
+
+    return { graph, assemblyWarnings };
+}
+
+function parseApiGroupFromApiVersion(apiVersion: string): string | undefined {
+    const slash = apiVersion.indexOf('/');
+    if (slash === -1) {
+        return undefined;
+    }
+    return apiVersion.slice(0, slash);
+}
+
+function ownerRefToManagedResourceKey(
+    ownerRef: { apiVersion?: string; kind?: string; name?: string },
+    resourceNamespace: string
+): ManagedResourceKey | null {
+    const kind = trimOrEmpty(ownerRef.kind);
+    const name = trimOrEmpty(ownerRef.name);
+    if (!kind || !name) {
+        return null;
+    }
+
+    const apiGroup = parseApiGroupFromApiVersion(ownerRef.apiVersion ?? '');
+    return {
+        namespace: resourceNamespace,
+        kind,
+        name,
+        ...(apiGroup ? { apiGroup } : {})
+    };
+}
+
+function resolveOwnerRefToNodeId(
+    ownerRef: KubernetesOwnerReference,
+    resourceNamespace: string,
+    nodeIdsByKey: Map<string, GraphNodeId>
+): GraphNodeId | null {
+    const ownerKey = ownerRefToManagedResourceKey(ownerRef, resourceNamespace);
+    if (!ownerKey) {
+        return null;
+    }
+    return nodeIdsByKey.get(formatManagedResourceKey(ownerKey)) ?? null;
+}
+
+function selectResolvableOwnerNodeId(
+    ownerRefs: KubernetesOwnerReference[],
+    resourceNamespace: string,
+    nodeIdsByKey: Map<string, GraphNodeId>
+): GraphNodeId | null {
+    const controllerOwners = ownerRefs.filter((ownerRef) => ownerRef.controller === true);
+    const candidates = controllerOwners.length > 0 ? controllerOwners : ownerRefs;
+
+    for (const ownerRef of candidates) {
+        const nodeId = resolveOwnerRefToNodeId(ownerRef, resourceNamespace, nodeIdsByKey);
+        if (nodeId) {
+            return nodeId;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Enriches a CRD-flat graph with owns edges inferred from Kubernetes ownerReferences.
+ * Returns null when no owns edges can be inferred (caller should keep crd_flat).
+ */
+export function buildOwnerRefApplicationResourceGraph(
+    input: BuildOwnerRefApplicationResourceGraphInput
+): CrdFlatGraphAssemblyResult | null {
+    const baseline = buildCrdFlatApplicationResourceGraph(input);
+    const { applicationKey } = input;
+    const observedAt = input.observedAt ?? baseline.graph.observedAt;
+    const assemblyWarnings = [...baseline.assemblyWarnings];
+
+    const rootNode = baseline.graph.nodes.find((node) => node.role === 'application');
+    const managedNodes = baseline.graph.nodes.filter((node) => node.role === 'managed_resource');
+    if (!rootNode || managedNodes.length === 0) {
+        return null;
+    }
+
+    const nodeIdsByKey = new Map<string, GraphNodeId>();
+    for (const node of managedNodes) {
+        if (node.resourceKey) {
+            nodeIdsByKey.set(formatManagedResourceKey(node.resourceKey), node.id);
+        }
+    }
+
+    const ownerRefsByKey = new Map<string, KubernetesOwnerReference[]>();
+    for (const entry of input.ownerRefsByResource) {
+        ownerRefsByKey.set(formatManagedResourceKey(entry.resourceKey), entry.ownerReferences);
+    }
+
+    const edges: ResourceGraphEdge[] = [];
+    const edgeIds = new Set<string>();
+    let ownsEdgeCount = 0;
+
+    for (const childNode of managedNodes) {
+        if (!childNode.resourceKey) {
+            continue;
+        }
+
+        const childKey = formatManagedResourceKey(childNode.resourceKey);
+        const ownerRefs = ownerRefsByKey.get(childKey) ?? [];
+        const parentId = selectResolvableOwnerNodeId(
+            ownerRefs,
+            childNode.resourceKey.namespace,
+            nodeIdsByKey
+        );
+
+        if (parentId) {
+            const edgeId = buildGraphEdgeId(parentId, childNode.id, 'owns');
+            if (!edgeIds.has(edgeId)) {
+                edgeIds.add(edgeId);
+                edges.push({
+                    id: edgeId,
+                    source: parentId,
+                    target: childNode.id,
+                    relationship: 'owns'
+                });
+                ownsEdgeCount += 1;
+            }
+            continue;
+        }
+
+        const managesEdgeId = buildGraphEdgeId(rootNode.id, childNode.id, 'manages');
+        if (!edgeIds.has(managesEdgeId)) {
+            edgeIds.add(managesEdgeId);
+            edges.push({
+                id: managesEdgeId,
+                source: rootNode.id,
+                target: childNode.id,
+                relationship: 'manages'
+            });
+        }
+    }
+
+    if (ownsEdgeCount === 0) {
+        return null;
+    }
+
+    const nodes = baseline.graph.nodes;
+    const graph: ApplicationResourceGraph = truncateApplicationResourceGraph({
+        applicationKey,
+        nodes,
+        edges,
+        topologySource: OWNER_REF_TOPOLOGY_SOURCE,
+        topologyMode: topologyModeFromSource(OWNER_REF_TOPOLOGY_SOURCE),
         structureVersion: computeStructureVersion({ nodes, edges }),
         observedAt
     });

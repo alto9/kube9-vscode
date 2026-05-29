@@ -8,7 +8,9 @@ import {
 import {
     GRAPH_TRUNCATION_AFFORDANCE_MESSAGE,
     LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE,
+    OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE,
     countManagedResourceNodes,
+    getLimitedTopologyAffordanceMessage,
     hasVisibleManagedTopology,
     shouldShowLimitedTopologyAffordance,
     shouldShowTruncationAffordance
@@ -111,5 +113,15 @@ suite('graph topology affordances', () => {
         assert.notStrictEqual(LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE, GRAPH_TRUNCATION_AFFORDANCE_MESSAGE);
         assert.match(GRAPH_TRUNCATION_AFFORDANCE_MESSAGE, /truncat/i);
         assert.match(GRAPH_TRUNCATION_AFFORDANCE_MESSAGE, /node limit/i);
+    });
+
+    test('owner-ref topology uses inferred relationship copy', () => {
+        const graph = {
+            ...limitedGraphWithManagedResources(),
+            topologySource: 'kubernetes_owner_ref' as const
+        };
+        assert.strictEqual(getLimitedTopologyAffordanceMessage(graph), OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE);
+        assert.match(OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE, /owner references/i);
+        assert.match(OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE, /inferred/i);
     });
 });

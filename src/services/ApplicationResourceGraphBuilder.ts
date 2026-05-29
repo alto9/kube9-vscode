@@ -3,10 +3,12 @@ import type { ArgoCDApplication } from '../types/argocd';
 import type { ApplicationKey, ApplicationResourceGraph, TopologySource } from '../types/applicationResourceGraph';
 import {
     buildCrdFlatApplicationResourceGraph,
+    buildOwnerRefApplicationResourceGraph,
     buildResourceTreeApplicationResourceGraph
 } from './ApplicationResourceGraphAssembler';
 import { fetchApplicationResourceTree } from './ArgoCDRestClient';
 import { ArgoCDRestAuthResolver } from './ArgoCDRestAuthResolver';
+import { fetchManagedResourceOwnerReferences } from './ManagedResourceOwnerRefReader';
 import type { ArgoCDService } from './ArgoCDService';
 
 export interface BuildApplicationResourceGraphInput {
@@ -68,6 +70,19 @@ export async function buildApplicationResourceGraph(
         );
     }
 
+    const ownerRefAttempt = await tryBuildOwnerRefApplicationResourceGraph(input, observedAt);
+    if (ownerRefAttempt) {
+        for (const warning of ownerRefAttempt.assemblyWarnings) {
+            getOutputChannel().appendLine(`[WARNING] owner-reference graph assembly: ${warning}`);
+        }
+
+        return {
+            graph: ownerRefAttempt.graph,
+            topologySource: 'kubernetes_owner_ref',
+            assemblyWarnings: ownerRefAttempt.assemblyWarnings
+        };
+    }
+
     const { graph, assemblyWarnings } = buildCrdFlatApplicationResourceGraph({
         application: input.application,
         applicationKey: input.applicationKey,
@@ -79,4 +94,45 @@ export async function buildApplicationResourceGraph(
         topologySource: 'crd_flat',
         assemblyWarnings
     };
+}
+
+async function tryBuildOwnerRefApplicationResourceGraph(
+    input: BuildApplicationResourceGraphInput,
+    observedAt: string
+): Promise<ReturnType<typeof buildOwnerRefApplicationResourceGraph>> {
+    try {
+        const { results, warnings } = await fetchManagedResourceOwnerReferences(
+            input.applicationKey.context,
+            input.application.resources
+        );
+
+        for (const warning of warnings) {
+            getOutputChannel().appendLine(`[WARNING] owner-reference fetch: ${warning}`);
+        }
+
+        const ownerRefGraph = buildOwnerRefApplicationResourceGraph({
+            application: input.application,
+            applicationKey: input.applicationKey,
+            ownerRefsByResource: results,
+            observedAt
+        });
+
+        if (!ownerRefGraph) {
+            getOutputChannel().appendLine(
+                '[INFO] Kubernetes owner-reference enrichment unavailable; falling back to CRD-flat graph'
+            );
+            return null;
+        }
+
+        return {
+            graph: ownerRefGraph.graph,
+            assemblyWarnings: [...ownerRefGraph.assemblyWarnings, ...warnings]
+        };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        getOutputChannel().appendLine(
+            `[INFO] Kubernetes owner-reference enrichment failed; falling back to CRD-flat graph: ${message}`
+        );
+        return null;
+    }
 }
