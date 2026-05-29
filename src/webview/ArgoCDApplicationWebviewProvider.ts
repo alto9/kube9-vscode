@@ -3,6 +3,7 @@ import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { ArgoCDNotFoundError, ArgoCDPermissionError } from '../types/argocd';
 import type { ApplicationKey, ApplicationResourceGraph, TopologySource } from '../types/applicationResourceGraph';
+import { buildApplicationResourceGraph } from '../services/ApplicationResourceGraphBuilder';
 import { buildCrdFlatApplicationResourceGraph } from '../services/ApplicationResourceGraphAssembler';
 import { mergeApplicationResourceGraphSnapshots } from '../services/ApplicationResourceGraphMerger';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
@@ -30,6 +31,8 @@ interface PanelInfo {
     namespace: string;
     /** Kubernetes context */
     context: string;
+    /** Extension context for host-only services (REST auth, secrets) */
+    extensionContext: vscode.ExtensionContext;
     /** Previous graph snapshot for merge-on-refresh */
     lastGraph?: ApplicationResourceGraph;
     /** Cancels in-flight operation polling for this panel */
@@ -110,7 +113,8 @@ export class ArgoCDApplicationWebviewProvider {
             panel,
             applicationName,
             namespace,
-            context
+            context,
+            extensionContext
         });
 
         // Set the webview's HTML content
@@ -535,6 +539,7 @@ export class ArgoCDApplicationWebviewProvider {
     ): Promise<void> {
         const panelKey = ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName);
         const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+        const extensionContext = panelInfo?.extensionContext;
 
         try {
             if (options?.bypassCache) {
@@ -550,10 +555,27 @@ export class ArgoCDApplicationWebviewProvider {
                 namespace,
                 applicationName
             );
-            const { graph: incoming } = buildCrdFlatApplicationResourceGraph({
-                application,
-                applicationKey
-            });
+
+            let incoming;
+            let topologySource: TopologySource;
+
+            if (extensionContext) {
+                const built = await buildApplicationResourceGraph({
+                    application,
+                    applicationKey,
+                    argoCDService,
+                    extensionContext
+                });
+                incoming = built.graph;
+                topologySource = built.topologySource;
+            } else {
+                const built = buildCrdFlatApplicationResourceGraph({
+                    application,
+                    applicationKey
+                });
+                incoming = built.graph;
+                topologySource = 'crd_flat';
+            }
 
             const { graph } = mergeApplicationResourceGraphSnapshots(panelInfo?.lastGraph, incoming);
 
@@ -562,7 +584,7 @@ export class ArgoCDApplicationWebviewProvider {
             }
 
             ArgoCDApplicationWebviewProvider.postResourceGraph(panel, graph, {
-                topologySource: 'crd_flat',
+                topologySource,
                 refreshedAt: new Date().toISOString(),
                 truncated: graph.truncated
             });
