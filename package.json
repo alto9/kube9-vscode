@@ -705,6 +705,39 @@
           "default": 30000,
           "description": "API request timeout in milliseconds"
         },
+        "kube9.argocd.restEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Argo CD REST API enrichment for resource graph topology (resource-tree). CRD-only workflows are unchanged when false.",
+          "scope": "application"
+        },
+        "kube9.argocd.serverUrl": {
+          "type": [
+            "string",
+            "object"
+          ],
+          "default": null,
+          "markdownDescription": "Argo CD API server base URL for REST enrichment (`accessMode: direct`). String applies to all contexts; object maps kubeconfig context names to URLs."
+        },
+        "kube9.argocd.accessMode": {
+          "type": "string",
+          "enum": [
+            "direct",
+            "portForward"
+          ],
+          "default": "direct",
+          "description": "How to reach the Argo CD API server for REST enrichment: direct URL or kubectl port-forward to argocd-server."
+        },
+        "kube9.argocd.tlsInsecure": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip TLS certificate verification for Argo CD REST requests (lab/local HTTPS only)."
+        },
+        "kube9.argocd.portForwardLocalPort": {
+          "type": "number",
+          "default": 8443,
+          "description": "Preferred local port when accessMode is portForward for Argo CD REST."
+        },
         "kube9.errors.showDetails": {
           "type": "boolean",
           "default": false,

@@ -111,7 +111,10 @@ suite('ArgoCDApplicationWebviewProvider resource graph', () => {
         mockExtensionContext = {
             subscriptions: [],
             extensionUri: vscode.Uri.file('/mock/extension/path'),
-            extensionPath: '/mock/extension/path'
+            extensionPath: '/mock/extension/path',
+            secrets: {
+                get: async () => undefined
+            }
         } as unknown as vscode.ExtensionContext;
 
         mockArgoCDService = {
