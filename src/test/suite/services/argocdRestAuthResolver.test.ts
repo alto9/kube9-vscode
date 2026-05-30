@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { ArgoCDRestAuthResolver, bearerTokenSecretKey } from '../../../services/ArgoCDRestAuthResolver';
 import { buildResourceTreeUrl } from '../../../services/ArgoCDRestClient';
 import type { ArgoCDService } from '../../../services/ArgoCDService';
+import { PortForwardStatus } from '../../../services/PortForwardManager';
 
 const originalGetConfiguration = vscode.workspace.getConfiguration;
 
@@ -105,6 +106,139 @@ suite('ArgoCDRestAuthResolver', () => {
             assert.strictEqual(result.baseUrl, 'https://argocd.example.com');
             assert.strictEqual(result.bearerToken, 'secret-token');
             assert.strictEqual(result.tlsInsecure, false);
+        }
+    });
+
+    test('returns unavailable when direct mode lacks server URL', async () => {
+        vscode.workspace.getConfiguration = ((section?: string) => ({
+            get: <T>(key: string, defaultValue?: T): T | undefined => {
+                if (section !== 'kube9') {
+                    return defaultValue;
+                }
+                const values: Record<string, unknown> = {
+                    'argocd.restEnabled': true,
+                    'argocd.accessMode': 'direct',
+                    'argocd.tlsInsecure': false
+                };
+                return (values[key] ?? defaultValue) as T | undefined;
+            }
+        })) as typeof vscode.workspace.getConfiguration;
+
+        const secrets = new Map<string, string>();
+        secrets.set(bearerTokenSecretKey(contextName), 'secret-token');
+
+        const resolver = new ArgoCDRestAuthResolver(
+            {
+                secrets: {
+                    get: async (key: string) => secrets.get(key)
+                }
+            } as unknown as vscode.ExtensionContext,
+            {} as ArgoCDService
+        );
+
+        const result = await resolver.resolve(contextName);
+        assert.strictEqual(result.available, false);
+        if (!result.available) {
+            assert.match(result.reason, /server url/i);
+        }
+    });
+
+    test('resolves port-forward mode base URL from connected forward', async () => {
+        vscode.workspace.getConfiguration = ((section?: string) => ({
+            get: <T>(key: string, defaultValue?: T): T | undefined => {
+                if (section !== 'kube9') {
+                    return defaultValue;
+                }
+                const values: Record<string, unknown> = {
+                    'argocd.restEnabled': true,
+                    'argocd.accessMode': 'portForward',
+                    'argocd.tlsInsecure': false,
+                    'argocd.portForwardLocalPort': 8443
+                };
+                return (values[key] ?? defaultValue) as T | undefined;
+            }
+        })) as typeof vscode.workspace.getConfiguration;
+
+        const secrets = new Map<string, string>();
+        secrets.set(bearerTokenSecretKey(contextName), 'secret-token');
+
+        const argoCDService = {
+            isInstalled: async () => ({ installed: true, namespace: 'argocd' })
+        } as unknown as ArgoCDService;
+
+        const portForwardManager = {
+            getAllForwards: () => [
+                {
+                    context: contextName,
+                    namespace: 'argocd',
+                    resourceType: 'service' as const,
+                    resourceName: 'argocd-server',
+                    status: PortForwardStatus.Connected,
+                    localPort: 9443
+                }
+            ],
+            startForward: async () => {
+                throw new Error('startForward should not be called when a connected forward exists');
+            }
+        };
+
+        const resolver = new ArgoCDRestAuthResolver(
+            {
+                secrets: {
+                    get: async (key: string) => secrets.get(key)
+                }
+            } as unknown as vscode.ExtensionContext,
+            argoCDService,
+            portForwardManager as never
+        );
+
+        const result = await resolver.resolve(contextName);
+        assert.strictEqual(result.available, true);
+        if (result.available) {
+            assert.strictEqual(result.baseUrl, 'http://127.0.0.1:9443');
+        }
+    });
+
+    test('redacts sensitive details from resolver errors', async () => {
+        vscode.workspace.getConfiguration = ((section?: string) => ({
+            get: <T>(key: string, defaultValue?: T): T | undefined => {
+                if (section !== 'kube9') {
+                    return defaultValue;
+                }
+                const values: Record<string, unknown> = {
+                    'argocd.restEnabled': true,
+                    'argocd.accessMode': 'portForward',
+                    'argocd.tlsInsecure': false,
+                    'argocd.portForwardLocalPort': 8443
+                };
+                return (values[key] ?? defaultValue) as T | undefined;
+            }
+        })) as typeof vscode.workspace.getConfiguration;
+
+        const secrets = new Map<string, string>();
+        secrets.set(bearerTokenSecretKey(contextName), 'secret-token');
+
+        const argoCDService = {
+            isInstalled: async () => {
+                throw new Error('Bearer super-secret-token kubeconfig=/home/user/.kube/config');
+            }
+        } as unknown as ArgoCDService;
+
+        const resolver = new ArgoCDRestAuthResolver(
+            {
+                secrets: {
+                    get: async (key: string) => secrets.get(key)
+                }
+            } as unknown as vscode.ExtensionContext,
+            argoCDService
+        );
+
+        const result = await resolver.resolve(contextName);
+        assert.strictEqual(result.available, false);
+        if (!result.available) {
+            assert.ok(!result.reason.includes('super-secret-token'));
+            assert.ok(!result.reason.includes('/home/user/.kube/config'));
+            assert.match(result.reason, /Bearer \[redacted\]/i);
         }
     });
 });

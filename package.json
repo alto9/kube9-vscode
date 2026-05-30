@@ -181,6 +181,21 @@
         "category": "Kube9"
       },
       {
+        "command": "kube9.argocd.setApiToken",
+        "title": "Set Argo CD API Token",
+        "category": "Kube9"
+      },
+      {
+        "command": "kube9.argocd.clearApiToken",
+        "title": "Clear Argo CD API Token",
+        "category": "Kube9"
+      },
+      {
+        "command": "kube9.argocd.testApiConnection",
+        "title": "Test Argo CD API Connection",
+        "category": "Kube9"
+      },
+      {
         "command": "kube9.showCacheStats",
         "title": "Show Cache Statistics",
         "category": "Kube9"

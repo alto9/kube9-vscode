@@ -211,6 +211,62 @@ Right-click any application in the tree view or use buttons in the webview to:
 **Copy Name / Copy Namespace**
 - Quick clipboard actions for application metadata
 
+## REST API enrichment (resource graph)
+
+By default, the application **resource graph** uses Kubernetes Application CRD data only (`topologySource: crd_flat`). Optional **Tier B** enrichment calls the Argo CD REST API (`GET /api/v1/applications/{name}/resource-tree`) for native parent/child topology when you enable REST access separately from CRD RBAC.
+
+### Kubernetes RBAC vs Argo CD API RBAC
+
+These are **independent** trust boundaries:
+
+| Concern | Identity | Typical permissions |
+|---------|----------|---------------------|
+| **Application CRD** (baseline) | kubeconfig user | `applications` get, list, patch on `argoproj.io` |
+| **Resource graph (CRD-flat)** | kubeconfig user | Same as Application CRD |
+| **Resource graph (owner-ref fallback)** | kubeconfig user | Additional get/list on managed workload kinds in destination namespaces |
+| **Resource graph (REST resource-tree)** | Argo CD API bearer token | Argo CD project/RBAC allowing application get and resource-tree for the app |
+
+Your kubeconfig can read Application CRDs while REST enrichment still fails with 401/403 if the Argo CD token or URL is wrong. The extension logs host-side, skips Tier B, and keeps the Application panel usable on CRD data.
+
+### Enable REST enrichment
+
+1. Open VS Code settings and set **`kube9.argocd.restEnabled`** to `true` for the workspace or user scope.
+2. Choose an access mode with **`kube9.argocd.accessMode`**:
+   - **`direct`** — set **`kube9.argocd.serverUrl`** to the HTTPS API base (ingress URL or in-cluster URL reachable from your workstation). Use a string for all contexts or an object keyed by kubeconfig context name (same pattern as `kube9.operatorNamespace`).
+   - **`portForward`** — Kube9 starts or reuses a host-managed `kubectl port-forward` to the detected **`argocd-server`** Service. The API base becomes `http://127.0.0.1:{localPort}`. Optional **`kube9.argocd.portForwardLocalPort`** sets the preferred local bind port (default `8443`).
+3. Run **Kube9: Set Argo CD API Token** from the Command Palette for the active kubectl context. Tokens are stored in VS Code **SecretStorage** only (`kube9.argocd.bearerToken.{context}`), never in `settings.json` or webview payloads.
+4. Run **Kube9: Test Argo CD API Connection** to verify reachability. Success and failure messages are redacted (no token values, kubeconfig paths, or raw Authorization headers).
+5. Open an Application graph. When REST is disabled or misconfigured, topology stays on CRD tiers only.
+
+### Token creation
+
+Create an Argo CD API token with permissions to list applications and read resource-tree for your target apps. Common approaches:
+
+- Argo CD UI: **User Info → Generate New Token** (admin or project-scoped user)
+- CLI: `argocd account generate-token` (when you already have CLI access)
+
+Store the token with **Kube9: Set Argo CD API Token**. Use **Kube9: Clear Argo CD API Token** to remove it from SecretStorage for the active context.
+
+### TLS settings
+
+**`kube9.argocd.tlsInsecure`** skips TLS certificate verification for HTTPS API bases. Default is `false`. Use only for local labs or trusted port-forward setups. Do not enable for production ingress URLs.
+
+### Settings reference
+
+| Setting | Default | Purpose |
+|---------|---------|---------|
+| `kube9.argocd.restEnabled` | `false` | Opt-in gate for Tier B REST calls |
+| `kube9.argocd.serverUrl` | unset | Direct API base URL (string or per-context object) |
+| `kube9.argocd.accessMode` | `direct` | `direct` or `portForward` |
+| `kube9.argocd.tlsInsecure` | `false` | Skip TLS verification (non-production) |
+| `kube9.argocd.portForwardLocalPort` | `8443` | Preferred local port for port-forward mode |
+
+Commands (Command Palette → **Kube9**):
+
+- **Set Argo CD API Token**
+- **Clear Argo CD API Token**
+- **Test Argo CD API Connection**
+
 ## Usage Guide
 
 ### Viewing Applications
