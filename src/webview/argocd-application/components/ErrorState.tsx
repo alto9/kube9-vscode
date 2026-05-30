@@ -1,28 +1,28 @@
 import React from 'react';
+import { getErrorRecoveryHint } from '../graph/errorRecoveryHints';
 
 interface ErrorStateProps {
     message: string;
 }
 
 /**
- * Error state component displayed when application data fails to load.
+ * Full-panel error state when the Application detail session cannot load.
  */
 export function ErrorState({ message }: ErrorStateProps): React.JSX.Element {
+    const recoveryHint = getErrorRecoveryHint(message);
+
     return (
-        <div style={{
-            padding: '20px',
-            backgroundColor: 'var(--vscode-inputValidation-errorBackground)',
-            border: '1px solid var(--vscode-inputValidation-errorBorder)',
-            borderRadius: '4px',
-            color: 'var(--vscode-errorForeground)',
-            marginBottom: '20px'
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <span className="codicon codicon-error" style={{ marginRight: '8px' }}></span>
+        <div
+            className="argocd-app-error-state"
+            role="alert"
+            data-testid="app-error-state"
+        >
+            <div className="argocd-app-error-state__header">
+                <span className="codicon codicon-error" aria-hidden="true" />
                 <strong>Error</strong>
             </div>
-            <div>{message}</div>
+            <p className="argocd-app-error-state__message">{message}</p>
+            <p className="argocd-app-error-state__hint">{recoveryHint}</p>
         </div>
     );
 }
-

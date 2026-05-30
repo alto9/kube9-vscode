@@ -273,4 +273,67 @@ suite('ArgoCDApplicationWebviewProvider resource graph', () => {
         assert.strictEqual(messages.some((message) => message.type === 'resourceGraph'), false);
         assert.strictEqual(messages.some((message) => message.type === 'error'), true);
     });
+
+    test('graph rebuild failure posts graphDegradation when prior graph exists', async () => {
+        const pending = ArgoCDApplicationWebviewProvider.showApplication(
+            mockExtensionContext,
+            mockArgoCDService,
+            mockTreeProvider,
+            applicationName,
+            namespace,
+            contextName
+        );
+        const panel = getWebviewPanels().at(-1);
+        assert.ok(panel);
+        const messages = capturePostMessages(panel);
+        await pending;
+        await flushUntil(() => messages.length >= 2);
+
+        mockArgoCDService.getApplication = async () => {
+            throw new Error('cluster unreachable during graph rebuild');
+        };
+        messages.length = 0;
+
+        const webview = panel.webview as unknown as MockWebviewWithFire;
+        webview._fireMessage({ type: 'graphRefresh' });
+        await flushUntil(() => messages.some((message) => message.type === 'graphDegradation'));
+
+        assert.strictEqual(messages.some((message) => message.type === 'graphDegradation'), true);
+        assert.strictEqual(messages.some((message) => message.type === 'graphError'), false);
+        assert.strictEqual(messages.some((message) => message.type === 'resourceGraph'), false);
+    });
+
+    test('graph rebuild failure posts graphError when no prior graph exists', async () => {
+        const pending = ArgoCDApplicationWebviewProvider.showApplication(
+            mockExtensionContext,
+            mockArgoCDService,
+            mockTreeProvider,
+            applicationName,
+            namespace,
+            contextName
+        );
+        const panel = getWebviewPanels().at(-1);
+        assert.ok(panel);
+        await pending;
+
+        const panelKey = `${contextName}:${namespace}:${applicationName}`;
+        const openPanels = (ArgoCDApplicationWebviewProvider as unknown as {
+            openPanels: Map<string, { lastGraph?: unknown }>;
+        }).openPanels;
+        const panelInfo = openPanels.get(panelKey);
+        assert.ok(panelInfo);
+        panelInfo.lastGraph = undefined;
+
+        const messages = capturePostMessages(panel);
+        mockArgoCDService.getApplication = async () => {
+            throw new Error('cluster unreachable during graph rebuild');
+        };
+
+        const webview = panel.webview as unknown as MockWebviewWithFire;
+        webview._fireMessage({ type: 'graphRefresh' });
+        await flushUntil(() => messages.some((message) => message.type === 'graphError'));
+
+        assert.strictEqual(messages.some((message) => message.type === 'graphError'), true);
+        assert.strictEqual(messages.some((message) => message.type === 'graphDegradation'), false);
+    });
 });

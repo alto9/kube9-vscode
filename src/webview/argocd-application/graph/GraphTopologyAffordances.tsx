@@ -9,11 +9,17 @@ import {
 
 interface GraphTopologyAffordancesProps {
     resourceGraph: ApplicationResourceGraph;
+    hidden?: boolean;
 }
 
 export function GraphTopologyAffordances({
-    resourceGraph
+    resourceGraph,
+    hidden = false
 }: GraphTopologyAffordancesProps): React.JSX.Element | null {
+    if (hidden) {
+        return null;
+    }
+
     const showLimited = shouldShowLimitedTopologyAffordance(resourceGraph);
     const showTruncated = shouldShowTruncationAffordance(resourceGraph);
     const limitedMessage = getLimitedTopologyAffordanceMessage(resourceGraph);

@@ -24,6 +24,9 @@ interface ArgoCDApplicationViewProps {
     onViewInTree: () => void;
     onNavigateToResource: (kind: string, name: string, namespace: string) => void;
     resourceGraph: ApplicationResourceGraph | null;
+    graphError: string | null;
+    graphDegradation: string | null;
+    graphMerging: boolean;
     graphInteraction: GraphInteractionContextValue;
 }
 
@@ -49,6 +52,9 @@ export function ArgoCDApplicationView({
     onViewInTree,
     onNavigateToResource,
     resourceGraph,
+    graphError,
+    graphDegradation,
+    graphMerging,
     graphInteraction
 }: ArgoCDApplicationViewProps): React.JSX.Element {
     // Show loading state
@@ -105,6 +111,9 @@ export function ArgoCDApplicationView({
                     <GraphTab
                         application={application}
                         resourceGraph={resourceGraph}
+                        graphError={graphError}
+                        graphDegradation={graphDegradation}
+                        graphMerging={graphMerging}
                         graphInteraction={graphInteraction}
                         panelId={ARGOCD_APP_PANEL_IDS.graph}
                         labelledBy={ARGOCD_APP_TAB_IDS.graph}

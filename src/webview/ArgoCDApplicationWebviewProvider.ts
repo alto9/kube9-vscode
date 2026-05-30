@@ -526,6 +526,21 @@ export class ArgoCDApplicationWebviewProvider {
         }
     }
 
+    private static formatGraphRebuildErrorMessage(
+        error: unknown,
+        applicationName: string,
+        namespace: string,
+        context: string
+    ): string {
+        return ArgoCDApplicationWebviewProvider.formatOperationErrorMessage(
+            error,
+            applicationName,
+            namespace,
+            context,
+            'Resource graph rebuild'
+        );
+    }
+
     /**
      * Rebuild the resource graph from Application CRD data and post it to the webview.
      */
@@ -589,10 +604,29 @@ export class ArgoCDApplicationWebviewProvider {
                 truncated: graph.truncated
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(
-                `Failed to rebuild resource graph for ${applicationName} in ${namespace} (${context}): ${errorMessage}`
+            const userFriendlyMessage = ArgoCDApplicationWebviewProvider.formatGraphRebuildErrorMessage(
+                error,
+                applicationName,
+                namespace,
+                context
             );
+            console.warn(
+                `Failed to rebuild resource graph for ${applicationName} in ${namespace} (${context}): ${userFriendlyMessage}`
+            );
+
+            const priorGraph = panelInfo?.lastGraph;
+            if (priorGraph) {
+                panel.webview.postMessage({
+                    type: 'graphDegradation',
+                    message: userFriendlyMessage
+                } satisfies ExtensionToWebviewMessage);
+                return;
+            }
+
+            panel.webview.postMessage({
+                type: 'graphError',
+                message: userFriendlyMessage
+            } satisfies ExtensionToWebviewMessage);
         }
     }
 

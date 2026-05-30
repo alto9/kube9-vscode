@@ -126,6 +126,16 @@ export interface ErrorExtensionMessage {
     message: string;
 }
 
+export interface GraphErrorExtensionMessage {
+    type: 'graphError';
+    message: string;
+}
+
+export interface GraphDegradationExtensionMessage {
+    type: 'graphDegradation';
+    message: string;
+}
+
 export type ExtensionToWebviewMessage =
     | ApplicationDataExtensionMessage
     | UpdateStatusExtensionMessage
@@ -133,7 +143,9 @@ export type ExtensionToWebviewMessage =
     | ResourceGraphExtensionMessage
     | ResourceActionProgressExtensionMessage
     | ResourceActionResultExtensionMessage
-    | ErrorExtensionMessage;
+    | ErrorExtensionMessage
+    | GraphErrorExtensionMessage
+    | GraphDegradationExtensionMessage;
 
 export type ArgoCDWebviewMessage = WebviewToExtensionMessage | ExtensionToWebviewMessage;
 
@@ -155,7 +167,9 @@ const EXTENSION_MESSAGE_TYPES = new Set<string>([
     'resourceGraph',
     'resourceActionProgress',
     'resourceActionResult',
-    'error'
+    'error',
+    'graphError',
+    'graphDegradation'
 ]);
 
 const OPERATION_PHASES = new Set<string>(['Running', 'Succeeded', 'Failed', 'Error']);
@@ -283,6 +297,8 @@ function validateExtensionPayload(type: string, payload: Record<string, unknown>
                 (payload.nodeRef === undefined || isResourceNodeRef(payload.nodeRef))
             );
         case 'error':
+        case 'graphError':
+        case 'graphDegradation':
             return isNonEmptyString(payload.message);
         default:
             return false;

@@ -22,10 +22,25 @@ import {
     graphZoomAnimationDuration,
     usePrefersReducedMotion
 } from '../graph/usePrefersReducedMotion';
+import { GraphLoadingPlaceholder } from '../graph/GraphLoadingPlaceholder';
+import { GraphLoadingOverlay } from '../graph/GraphLoadingOverlay';
+import { GraphEmptyState } from '../graph/GraphEmptyState';
+import { GraphErrorState } from '../graph/GraphErrorState';
+import { GraphDegradationBanner } from '../graph/GraphDegradationBanner';
+import {
+    deriveGraphMerging,
+    isGraphEmptyManaged,
+    isGraphInitialLoad,
+    shouldHideGraphTopologyAffordances,
+    type GraphPresentationContext
+} from '../graph/graphStatePredicates';
 
 interface GraphTabProps {
     application: ArgoCDApplication;
     resourceGraph: ApplicationResourceGraph | null;
+    graphError: string | null;
+    graphDegradation: string | null;
+    graphMerging: boolean;
     graphInteraction: GraphInteractionContextValue;
     panelId?: string;
     labelledBy?: string;
@@ -36,23 +51,13 @@ const nodeTypes = {
     resourceGraph: ResourceGraphNodeTile
 };
 
-const placeholderStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '240px',
-    padding: '40px 20px',
-    color: 'var(--vscode-descriptionForeground)',
-    fontSize: '13px',
-    fontFamily: 'var(--vscode-font-family)',
-    textAlign: 'center',
-    gap: '8px'
-};
-
 interface GraphCanvasProps {
     application: ArgoCDApplication;
     resourceGraph: ApplicationResourceGraph;
+    graphMerging: boolean;
+    graphDegradation: string | null;
+    hideAffordances: boolean;
+    showEmptyManaged: boolean;
     graphInteraction: GraphInteractionContextValue;
 }
 
@@ -98,14 +103,21 @@ function GraphToolbar({
     );
 }
 
-function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanvasProps): React.JSX.Element {
+function GraphCanvas({
+    application,
+    resourceGraph,
+    graphMerging,
+    graphDegradation,
+    hideAffordances,
+    showEmptyManaged,
+    graphInteraction
+}: GraphCanvasProps): React.JSX.Element {
     const { zoomIn, zoomOut, fitView } = useReactFlow();
     const prefersReducedMotion = usePrefersReducedMotion();
     const zoomDuration = graphZoomAnimationDuration(prefersReducedMotion);
     const layoutCacheRef = React.useRef<GraphLayoutCache>(createEmptyLayoutCache());
     const [nodes, setNodes] = React.useState<Node<GraphNodeData>[]>([]);
     const [edges, setEdges] = React.useState<Edge[]>([]);
-    const managedNodeCount = resourceGraph.nodes.filter((node) => node.role === 'managed_resource').length;
 
     const applyGraph = React.useCallback(
         (graph: ApplicationResourceGraph, options?: { explicitFitView?: boolean; autoFit?: boolean }) => {
@@ -150,12 +162,13 @@ function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanv
                     </button>
                 </div>
             )}
+            {graphDegradation && <GraphDegradationBanner message={graphDegradation} />}
             <GraphToolbar
                 onZoomIn={() => zoomIn({ duration: zoomDuration })}
                 onZoomOut={() => zoomOut({ duration: zoomDuration })}
                 onFitView={handleFitView}
             />
-            <GraphTopologyAffordances resourceGraph={resourceGraph} />
+            <GraphTopologyAffordances resourceGraph={resourceGraph} hidden={hideAffordances} />
             <div className="argocd-graph-canvas">
                 <ReactFlow
                     nodes={nodes}
@@ -170,14 +183,24 @@ function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanv
                     proOptions={{ hideAttribution: true }}
                     defaultEdgeOptions={{ className: 'argocd-graph-edge' }}
                 />
-                {managedNodeCount === 0 && (
-                    <div className="argocd-graph-empty-banner" data-testid="graph-empty-banner">
-                        No managed resources for {application.name}
-                    </div>
-                )}
+                {showEmptyManaged && <GraphEmptyState applicationName={application.name} />}
+                {graphMerging && <GraphLoadingOverlay />}
             </div>
         </div>
     );
+}
+
+function buildPresentationContext(
+    resourceGraph: ApplicationResourceGraph | null,
+    graphError: string | null,
+    graphMerging: boolean
+): GraphPresentationContext {
+    return {
+        resourceGraph,
+        graphError,
+        graphMerging,
+        sessionError: false
+    };
 }
 
 /**
@@ -186,34 +209,67 @@ function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanv
 export function GraphTab({
     application,
     resourceGraph,
+    graphError,
+    graphDegradation,
+    graphMerging,
     graphInteraction,
     panelId = ARGOCD_APP_PANEL_IDS.graph,
     labelledBy,
     className
 }: GraphTabProps): React.JSX.Element {
-    if (!resourceGraph) {
+    const presentation = buildPresentationContext(resourceGraph, graphError, graphMerging);
+    const initialLoad = isGraphInitialLoad(presentation);
+    const emptyManaged = isGraphEmptyManaged(presentation);
+    const hideAffordances = shouldHideGraphTopologyAffordances(presentation);
+
+    const panelClass = ['argocd-graph-tab', className].filter(Boolean).join(' ');
+
+    if (graphError && !resourceGraph) {
         return (
             <div
-                className={['argocd-graph-tab', 'argocd-graph-tab--placeholder', className].filter(Boolean).join(' ')}
-                data-testid="graph-tab-placeholder"
-                role="tabpanel"
                 id={panelId}
+                className={[panelClass, 'argocd-graph-tab--error'].filter(Boolean).join(' ')}
+                role="tabpanel"
                 aria-labelledby={labelledBy}
+                data-testid="graph-tab-error"
             >
-                <div style={placeholderStyle}>
-                    <span>Graph loading…</span>
-                    <span style={{ fontSize: '12px' }}>Waiting for resource graph from {application.name}</span>
-                </div>
+                <GraphErrorState message={graphError} />
             </div>
         );
     }
 
-    const rootClass = ['argocd-graph-tab', className].filter(Boolean).join(' ');
+    if (initialLoad) {
+        return (
+            <div
+                id={panelId}
+                className={[panelClass, 'argocd-graph-tab--placeholder'].filter(Boolean).join(' ')}
+                role="tabpanel"
+                aria-labelledby={labelledBy}
+                data-testid="graph-tab-placeholder"
+            >
+                <GraphLoadingPlaceholder applicationName={application.name} />
+            </div>
+        );
+    }
+
+    if (!resourceGraph) {
+        return (
+            <div
+                id={panelId}
+                className={[panelClass, 'argocd-graph-tab--placeholder'].filter(Boolean).join(' ')}
+                role="tabpanel"
+                aria-labelledby={labelledBy}
+                data-testid="graph-tab-placeholder"
+            >
+                <GraphLoadingPlaceholder applicationName={application.name} />
+            </div>
+        );
+    }
 
     return (
         <div
             id={panelId}
-            className={rootClass}
+            className={panelClass}
             role="tabpanel"
             aria-labelledby={labelledBy}
         >
@@ -222,6 +278,10 @@ export function GraphTab({
                     <GraphCanvas
                         application={application}
                         resourceGraph={resourceGraph}
+                        graphMerging={graphMerging}
+                        graphDegradation={graphDegradation}
+                        hideAffordances={hideAffordances}
+                        showEmptyManaged={emptyManaged}
                         graphInteraction={graphInteraction}
                     />
                 </ReactFlowProvider>
@@ -229,3 +289,5 @@ export function GraphTab({
         </div>
     );
 }
+
+export { deriveGraphMerging };

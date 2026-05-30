@@ -5,14 +5,17 @@ import React from 'react';
  */
 export function LoadingState(): React.JSX.Element {
     return (
-        <div style={{
-            textAlign: 'center',
-            padding: '40px 20px',
-            color: 'var(--vscode-descriptionForeground)'
-        }}>
-            <div style={{ marginBottom: '12px' }}>
-                <span className="codicon codicon-loading codicon-modifier-spin" style={{ fontSize: '24px' }}></span>
-            </div>
+        <div
+            className="argocd-app-loading-state"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            data-testid="app-loading-state"
+        >
+            <span
+                className="codicon codicon-loading codicon-modifier-spin argocd-app-loading-state__icon"
+                aria-hidden="true"
+            />
             <div>Loading application data...</div>
         </div>
     );

@@ -971,3 +971,180 @@ body {
     pointer-events: none;
 }
 
+/* ==========================================================================
+   Application session loading / error
+   ========================================================================== */
+
+.argocd-app-loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: var(--description-foreground);
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+    text-align: center;
+    gap: var(--spacing-md);
+}
+
+.argocd-app-loading-state__icon {
+    font-size: 24px;
+}
+
+.argocd-app-error-state {
+    margin: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: var(--error-bg);
+    border: 1px solid var(--error-border);
+    border-radius: var(--radius-lg);
+    color: var(--error-fg);
+    font-family: var(--font-family);
+    font-size: var(--font-size);
+}
+
+.argocd-app-error-state__header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.argocd-app-error-state__message {
+    margin: 0 0 var(--spacing-sm);
+}
+
+.argocd-app-error-state__hint {
+    margin: 0;
+    color: var(--description-foreground);
+    font-size: var(--font-size-sm);
+}
+
+/* ==========================================================================
+   Graph state surfaces (loading, empty, error, merge overlay)
+   ========================================================================== */
+
+.argocd-graph-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 240px;
+    padding: 40px 20px;
+    text-align: center;
+    gap: var(--spacing-sm);
+    font-family: var(--font-family);
+    color: var(--description-foreground);
+}
+
+.argocd-graph-state__icon {
+    font-size: 24px;
+}
+
+.argocd-graph-state__title {
+    margin: 0;
+    font-size: var(--font-size);
+    color: var(--foreground);
+}
+
+.argocd-graph-state__detail,
+.argocd-graph-state__hint {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    max-width: 420px;
+}
+
+.argocd-graph-state--error {
+    color: var(--error-fg);
+}
+
+.argocd-graph-state--error .argocd-graph-state__title {
+    color: var(--error-fg);
+}
+
+.argocd-graph-state--error .argocd-graph-state__icon {
+    color: var(--error-fg);
+}
+
+.argocd-graph-state--error .argocd-graph-state__hint {
+    color: var(--description-foreground);
+}
+
+.argocd-graph-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    background: color-mix(in srgb, var(--background) 72%, transparent);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.argocd-graph-loading-overlay__icon {
+    font-size: 20px;
+    color: var(--foreground);
+}
+
+.argocd-graph-loading-overlay__message {
+    font-size: var(--font-size-sm);
+    color: var(--description-foreground);
+}
+
+.argocd-graph-empty-state {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xs);
+    max-width: min(420px, calc(100% - 32px));
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--info-border);
+    background: var(--info-bg);
+    color: var(--foreground);
+    font-family: var(--font-family);
+    text-align: center;
+    pointer-events: none;
+}
+
+.argocd-graph-empty-state__icon {
+    color: var(--foreground);
+}
+
+.argocd-graph-empty-state__title {
+    margin: 0;
+    font-size: var(--font-size);
+    font-weight: 600;
+}
+
+.argocd-graph-empty-state__detail {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--description-foreground);
+}
+
+.argocd-graph-degradation-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    margin: 0 var(--spacing-md) var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--warning-border);
+    background: var(--warning-bg);
+    color: var(--foreground);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+}
+
+.argocd-graph-degradation-banner__icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
