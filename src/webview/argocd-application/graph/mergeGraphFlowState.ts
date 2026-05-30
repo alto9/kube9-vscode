@@ -70,7 +70,7 @@ export function mergeGraphFlowState(input: MergeGraphFlowStateInput): MergeGraph
         nodes: sortNodesForFocusOrder(nodes),
         edges,
         relayouted: relayout,
-        shouldAutoFit: isInitial || (structureVersionChanged && !explicitFitView),
+        shouldAutoFit: isInitial || explicitFitView,
         cache: {
             positions,
             structureVersion: graph.structureVersion,

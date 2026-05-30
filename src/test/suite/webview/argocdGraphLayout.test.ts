@@ -15,6 +15,11 @@ import {
     createEmptyLayoutCache,
     mergeGraphFlowState
 } from '../../../webview/argocd-application/graph/mergeGraphFlowState';
+import { applyNodeSelection, resolveSelectionAfterMerge } from '../../../webview/argocd-application/graph/graphSelection';
+import {
+    applicationKeyChanged,
+    shouldPreserveViewport
+} from '../../../webview/argocd-application/graph/viewportCache';
 
 function rootNode(): ResourceGraphNode {
     return {
@@ -120,6 +125,102 @@ suite('argocd graph layout', () => {
                 assert.strictEqual(node.data.dto.status.syncStatus, 'OutOfSync');
             }
         }
+    });
+
+    test('structureVersion change does not auto-fit without explicit fit', () => {
+        const graph = starGraph();
+        const first = mergeGraphFlowState({
+            graph,
+            cache: createEmptyLayoutCache()
+        });
+        assert.strictEqual(first.shouldAutoFit, true);
+
+        const extraNode = managedNode('api');
+        const expandedNodes = [...graph.nodes, extraNode];
+        const expandedEdges = [
+            ...graph.edges,
+            {
+                id: buildGraphEdgeId(graph.nodes[0].id, extraNode.id, 'manages'),
+                source: graph.nodes[0].id,
+                target: extraNode.id,
+                relationship: 'manages' as const
+            }
+        ];
+        const structuralGraph: ApplicationResourceGraph = {
+            ...graph,
+            nodes: expandedNodes,
+            edges: expandedEdges,
+            structureVersion: computeStructureVersion({ nodes: expandedNodes, edges: expandedEdges })
+        };
+
+        const second = mergeGraphFlowState({
+            graph: structuralGraph,
+            cache: first.cache
+        });
+
+        assert.strictEqual(second.relayouted, true);
+        assert.strictEqual(second.shouldAutoFit, false);
+    });
+
+    test('resolveSelectionAfterMerge keeps id when present and clears when removed', () => {
+        const ids = new Set(['a', 'b']);
+        assert.strictEqual(resolveSelectionAfterMerge('b', ids), 'b');
+        assert.strictEqual(resolveSelectionAfterMerge('c', ids), null);
+        assert.strictEqual(resolveSelectionAfterMerge(null, ids), null);
+    });
+
+    test('applyNodeSelection marks only the selected tile', () => {
+        const graph = starGraph();
+        const { nodes } = mapGraphDtoToFlow(graph);
+        const managedId = nodes.find((node) => node.data.dto.role === 'managed_resource')!.id;
+        const selected = applyNodeSelection(nodes, managedId);
+        assert.strictEqual(selected.filter((node) => node.selected).length, 1);
+        assert.strictEqual(selected.find((node) => node.selected)?.id, managedId);
+    });
+
+    test('shouldPreserveViewport follows attribute-only merge rules', () => {
+        const viewport = { x: 10, y: 20, zoom: 1.5 };
+        assert.strictEqual(
+            shouldPreserveViewport({
+                applicationKeyChanged: false,
+                shouldAutoFit: false,
+                explicitFitView: false,
+                cachedViewport: viewport
+            }),
+            true
+        );
+        assert.strictEqual(
+            shouldPreserveViewport({
+                applicationKeyChanged: false,
+                shouldAutoFit: true,
+                explicitFitView: false,
+                cachedViewport: viewport
+            }),
+            false
+        );
+        assert.strictEqual(
+            shouldPreserveViewport({
+                applicationKeyChanged: true,
+                shouldAutoFit: false,
+                explicitFitView: false,
+                cachedViewport: viewport
+            }),
+            false
+        );
+    });
+
+    test('applicationKeyChanged detects context switch', () => {
+        const graph = starGraph();
+        const key = graph.applicationKey;
+        assert.strictEqual(applicationKeyChanged(null, key), false);
+        assert.strictEqual(applicationKeyChanged('minikube:argocd:guestbook', key), false);
+        assert.strictEqual(
+            applicationKeyChanged('minikube:argocd:guestbook', {
+                ...key,
+                name: 'other-app'
+            }),
+            true
+        );
     });
 
     test('cycle fallback produces finite positions without throwing', () => {
