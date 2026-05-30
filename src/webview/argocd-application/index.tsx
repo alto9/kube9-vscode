@@ -6,6 +6,7 @@ import { TabType } from './components/TabBar';
 import { migratePersistedTab } from './utils/tabMigration';
 import { ArgoCDApplication } from '../../types/argocd';
 import type { ApplicationResourceGraph } from '../../types/applicationResourceGraph';
+import { deriveGraphMerging } from './components/GraphTab';
 import { useGraphInteractionState } from './graph/useGraphInteractionState';
 
 // Acquire VS Code API
@@ -29,6 +30,8 @@ function App(): React.JSX.Element {
     const [loading, setLoading] = React.useState<boolean>(true);
     const [activeTab, setActiveTab] = React.useState<TabType>('graph');
     const [resourceGraph, setResourceGraph] = React.useState<ApplicationResourceGraph | null>(null);
+    const [graphError, setGraphError] = React.useState<string | null>(null);
+    const [graphDegradation, setGraphDegradation] = React.useState<string | null>(null);
     const [syncing, setSyncing] = React.useState<boolean>(false);
     const [refreshing, setRefreshing] = React.useState<boolean>(false);
     const [appOperationRunning, setAppOperationRunning] = React.useState<boolean>(false);
@@ -103,6 +106,16 @@ function App(): React.JSX.Element {
 
                 case 'resourceGraph':
                     setResourceGraph(message.graph);
+                    setGraphError(null);
+                    setGraphDegradation(null);
+                    break;
+
+                case 'graphError':
+                    setGraphError(message.message || 'Resource graph unavailable');
+                    break;
+
+                case 'graphDegradation':
+                    setGraphDegradation(message.message || 'Graph data may be incomplete');
                     break;
 
                 case 'resourceActionProgress':
@@ -172,6 +185,8 @@ function App(): React.JSX.Element {
         }
     };
 
+    const graphMerging = deriveGraphMerging(resourceGraph, syncing, refreshing, appOperationRunning);
+
     return (
         <ArgoCDApplicationView
             application={application}
@@ -187,6 +202,9 @@ function App(): React.JSX.Element {
             onViewInTree={handleViewInTree}
             onNavigateToResource={handleNavigateToResource}
             resourceGraph={resourceGraph}
+            graphError={graphError}
+            graphDegradation={graphDegradation}
+            graphMerging={graphMerging}
             graphInteraction={graphInteraction}
         />
     );
