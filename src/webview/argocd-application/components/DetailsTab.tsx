@@ -12,6 +12,9 @@ interface DetailsTabProps {
     onHardRefresh: () => void;
     onViewInTree: () => void;
     onNavigateToResource: (kind: string, name: string, namespace: string) => void;
+    panelId?: string;
+    labelledBy?: string;
+    className?: string;
 }
 
 const sectionDividerStyle: React.CSSProperties = {
@@ -30,10 +33,21 @@ export function DetailsTab({
     onRefresh,
     onHardRefresh,
     onViewInTree,
-    onNavigateToResource
+    onNavigateToResource,
+    panelId,
+    labelledBy,
+    className
 }: DetailsTabProps): React.JSX.Element {
+    const rootClass = ['argocd-details-panel', className].filter(Boolean).join(' ');
+
     return (
-        <div>
+        <div
+            id={panelId}
+            className={rootClass}
+            role="tabpanel"
+            aria-labelledby={labelledBy}
+            tabIndex={-1}
+        >
             <OverviewTab
                 application={application}
                 syncing={syncing}

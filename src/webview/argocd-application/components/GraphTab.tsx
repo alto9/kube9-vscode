@@ -17,11 +17,19 @@ import {
 } from '../graph/mergeGraphFlowState';
 import type { GraphNodeData } from '../graph/types';
 import { GraphTopologyAffordances } from '../graph/GraphTopologyAffordances';
+import { ARGOCD_APP_PANEL_IDS } from '../graph/tabBarA11y';
+import {
+    graphZoomAnimationDuration,
+    usePrefersReducedMotion
+} from '../graph/usePrefersReducedMotion';
 
 interface GraphTabProps {
     application: ArgoCDApplication;
     resourceGraph: ApplicationResourceGraph | null;
     graphInteraction: GraphInteractionContextValue;
+    panelId?: string;
+    labelledBy?: string;
+    className?: string;
 }
 
 const nodeTypes = {
@@ -80,8 +88,8 @@ function GraphToolbar({
             <button
                 type="button"
                 className="argocd-graph-toolbar__button"
-                title="Fit view"
-                aria-label="Fit view"
+                title="Fit graph to view"
+                aria-label="Fit graph to view"
                 onClick={onFitView}
             >
                 Fit
@@ -92,6 +100,8 @@ function GraphToolbar({
 
 function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanvasProps): React.JSX.Element {
     const { zoomIn, zoomOut, fitView } = useReactFlow();
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const zoomDuration = graphZoomAnimationDuration(prefersReducedMotion);
     const layoutCacheRef = React.useRef<GraphLayoutCache>(createEmptyLayoutCache());
     const [nodes, setNodes] = React.useState<Node<GraphNodeData>[]>([]);
     const [edges, setEdges] = React.useState<Edge[]>([]);
@@ -110,11 +120,11 @@ function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanv
 
             if (options?.autoFit ?? merged.shouldAutoFit) {
                 window.requestAnimationFrame(() => {
-                    fitView({ padding: 0.2, duration: 150 });
+                    fitView({ padding: 0.2, duration: zoomDuration });
                 });
             }
         },
-        [fitView]
+        [fitView, zoomDuration]
     );
 
     React.useEffect(() => {
@@ -141,8 +151,8 @@ function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanv
                 </div>
             )}
             <GraphToolbar
-                onZoomIn={() => zoomIn({ duration: 150 })}
-                onZoomOut={() => zoomOut({ duration: 150 })}
+                onZoomIn={() => zoomIn({ duration: zoomDuration })}
+                onZoomOut={() => zoomOut({ duration: zoomDuration })}
                 onFitView={handleFitView}
             />
             <GraphTopologyAffordances resourceGraph={resourceGraph} />
@@ -173,25 +183,49 @@ function GraphCanvas({ application, resourceGraph, graphInteraction }: GraphCanv
 /**
  * Interactive React Flow canvas for the Argo CD Application resource graph.
  */
-export function GraphTab({ application, resourceGraph, graphInteraction }: GraphTabProps): React.JSX.Element {
+export function GraphTab({
+    application,
+    resourceGraph,
+    graphInteraction,
+    panelId = ARGOCD_APP_PANEL_IDS.graph,
+    labelledBy,
+    className
+}: GraphTabProps): React.JSX.Element {
     if (!resourceGraph) {
         return (
-            <div style={placeholderStyle} data-testid="graph-tab-placeholder">
-                <span>Graph loading…</span>
-                <span style={{ fontSize: '12px' }}>Waiting for resource graph from {application.name}</span>
+            <div
+                className={['argocd-graph-tab', 'argocd-graph-tab--placeholder', className].filter(Boolean).join(' ')}
+                data-testid="graph-tab-placeholder"
+                role="tabpanel"
+                id={panelId}
+                aria-labelledby={labelledBy}
+            >
+                <div style={placeholderStyle}>
+                    <span>Graph loading…</span>
+                    <span style={{ fontSize: '12px' }}>Waiting for resource graph from {application.name}</span>
+                </div>
             </div>
         );
     }
 
+    const rootClass = ['argocd-graph-tab', className].filter(Boolean).join(' ');
+
     return (
-        <GraphInteractionProvider value={graphInteraction}>
-            <ReactFlowProvider>
-                <GraphCanvas
-                    application={application}
-                    resourceGraph={resourceGraph}
-                    graphInteraction={graphInteraction}
-                />
-            </ReactFlowProvider>
-        </GraphInteractionProvider>
+        <div
+            id={panelId}
+            className={rootClass}
+            role="tabpanel"
+            aria-labelledby={labelledBy}
+        >
+            <GraphInteractionProvider value={graphInteraction}>
+                <ReactFlowProvider>
+                    <GraphCanvas
+                        application={application}
+                        resourceGraph={resourceGraph}
+                        graphInteraction={graphInteraction}
+                    />
+                </ReactFlowProvider>
+            </GraphInteractionProvider>
+        </div>
     );
 }

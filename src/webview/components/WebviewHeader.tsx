@@ -8,6 +8,7 @@ export interface WebviewHeaderAction {
     icon?: string;
     onClick: () => void;
     disabled?: boolean;
+    busy?: boolean;
 }
 
 /**
@@ -17,6 +18,7 @@ export interface WebviewHeaderProps {
     title: string;
     actions?: WebviewHeaderAction[];
     helpContext?: string; // If provided, shows help button
+    className?: string;
 }
 
 // Get VS Code API - use shared instance if available, otherwise try to acquire
@@ -49,7 +51,8 @@ function getVSCodeAPI(): any {
 export const WebviewHeader: React.FC<WebviewHeaderProps> = ({
     title,
     actions = [],
-    helpContext
+    helpContext,
+    className
 }) => {
     const handleHelpClick = () => {
         // Resolve on each click: acquireVsCodeApi runs in the app entry module; this module
@@ -64,7 +67,7 @@ export const WebviewHeader: React.FC<WebviewHeaderProps> = ({
     };
 
     return (
-        <header className="webview-header">
+        <header className={['webview-header', className].filter(Boolean).join(' ')}>
             <div className="webview-header-title">
                 <h1>{title}</h1>
             </div>
@@ -75,6 +78,8 @@ export const WebviewHeader: React.FC<WebviewHeaderProps> = ({
                         className="webview-header-action-btn"
                         onClick={action.onClick}
                         disabled={action.disabled}
+                        aria-disabled={action.disabled ? true : undefined}
+                        aria-busy={action.busy ? true : undefined}
                         aria-label={action.label}
                     >
                         {action.icon && (

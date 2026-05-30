@@ -5,10 +5,8 @@ import { getKindIconClass } from './kindIcons';
 import { SyncHealthBadges } from './syncHealthBadges';
 import { getOverflowActions, nodeBusyKeyFromNode, type GraphOverflowAction } from './graphNodeCapabilities';
 import { useGraphInteraction } from './GraphInteractionContext';
-
-function buildAccessibleName(kindLabel: string, label: string, syncStatus: string, healthStatus: string): string {
-    return `${kindLabel} ${label} ${syncStatus} ${healthStatus}`;
-}
+import { buildGraphTileAccessibleName } from './buildAccessibleName';
+import { nextOverflowMenuIndex } from './overflowMenuKeyboard';
 
 export interface GraphOverflowMenuHandle {
     open: () => void;
@@ -19,24 +17,38 @@ const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
         actions,
         disabled,
         busyMessage,
-        onSelect
+        onSelect,
+        onClose,
+        tileRef
     }: {
         actions: GraphOverflowAction[];
         disabled: boolean;
         busyMessage?: string;
         onSelect: (action: GraphOverflowAction) => void;
+        onClose: () => void;
+        tileRef: React.RefObject<HTMLDivElement>;
     },
     ref: React.Ref<GraphOverflowMenuHandle>
 ): React.JSX.Element | null {
     const [open, setOpen] = React.useState(false);
+    const [focusedItemIndex, setFocusedItemIndex] = React.useState(0);
     const menuRef = React.useRef<HTMLDivElement>(null);
     const buttonRef = React.useRef<HTMLButtonElement>(null);
+    const menuItemRefs = React.useRef<Array<HTMLButtonElement | null>>([]);
+
+    const closeMenu = React.useCallback((returnFocusToTile: boolean) => {
+        setOpen(false);
+        onClose();
+        if (returnFocusToTile) {
+            tileRef.current?.focus();
+        }
+    }, [onClose, tileRef]);
 
     React.useImperativeHandle(ref, () => ({
         open: () => {
             if (!disabled && actions.length > 0) {
+                setFocusedItemIndex(0);
                 setOpen(true);
-                buttonRef.current?.focus();
             }
         }
     }), [actions.length, disabled]);
@@ -45,21 +57,39 @@ const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
         if (!open) {
             return;
         }
+        menuItemRefs.current[focusedItemIndex]?.focus();
+    }, [focusedItemIndex, open]);
+
+    React.useEffect(() => {
+        if (!open) {
+            return;
+        }
         const handlePointerDown = (event: MouseEvent): void => {
             if (menuRef.current && !menuRef.current.contains(event.target as Element)) {
-                setOpen(false);
+                closeMenu(false);
             }
         };
         document.addEventListener('mousedown', handlePointerDown);
         return () => document.removeEventListener('mousedown', handlePointerDown);
-    }, [open]);
+    }, [closeMenu, open]);
 
-    const handleKeyDown = (event: React.KeyboardEvent): void => {
+    const handleMenuKeyDown = (event: React.KeyboardEvent): void => {
         if (event.key === 'Escape') {
             event.preventDefault();
             event.stopPropagation();
-            setOpen(false);
-            buttonRef.current?.focus();
+            closeMenu(true);
+            return;
+        }
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setFocusedItemIndex((current) => nextOverflowMenuIndex(current, 'down', actions.length));
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setFocusedItemIndex((current) => nextOverflowMenuIndex(current, 'up', actions.length));
         }
     };
 
@@ -68,7 +98,7 @@ const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
     }
 
     return (
-        <div className="argocd-graph-node__overflow" ref={menuRef} onKeyDown={handleKeyDown}>
+        <div className="argocd-graph-node__overflow" ref={menuRef} onKeyDown={handleMenuKeyDown}>
             <button
                 ref={buttonRef}
                 type="button"
@@ -80,7 +110,12 @@ const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
                 disabled={disabled}
                 onClick={(event) => {
                     event.stopPropagation();
-                    setOpen((value) => !value);
+                    if (open) {
+                        closeMenu(true);
+                        return;
+                    }
+                    setFocusedItemIndex(0);
+                    setOpen(true);
                 }}
             >
                 <span className="codicon codicon-kebab-vertical" aria-hidden="true" />
@@ -88,20 +123,24 @@ const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
             {open && (
                 <div className="argocd-graph-node__overflow-menu" role="menu">
                     {busyMessage && (
-                        <div className="argocd-graph-node__overflow-busy" role="status">
+                        <div className="argocd-graph-node__overflow-busy" role="status" aria-live="polite">
                             {busyMessage}
                         </div>
                     )}
-                    {actions.map((action) => (
+                    {actions.map((action, index) => (
                         <button
                             key={action.actionId}
+                            ref={(element) => {
+                                menuItemRefs.current[index] = element;
+                            }}
                             type="button"
                             role="menuitem"
                             className="argocd-graph-node__overflow-item"
                             disabled={disabled}
+                            tabIndex={-1}
                             onClick={(event) => {
                                 event.stopPropagation();
-                                setOpen(false);
+                                closeMenu(true);
                                 onSelect(action);
                             }}
                         >
@@ -123,13 +162,14 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
     const busyKey = nodeBusyKeyFromNode(dto);
     const nodeBusy = busyKey !== null && interaction.busyNodeKeys.has(busyKey);
     const menusDisabled = interaction.menusDisabled || nodeBusy;
-    const accessibleName = buildAccessibleName(
+    const accessibleName = buildGraphTileAccessibleName(
         dto.kindLabel,
         dto.label,
         dto.status.syncStatus,
         dto.status.healthStatus
     );
 
+    const tileRef = React.useRef<HTMLDivElement>(null);
     const overflowMenuRef = React.useRef<GraphOverflowMenuHandle>(null);
 
     const handleTileKeyDown = (event: React.KeyboardEvent): void => {
@@ -161,6 +201,7 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
 
     return (
         <div
+            ref={tileRef}
             className={[
                 'argocd-graph-node',
                 isRoot ? 'argocd-graph-node--root' : '',
@@ -180,7 +221,9 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
                     className={getKindIconClass(dto.kindLabel, dto.resourceKey?.kind)}
                     aria-hidden="true"
                 />
-                <span className="argocd-graph-node__kind">{dto.kindLabel}</span>
+                <span className="argocd-graph-node__kind" aria-hidden="true">
+                    {dto.kindLabel}
+                </span>
                 {overflowActions.length > 0 && (
                     <GraphOverflowMenu
                         ref={overflowMenuRef}
@@ -188,13 +231,19 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
                         disabled={menusDisabled}
                         busyMessage={nodeBusy ? 'Action in progress…' : undefined}
                         onSelect={handleOverflowSelect}
+                        onClose={() => undefined}
+                        tileRef={tileRef}
                     />
                 )}
             </div>
-            <div className="argocd-graph-node__label" title={dto.label}>
+            <div className="argocd-graph-node__label" title={dto.label} aria-hidden="true">
                 {dto.label}
             </div>
-            <SyncHealthBadges status={dto.status} className="argocd-graph-node__badges" />
+            <SyncHealthBadges
+                status={dto.status}
+                className="argocd-graph-node__badges"
+                decorative
+            />
             <Handle type="source" position={Position.Right} className="argocd-graph-node__handle" />
         </div>
     );
