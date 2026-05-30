@@ -46,6 +46,11 @@ import {
     copyNameCommand,
     copyNamespaceCommand
 } from './commands/ArgoCDCommands';
+import {
+    setArgoCDApiTokenCommand,
+    clearArgoCDApiTokenCommand,
+    testArgoCDApiConnectionCommand
+} from './commands/ArgoCDRestAuthCommands';
 import { showCacheStatsCommand } from './commands/cacheStats';
 import { EventsCommands } from './commands/EventsCommands';
 import { EventViewerPanel } from './webview/EventViewerPanel';
@@ -1442,6 +1447,27 @@ function registerCommands(): void {
     );
     context.subscriptions.push(copyNamespaceCmd);
     disposables.push(copyNamespaceCmd);
+
+    const setArgoCDApiTokenCmd = registerInstrumentedKube9Command(
+        'kube9.argocd.setApiToken',
+        setArgoCDApiTokenCommand
+    );
+    context.subscriptions.push(setArgoCDApiTokenCmd);
+    disposables.push(setArgoCDApiTokenCmd);
+
+    const clearArgoCDApiTokenCmd = registerInstrumentedKube9Command(
+        'kube9.argocd.clearApiToken',
+        clearArgoCDApiTokenCommand
+    );
+    context.subscriptions.push(clearArgoCDApiTokenCmd);
+    disposables.push(clearArgoCDApiTokenCmd);
+
+    const testArgoCDApiConnectionCmd = registerInstrumentedKube9Command(
+        'kube9.argocd.testApiConnection',
+        testArgoCDApiConnectionCommand
+    );
+    context.subscriptions.push(testArgoCDApiConnectionCmd);
+    disposables.push(testArgoCDApiConnectionCmd);
     
     // Register cache statistics command
     const showCacheStatsCmd = registerInstrumentedKube9Command(

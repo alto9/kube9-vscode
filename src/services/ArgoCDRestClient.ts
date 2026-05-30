@@ -80,6 +80,33 @@ function requestJson(url: string, auth: ArgoCDRestAuthContext, timeoutMs: number
     });
 }
 
+export async function testArgoCDRestConnection(auth: ArgoCDRestAuthContext): Promise<void> {
+    const timeoutMs = readNumberSetting('kube9', 'timeout.apiRequest', 30_000);
+    const url = new URL('/api/v1/applications', `${auth.baseUrl}/`);
+    url.searchParams.set('limit', '1');
+
+    try {
+        const response = await requestJson(url.toString(), auth, timeoutMs);
+
+        if (!response.ok) {
+            const body = await response.text();
+            const detail = body.trim() === '' ? response.statusText : body;
+            throw new ArgoCDRestClientError(
+                redactErrorMessage(
+                    `Argo CD API connection test failed (${response.status}): ${detail}`
+                ),
+                response.status
+            );
+        }
+    } catch (error) {
+        if (error instanceof ArgoCDRestClientError) {
+            throw error;
+        }
+        const message = error instanceof Error ? error.message : String(error);
+        throw new ArgoCDRestClientError(redactErrorMessage(message));
+    }
+}
+
 export async function fetchApplicationResourceTree(
     auth: ArgoCDRestAuthContext,
     applicationName: string,
