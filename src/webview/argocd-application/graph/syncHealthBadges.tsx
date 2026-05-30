@@ -11,18 +11,20 @@ export { healthStatusBadgeClass, syncStatusBadgeClass, syncStatusIconClass } fro
 interface SyncHealthBadgesProps {
     status: Pick<ResourceGraphNodeStatus, 'syncStatus' | 'healthStatus' | 'message'>;
     className?: string;
+    /** When true, badges are hidden from the accessibility tree (parent supplies the name). */
+    decorative?: boolean;
 }
 
 /**
  * Sync and health badges shared by drift table rows and graph tiles.
  */
-export function SyncHealthBadges({ status, className }: SyncHealthBadgesProps): React.JSX.Element {
+export function SyncHealthBadges({ status, className, decorative = false }: SyncHealthBadgesProps): React.JSX.Element {
     const syncClass = syncStatusBadgeClass(status.syncStatus);
     const healthClass = healthStatusBadgeClass(status.healthStatus);
     const rootClass = ['argocd-status-badge-group', className].filter(Boolean).join(' ');
 
     return (
-        <div className={rootClass}>
+        <div className={rootClass} aria-hidden={decorative ? true : undefined}>
             <span
                 className={`argocd-status-badge ${syncClass}`}
                 title={status.message}

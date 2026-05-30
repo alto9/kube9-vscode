@@ -8,6 +8,7 @@ import { GraphTab } from './components/GraphTab';
 import { ArgoCDApplication } from '../../types/argocd';
 import type { ApplicationResourceGraph } from '../../types/applicationResourceGraph';
 import type { GraphInteractionContextValue } from './graph/GraphInteractionContext';
+import { ARGOCD_APP_PANEL_IDS, ARGOCD_APP_TAB_IDS } from './graph/tabBarA11y';
 
 interface ArgoCDApplicationViewProps {
     application: ArgoCDApplication | null;
@@ -29,6 +30,10 @@ interface ArgoCDApplicationViewProps {
 /**
  * Main component for the ArgoCD Application webview.
  * Manages application data display, tab navigation, and state.
+ *
+ * Focus order follows `.ai/interface/accessibility.md`: header actions, graph toolbar,
+ * graph tiles, Graph | Details tabs, then the active panel. CSS grid keeps tabs visually
+ * below the header while DOM order preserves keyboard sequence.
  */
 export function ArgoCDApplicationView({
     application,
@@ -63,13 +68,15 @@ export function ArgoCDApplicationView({
                 label: syncing ? 'Syncing...' : 'Sync',
                 icon: 'codicon-sync',
                 onClick: onSync,
-                disabled: syncing || refreshing
+                disabled: syncing || refreshing,
+                busy: syncing
             },
             {
                 label: refreshing ? 'Refreshing...' : 'Refresh',
                 icon: 'codicon-refresh',
                 onClick: onRefresh,
-                disabled: syncing || refreshing
+                disabled: syncing || refreshing,
+                busy: refreshing
             },
             {
                 label: 'Hard Refresh',
@@ -86,29 +93,28 @@ export function ArgoCDApplicationView({
         ];
 
         return (
-            <div style={{
-                fontFamily: 'var(--vscode-font-family)',
-                color: 'var(--vscode-foreground)',
-                backgroundColor: 'var(--vscode-editor-background)',
-                padding: 0,
-                margin: 0,
-                minHeight: '100vh'
-            }}>
+            <div className="argocd-app-shell">
                 <WebviewHeader
                     title={`ArgoCD: ${application.name}`}
                     actions={headerActions}
                     helpContext="argocd-application"
+                    className="argocd-app-shell__header"
                 />
-                <div style={{ padding: '0 20px' }}>
-                    <TabBar activeTab={activeTab} onTabChange={onTabChange} />
 
                 {activeTab === 'graph' && application && (
                     <GraphTab
                         application={application}
                         resourceGraph={resourceGraph}
                         graphInteraction={graphInteraction}
+                        panelId={ARGOCD_APP_PANEL_IDS.graph}
+                        labelledBy={ARGOCD_APP_TAB_IDS.graph}
+                        className="argocd-app-shell__main"
                     />
                 )}
+
+                <div className="argocd-app-shell__tabs">
+                    <TabBar activeTab={activeTab} onTabChange={onTabChange} />
+                </div>
 
                 {activeTab === 'details' && application && (
                     <DetailsTab
@@ -120,9 +126,11 @@ export function ArgoCDApplicationView({
                         onHardRefresh={onHardRefresh}
                         onViewInTree={onViewInTree}
                         onNavigateToResource={onNavigateToResource}
+                        panelId={ARGOCD_APP_PANEL_IDS.details}
+                        labelledBy={ARGOCD_APP_TAB_IDS.details}
+                        className="argocd-app-shell__main"
                     />
                 )}
-                </div>
             </div>
         );
     }
@@ -130,4 +138,3 @@ export function ArgoCDApplicationView({
     // Fallback (should not reach here)
     return <LoadingState />;
 }
-

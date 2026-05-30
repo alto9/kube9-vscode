@@ -113,9 +113,70 @@ body {
     outline-offset: -1px;
 }
 
+.argocd-tab:focus-visible {
+    outline: 2px solid var(--focus-border);
+    outline-offset: -1px;
+}
+
 .argocd-tab.active {
     border-bottom-color: var(--focus-border);
     font-weight: 600;
+}
+
+/* ==========================================================================
+   Application shell (focus order vs visual layout)
+   ========================================================================== */
+
+.argocd-app-shell {
+    display: grid;
+    grid-template-areas:
+        "header"
+        "tabs"
+        "main";
+    grid-template-rows: auto auto minmax(0, 1fr);
+    min-height: 100vh;
+    font-family: var(--font-family);
+    color: var(--foreground);
+    background-color: var(--background);
+}
+
+.argocd-app-shell__header {
+    grid-area: header;
+}
+
+.argocd-app-shell__tabs {
+    grid-area: tabs;
+    padding: 0 var(--spacing-xl);
+}
+
+.argocd-app-shell__main {
+    grid-area: main;
+    padding: 0 var(--spacing-xl) var(--spacing-xl);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.argocd-graph-tab {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.argocd-graph-tab--placeholder {
+    align-items: center;
+    justify-content: center;
+}
+
+.argocd-details-panel {
+    min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .argocd-tab {
+        transition: none;
+    }
 }
 
 /* ==========================================================================
@@ -869,6 +930,11 @@ body {
 
 .argocd-graph-node__overflow-item:hover:not(:disabled) {
     background: var(--vscode-menu-selectionBackground, var(--vscode-list-hoverBackground));
+}
+
+.argocd-graph-node__overflow-item:focus-visible {
+    outline: 1px solid var(--focus-border);
+    outline-offset: -1px;
 }
 
 .argocd-graph-node__overflow-item:disabled {

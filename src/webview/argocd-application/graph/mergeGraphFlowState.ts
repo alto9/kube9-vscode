@@ -3,6 +3,7 @@ import type { ApplicationResourceGraph } from '../../../types/applicationResourc
 import { applyGraphLayout } from './applyDagreLayout';
 import { mapGraphDtoToFlow } from './mapGraphDtoToFlow';
 import { shouldRelayout } from './shouldRelayout';
+import { sortNodesForFocusOrder } from './focusOrder';
 import type { GraphLayoutCache, GraphNodeData, LayoutPosition } from './types';
 
 export interface MergeGraphFlowStateInput {
@@ -66,7 +67,7 @@ export function mergeGraphFlowState(input: MergeGraphFlowStateInput): MergeGraph
     }
 
     return {
-        nodes,
+        nodes: sortNodesForFocusOrder(nodes),
         edges,
         relayouted: relayout,
         shouldAutoFit: isInitial || (structureVersionChanged && !explicitFitView),
