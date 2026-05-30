@@ -15,7 +15,14 @@ import {
     mergeGraphFlowState,
     type GraphLayoutCache
 } from '../graph/mergeGraphFlowState';
+import { applyNodeSelection, resolveSelectionAfterMerge } from '../graph/graphSelection';
 import type { GraphNodeData } from '../graph/types';
+import {
+    applicationKeyChanged,
+    serializeApplicationKey,
+    shouldPreserveViewport,
+    type GraphViewport
+} from '../graph/viewportCache';
 import { GraphTopologyAffordances } from '../graph/GraphTopologyAffordances';
 import { ARGOCD_APP_PANEL_IDS } from '../graph/tabBarA11y';
 import {
@@ -112,31 +119,68 @@ function GraphCanvas({
     showEmptyManaged,
     graphInteraction
 }: GraphCanvasProps): React.JSX.Element {
-    const { zoomIn, zoomOut, fitView } = useReactFlow();
+    const { zoomIn, zoomOut, fitView, getViewport, setViewport } = useReactFlow();
     const prefersReducedMotion = usePrefersReducedMotion();
     const zoomDuration = graphZoomAnimationDuration(prefersReducedMotion);
     const layoutCacheRef = React.useRef<GraphLayoutCache>(createEmptyLayoutCache());
+    const applicationKeyRef = React.useRef<string | null>(null);
+    const viewportCacheRef = React.useRef<GraphViewport | null>(null);
+    const selectedNodeIdRef = React.useRef<string | null>(null);
     const [nodes, setNodes] = React.useState<Node<GraphNodeData>[]>([]);
     const [edges, setEdges] = React.useState<Edge[]>([]);
 
+    const persistViewport = React.useCallback(() => {
+        viewportCacheRef.current = getViewport();
+    }, [getViewport]);
+
     const applyGraph = React.useCallback(
         (graph: ApplicationResourceGraph, options?: { explicitFitView?: boolean; autoFit?: boolean }) => {
+            const explicitFitView = options?.explicitFitView ?? false;
+            const keyChanged = applicationKeyChanged(applicationKeyRef.current, graph.applicationKey);
+
+            if (keyChanged) {
+                layoutCacheRef.current = createEmptyLayoutCache();
+                viewportCacheRef.current = null;
+                selectedNodeIdRef.current = null;
+            }
+            applicationKeyRef.current = serializeApplicationKey(graph.applicationKey);
+
             const merged = mergeGraphFlowState({
                 graph,
                 cache: layoutCacheRef.current,
-                explicitFitView: options?.explicitFitView ?? false
+                explicitFitView
             });
             layoutCacheRef.current = merged.cache;
-            setNodes(merged.nodes);
+
+            const nextNodeIds = new Set(merged.nodes.map((node) => node.id));
+            const nextSelectedId = resolveSelectionAfterMerge(selectedNodeIdRef.current, nextNodeIds);
+            selectedNodeIdRef.current = nextSelectedId;
+
+            setNodes(applyNodeSelection(merged.nodes, nextSelectedId));
             setEdges(merged.edges);
 
-            if (options?.autoFit ?? merged.shouldAutoFit) {
-                window.requestAnimationFrame(() => {
+            const autoFit = options?.autoFit ?? merged.shouldAutoFit;
+            const cachedViewport = viewportCacheRef.current;
+
+            window.requestAnimationFrame(() => {
+                if (autoFit) {
                     fitView({ padding: 0.2, duration: zoomDuration });
-                });
-            }
+                    viewportCacheRef.current = getViewport();
+                    return;
+                }
+                if (
+                    shouldPreserveViewport({
+                        applicationKeyChanged: keyChanged,
+                        shouldAutoFit: merged.shouldAutoFit,
+                        explicitFitView,
+                        cachedViewport
+                    })
+                ) {
+                    setViewport(cachedViewport!, { duration: zoomDuration });
+                }
+            });
         },
-        [fitView, zoomDuration]
+        [fitView, getViewport, setViewport, zoomDuration]
     );
 
     React.useEffect(() => {
@@ -146,6 +190,13 @@ function GraphCanvas({
     const handleFitView = React.useCallback(() => {
         applyGraph(resourceGraph, { explicitFitView: true, autoFit: true });
     }, [applyGraph, resourceGraph]);
+
+    const handleSelectionChange = React.useCallback(
+        ({ nodes: selectedNodes }: { nodes: Node<GraphNodeData>[] }) => {
+            selectedNodeIdRef.current = selectedNodes[0]?.id ?? null;
+        },
+        []
+    );
 
     return (
         <div className="argocd-graph-tab" data-testid="graph-tab-canvas">
@@ -180,6 +231,8 @@ function GraphCanvas({
                     panOnDrag
                     zoomOnScroll
                     fitView={false}
+                    onMoveEnd={persistViewport}
+                    onSelectionChange={handleSelectionChange}
                     proOptions={{ hideAttribution: true }}
                     defaultEdgeOptions={{ className: 'argocd-graph-edge' }}
                 />
