@@ -22,6 +22,7 @@
     /* Status Colors */
     --status-synced: var(--vscode-testing-iconPassed);
     --status-out-of-sync: var(--vscode-testing-iconQueued);
+    --status-out-of-sync-warning: var(--vscode-editorWarning-foreground);
     --status-healthy: var(--vscode-testing-iconPassed);
     --status-degraded: var(--vscode-testing-iconFailed);
     --status-progressing: var(--vscode-testing-iconQueued);
@@ -200,6 +201,11 @@ body {
 
 .argocd-status-badge.out-of-sync {
     background-color: var(--status-out-of-sync);
+    color: var(--foreground);
+}
+
+.argocd-status-badge.out-of-sync-warning {
+    background-color: var(--status-out-of-sync-warning);
     color: var(--foreground);
 }
 
