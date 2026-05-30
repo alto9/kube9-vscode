@@ -1,10 +1,6 @@
 import React from 'react';
 import { ArgoCDResource } from '../../../types/argocd';
-import {
-    healthStatusBadgeClass,
-    syncStatusBadgeClass,
-    syncStatusIconClass
-} from '../graph/syncHealthBadgeClasses';
+import { SyncHealthBadges } from '../graph/syncHealthBadges';
 
 interface ResourceRowProps {
     resource: ArgoCDResource;
@@ -62,6 +58,12 @@ export function ResourceRow({ resource, isExpanded, onToggle, onNavigate }: Reso
         onNavigate(resource.kind, resource.name, resource.namespace);
     };
 
+    const badgeStatus = {
+        syncStatus: resource.syncStatus,
+        healthStatus: resource.healthStatus,
+        message: resource.message
+    };
+
     return (
         <>
             <tr style={rowStyle} onClick={onToggle}>
@@ -77,19 +79,10 @@ export function ResourceRow({ resource, isExpanded, onToggle, onNavigate }: Reso
                 </td>
                 <td style={cellStyle}>{resource.namespace}</td>
                 <td style={cellStyle}>
-                    <span className={`argocd-status-badge ${syncStatusBadgeClass(resource.syncStatus)}`}>
-                        <span className={`codicon ${syncStatusIconClass(resource.syncStatus)}`} style={{ fontSize: '12px' }} />
-                        <span>{resource.syncStatus}</span>
-                    </span>
+                    <SyncHealthBadges status={badgeStatus} showHealth={false} />
                 </td>
                 <td style={cellStyle}>
-                    {resource.healthStatus ? (
-                        <span className={`argocd-status-badge ${healthStatusBadgeClass(resource.healthStatus)}`}>
-                            <span>{resource.healthStatus}</span>
-                        </span>
-                    ) : (
-                        <span className={`argocd-status-badge ${healthStatusBadgeClass(undefined)}`}>—</span>
-                    )}
+                    <SyncHealthBadges status={badgeStatus} showSync={false} />
                 </td>
             </tr>
             {isExpanded && resource.message && (
