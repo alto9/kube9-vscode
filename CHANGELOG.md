@@ -1,3 +1,47 @@
+# [1.36.0](https://github.com/alto9/kube9-vscode/compare/v1.35.1...v1.36.0) (2026-05-31)
+
+
+### Bug Fixes
+
+* **argocd:** align graph navigate menu with host tree support ([85c3b60](https://github.com/alto9/kube9-vscode/commit/85c3b605e446fad572ce7f083eab8f6694913156))
+* **argocd:** preserve graph viewport and tile selection on refresh ([2fa4ae6](https://github.com/alto9/kube9-vscode/commit/2fa4ae63cbad3207db6005df857359195603348a)), closes [#171](https://github.com/alto9/kube9-vscode/issues/171)
+* **argocd:** preserve viewport on non-structural graph refresh ([26f666e](https://github.com/alto9/kube9-vscode/commit/26f666ea5de0fd2def6d577d29fc076c3aef0700))
+* **argocd:** ship application graph CSS in packaged VSIX ([f11f5cf](https://github.com/alto9/kube9-vscode/commit/f11f5cf4b4db82447803858a82db2983a1ff0548))
+* **describe:** DaemonSet shared panel bindings and rebase onto main ([ba50768](https://github.com/alto9/kube9-vscode/commit/ba507687cbe3b1995877411be56b15afdef78ff7))
+* **describe:** exclusive shared panel bindings and ordinal start ([a5543d9](https://github.com/alto9/kube9-vscode/commit/a5543d940e681e8ed1ce8f63356062860f415078))
+* **describe:** expose Namespace rows in Describe context-menu when clause ([e8f1472](https://github.com/alto9/kube9-vscode/commit/e8f14725a9b8c85fc403e838966e2e68654b1a28)), closes [#146](https://github.com/alto9/kube9-vscode/issues/146)
+* **describe:** keep Raw Describe off namespace picker rows ([e32db95](https://github.com/alto9/kube9-vscode/commit/e32db958628175866247a1146d847f431eff9255))
+* **describe:** make CRD describe panel mutually exclusive with other kinds ([c2267a9](https://github.com/alto9/kube9-vscode/commit/c2267a9c7c8ea1ed1abca5fe72f6b6a8880cdfaf))
+* **describe:** rebind StatefulSet webview handlers on shared panel reuse ([586db6b](https://github.com/alto9/kube9-vscode/commit/586db6bcfb97f9f0eeae0749a21f13949dd0aea7)), closes [kube9-vscode#151](https://github.com/kube9-vscode/issues/151)
+* **describe:** release shared Describe handlers for StatefulSet panel reuse ([b0355a6](https://github.com/alto9/kube9-vscode/commit/b0355a6f3af07197afc96a8e0dbace9809f41590))
+* **describe:** route context-menu Describe to specialized webviews ([29375eb](https://github.com/alto9/kube9-vscode/commit/29375eb5477101b1e10b6c4df351ef955c3e52bf)), closes [#146](https://github.com/alto9/kube9-vscode/issues/146)
+
+
+### Features
+
+* **argocd:** add ApplicationResourceGraph DTO and identity helpers ([0dc1a48](https://github.com/alto9/kube9-vscode/commit/0dc1a48d4b15647b6860434ab0380aa0ba186358)), closes [#153](https://github.com/alto9/kube9-vscode/issues/153)
+* **argocd:** add graph tiles with sync/health badges and action menus ([#164](https://github.com/alto9/kube9-vscode/issues/164)) ([4a00cf2](https://github.com/alto9/kube9-vscode/commit/4a00cf24ef2c5a2f4a1b0f7142561aaa4cd8c08b))
+* **argocd:** add REST auth commands and connection test ([#168](https://github.com/alto9/kube9-vscode/issues/168)) ([0936736](https://github.com/alto9/kube9-vscode/commit/09367363a608505e9252725e307e0a4516ed052b))
+* **argocd:** add typed resource graph webview protocol ([#157](https://github.com/alto9/kube9-vscode/issues/157)) ([8855666](https://github.com/alto9/kube9-vscode/commit/88556668877bcca64ab1cf0864b0cc2486602121))
+* **argocd:** align graph and drift badge iconography with tree ([5cde5ee](https://github.com/alto9/kube9-vscode/commit/5cde5ee2717f33f27ee34e770ac33def91c1ffe8))
+* **argocd:** assemble crd_flat ApplicationResourceGraph from CR status ([59063b6](https://github.com/alto9/kube9-vscode/commit/59063b61098786f8700558ec12eae574b9ea00a5))
+* **argocd:** auto-post resourceGraph after applicationData loads ([ff66891](https://github.com/alto9/kube9-vscode/commit/ff668913baf32f9d1bf4dfd49bc8269d7612d373))
+* **argocd:** bundle React Flow and dagre for graph webview packaging ([3ec67c4](https://github.com/alto9/kube9-vscode/commit/3ec67c4024416b8a50abaa1405949158ea4b07fa)), closes [#161](https://github.com/alto9/kube9-vscode/issues/161)
+* **argocd:** cap ApplicationResourceGraph at 200 managed nodes ([d85a2ff](https://github.com/alto9/kube9-vscode/commit/d85a2ff329b1969cb17414f5d28316cd809570f4)), closes [#156](https://github.com/alto9/kube9-vscode/issues/156)
+* **argocd:** default Graph tab and consolidate Details tab ([#162](https://github.com/alto9/kube9-vscode/issues/162)) ([121250d](https://github.com/alto9/kube9-vscode/commit/121250d4962e121c012cee6001531a23f6541d0e))
+* **argocd:** dispatch graph resource actions via kind registry ([#160](https://github.com/alto9/kube9-vscode/issues/160)) ([90b1991](https://github.com/alto9/kube9-vscode/commit/90b1991994fe961bb7ec3673a9bced38c394476b))
+* **argocd:** fetch resource-tree API and map parentRefs into full topology ([b2e0ac9](https://github.com/alto9/kube9-vscode/commit/b2e0ac9a232fb70f8c229066d4f762ae0f00e28d)), closes [#166](https://github.com/alto9/kube9-vscode/issues/166)
+* **argocd:** implement graph error and empty states per contracts ([#170](https://github.com/alto9/kube9-vscode/issues/170)) ([70d7cf8](https://github.com/alto9/kube9-vscode/commit/70d7cf88811fec5d73daf8369e09bd7d03e6ad06))
+* **argocd:** infer graph owns edges from Kubernetes ownerReferences ([#167](https://github.com/alto9/kube9-vscode/issues/167)) ([0812846](https://github.com/alto9/kube9-vscode/commit/0812846ae0fa0b44e6edce8136f91fa7ca15930c))
+* **argocd:** keyboard focus order and accessible names for resource graph ([#169](https://github.com/alto9/kube9-vscode/issues/169)) ([b3885e6](https://github.com/alto9/kube9-vscode/commit/b3885e67423174ad0545ea0659d47c0aa0152313))
+* **argocd:** merge ApplicationResourceGraph snapshots by structureVersion ([1b128e4](https://github.com/alto9/kube9-vscode/commit/1b128e44ee2b539dee43c22250428390389d40c5))
+* **argocd:** render dagre LR graph canvas with zoom toolbar ([#163](https://github.com/alto9/kube9-vscode/issues/163)) ([b4bb7a6](https://github.com/alto9/kube9-vscode/commit/b4bb7a6ebac5ea58c0e0654c7565c825d0cd1ac5))
+* **argocd:** surface limited topology affordance on graph tab ([#165](https://github.com/alto9/kube9-vscode/issues/165)) ([28d8fb2](https://github.com/alto9/kube9-vscode/commit/28d8fb2d4533f272cad7c432ffd47e4d1a595538))
+* **argocd:** wire trackOperation polling for sync progress UX ([a414831](https://github.com/alto9/kube9-vscode/commit/a41483150361e9144e91b98febac0289f670275a))
+* **describe:** add DaemonSet structured detail webview ([6670045](https://github.com/alto9/kube9-vscode/commit/66700458f03fd0f1d565c2823628d48ee5f45e30)), closes [#148](https://github.com/alto9/kube9-vscode/issues/148)
+* **describe:** add StatefulSet structured detail webview ([25b9c40](https://github.com/alto9/kube9-vscode/commit/25b9c403bbb17fbaaaf2efa5b5c5236bceab9b15)), closes [#147](https://github.com/alto9/kube9-vscode/issues/147)
+* **describe:** add structured CRD describe webview ([f519e7a](https://github.com/alto9/kube9-vscode/commit/f519e7a6e1879b2d7f6ac196ac5955a0dd6aff7c))
+
 ## [1.35.1](https://github.com/alto9/kube9-vscode/compare/v1.35.0...v1.35.1) (2026-05-16)
 
 # [1.35.0](https://github.com/alto9/kube9-vscode/compare/v1.34.1...v1.35.0) (2026-05-02)
