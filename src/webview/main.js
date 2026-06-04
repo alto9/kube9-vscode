@@ -8,28 +8,15 @@
 
     // Update UI based on whether this is "All Namespaces" view
     const isAllNamespaces = window.initialIsAllNamespaces || false;
-    
-    if (isAllNamespaces) {
-        const icon = document.getElementById('namespace-icon');
-        const badge = document.getElementById('scope-badge');
-        
-        if (icon) {
-            icon.classList.add('all-namespaces');
-        }
-        
-        if (badge) {
-            badge.textContent = 'CLUSTER-WIDE';
-        }
-    }
 
     // Set up message passing for communication with extension
     const vscode = acquireVsCodeApi();
 
     // Get button elements
     const setDefaultNamespaceButton = document.getElementById('set-default-namespace');
-    const btnIcon = setDefaultNamespaceButton?.querySelector('.btn-icon');
-    const btnText = setDefaultNamespaceButton?.querySelector('.btn-text');
-    const namespaceTitle = document.querySelector('h1.namespace-title');
+    const defaultIndicator = setDefaultNamespaceButton?.querySelector('.namespace-default-indicator');
+    const defaultActionLabel = setDefaultNamespaceButton?.querySelector('.webview-header-action-label');
+    const namespaceTitle = document.getElementById('namespace-header-title');
 
     /**
      * Update the button state based on whether the namespace is active.
@@ -38,7 +25,7 @@
      * @param {string} namespaceName - The namespace name (for validation/logging)
      */
     function updateButtonState(isActive, namespaceName) {
-        if (!setDefaultNamespaceButton || !btnIcon || !btnText) {
+        if (!setDefaultNamespaceButton || !defaultActionLabel) {
             console.warn('Button elements not found, cannot update state');
             return;
         }
@@ -46,15 +33,17 @@
         if (isActive) {
             // Namespace is active - show disabled/selected state
             setDefaultNamespaceButton.disabled = true;
-            btnIcon.style.display = 'inline';
-            btnIcon.classList.remove('hidden');
-            btnText.textContent = 'Default Namespace';
+            if (defaultIndicator) {
+                defaultIndicator.hidden = false;
+            }
+            defaultActionLabel.textContent = 'Default Namespace';
         } else {
             // Namespace is not active - show enabled state
             setDefaultNamespaceButton.disabled = false;
-            btnIcon.style.display = 'none';
-            btnIcon.classList.add('hidden');
-            btnText.textContent = 'Set as Default Namespace';
+            if (defaultIndicator) {
+                defaultIndicator.hidden = true;
+            }
+            defaultActionLabel.textContent = 'Set as Default Namespace';
         }
     }
 
@@ -459,17 +448,7 @@
     // For "All Namespaces" view, disable the button
     // For regular namespace view, start with disabled state (will be updated when first message arrives)
     if (isAllNamespaces) {
-        // Disable button for "All Namespaces" view
-        if (setDefaultNamespaceButton) {
-            setDefaultNamespaceButton.disabled = true;
-            if (btnIcon) {
-                btnIcon.style.display = 'none';
-                btnIcon.classList.add('hidden');
-            }
-            if (btnText) {
-                btnText.textContent = 'Set as Default Namespace';
-            }
-        }
+        // Primary actions are hidden in markup for cluster-wide view
     } else {
         // Initialize with inactive state (will be updated by first namespaceContextChanged message)
         const initialNamespaceName = namespaceTitle?.textContent?.trim();

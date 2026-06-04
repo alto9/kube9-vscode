@@ -11,6 +11,11 @@ import { PodHealthAnalyzer } from '../kubernetes/PodHealthAnalyzer';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { calculateHealthStatus } from '../kubernetes/HealthCalculator';
 import { WorkloadType, WorkloadEntry } from '../types/workloadData';
+import {
+    buildLegacyDescribeHeadAssets,
+    getLegacyDescribeLocalResourceRoots,
+    getLegacyDescribeWebviewPanelOptions
+} from './legacyDescribeHeaderShell';
 
 /**
  * Context information for namespace webviews.
@@ -106,9 +111,9 @@ export class NamespaceWebview {
             title,
             vscode.ViewColumn.One,
             {
-                enableScripts: true,
-                retainContextWhenHidden: true,
+                ...getLegacyDescribeWebviewPanelOptions(context.extensionUri),
                 localResourceRoots: [
+                    ...getLegacyDescribeLocalResourceRoots(context.extensionUri),
                     vscode.Uri.joinPath(context.extensionUri, 'src', 'webview')
                 ]
             }
@@ -319,9 +324,17 @@ export class NamespaceWebview {
             // Get the URI for the main.js script file
             const scriptPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'main.js');
             const scriptUri = webview.asWebviewUri(scriptPath);
-            
+            const { csp, headerLink, codiconsLink } = buildLegacyDescribeHeadAssets(
+                webview,
+                context.extensionUri
+            );
+
             // Read the HTML file
             let htmlContent = fs.readFileSync(htmlPath, 'utf8');
+
+            htmlContent = htmlContent.replace(/\{\{CSP\}\}/g, csp);
+            htmlContent = htmlContent.replace(/\{\{HEADER_LINK\}\}/g, headerLink);
+            htmlContent = htmlContent.replace(/\{\{CODICONS_LINK\}\}/g, codiconsLink);
             
             // Replace placeholders with actual context data (using regex with global flag for all occurrences)
             htmlContent = htmlContent.replace(/\{\{CLUSTER_NAME\}\}/g, this.escapeHtml(namespaceContext.clusterName));
@@ -332,16 +345,20 @@ export class NamespaceWebview {
             if (namespaceContext.namespace) {
                 htmlContent = htmlContent.replace(/\{\{NAMESPACE_NAME\}\}/g, this.escapeHtml(namespaceContext.namespace));
                 htmlContent = htmlContent.replace(/\{\{IS_ALL_NAMESPACES\}\}/g, 'false');
+                htmlContent = htmlContent.replace(/\{\{NAMESPACE_ACTIONS_CLASS\}\}/g, '');
+                htmlContent = htmlContent.replace(/\{\{SCOPE_BADGE_TEXT\}\}/g, 'NAMESPACE');
             } else {
                 htmlContent = htmlContent.replace(/\{\{NAMESPACE_NAME\}\}/g, 'All Namespaces');
                 htmlContent = htmlContent.replace(/\{\{IS_ALL_NAMESPACES\}\}/g, 'true');
+                htmlContent = htmlContent.replace(
+                    /\{\{NAMESPACE_ACTIONS_CLASS\}\}/g,
+                    'namespace-header-actions--hidden'
+                );
+                htmlContent = htmlContent.replace(/\{\{SCOPE_BADGE_TEXT\}\}/g, 'CLUSTER-WIDE');
             }
             
             // Replace script URI placeholder
             htmlContent = htmlContent.replace(/\{\{SCRIPT_URI\}\}/g, scriptUri.toString());
-            
-            // Replace CSP source placeholder
-            htmlContent = htmlContent.replace(/\{\{CSP_SOURCE\}\}/g, webview.cspSource);
             
             return htmlContent;
         } catch (error) {

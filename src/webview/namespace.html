@@ -3,9 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src {{CSP_SOURCE}} 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="{{CSP}}">
+    {{HEADER_LINK}}
+    {{CODICONS_LINK}}
     <title>Namespace: {{NAMESPACE_NAME}}</title>
     <style>
+        /* Namespace explorer scrolls; override shipped header shell overflow defaults */
+        html, body {
+            overflow: auto;
+            height: auto;
+        }
+
         body {
             font-family: var(--vscode-font-family);
             font-size: var(--vscode-font-size);
@@ -21,34 +29,19 @@
             padding: 20px;
         }
 
-        .header {
-            border-bottom: 1px solid var(--vscode-panel-border);
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-
-        .header h2 {
-            margin: 0 0 10px 0;
-            font-size: 24px;
-            font-weight: 600;
+        .namespace-metadata {
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            margin-bottom: 24px;
         }
 
-        .icon {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            background-color: var(--vscode-symbolIcon-namespaceForeground);
-            mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="currentColor"/></svg>');
-            -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="currentColor"/></svg>');
-        }
-
-        .icon.all-namespaces {
-            background-color: var(--vscode-symbolIcon-classForeground);
-            mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/></svg>');
-            -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/></svg>');
+        .namespace-header-actions--hidden {
+            display: none !important;
         }
 
         .metadata {
@@ -110,74 +103,12 @@
             letter-spacing: 0.5px;
         }
 
-        .namespace-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px;
-            background-color: var(--vscode-editor-background);
-            border-bottom: 2px solid var(--vscode-panel-border);
-        }
-
-        .namespace-title {
-            flex: 1;
-            margin: 0;
-            font-size: 1.5em;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-        }
-
-        .default-namespace-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.95em;
-        }
-
-        .default-namespace-btn:hover:not(:disabled) {
-            background-color: var(--vscode-button-hoverBackground);
-        }
-
-        .default-namespace-btn:disabled {
-            background-color: var(--vscode-button-secondaryBackground);
-            color: var(--vscode-button-secondaryForeground);
-            cursor: default;
-            opacity: 0.8;
-        }
-
-        .default-namespace-btn .btn-icon {
-            font-size: 1.1em;
-        }
-
-        .default-namespace-btn:not(:disabled) .btn-icon {
+        #set-default-namespace .namespace-default-indicator[hidden] {
             display: none;
         }
 
-        .view-yaml-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background-color: var(--vscode-button-secondaryBackground);
-            color: var(--vscode-button-secondaryForeground);
-            border: 1px solid var(--vscode-button-border);
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.95em;
-        }
-
-        .view-yaml-btn:hover {
-            background-color: var(--vscode-button-secondaryHoverBackground);
-        }
-
-        .view-yaml-btn .btn-icon {
-            font-size: 1.1em;
+        #set-default-namespace .namespace-default-indicator:not([hidden]) {
+            display: inline-flex;
         }
 
         /* Notification banner styles */
@@ -402,24 +333,23 @@
     </div>
 
     <div class="container">
-        <div class="namespace-header">
-            <h1 class="namespace-title">{{NAMESPACE_NAME}}</h1>
-            <button id="view-namespace-yaml" class="view-yaml-btn" data-namespace="{{NAMESPACE_NAME}}">
-                <span class="btn-icon">📄</span>
-                <span class="btn-text">View YAML</span>
-            </button>
-            <button id="set-default-namespace" class="default-namespace-btn">
-                <span class="btn-icon">✓</span>
-                <span class="btn-text">Set as Default Namespace</span>
-            </button>
-        </div>
+        <header class="webview-header namespace-explorer-header">
+            <div class="webview-header-title">
+                <h1 id="namespace-header-title">{{NAMESPACE_NAME}}</h1>
+            </div>
+            <div class="webview-header-actions {{NAMESPACE_ACTIONS_CLASS}}">
+                <button type="button" id="view-namespace-yaml" class="webview-header-action-btn" aria-label="View YAML" data-namespace="{{NAMESPACE_NAME}}">
+                    <span class="codicon codicon-file-code" aria-hidden="true"></span>
+                    <span class="webview-header-action-label">View YAML</span>
+                </button>
+                <button type="button" id="set-default-namespace" class="webview-header-action-btn" aria-label="Set as Default Namespace">
+                    <span class="codicon codicon-check namespace-default-indicator" aria-hidden="true" hidden></span>
+                    <span class="webview-header-action-label">Set as Default Namespace</span>
+                </button>
+            </div>
+        </header>
 
-        <div class="header">
-            <h2>
-                <span class="icon" id="namespace-icon"></span>
-                <span id="namespace-title">{{NAMESPACE_NAME}}</span>
-                <span class="badge" id="scope-badge">NAMESPACE</span>
-            </h2>
+        <div class="namespace-metadata">
             <div class="metadata">
                 <div class="metadata-item">
                     <span class="metadata-label">Cluster:</span>
@@ -430,6 +360,7 @@
                     <span>{{CONTEXT_NAME}}</span>
                 </div>
             </div>
+            <span class="badge" id="scope-badge">{{SCOPE_BADGE_TEXT}}</span>
         </div>
 
         <div class="workloads-section">

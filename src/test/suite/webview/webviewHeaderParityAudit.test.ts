@@ -76,4 +76,14 @@ suite('webviewHeaderParityAudit @unit', () => {
         assert.ok(source.includes('getWebviewShellHtml'));
         assert.ok(!source.includes('src/webview/styles/webview-header'));
     });
+
+    test('namespace explorer links shipped header CSS and codicons', () => {
+        const html = fs.readFileSync(path.join(WEBVIEW_SRC, 'namespace.html'), 'utf8');
+        assert.ok(html.includes('{{HEADER_LINK}}'));
+        assert.ok(html.includes('codicon-file-code'));
+
+        const panelSource = readWebviewSource('NamespaceWebview.ts');
+        assert.ok(panelSource.includes('buildLegacyDescribeHeadAssets'));
+        assert.ok(panelSource.includes('getLegacyDescribeLocalResourceRoots'));
+    });
 });
