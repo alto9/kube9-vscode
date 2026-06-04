@@ -7,7 +7,7 @@ import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InitialState, Pod
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
 import { makePodLogsViewerKey } from './podLogsViewerKey';
-import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
+import { getWebviewShellHtml } from './webviewShellHtml';
 
 /**
  * Interface for storing panel information.
@@ -233,10 +233,7 @@ export class PodLogsViewerPanel {
             compositeKey
         });
 
-        panel.webview.html = PodLogsViewerPanel.getWebviewContent(
-            panel.webview,
-            context.extensionUri
-        );
+        panel.webview.html = PodLogsViewerPanel.getWebviewContent(panel.webview, context);
 
         PodLogsViewerPanel.setupMessageHandling(panel, viewerInstanceId, context);
 
@@ -1268,34 +1265,26 @@ export class PodLogsViewerPanel {
      */
     private static getWebviewContent(
         webview: vscode.Webview,
-        extensionUri: vscode.Uri
+        context: vscode.ExtensionContext
     ): string {
         const scriptUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'media', 'pod-logs', 'main.js')
+            vscode.Uri.joinPath(context.extensionUri, 'media', 'pod-logs', 'main.js')
         );
         const stylesUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'media', 'pod-logs', 'styles.css')
+            vscode.Uri.joinPath(context.extensionUri, 'media', 'pod-logs', 'styles.css')
         );
-        const headerStyleUri = getWebviewHeaderStyleUri(extensionUri, webview);
 
-        const nonce = getNonce();
-        const cspSource = webview.cspSource;
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}'; style-src ${cspSource} 'unsafe-inline'; font-src ${cspSource};">
-    <link href="${stylesUri}" rel="stylesheet">
-    <link href="${headerStyleUri}" rel="stylesheet">
-    <title>Pod Logs Viewer</title>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return getWebviewShellHtml(webview, context, {
+            extensionContext: context,
+            webview,
+            scriptUri,
+            stylesUris: [stylesUri],
+            pageTitle: 'Pod Logs Viewer',
+            nonce: getNonce(),
+            shellClass: 'pod-logs-viewer',
+            headerCssMode: 'link',
+            cspProfile: 'describe'
+        });
     }
 }
 

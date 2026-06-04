@@ -108,6 +108,7 @@ const OperatorHealthReport: React.FC = () => {
 
     const headerActions = [
         {
+            icon: 'codicon-refresh',
             label: 'Refresh',
             onClick: handleRefresh,
             disabled: loading
