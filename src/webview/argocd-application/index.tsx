@@ -12,9 +12,10 @@ import { useGraphInteractionState } from './graph/useGraphInteractionState';
 // Acquire VS Code API
 const vscode = typeof acquireVsCodeApi !== 'undefined' ? acquireVsCodeApi() : undefined;
 
-// Make vscode API globally available
+// Make vscode API globally available (WebviewHeader prefers vscodeApi)
 if (vscode) {
     (window as any).vscode = vscode;
+    (window as any).vscodeApi = vscode;
 }
 
 interface WebviewState {

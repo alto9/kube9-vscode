@@ -1,5 +1,6 @@
 import React from 'react';
 import { WebviewHeader, WebviewHeaderAction } from '../components/WebviewHeader';
+import { WebviewSubheader } from '../components/WebviewSubheader';
 import { TabBar, TabType } from './components/TabBar';
 import { LoadingState } from './components/LoadingState';
 import { ErrorState } from './components/ErrorState';
@@ -69,42 +70,52 @@ export function ArgoCDApplicationView({
 
     // Show content when application data is loaded
     if (application) {
-        const headerActions: WebviewHeaderAction[] = [
+        const operationDisabled = syncing || refreshing;
+
+        const primaryActions: WebviewHeaderAction[] = [
             {
                 label: syncing ? 'Syncing...' : 'Sync',
                 icon: 'codicon-sync',
                 onClick: onSync,
-                disabled: syncing || refreshing,
+                disabled: operationDisabled,
                 busy: syncing
             },
             {
                 label: refreshing ? 'Refreshing...' : 'Refresh',
                 icon: 'codicon-refresh',
                 onClick: onRefresh,
-                disabled: syncing || refreshing,
+                disabled: operationDisabled,
                 busy: refreshing
-            },
+            }
+        ];
+
+        const subheaderActions: WebviewHeaderAction[] = [
             {
                 label: 'Hard Refresh',
                 icon: 'codicon-clear-all',
                 onClick: onHardRefresh,
-                disabled: syncing || refreshing
+                disabled: operationDisabled
             },
             {
                 label: 'View in Tree',
                 icon: 'codicon-list-tree',
                 onClick: onViewInTree,
-                disabled: syncing || refreshing
+                disabled: operationDisabled
             }
         ];
 
         return (
-            <div className="argocd-app-shell">
+            <div className="argocd-app-shell argocd-application-view">
                 <WebviewHeader
                     title={`ArgoCD: ${application.name}`}
-                    actions={headerActions}
+                    primaryActions={primaryActions}
                     helpContext="argocd-application"
                     className="argocd-app-shell__header"
+                />
+
+                <WebviewSubheader
+                    actions={subheaderActions}
+                    className="argocd-app-shell__subheader"
                 />
 
                 {activeTab === 'graph' && application && (

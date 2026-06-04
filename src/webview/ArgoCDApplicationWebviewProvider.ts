@@ -18,7 +18,10 @@ import {
     type WebviewToExtensionMessage
 } from '../types/argocdWebviewProtocol';
 import { dispatchResourceAction } from '../services/KindCapabilityRegistry';
+import { getHelpController } from '../extension';
+import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
+import { getCodiconsStyleUri } from './webviewShellHtml';
 
 /**
  * Information stored with each webview panel.
@@ -144,6 +147,16 @@ export class ArgoCDApplicationWebviewProvider {
             extensionContext
         );
 
+        try {
+            const helpHandler = new WebviewHelpHandler(getHelpController());
+            helpHandler.setupHelpMessageHandler(panel.webview);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.warn(
+                `[kube9] Argo CD application help handler not registered: ${message}`
+            );
+        }
+
         // Handle panel disposal
         panel.onDidDispose(
             () => {
@@ -176,6 +189,7 @@ export class ArgoCDApplicationWebviewProvider {
         );
 
         const headerStyleUri = getWebviewHeaderStyleUri(extensionContext.extensionUri, webview);
+        const codiconsStyleUri = getCodiconsStyleUri(extensionContext.extensionUri, webview);
 
         const reactFlowStyleUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'style.css')
@@ -190,7 +204,8 @@ export class ArgoCDApplicationWebviewProvider {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource};">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource}; font-src ${cspSource};">
+    <link href="${codiconsStyleUri}" rel="stylesheet">
     <link href="${headerStyleUri}" rel="stylesheet">
     <link href="${reactFlowStyleUri}" rel="stylesheet">
     <link href="${applicationStyleUri}" rel="stylesheet">
