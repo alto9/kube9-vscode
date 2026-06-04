@@ -1,14 +1,5 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-
-function readWebviewHeaderCss(extensionPath: string): string {
-    const headerCssPath = path.join(extensionPath, 'src', 'webview', 'styles', 'webview-header.css');
-    if (!fs.existsSync(headerCssPath)) {
-        return '';
-    }
-    return fs.readFileSync(headerCssPath, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-}
+import { getWebviewHeaderCssForInline } from './webviewHeaderStyles';
 
 /**
  * HTML document for React report webviews that use WebviewHeader (codicons, shared header CSS, flex root).
@@ -27,7 +18,9 @@ export function getReportWebviewHtml(
 ): string {
     const cspSource = webview.cspSource;
     const { scriptUri, stylesUri, pageTitle, nonce, shellClass } = options;
-    const headerCss = readWebviewHeaderCss(extensionContext.extensionPath);
+    const headerCss = getWebviewHeaderCssForInline(extensionContext.extensionPath, {
+        stripBlockComments: true
+    });
     const codiconsUri = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionContext.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
     );

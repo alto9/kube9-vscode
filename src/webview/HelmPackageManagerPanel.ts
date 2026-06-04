@@ -1,6 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import { getHelpController } from '../extension';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { HelmService } from '../services/HelmService';
@@ -10,6 +8,7 @@ import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams, Li
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { getContextInfo } from '../utils/kubectlContext';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
+import { getWebviewHeaderCssForInline } from './webviewHeaderStyles';
 
 /**
  * Cache entry with TTL support.
@@ -109,7 +108,6 @@ export class HelmPackageManagerPanel {
                 localResourceRoots: [
                     vscode.Uri.joinPath(context.extensionUri, 'media'),
                     vscode.Uri.joinPath(context.extensionUri, 'dist'),
-                    vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'styles'),
                     vscode.Uri.joinPath(context.extensionUri, 'node_modules', '@vscode', 'codicons')
                 ]
             }
@@ -1540,14 +1538,9 @@ export class HelmPackageManagerPanel {
             vscode.Uri.joinPath(context.extensionUri, 'media', 'helm-package-manager', 'main.js')
         );
 
-        // Read and inline webview-header.css
-        const headerCssPath = path.join(context.extensionPath, 'src', 'webview', 'styles', 'webview-header.css');
-        let headerCss = '';
-        if (fs.existsSync(headerCssPath)) {
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-            // Remove only block comments (preserve CSS rules)
-            headerCss = headerCss.replace(/\/\*[\s\S]*?\*\//g, '');
-        }
+        const headerCss = getWebviewHeaderCssForInline(context.extensionPath, {
+            stripBlockComments: true
+        });
 
         // Get codicons CSS URI
         const codiconsUri = webview.asWebviewUri(

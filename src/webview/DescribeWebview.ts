@@ -23,6 +23,7 @@ import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { NamespaceTreeItemConfig } from '../tree/items/NamespaceTreeItem';
 import { setNamespace } from '../utils/kubectlContext';
 import { resolveSpecializedDescribeFromTreeItem } from './describeTreeRouting';
+import { getWebviewHeaderCssForInline, getWebviewHeaderStyleUri } from './webviewHeaderStyles';
 
 /**
  * Resource information for the Describe webview.
@@ -368,8 +369,9 @@ export class DescribeWebview {
         let nonce = '';
 
         if (DescribeWebview.extensionContext) {
-            headerStyleUri = webview.asWebviewUri(
-                vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'src', 'webview', 'styles', 'webview-header.css')
+            headerStyleUri = getWebviewHeaderStyleUri(
+                DescribeWebview.extensionContext.extensionUri,
+                webview
             ).toString();
             nonce = getNonce();
         }
@@ -1159,20 +1161,7 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pod-describe', 'index.js')
         );
 
-        // Read header CSS and inline it
-        let headerCss = '';
-        try {
-            const headerCssPath = path.join(
-                DescribeWebview.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'styles',
-                'webview-header.css'
-            );
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load header CSS:', error);
-        }
+        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
 
         const nonce = getNonce();
 
@@ -1588,20 +1577,7 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pvc-describe', 'index.js')
         );
 
-        // Read header CSS and inline it
-        let headerCss = '';
-        try {
-            const headerCssPath = path.join(
-                DescribeWebview.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'styles',
-                'webview-header.css'
-            );
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load header CSS:', error);
-        }
+        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
 
         const nonce = getNonce();
 
@@ -1813,20 +1789,7 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pv-describe', 'index.js')
         );
 
-        // Read header CSS and inline it
-        let headerCss = '';
-        try {
-            const headerCssPath = path.join(
-                DescribeWebview.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'styles',
-                'webview-header.css'
-            );
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load header CSS:', error);
-        }
+        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
 
         const nonce = getNonce();
 
@@ -2234,19 +2197,7 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'crd-describe', 'index.js')
         );
 
-        let headerCss = '';
-        try {
-            const headerCssPath = path.join(
-                DescribeWebview.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'styles',
-                'webview-header.css'
-            );
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-        } catch (err) {
-            console.error('Failed to load header CSS:', err);
-        }
+        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
 
         const nonce = getNonce();
         const escaped = DescribeWebview.escapeHtml(crdConfig.kindLabel);
@@ -2453,20 +2404,7 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'secret-describe', 'index.js')
         );
 
-        // Read header CSS and inline it
-        let headerCss = '';
-        try {
-            const headerCssPath = path.join(
-                DescribeWebview.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'styles',
-                'webview-header.css'
-            );
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load header CSS:', error);
-        }
+        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
 
         const nonce = getNonce();
 
@@ -2510,20 +2448,7 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'storageclass-describe', 'index.js')
         );
 
-        // Read header CSS and inline it
-        let headerCss = '';
-        try {
-            const headerCssPath = path.join(
-                DescribeWebview.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'styles',
-                'webview-header.css'
-            );
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load header CSS:', error);
-        }
+        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
 
         const nonce = getNonce();
 
@@ -2871,20 +2796,7 @@ export class DescribeWebview {
             console.warn('Failed to load service describe CSS from any path');
         }
 
-        // Read header CSS and inline it
-        let headerCss = '';
-        try {
-            const headerCssPath = path.join(
-                DescribeWebview.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'styles',
-                'webview-header.css'
-            );
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load header CSS:', error);
-        }
+        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
 
         const nonce = getNonce();
 
@@ -3132,20 +3044,7 @@ export class DescribeWebview {
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'configmap-describe', 'index.js')
         );
 
-        // Read header CSS and inline it
-        let headerCss = '';
-        try {
-            const headerCssPath = path.join(
-                DescribeWebview.extensionContext.extensionPath,
-                'src',
-                'webview',
-                'styles',
-                'webview-header.css'
-            );
-            headerCss = fs.readFileSync(headerCssPath, 'utf8');
-        } catch (error) {
-            console.error('Failed to load header CSS:', error);
-        }
+        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
 
         const nonce = getNonce();
 
