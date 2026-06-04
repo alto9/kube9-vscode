@@ -780,6 +780,7 @@
     "lint": "eslint src --ext ts --rulesdir eslint-rules",
     "prepackage": "npm run build",
     "package": "vsce package",
+    "verify:vsix-header-css": "bash scripts/verify-vsix-header-css.sh",
     "release": "semantic-release",
     "release:dry-run": "semantic-release --dry-run",
     "prepare": "husky"

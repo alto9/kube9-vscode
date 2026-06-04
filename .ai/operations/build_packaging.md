@@ -66,3 +66,4 @@ Release artifacts are VSIX packages built from current repository state. Version
 
 - **Source of truth:** `src/webview/styles/webview-header.css` (edited by developers; excluded from the VSIX via `.vscodeignore` `src/**`).
 - **Shipped copy:** `build:webview` runs `mkdir -p media/styles` and copies the file to `media/styles/webview-header.css`, which is included in the VSIX because `media/` is not ignored.
+- **CI gate:** After `npm run package`, CI runs `scripts/verify-vsix-header-css.sh` (also `npm run verify:vsix-header-css`) and fails the **Build Extension** job if the VSIX zip lacks `extension/media/styles/webview-header.css` (vsce `extension/` root prefix inside the archive).
