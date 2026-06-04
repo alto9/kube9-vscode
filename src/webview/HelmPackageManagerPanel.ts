@@ -8,7 +8,7 @@ import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InstallParams, Li
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { getContextInfo } from '../utils/kubectlContext';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
-import { getWebviewHeaderCssForInline } from './webviewHeaderStyles';
+import { getWebviewShellHtml } from './webviewShellHtml';
 
 /**
  * Cache entry with TTL support.
@@ -1531,117 +1531,25 @@ export class HelmPackageManagerPanel {
      * @returns HTML content string
      */
     private static getWebviewContent(webview: vscode.Webview, context: vscode.ExtensionContext): string {
-        const cspSource = webview.cspSource;
-
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(context.extensionUri, 'media', 'helm-package-manager', 'main.js')
         );
 
-        const headerCss = getWebviewHeaderCssForInline(context.extensionPath, {
-            stripBlockComments: true
-        });
-
-        // Get codicons CSS URI
-        const codiconsUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(context.extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
-        );
-
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src ${cspSource} 'nonce-${nonce}'; connect-src ${cspSource}; font-src ${cspSource}; img-src ${cspSource} data:;">
-    <link href="${codiconsUri}" rel="stylesheet">
-    <title>Helm Package Manager</title>
-    <style>
-        ${headerCss}
-        /* Ensure webview-header styles are applied */
-        .helm-package-manager .webview-header {
-            display: flex !important;
-            justify-content: space-between !important;
-            align-items: center !important;
-            padding: 12px 16px !important;
-            border-bottom: 1px solid var(--vscode-panel-border) !important;
-            background-color: var(--vscode-editor-background) !important;
-            min-height: 48px !important;
-            gap: 16px !important;
-        }
-        .helm-package-manager .webview-header-title h1 {
-            margin: 0 !important;
-            padding: 0 !important;
-            font-size: 1.5em !important;
-            font-weight: 600 !important;
-        }
-        .helm-package-manager .webview-header-actions {
-            display: flex !important;
-            align-items: center !important;
-            gap: 8px !important;
-            flex-shrink: 0 !important;
-        }
-        .helm-package-manager .webview-header-action-btn {
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            padding: 6px 12px !important;
-            background-color: var(--vscode-button-background) !important;
-            color: var(--vscode-button-foreground) !important;
-            border: none !important;
-            border-radius: 4px !important;
-            cursor: pointer !important;
-            font-size: 13px !important;
-            font-family: var(--vscode-font-family) !important;
-            font-weight: 500 !important;
-            white-space: nowrap !important;
-        }
-        .helm-package-manager .webview-header-action-btn:hover {
-            background-color: var(--vscode-button-hoverBackground) !important;
-        }
-        .helm-package-manager .webview-header-action-label {
-            line-height: 1 !important;
-        }
-        .helm-package-manager .webview-header-help-btn .codicon {
-            font-size: 16px !important;
-        }
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        body {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-        }
-        #root {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
+        return getWebviewShellHtml(webview, context, {
+            extensionContext: context,
+            webview,
+            scriptUri,
+            pageTitle: 'Helm Package Manager',
+            nonce: getNonce(),
+            shellClass: 'helm-package-manager',
+            headerCssMode: 'inline',
+            cspProfile: 'helm',
+            additionalInlineCss: `
         .helm-package-manager {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
             overflow-y: auto;
         }
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+            `.trim()
+        });
     }
 }
 

@@ -23,7 +23,8 @@ import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { NamespaceTreeItemConfig } from '../tree/items/NamespaceTreeItem';
 import { setNamespace } from '../utils/kubectlContext';
 import { resolveSpecializedDescribeFromTreeItem } from './describeTreeRouting';
-import { getWebviewHeaderCssForInline, getWebviewHeaderStyleUri } from './webviewHeaderStyles';
+import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
+import { getWebviewShellHtml } from './webviewShellHtml';
 
 /**
  * Resource information for the Describe webview.
@@ -1153,34 +1154,16 @@ export class DescribeWebview {
             return this.getFallbackHtml(podConfig);
         }
 
-        const cspSource = webview.cspSource;
         const escapedPodName = DescribeWebview.escapeHtml(podConfig.name);
-        
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pod-describe', 'index.js')
         );
 
-        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
-
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>Pod / ${escapedPodName}</title>
-    <style>
-        ${headerCss}
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `Pod / ${escapedPodName}`
+        );
     }
 
     /**
@@ -1361,29 +1344,16 @@ export class DescribeWebview {
             return this.getNamespaceFallbackHtml(namespaceConfig);
         }
 
-        const cspSource = webview.cspSource;
         const escapedNamespaceName = DescribeWebview.escapeHtml(namespaceConfig.name);
-        
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'describe', 'index.js')
         );
 
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>Namespace / ${escapedNamespaceName}</title>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `Namespace / ${escapedNamespaceName}`
+        );
     }
 
     /**
@@ -1569,34 +1539,16 @@ export class DescribeWebview {
             return this.getPVCFallbackHtml(pvcConfig);
         }
 
-        const cspSource = webview.cspSource;
         const escapedPVCName = DescribeWebview.escapeHtml(pvcConfig.name);
-        
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pvc-describe', 'index.js')
         );
 
-        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
-
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>PersistentVolumeClaim / ${escapedPVCName}</title>
-    <style>
-        ${headerCss}
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `PersistentVolumeClaim / ${escapedPVCName}`
+        );
     }
 
     /**
@@ -1781,34 +1733,16 @@ export class DescribeWebview {
             return this.getPVFallbackHtml(pvConfig);
         }
 
-        const cspSource = webview.cspSource;
         const escapedPVName = DescribeWebview.escapeHtml(pvConfig.name);
-        
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'pv-describe', 'index.js')
         );
 
-        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
-
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>PersistentVolume / ${escapedPVName}</title>
-    <style>
-        ${headerCss}
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `PersistentVolume / ${escapedPVName}`
+        );
     }
 
     /**
@@ -2196,29 +2130,13 @@ export class DescribeWebview {
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'crd-describe', 'index.js')
         );
-
-        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
-
-        const nonce = getNonce();
         const escaped = DescribeWebview.escapeHtml(crdConfig.kindLabel);
-        const cspSource = webview.cspSource;
 
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>CRD / ${escaped}</title>
-    <style>
-        ${headerCss}
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `CRD / ${escaped}`
+        );
     }
 
     private static getCRDFallbackHtml(crdConfig: CRDTreeItemConfig): string {
@@ -2396,34 +2314,16 @@ export class DescribeWebview {
             return this.getSecretFallbackHtml(secretConfig);
         }
 
-        const cspSource = webview.cspSource;
         const escapedSecretName = DescribeWebview.escapeHtml(secretConfig.name);
-        
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'secret-describe', 'index.js')
         );
 
-        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
-
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>Secret / ${escapedSecretName}</title>
-    <style>
-        ${headerCss}
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `Secret / ${escapedSecretName}`
+        );
     }
 
     /**
@@ -2440,34 +2340,16 @@ export class DescribeWebview {
             return this.getStorageClassFallbackHtml(scConfig);
         }
 
-        const cspSource = webview.cspSource;
         const escapedSCName = DescribeWebview.escapeHtml(scConfig.name);
-        
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'storageclass-describe', 'index.js')
         );
 
-        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
-
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>StorageClass / ${escapedSCName}</title>
-    <style>
-        ${headerCss}
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `StorageClass / ${escapedSCName}`
+        );
     }
 
     /**
@@ -2764,59 +2646,38 @@ export class DescribeWebview {
             return this.getServiceFallbackHtml(serviceConfig);
         }
 
-        const cspSource = webview.cspSource;
         const escapedServiceName = DescribeWebview.escapeHtml(serviceConfig.name);
-        
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'service-describe', 'index.js')
         );
 
-        // Read CSS bundle and inline it
-        // Try dist path first (production), then media path (development)
         let bundleCss = '';
         const cssPaths = [
             path.join(DescribeWebview.extensionContext.extensionPath, 'dist', 'media', 'service-describe', 'index.css'),
             path.join(DescribeWebview.extensionContext.extensionPath, 'media', 'describe', 'podDescribe.css')
         ];
-        
+
         for (const cssPath of cssPaths) {
             try {
                 if (fs.existsSync(cssPath)) {
                     bundleCss = fs.readFileSync(cssPath, 'utf8');
                     break;
                 }
-            } catch (error) {
-                // Try next path
+            } catch {
                 continue;
             }
         }
-        
+
         if (!bundleCss) {
             console.warn('Failed to load service describe CSS from any path');
         }
 
-        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
-
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>Service / ${escapedServiceName}</title>
-    <style>
-        ${bundleCss}
-        ${headerCss}
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `Service / ${escapedServiceName}`,
+            bundleCss
+        );
     }
 
     /**
@@ -3036,34 +2897,16 @@ export class DescribeWebview {
             return this.getConfigMapFallbackHtml(configMapConfig);
         }
 
-        const cspSource = webview.cspSource;
         const escapedConfigMapName = DescribeWebview.escapeHtml(configMapConfig.name);
-        
-        // Get React bundle URI
         const scriptUri = webview.asWebviewUri(
             vscode.Uri.joinPath(DescribeWebview.extensionContext.extensionUri, 'dist', 'media', 'configmap-describe', 'index.js')
         );
 
-        const headerCss = getWebviewHeaderCssForInline(DescribeWebview.extensionContext.extensionPath);
-
-        const nonce = getNonce();
-
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
-    <title>ConfigMap / ${escapedConfigMapName}</title>
-    <style>
-        ${headerCss}
-    </style>
-</head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
-</body>
-</html>`;
+        return DescribeWebview.getWebpackDescribeShellHtml(
+            webview,
+            scriptUri,
+            `ConfigMap / ${escapedConfigMapName}`
+        );
     }
 
     /**
@@ -3140,6 +2983,28 @@ export class DescribeWebview {
             console.error('Failed to open YAML editor for ConfigMap:', errorMessage);
             vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
         }
+    }
+
+    private static getWebpackDescribeShellHtml(
+        webview: vscode.Webview,
+        scriptUri: vscode.Uri,
+        pageTitle: string,
+        extraInlineCss?: string
+    ): string {
+        if (!DescribeWebview.extensionContext) {
+            throw new Error('DescribeWebview.extensionContext is not set');
+        }
+
+        return getWebviewShellHtml(webview, DescribeWebview.extensionContext, {
+            extensionContext: DescribeWebview.extensionContext,
+            webview,
+            scriptUri,
+            pageTitle,
+            nonce: getNonce(),
+            headerCssMode: 'inline',
+            extraInlineCss,
+            cspProfile: 'describe'
+        });
     }
 }
 

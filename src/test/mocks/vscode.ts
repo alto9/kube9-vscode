@@ -52,6 +52,10 @@ export class Uri {
     get fragment(): string {
         return this._fragment || '';
     }
+
+    toString(): string {
+        return this.path;
+    }
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
