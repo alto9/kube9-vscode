@@ -124,12 +124,12 @@ export const PVDescribeApp: React.FC = () => {
 
     const headerActions: WebviewHeaderAction[] = [
         {
-            icon: 'refresh',
+            icon: 'codicon-refresh',
             label: 'Refresh',
             onClick: handleRefresh
         },
         {
-            icon: 'code',
+            icon: 'codicon-file-code',
             label: 'View YAML',
             onClick: handleViewYaml
         }
@@ -140,6 +140,7 @@ export const PVDescribeApp: React.FC = () => {
             <WebviewHeader
                 title={`PersistentVolume / ${pvData.overview.name}`}
                 actions={headerActions}
+                helpContext="describe-webview"
             />
             <div className="tab-bar">
                 <button

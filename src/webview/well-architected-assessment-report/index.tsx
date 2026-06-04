@@ -112,6 +112,7 @@ const WellArchitectedReport: React.FC = () => {
     const reportTitle = data?.reportTitle ?? 'Well-Architected Assessment';
     const headerActions = [
         {
+            icon: 'codicon-refresh',
             label: 'Refresh',
             onClick: onRefresh,
             disabled: loading,
