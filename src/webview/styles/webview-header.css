@@ -184,7 +184,7 @@ body {
     white-space: nowrap;
 }
 
-.webview-header-overflow-item:hover:not(:disabled) {
+.webview-header-overflow-item:hover:not([aria-disabled="true"]) {
     background-color: var(--vscode-menu-selectionBackground);
     color: var(--vscode-menu-selectionForeground);
 }

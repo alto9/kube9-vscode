@@ -52,11 +52,32 @@ suite('webviewShellHtml', () => {
         assert.ok(html.includes('connect-src'));
     });
 
-    test('getCodiconsStyleUri points at bundled codicons css', () => {
+    test('getCodiconsStyleUri points at shipped codicons css in media', () => {
         const extensionUri = vscode.Uri.file(path.join(os.tmpdir(), 'kube9-ext'));
         const webview = makeWebview();
         const uri = getCodiconsStyleUri(extensionUri, webview);
-        assert.ok(uri.fsPath.includes(path.join('node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')));
+        assert.ok(uri.fsPath.includes(path.join('media', 'styles', 'codicons', 'codicon.css')));
+    });
+
+    test('describe CSP profile allows codicon font-src', () => {
+        const extensionPath = fs.mkdtempSync(path.join(os.tmpdir(), 'kube9-shell-describe-'));
+        const stylesDir = path.join(extensionPath, 'media', 'styles');
+        fs.mkdirSync(stylesDir, { recursive: true });
+        fs.writeFileSync(path.join(stylesDir, 'webview-header.css'), '.webview-header {}', 'utf8');
+
+        const context = makeContext(extensionPath);
+        const webview = makeWebview();
+        const html = getWebviewShellHtml(webview, context, {
+            extensionContext: context,
+            webview,
+            scriptUri: vscode.Uri.joinPath(context.extensionUri, 'main.js'),
+            pageTitle: 'Describe',
+            nonce: 'n',
+            cspProfile: 'describe'
+        });
+
+        assert.ok(html.includes('font-src'));
+        assert.ok(!html.includes('connect-src'));
     });
 
     test('link header mode emits header stylesheet link', () => {

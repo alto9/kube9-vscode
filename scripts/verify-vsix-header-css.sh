@@ -3,7 +3,11 @@
 # vsce lays extension files under extension/ in the zip (see `unzip -l *.vsix`).
 set -euo pipefail
 
-REQUIRED_ENTRY='extension/media/styles/webview-header.css'
+REQUIRED_ENTRIES=(
+  'extension/media/styles/webview-header.css'
+  'extension/media/styles/codicons/codicon.css'
+  'extension/media/styles/codicons/codicon.ttf'
+)
 
 vsix_path="${1:-}"
 if [[ -z "${vsix_path}" ]]; then
@@ -26,10 +30,19 @@ if [[ ! -f "${vsix_path}" ]]; then
   exit 1
 fi
 
-if ! unzip -l "${vsix_path}" | awk '{print $4}' | grep -Fxq "${REQUIRED_ENTRY}"; then
-  echo "verify-vsix-header-css: ${vsix_path} is missing required entry: ${REQUIRED_ENTRY}" >&2
-  echo "verify-vsix-header-css: ensure build:webview copies src/webview/styles/webview-header.css to media/styles/" >&2
+listing="$(unzip -l "${vsix_path}" | awk '{print $4}')"
+missing=()
+for entry in "${REQUIRED_ENTRIES[@]}"; do
+  if ! grep -Fxq "${entry}" <<<"${listing}"; then
+    missing+=("${entry}")
+  fi
+done
+
+if [[ ${#missing[@]} -gt 0 ]]; then
+  echo "verify-vsix-header-css: ${vsix_path} is missing required entries:" >&2
+  printf '  %s\n' "${missing[@]}" >&2
+  echo "verify-vsix-header-css: ensure build:webview copies header CSS and codicons into media/styles/" >&2
   exit 1
 fi
 
-echo "verify-vsix-header-css: ok (${vsix_path} contains ${REQUIRED_ENTRY})"
+echo "verify-vsix-header-css: ok (${vsix_path} contains shipped header CSS and codicons)"

@@ -172,15 +172,23 @@ function WebviewHeaderActionsOverflow({
                             type="button"
                             role="menuitem"
                             className="webview-header-overflow-item"
-                            disabled={action.disabled}
                             aria-disabled={action.disabled ? true : undefined}
                             aria-busy={action.busy ? true : undefined}
                             tabIndex={-1}
                             onClick={() => {
-                                if (!action.disabled) {
-                                    action.onClick();
+                                if (action.disabled) {
+                                    return;
                                 }
+                                action.onClick();
                                 closeMenu(true);
+                            }}
+                            onKeyDown={(event) => {
+                                if (
+                                    action.disabled &&
+                                    (event.key === 'Enter' || event.key === ' ')
+                                ) {
+                                    event.preventDefault();
+                                }
                             }}
                         >
                             {action.icon && (

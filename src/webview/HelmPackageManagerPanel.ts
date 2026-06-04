@@ -107,8 +107,7 @@ export class HelmPackageManagerPanel {
                 retainContextWhenHidden: true,
                 localResourceRoots: [
                     vscode.Uri.joinPath(context.extensionUri, 'media'),
-                    vscode.Uri.joinPath(context.extensionUri, 'dist'),
-                    vscode.Uri.joinPath(context.extensionUri, 'node_modules', '@vscode', 'codicons')
+                    vscode.Uri.joinPath(context.extensionUri, 'dist')
                 ]
             }
         );

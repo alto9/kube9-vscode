@@ -27,16 +27,19 @@ export interface WebviewShellHtmlOptions {
     cspProfile?: WebviewShellCspProfile;
 }
 
+/** Shipped codicons (`media/styles/codicons/`), copied from `@vscode/codicons` at build. */
+export const SHIPPED_CODICONS_CSS_SEGMENTS = ['media', 'styles', 'codicons', 'codicon.css'] as const;
+
 /**
- * Codicons are loaded from the extension bundle. Panels using this helper must include
- * `node_modules/@vscode/codicons/dist/codicon.css` in `localResourceRoots` when creating the webview.
+ * Codicons are loaded from shipped `media/styles/codicons/`. Include `media` in
+ * `localResourceRoots` when creating the webview.
  */
 export function getCodiconsStyleUri(
     extensionUri: vscode.Uri,
     webview: vscode.Webview
 ): vscode.Uri {
     return webview.asWebviewUri(
-        vscode.Uri.joinPath(extensionUri, 'node_modules', '@vscode', 'codicons', 'dist', 'codicon.css')
+        vscode.Uri.joinPath(extensionUri, ...SHIPPED_CODICONS_CSS_SEGMENTS)
     );
 }
 
@@ -46,10 +49,14 @@ function buildContentSecurityPolicy(cspSource: string, nonce: string, profile: W
             ? `script-src ${cspSource} 'nonce-${nonce}';`
             : `script-src 'nonce-${nonce}';`;
 
+    const fontSrc = ` font-src ${cspSource};`;
+
     const extras =
         profile === 'report' || profile === 'helm'
-            ? ` connect-src ${cspSource}; font-src ${cspSource}; img-src ${cspSource} data:;`
-            : '';
+            ? ` connect-src ${cspSource};${fontSrc} img-src ${cspSource} data:;`
+            : profile === 'describe'
+              ? fontSrc
+              : '';
 
     return `default-src 'none'; style-src ${cspSource} 'unsafe-inline'; ${scriptSrc}${extras}`;
 }
