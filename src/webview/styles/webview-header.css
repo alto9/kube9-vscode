@@ -93,7 +93,7 @@ body {
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .webview-header-action-btn {
@@ -144,16 +144,58 @@ body {
     font-size: 16px;
 }
 
-/* Responsive behavior for smaller panels */
-@media (max-width: 600px) {
-    .webview-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-    }
+.webview-header-overflow {
+    position: relative;
+    display: inline-flex;
+}
 
-    .webview-header-actions {
-        width: 100%;
-        justify-content: flex-start;
-    }
+.webview-header-overflow-trigger {
+    /* Shares .webview-header-action-btn */
+}
+
+.webview-header-overflow-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    min-width: 180px;
+    padding: 4px 0;
+    background-color: var(--vscode-menu-background);
+    border: 1px solid var(--vscode-menu-border);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.webview-header-overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 12px;
+    border: none;
+    background: transparent;
+    color: var(--vscode-menu-foreground);
+    font-size: 13px;
+    font-family: var(--vscode-font-family);
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.webview-header-overflow-item:hover:not(:disabled) {
+    background-color: var(--vscode-menu-selectionBackground);
+    color: var(--vscode-menu-selectionForeground);
+}
+
+.webview-header-overflow-item:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+    outline-offset: -1px;
+}
+
+.webview-header-overflow-item:disabled,
+.webview-header-overflow-item[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

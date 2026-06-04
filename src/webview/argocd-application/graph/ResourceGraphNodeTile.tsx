@@ -6,7 +6,7 @@ import { SyncHealthBadges } from './syncHealthBadges';
 import { getOverflowActions, nodeBusyKeyFromNode, type GraphOverflowAction } from './graphNodeCapabilities';
 import { useGraphInteraction } from './GraphInteractionContext';
 import { buildGraphTileAccessibleName } from './buildAccessibleName';
-import { nextOverflowMenuIndex } from './overflowMenuKeyboard';
+import { nextOverflowMenuIndex } from '../../components/overflowMenuKeyboard';
 
 export interface GraphOverflowMenuHandle {
     open: () => void;
