@@ -25,7 +25,7 @@ The tree **does not** embed the graph; it continues to list applications with st
 
 ### Operate from tiles and header
 
-- **Application-level:** **Sync**, **Refresh**, **Hard refresh**, and **View in tree** on the webview header (disabled while an operation is in progress, same as today). The Application root tile may expose the same actions in its overflow menu.
+- **Application-level:** **Sync** and **Refresh** on the **primary webview header**; **Hard refresh** and **View in tree** on the **sub-header row** directly below (disabled while an operation is in progress, same semantics as today). The Application root tile may expose the same actions in its overflow menu.
 - **Per-resource overflow (⋮):** Actions are **kind-driven** via a capability registry (not ad hoc per screen). Initial set:
   - **Deployment:** restart rollout (pods), with progress/error feedback through existing extension notification patterns.
   - **Supported workload/kinds:** navigate to resource in tree; open describe where the extension already supports that kind.
@@ -46,6 +46,27 @@ The tree **does not** embed the graph; it continues to list applications with st
 
 - Missing permissions, unreachable application, or empty resource set: show dedicated empty/error presentation on the graph or full-panel error (consistent with other webviews).
 - If topology cannot be built (integration provides a flat list only), graph still renders nodes with **no inferred edges** and surfaces a non-blocking hint that relationships are unavailable; **Details** drift table remains usable.
+
+## Webview header and overflow flows
+
+### Page-level actions (all in-scope webviews)
+
+1. User opens a webview panel; the host supplies HTML with shipped header CSS and the shared header contract (React `WebviewHeader` or legacy shared shell).
+2. User scans **title left**, **primary actions right** (at most three labeled primaries before overflow).
+3. When more page-level operations exist than the primary cap allows, user opens **Actions** overflow for the rest; **Help** (when present) stays trailing outside overflow.
+4. Panels with a **sub-header row** (Events, Argo CD Application) expose secondary controls one row below without breaking the single primary header row at default widths.
+
+### Events Viewer
+
+1. User opens Events from tree or command; primary header offers refresh and filter affordances within the global primary cap.
+2. **Export** and **Search** live on the **sub-header row** (not a third ad hoc toolbar band with unrelated styling).
+3. Command semantics (export, search, auto-refresh, clear filters) are unchanged; only placement and chrome unify.
+
+### Legacy workload describe
+
+1. User opens Deployment, StatefulSet, DaemonSet, CronJob, Node, or generic describe HTML; header uses the shared shell and tokens.
+2. **View YAML** is available on legacy Deployment and peer describes that lacked it, matching React describe parity where the extension already supports YAML for that kind.
+3. Messages remain the panel's existing `{ command }` or `{ type }` protocol until a future migration story normalizes them.
 
 ## Flow Constraints
 

@@ -35,11 +35,25 @@ Browser-side graph dependencies for this webview belong in the **esbuild bundle 
 
 These packages are **devDependencies** bundled into `media/argocd-application/main.js`. They do not ship as separate npm runtime deps inside the VSIX beyond the single IIFE artifact.
 
+## Shared webview header CSS (packaging contract)
+
+All in-scope webview HTML shells must load **one canonical shipped stylesheet** for page headers:
+
+- **Source:** `src/webview/styles/webview-header.css`
+- **Shipped artifact:** `media/styles/webview-header.css` (copied on every `npm run build` / `build:webview`)
+- **VSIX:** The shipped path must be included in the package (`.vscodeignore` must not exclude it). Production panels must **not** link to unpackaged `src/webview/styles/` URIs.
+
+**Delivery:** Shell HTML may **link** the shipped file (with `localResourceRoots` including `media/styles/`) or **inline** CSS read from the shipped path at build or panel generation time. Legacy inline generators and React shells both depend on this artifact.
+
+**CI gate:** After `npm run package`, CI **fails** if `webview-header.css` is missing from the VSIX artifact (automated assert on the packaged file path).
+
+**Consolidation:** Duplicate shell-scoped `!important` header overrides in individual panels should fold into the shared file or one optional `webview-header-overrides.css` shipped alongside the base file when shells converge.
+
 ## CSS Load Order (Argo CD Application Webview)
 
 The webview HTML is assembled in `ArgoCDApplicationWebviewProvider.getWebviewContent`. Styles must load in this order so React Flow base rules apply before kube9 overrides:
 
-1. **`webview-header.css`** (linked shared header styles)
+1. **`media/styles/webview-header.css`** (shared header styles; shipped artifact)
 2. **React Flow base stylesheet** — `@xyflow/react/dist/style.css`, copied or linked from `media/argocd-application/` at build time (do not rely on bundler-injected CSS alone; CSP and load order are explicit in HTML)
 3. **Application styles** — `src/webview/argocd-application/styles.css` copied to `media/argocd-application/styles.css` by `build:webview` and linked from HTML (graph tile, theme tokens, layout chrome)
 4. **Script last** — `media/argocd-application/main.js`

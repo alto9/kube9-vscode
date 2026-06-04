@@ -32,6 +32,8 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 - **Graph | Details** tabs use native `button` semantics or equivalent with `aria-selected` / roving tabindex so screen readers announce the active view.
 - **Details** drift table: preserve header/row associations (`th`/`scope` or grid roles), expandable row state announced on toggle, and keyboard activation for navigate-to-tree links.
 - Header operation buttons expose **disabled** state and in-progress labels ("Syncing...", "Refreshing...") to assistive tech when operations run.
+- **Actions overflow menu:** The overflow trigger and menu items are keyboard operable with visible focus; **Escape** closes the menu and returns focus to the trigger. Menu items use the same accessible names as visible primary buttons would. Overflow must not trap focus.
+- **Sub-header row** controls (Events export/search, Argo hard refresh/view in tree) follow the same button semantics and disabled/in-progress labeling as primary header actions.
 
 ## Operations and safety
 

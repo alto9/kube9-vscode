@@ -67,6 +67,35 @@ The registry is extensible: new kinds add capability entries without changing th
 - Actions target the **specific node** the user selected; they do not implicitly cascade to unrelated nodes unless the underlying operation naturally affects dependents (for example, sync at Application root).
 - Read-only or insufficient RBAC must block write actions while preserving read-only graph inspection where permitted.
 
+## Webview page-level actions
+
+Page-level commands on webview panels (header, **Actions** overflow, documented sub-header rows) follow a frozen semantics rule: **handlers and message payloads do not change** for this initiative; only placement, grouping, and chrome change.
+
+### Global header rules
+
+- **Primary cap:** At most **three** labeled primary header buttons per panel (excluding Help and the overflow control). Additional page-level operations use the **Actions** overflow menu.
+- **Help:** Only where **`helpContext`** or an equivalent help link exists; Help posts `openHelp` with that context and is **trailing**, outside overflow. Help failures must not break the panel.
+- **No capability removal:** Every action reachable before header unification remains reachable (primary, overflow, or documented sub-header/toolbar slot).
+
+### Action tiers (placement)
+
+| Tier | Placement | Examples |
+|------|-----------|----------|
+| **A — primary header** | Up to three labeled primaries | Refresh; View YAML on describe surfaces; Argo CD **Sync** and **Refresh**; Events **Refresh** |
+| **B — overflow or sub-header** | **Actions** menu when over cap, or sub-header when standardized | Argo **Hard refresh**, **View in tree** (sub-header); Events **Auto-refresh**, **Clear Filters** (primary or overflow per cap) |
+| **C — sub-header or toolbar** | Below primary header or in-panel toolbar | Events **Export**, **Search**; Pod Logs stream controls; Helm section actions |
+| **D — never page header** | In-content or graph/tree only | Row actions, graph node overflow, graph canvas zoom/fit |
+
+**Helm Package Manager** keeps **zero** global header actions plus Help only; repo/release operations stay section-scoped.
+
+**Legacy workload describe parity:** Deployment and peer legacy describes that lacked **View YAML** gain it in the unified header where React describe panels already expose YAML for that kind.
+
+**Namespace explorer:** In-webview header title is **namespace name only**; View YAML and set-default-namespace actions remain available per existing behavior.
+
+**Disabled actions:** Remain **visible** when inapplicable (for example Clear Filters with no active filters) unless a future story chooses hide-when-inapplicable.
+
+Argo CD application-level **sync**, **refresh**, **hard refresh**, and **view in tree** stay **page-level** (header/sub-header), not on the graph canvas toolbar. Graph node overflow and canvas toolbar remain separate surfaces.
+
 ## Core Invariants
 
 1. Commands execute against the currently selected context.
@@ -75,6 +104,6 @@ The registry is extensible: new kinds add capability entries without changing th
 4. Resource views should degrade gracefully when optional integrations are unavailable.
 5. Resource identity and scope must remain consistent across tree items, command routing, detail providers, YAML views, and Resource Graph Nodes.
 6. The Application Resource Graph must remain usable when dependency topology is partial; missing edges or unknown parentage must not prevent rendering available nodes and status.
-7. Application-level sync, refresh, and hard refresh flows remain available from the Application root node and are not replaced by the graph.
+7. Application-level sync, refresh, hard refresh, and view-in-tree flows remain available from the webview header/sub-header and Application root overflow; they are not replaced by the graph canvas toolbar.
 8. Graph presentation and actions must not require the user to leave VS Code or open the native Argo CD server UI.
 9. **Extension-local graph assembly** for the first delivery: the extension owns graph DTO assembly and refresh paths; kube9-operator does not supply resource-tree snapshots today and is **not** required for this capability set. A future operator-mediated snapshot may align later without changing Kind Capability Registry rules stated here.

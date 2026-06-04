@@ -15,6 +15,46 @@
 - Keep technical details available but not forced in primary success paths.
 - Resource detail views are the primary inspection surface: supported built-in workloads and custom resources should expose status, related objects, events, and YAML through resource-appropriate sections while preserving a generic fallback only for unsupported kinds.
 
+## Webview page header contract
+
+Every **in-scope webview content panel** uses one shared header presentation contract. **Helm Package Manager** is the **chrome reference** for spacing, border, title typography, and VS Code-themed action buttons (`--vscode-button-*`); other panels keep their operational actions while matching that chrome.
+
+### Primary header row
+
+- **Layout:** One horizontal row at typical panel widths: **title left** (`h1`, ellipsis truncation), **actions right** (flex, shrink-0).
+- **Primary actions:** At most **three** labeled primary header buttons per panel (excluding Help and the overflow control). Additional page-level operations belong in an **Actions** overflow menu (user-facing label **Actions**; entries keep existing action labels).
+- **Help:** When the surface defines a **help link** or **`helpContext`**, **Help** is the **trailing** header control, **outside** the Actions overflow. Panels without help context do not add Help.
+- **Layering:** **Status banners**, **tab bars** (for example Pod describe, Argo CD **Graph | Details**), and Events status chrome stay **below** the primary header; they are not folded into the header row.
+- **Implementation paths:** **React bundles** use `WebviewHeader` (or equivalent) plus shipped `webview-header.css`. **Legacy inline-HTML** generators use a **shared header shell** (markup, classes, shipped CSS, shared overflow script) matching the same DOM and tokens until optional per-kind React migration. Visual parity does not require every legacy panel to become React in this initiative.
+
+### Sub-header row (secondary controls)
+
+Some panels need a **standardized sub-header row** directly under the primary header: shared border, padding, and button tokens (no ad hoc inline style rows).
+
+| Surface | Primary header | Sub-header row |
+|---------|----------------|----------------|
+| **Events Viewer** | Refresh, Auto-refresh, Clear Filters (within primary cap; overflow if needed) | **Export**, **Search** |
+| **Argo CD Application** | **Sync**, **Refresh** (within primary cap) | **Hard refresh**, **View in tree** |
+
+Other dense tooling (Pod Logs stream controls, Helm section actions) stays in documented toolbar or body regions, not competing with Tier A header actions (see business logic **Webview page-level actions**).
+
+### Titles
+
+- **Resource describe (React and aligned legacy):** `{Kind} / {name}` unless a surface-specific rule applies.
+- **Namespace explorer (in-webview header):** **namespace name only** (no breadcrumb in the header; cluster context remains in the VS Code panel title and body as today).
+- **Argo CD Application:** application name (existing pattern).
+
+### Non-goals for this contract
+
+- kube9-desktop parity; redesign of Argo CD **graph canvas** zoom/fit toolbar; tree view chrome; backend or cluster API changes.
+- Universal Help on panels that lack help context.
+
+### Acceptance
+
+- Header actions use VS Code button tokens on all in-scope panels; no default browser-styled button rows under titles.
+- **Packaged VSIX** includes required header CSS; **CI fails** when that CSS is missing from the build artifact (operations packaging contract).
+- Narrow panels prefer **Actions overflow** over wrapping primary buttons off-panel; responsive detail is refined per issue (`/refine-issue`).
+
 ## Argo CD Application Detail (webview)
 
 The cluster **tree list** for Argo CD Applications is unchanged: sync and health iconography, category grouping, and open-from-tree behavior stay as today. Opening an application launches a **dedicated webview** whose **primary surface** is an interactive **resource dependency graph**, not a tab-first overview.
@@ -42,7 +82,7 @@ Each node is a **tile** styled for quick scan (Argo CD UI–like density, adapte
 
 **Status iconography:** Sync and health badges reuse the **same visual language** as the tree and the existing drift table: codicon-based sync indicators, health-colored badge backgrounds mapped through `testing.iconPassed`, `testing.iconFailed`, `testing.iconQueued`, and related VS Code tokens. Unknown or missing health uses muted/description styling, not a false-positive green.
 
-**Application root tile:** Mirrors application-level sync and health on the tile; application-level **sync**, **refresh**, **hard refresh**, and **view in tree** remain on the **webview header** as today (root tile overflow may duplicate subset actions for in-graph context).
+**Application root tile:** Mirrors application-level sync and health on the tile; application-level **sync** and **refresh** sit on the **primary webview header**; **hard refresh** and **view in tree** sit on the **sub-header row** under the primary header (root tile overflow may duplicate subset actions for in-graph context).
 
 ### Secondary: Details (overview and drift)
 
