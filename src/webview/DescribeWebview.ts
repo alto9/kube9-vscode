@@ -23,7 +23,12 @@ import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { NamespaceTreeItemConfig } from '../tree/items/NamespaceTreeItem';
 import { setNamespace } from '../utils/kubectlContext';
 import { resolveSpecializedDescribeFromTreeItem } from './describeTreeRouting';
-import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
+import {
+    buildLegacyDescribeHeadAssets,
+    buildLegacyHeaderFragment,
+    getLegacyDescribeWebviewPanelOptions,
+    setupLegacyDescribeHelpHandler
+} from './legacyDescribeHeaderShell';
 import { getWebviewShellHtml } from './webviewShellHtml';
 
 /**
@@ -293,16 +298,15 @@ export class DescribeWebview {
             'kube9Describe',
             title,
             vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
+            getLegacyDescribeWebviewPanelOptions(context.extensionUri)
         );
 
         DescribeWebview.currentPanel = panel;
 
         // Set the webview's HTML content
         panel.webview.html = DescribeWebview.getWebviewContent(resourceInfo, panel.webview);
+
+        setupLegacyDescribeHelpHandler(panel.webview);
 
         // Handle panel disposal - clear shared state
         panel.onDidDispose(
@@ -365,45 +369,32 @@ export class DescribeWebview {
             ? `${resourceInfo.kind} "${resourceInfo.name}" in namespace "${resourceInfo.namespace}"`
             : `${resourceInfo.kind} "${resourceInfo.name}"`;
 
-        const cspSource = webview.cspSource;
-        let headerStyleUri = '';
-        let nonce = '';
-
-        if (DescribeWebview.extensionContext) {
-            headerStyleUri = getWebviewHeaderStyleUri(
-                DescribeWebview.extensionContext.extensionUri,
-                webview
-            ).toString();
-            nonce = getNonce();
+        const extensionUri = DescribeWebview.extensionContext?.extensionUri;
+        if (!extensionUri) {
+            throw new Error('Describe webview requires extension context');
         }
 
-        const headerStyleLink = headerStyleUri ? `<link href="${headerStyleUri}" rel="stylesheet">` : '';
-        const cspScriptSrc = nonce ? `script-src 'nonce-${nonce}';` : '';
+        const { headerLink, codiconsLink, csp } = buildLegacyDescribeHeadAssets(webview, extensionUri);
+        const headerFragment = buildLegacyHeaderFragment({
+            titleInnerHtml: `${DescribeWebview.escapeHtml(resourceInfo.kind)} / ${DescribeWebview.escapeHtml(resourceInfo.name)}`,
+            showRefresh: false,
+            showViewYaml: false
+        });
 
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' ${cspSource}; ${cspScriptSrc}">
-    ${headerStyleLink}
+    <meta http-equiv="Content-Security-Policy" content="${csp}">
+    ${headerLink}
+    ${codiconsLink}
     <title>Describe: ${DescribeWebview.escapeHtml(resourceInfo.kind)} / ${DescribeWebview.escapeHtml(resourceInfo.name)}</title>
     <style>
-        body {
-            font-family: var(--vscode-font-family);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
             padding: 20px;
-            margin: 0;
-        }
-        h1 {
-            margin-top: 0;
-            font-size: 1.5em;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-            border-bottom: 2px solid var(--vscode-panel-border);
-            padding-bottom: 10px;
-            margin-bottom: 20px;
         }
         .coming-soon {
             text-align: center;
@@ -422,11 +413,24 @@ export class DescribeWebview {
     </style>
 </head>
 <body>
-    <h1>${DescribeWebview.escapeHtml(resourceInfo.kind)} / ${DescribeWebview.escapeHtml(resourceInfo.name)}</h1>
-    <div class="coming-soon">
-        <div class="coming-soon-message">Coming soon</div>
-        <div class="resource-info">Resource: ${DescribeWebview.escapeHtml(resourceDisplay)}</div>
+    <div class="container">
+        ${headerFragment}
+        <div class="coming-soon">
+            <div class="coming-soon-message">Coming soon</div>
+            <div class="resource-info">Resource: ${DescribeWebview.escapeHtml(resourceDisplay)}</div>
+        </div>
     </div>
+    <script>
+    (function() {
+        var vscode = acquireVsCodeApi();
+        var helpBtn = document.getElementById('help-btn');
+        if (helpBtn) {
+            helpBtn.addEventListener('click', function() {
+                vscode.postMessage({ command: 'openHelp', context: 'describe-webview' });
+            });
+        }
+    })();
+    </script>
 </body>
 </html>`;
     }

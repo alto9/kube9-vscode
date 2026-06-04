@@ -165,6 +165,10 @@ export function getYAMLEditorManager(): YAMLEditorManager {
  * @returns The help controller
  * @throws Error if help controller has not been initialized
  */
+export function isHelpControllerReady(): boolean {
+    return helpController !== undefined;
+}
+
 export function getHelpController(): HelpController {
     if (!helpController) {
         throw new Error('HelpController not initialized');

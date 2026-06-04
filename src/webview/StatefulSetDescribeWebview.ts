@@ -4,6 +4,13 @@ import { transformStatefulSetData, StatefulSetDescribeData } from './statefulSet
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
 import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
+import {
+    buildLegacyDescribeDocumentShell,
+    buildLegacyHeaderActionScript,
+    buildLegacyHeaderFragment,
+    getLegacyDescribeWebviewPanelOptions,
+    setupLegacyDescribeHelpHandler
+} from './legacyDescribeHeaderShell';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 interface WebviewMessage {
@@ -19,6 +26,7 @@ interface WebviewMessage {
  * Mirrors {@link DeploymentDescribeWebview} patterns (shared panel, cache, messages).
  */
 export class StatefulSetDescribeWebview {
+    private static extensionUri: vscode.Uri | undefined;
     private static currentPanel: vscode.WebviewPanel | undefined;
     private static currentName: string | undefined;
     private static currentNamespace: string | undefined;
@@ -37,6 +45,7 @@ export class StatefulSetDescribeWebview {
         contextName: string
     ): Promise<void> {
         releaseExclusiveDescribePanelBindings();
+        StatefulSetDescribeWebview.extensionUri = context.extensionUri;
         StatefulSetDescribeWebview.currentName = statefulSetName;
         StatefulSetDescribeWebview.currentNamespace = namespace;
         StatefulSetDescribeWebview.kubeconfigPath = kubeconfigPath;
@@ -78,10 +87,12 @@ export class StatefulSetDescribeWebview {
 
         const title = `StatefulSet / ${statefulSetName}`;
         notifyMajorWebviewOpened('resource_describe');
-        const panel = vscode.window.createWebviewPanel('kube9Describe', title, vscode.ViewColumn.One, {
-            enableScripts: true,
-            retainContextWhenHidden: true
-        });
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            title,
+            vscode.ViewColumn.One,
+            getLegacyDescribeWebviewPanelOptions(context.extensionUri)
+        );
 
         StatefulSetDescribeWebview.currentPanel = panel;
         DescribeWebview.setSharedPanel(panel);
@@ -98,6 +109,7 @@ export class StatefulSetDescribeWebview {
     private static attachPanelBindings(panel: vscode.WebviewPanel): void {
         StatefulSetDescribeWebview.detachPanelSubscriptions();
         StatefulSetDescribeWebview.setupMessageHandlers(panel);
+        setupLegacyDescribeHelpHandler(panel.webview);
 
         StatefulSetDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
             if (StatefulSetDescribeWebview.currentPanel === panel) {
@@ -304,26 +316,16 @@ export class StatefulSetDescribeWebview {
     }
 
     private static getWebviewContent(webview: vscode.Webview): string {
-        const cspSource = webview.cspSource;
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src ${cspSource} 'unsafe-inline';">
-    <title>StatefulSet Describe</title>
-    <style>
-        body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background); padding: 0; margin: 0; }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        .resource-header { display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-        .resource-title { margin: 0; font-size: 24px; font-weight: 600; }
-        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-        .action-btn { display: flex; align-items: center; gap: 6px; padding: 6px 12px;
-            background-color: var(--vscode-button-background); color: var(--vscode-button-foreground);
-            border: none; border-radius: 2px; cursor: pointer; font-family: inherit; }
-        .action-btn:hover { background-color: var(--vscode-button-hoverBackground); }
+        const extensionUri = StatefulSetDescribeWebview.extensionUri;
+        if (!extensionUri) {
+            throw new Error('StatefulSet describe requires extension context');
+        }
+
+        const headerFragment = buildLegacyHeaderFragment({
+            titleInnerHtml: 'StatefulSet / <span id="sts-name">Loading…</span>'
+        });
+
+        const panelCss = `        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .section { margin-bottom: 28px; }
         .section h2 { margin: 0 0 12px 0; font-size: 18px; font-weight: 600;
             border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 8px; }
@@ -348,18 +350,10 @@ export class StatefulSetDescribeWebview {
         .loading { text-align: center; padding: 40px; color: var(--vscode-descriptionForeground); }
         .hidden { display: none; }
         .label-list { list-style: none; padding: 0; margin: 0; }
-        .label-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--vscode-panel-border); }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="resource-header">
-            <h1 class="resource-title">StatefulSet / <span id="sts-name">Loading…</span></h1>
-            <div class="header-actions">
-                <button id="yaml-btn" class="action-btn">View YAML</button>
-                <button id="refresh-btn" class="action-btn">Refresh</button>
-            </div>
-        </div>
+        .label-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--vscode-panel-border); }`;
+
+        const bodyHtml = `    <div class="container">
+            ${headerFragment}
         <div id="loading" class="loading">Loading StatefulSet…</div>
         <div id="page-error" class="error-banner hidden"></div>
         <div id="warnings" class="hidden"></div>
@@ -383,11 +377,9 @@ export class StatefulSetDescribeWebview {
                 <th>Type</th><th>Reason</th><th>Message</th><th>Age</th><th>From</th><th>Count</th>
             </tr></thead><tbody id="events-body"></tbody></table></div>
         </div>
-    </div>
-    <script>
-    (function() {
-        var vscode = acquireVsCodeApi();
-        window.addEventListener('message', function(event) {
+    </div>`;
+
+        const script = `        window.addEventListener('message', function(event) {
             var message = event.data;
             if (message.command === 'updateStatefulSetData') {
                 hideError();
@@ -570,12 +562,15 @@ export class StatefulSetDescribeWebview {
             document.getElementById('content').classList.add('hidden');
             vscode.postMessage({ command: 'refresh' });
         });
-        document.getElementById('yaml-btn').addEventListener('click', function() {
-            vscode.postMessage({ command: 'viewYaml' });
+${buildLegacyHeaderActionScript({ showRefresh: false })}`;
+
+        return buildLegacyDescribeDocumentShell({
+            webview,
+            extensionUri,
+            pageTitle: 'StatefulSet Describe',
+            bodyHtml,
+            panelCss,
+            script
         });
-    })();
-    </script>
-</body>
-</html>`;
     }
 }
