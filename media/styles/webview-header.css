@@ -199,3 +199,34 @@ body {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Secondary control row under .webview-header (export, search, hard refresh, etc.) */
+.webview-subheader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--vscode-panel-border);
+    background-color: var(--vscode-editor-background);
+    min-height: 40px;
+}
+
+.webview-subheader-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.webview-subheader-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.webview-subheader > .webview-subheader-actions:only-child {
+    width: 100%;
+    justify-content: flex-end;
+}
