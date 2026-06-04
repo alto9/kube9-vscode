@@ -132,9 +132,10 @@ body {
     display: grid;
     grid-template-areas:
         "header"
+        "subheader"
         "tabs"
         "main";
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
     min-height: 100vh;
     font-family: var(--font-family);
     color: var(--foreground);
@@ -143,6 +144,10 @@ body {
 
 .argocd-app-shell__header {
     grid-area: header;
+}
+
+.argocd-app-shell__subheader {
+    grid-area: subheader;
 }
 
 .argocd-app-shell__tabs {
