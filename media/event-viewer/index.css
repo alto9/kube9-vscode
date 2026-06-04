@@ -103,6 +103,115 @@ body {
     overflow: hidden;
 }
 
+.event-viewer-subheader-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: var(--spacing-sm);
+}
+
+.event-viewer-export {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.event-viewer-export-trigger {
+    position: relative;
+}
+
+.event-viewer-export-chevron {
+    margin-left: var(--spacing-xs);
+    font-size: 12px;
+}
+
+.event-viewer-export-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: var(--spacing-xs);
+    background-color: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.event-viewer-export-menu-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    background-color: transparent;
+    color: var(--vscode-dropdown-foreground);
+    cursor: pointer;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    text-align: left;
+    transition: background-color 0.15s ease;
+}
+
+.event-viewer-export-menu-item:hover {
+    background-color: var(--list-hover-bg);
+}
+
+.event-viewer-search {
+    display: inline-flex;
+    align-items: center;
+    width: 250px;
+    max-width: 100%;
+    flex-shrink: 0;
+}
+
+.event-viewer-search-field {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    gap: 6px;
+}
+
+.event-viewer-search-icon {
+    font-size: 14px;
+    color: var(--input-fg);
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.event-viewer-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    color: var(--input-fg);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    padding: 2px 0;
+}
+
+.event-viewer-search-clear {
+    padding: 2px;
+    border: none;
+    background-color: transparent;
+    color: var(--input-fg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.15s ease;
+}
+
+.event-viewer-search-clear:hover {
+    background-color: var(--input-option-hover);
+}
+
 /* ==========================================================================
    Toolbar Styles
    ========================================================================== */
@@ -197,9 +306,10 @@ body {
     flex-shrink: 0;
     background-color: var(--vscode-sideBar-background);
     border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     position: relative;
+    height: 100% !important;
 }
 
 .filter-pane-header {
@@ -212,13 +322,17 @@ body {
 }
 
 .filter-sections {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+    flex: 1 1 auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    display: block !important;
+    min-height: 300px !important;
 }
 
 .filter-section {
     border-bottom: 1px solid var(--border);
+    display: block !important;
+    min-height: 100px !important;
 }
 
 .filter-section:last-child {
@@ -249,7 +363,10 @@ body {
 
 .filter-section-content {
     padding: var(--spacing-sm) var(--spacing-md);
-    overflow: hidden;
+    overflow: visible !important;
+    display: block !important;
+    min-height: 60px !important;
+    visibility: visible !important;
 }
 
 /* ==========================================================================
@@ -817,7 +934,27 @@ body {
    Responsive Design
    ========================================================================== */
 
+/* Medium screens (768px - 1200px) */
+@media (min-width: 768px) and (max-width: 1200px) {
+    .filter-pane {
+        min-width: 200px;
+        max-width: 300px;
+    }
+    
+    .table-header,
+    .event-row {
+        grid-template-columns: 100px 140px 1fr 180px 80px;
+    }
+    
+    /* Slightly reduce column widths for better fit */
+    .event-cell.category {
+        font-size: var(--font-size-xs);
+    }
+}
+
+/* Narrow screens (<768px) */
 @media (max-width: 768px) {
+    /* Toolbar adjustments */
     .toolbar {
         flex-direction: column;
         align-items: stretch;
@@ -832,23 +969,89 @@ body {
         width: 100%;
     }
     
-    .filter-pane {
-        position: absolute;
-        z-index: 10;
-        height: 100%;
-        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+    /* Filter pane overlay behavior */
+    .three-pane-layout {
+        position: relative;
     }
     
+    .filter-pane {
+        position: absolute;
+        left: -250px;
+        top: 0;
+        z-index: 100;
+        height: 100%;
+        width: 250px;
+        transition: left 0.3s ease;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+        background-color: var(--vscode-sideBar-background);
+    }
+    
+    .filter-pane.open {
+        left: 0;
+    }
+    
+    /* Overlay backdrop when filter pane is open */
+    .three-pane-layout::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.3);
+        z-index: 99;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+    
+    .three-pane-layout.filter-pane-open::before {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    
+    /* Main content takes full width */
+    .main-and-details {
+        width: 100%;
+    }
+    
+    /* Table adjustments - hide Category (5th column), keep Level, Date/Time, Source */
     .table-header,
     .event-row {
         grid-template-columns: 100px 120px 1fr;
     }
     
+    /* Hide Event ID (4th column) and Category (5th column) on narrow screens */
     .table-header-column:nth-child(4),
     .table-header-column:nth-child(5),
     .event-cell:nth-child(4),
     .event-cell:nth-child(5) {
         display: none;
     }
+    
+    /* Enable horizontal scrolling for table if needed */
+    .event-table {
+        overflow-x: auto;
+    }
+    
+    /* Ensure table container can scroll horizontally when content overflows */
+    .main-and-details {
+        overflow-x: auto;
+    }
+    
+    /* Details pane defaults to collapsed on narrow screens */
+    .event-details {
+        min-height: 30px;
+    }
+    
+    .details-content {
+        display: none;
+    }
+    
+    .event-details:not(.collapsed) .details-content {
+        display: flex;
+    }
 }
+
+/* Wide screens (>1200px) - default styles apply, no media query needed */
 
