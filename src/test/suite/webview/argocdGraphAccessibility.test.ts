@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { buildGraphTileAccessibleName } from '../../../webview/argocd-application/graph/buildAccessibleName';
 import { sortNodesForFocusOrder } from '../../../webview/argocd-application/graph/focusOrder';
-import { nextOverflowMenuIndex } from '../../../webview/argocd-application/graph/overflowMenuKeyboard';
+import { nextOverflowMenuIndex } from '../../../webview/components/overflowMenuKeyboard';
 import {
     ARGOCD_APP_PANEL_IDS,
     ARGOCD_APP_TAB_IDS,
