@@ -62,6 +62,9 @@ jobs:
       
       - name: Package extension
         run: npm run package
+
+      - name: Verify VSIX includes webview-header.css
+        run: npm run verify:vsix-header-css
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -4,6 +4,7 @@ import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from 
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
+import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
 
 /**
  * EventViewerPanel manages webview panels for Events Viewer.
@@ -104,7 +105,7 @@ export class EventViewerPanel {
                 enableScripts: true,
                 retainContextWhenHidden: true,
                 localResourceRoots: [
-                    vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'event-viewer')
+                    vscode.Uri.joinPath(extensionContext.extensionUri, 'media')
                 ]
             }
         );
@@ -433,9 +434,7 @@ export class EventViewerPanel {
         const styleUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this.extensionContext.extensionUri, 'media', 'event-viewer', 'index.css')
         );
-        const headerStyleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.extensionContext.extensionUri, 'src', 'webview', 'styles', 'webview-header.css')
-        );
+        const headerStyleUri = getWebviewHeaderStyleUri(this.extensionContext.extensionUri, webview);
 
         const nonce = getNonce();
 

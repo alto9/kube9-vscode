@@ -7,6 +7,7 @@ import { WebviewToExtensionMessage, ExtensionToWebviewMessage, InitialState, Pod
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
 import { makePodLogsViewerKey } from './podLogsViewerKey';
+import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
 
 /**
  * Interface for storing panel information.
@@ -208,7 +209,10 @@ export class PodLogsViewerPanel {
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                retainContextWhenHidden: true
+                retainContextWhenHidden: true,
+                localResourceRoots: [
+                    vscode.Uri.joinPath(context.extensionUri, 'media')
+                ]
             }
         );
 
@@ -1272,9 +1276,7 @@ export class PodLogsViewerPanel {
         const stylesUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionUri, 'media', 'pod-logs', 'styles.css')
         );
-        const headerStyleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionUri, 'src', 'webview', 'styles', 'webview-header.css')
-        );
+        const headerStyleUri = getWebviewHeaderStyleUri(extensionUri, webview);
 
         const nonce = getNonce();
         const cspSource = webview.cspSource;

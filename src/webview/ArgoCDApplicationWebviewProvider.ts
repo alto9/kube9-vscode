@@ -18,6 +18,7 @@ import {
     type WebviewToExtensionMessage
 } from '../types/argocdWebviewProtocol';
 import { dispatchResourceAction } from '../services/KindCapabilityRegistry';
+import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
 
 /**
  * Information stored with each webview panel.
@@ -174,10 +175,7 @@ export class ArgoCDApplicationWebviewProvider {
             vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'main.js')
         );
 
-        // Get header styles URI
-        const headerStyleUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(extensionContext.extensionUri, 'src', 'webview', 'styles', 'webview-header.css')
-        );
+        const headerStyleUri = getWebviewHeaderStyleUri(extensionContext.extensionUri, webview);
 
         const reactFlowStyleUri = webview.asWebviewUri(
             vscode.Uri.joinPath(extensionContext.extensionUri, 'media', 'argocd-application', 'style.css')
