@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { KubernetesEvent, EventFilters, ExtensionMessage, WebviewMessage } from '../../types/Events';
 import { WebviewHeader, WebviewHeaderAction } from '../components/WebviewHeader';
+import { WebviewSubheader } from '../components/WebviewSubheader';
 import { ExportButton } from './components/ExportButton';
 import { ThreePaneLayout } from './components/ThreePaneLayout';
 import { StatusBar } from './components/StatusBar';
@@ -184,25 +185,15 @@ export const EventViewerApp: React.FC = () => {
                 actions={headerActions}
                 helpContext="events-viewer"
             />
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                padding: '8px 16px',
-                borderBottom: '1px solid var(--vscode-panel-border)',
-                backgroundColor: 'var(--vscode-editor-background)',
-                gap: '8px'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <WebviewSubheader>
+                <div className="event-viewer-subheader-row">
                     <ExportButton onExport={handleExport} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <SearchBox 
+                    <SearchBox
                         value={state.filters.searchText || ''}
                         onChange={(text) => handleFilterChange({ ...state.filters, searchText: text })}
                     />
                 </div>
-            </div>
+            </WebviewSubheader>
             <ThreePaneLayout
                 events={state.filteredEvents}
                 selectedEvent={state.selectedEvent}

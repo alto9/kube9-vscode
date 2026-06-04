@@ -56,83 +56,32 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ value, onChange }) => {
         inputRef.current?.focus();
     };
 
-    const containerStyle: React.CSSProperties = {
-        position: 'relative',
-        display: 'inline-flex',
-        alignItems: 'center',
-        width: '250px',
-        maxWidth: '100%'
-    };
-
-    const inputWrapperStyle: React.CSSProperties = {
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        width: '100%',
-        backgroundColor: 'var(--vscode-input-background)',
-        border: '1px solid var(--vscode-input-border)',
-        borderRadius: '3px',
-        padding: '4px 8px',
-        gap: '6px'
-    };
-
-    const inputStyle: React.CSSProperties = {
-        flex: 1,
-        border: 'none',
-        outline: 'none',
-        backgroundColor: 'transparent',
-        color: 'var(--vscode-input-foreground)',
-        fontSize: '13px',
-        fontFamily: 'var(--vscode-font-family)',
-        padding: '2px 0'
-    };
-
-    const clearButtonStyle: React.CSSProperties = {
-        padding: '2px',
-        border: 'none',
-        backgroundColor: 'transparent',
-        color: 'var(--vscode-input-foreground)',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: '2px',
-        transition: 'background-color 0.15s ease',
-        opacity: localValue ? 1 : 0,
-        pointerEvents: localValue ? 'auto' : 'none'
-    };
-
     return (
-        <div style={containerStyle}>
-            <div style={inputWrapperStyle}>
-                <span className="codicon codicon-search" style={{ fontSize: '14px', color: 'var(--vscode-input-foreground)', opacity: 0.7 }}></span>
+        <div className="event-viewer-search">
+            <div className="event-viewer-search-field">
+                <span className="codicon codicon-search event-viewer-search-icon" aria-hidden="true" />
                 <input
                     ref={inputRef}
                     type="text"
+                    className="event-viewer-search-input"
                     value={localValue}
                     onChange={(e) => setLocalValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Search events..."
-                    style={inputStyle}
                     aria-label="Search events"
                     title="Search events (Press Escape to clear)"
                 />
-                {localValue && (
+                {localValue ? (
                     <button
+                        type="button"
+                        className="event-viewer-search-clear"
                         onClick={handleClear}
-                        style={clearButtonStyle}
                         aria-label="Clear search"
                         title="Clear search"
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = 'var(--vscode-inputOption-hoverBackground)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
                     >
-                        <span className="codicon codicon-close" style={{ fontSize: '14px' }}></span>
+                        <span className="codicon codicon-close" aria-hidden="true" />
                     </button>
-                )}
+                ) : null}
             </div>
         </div>
     );

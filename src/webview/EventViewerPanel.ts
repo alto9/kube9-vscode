@@ -5,6 +5,7 @@ import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getHelpController } from '../extension';
 import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
+import { getCodiconsStyleUri } from './webviewShellHtml';
 
 /**
  * EventViewerPanel manages webview panels for Events Viewer.
@@ -435,15 +436,18 @@ export class EventViewerPanel {
             vscode.Uri.joinPath(this.extensionContext.extensionUri, 'media', 'event-viewer', 'index.css')
         );
         const headerStyleUri = getWebviewHeaderStyleUri(this.extensionContext.extensionUri, webview);
+        const codiconsStyleUri = getCodiconsStyleUri(this.extensionContext.extensionUri, webview);
 
         const nonce = getNonce();
+        const cspSource = webview.cspSource;
 
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${cspSource};">
+    <link href="${codiconsStyleUri}" rel="stylesheet">
     <link href="${styleUri}" rel="stylesheet">
     <link href="${headerStyleUri}" rel="stylesheet">
     <title>Events Viewer</title>

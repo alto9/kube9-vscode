@@ -103,6 +103,115 @@ body {
     overflow: hidden;
 }
 
+.event-viewer-subheader-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: var(--spacing-sm);
+}
+
+.event-viewer-export {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.event-viewer-export-trigger {
+    position: relative;
+}
+
+.event-viewer-export-chevron {
+    margin-left: var(--spacing-xs);
+    font-size: 12px;
+}
+
+.event-viewer-export-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: var(--spacing-xs);
+    background-color: var(--vscode-dropdown-background);
+    border: 1px solid var(--vscode-dropdown-border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    min-width: 150px;
+    display: flex;
+    flex-direction: column;
+}
+
+.event-viewer-export-menu-item {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    background-color: transparent;
+    color: var(--vscode-dropdown-foreground);
+    cursor: pointer;
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    text-align: left;
+    transition: background-color 0.15s ease;
+}
+
+.event-viewer-export-menu-item:hover {
+    background-color: var(--list-hover-bg);
+}
+
+.event-viewer-search {
+    display: inline-flex;
+    align-items: center;
+    width: 250px;
+    max-width: 100%;
+    flex-shrink: 0;
+}
+
+.event-viewer-search-field {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    gap: 6px;
+}
+
+.event-viewer-search-icon {
+    font-size: 14px;
+    color: var(--input-fg);
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.event-viewer-search-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    color: var(--input-fg);
+    font-size: var(--font-size);
+    font-family: var(--font-family);
+    padding: 2px 0;
+}
+
+.event-viewer-search-clear {
+    padding: 2px;
+    border: none;
+    background-color: transparent;
+    color: var(--input-fg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: background-color 0.15s ease;
+}
+
+.event-viewer-search-clear:hover {
+    background-color: var(--input-option-hover);
+}
+
 /* ==========================================================================
    Toolbar Styles
    ========================================================================== */
