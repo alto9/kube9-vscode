@@ -1,11 +1,18 @@
 import * as vscode from 'vscode';
+import { getYAMLEditorManager } from '../extension';
 import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { transformDaemonSetData, DaemonSetDescribeData } from './daemonSetDataTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
 import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
+import {
+    buildLegacyDescribeDocumentShell,
+    buildLegacyHeaderActionScript,
+    buildLegacyHeaderFragment,
+    getLegacyDescribeWebviewPanelOptions,
+    setupLegacyDescribeHelpHandler
+} from './legacyDescribeHeaderShell';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
-import { getYAMLEditorManager } from '../extension';
 
 interface WebviewMessage {
     command: 'refresh' | 'copyValue' | 'viewYaml' | 'navigateToPod';
@@ -19,6 +26,7 @@ interface WebviewMessage {
  * Structured describe panel for namespaced DaemonSet resources.
  */
 export class DaemonSetDescribeWebview {
+    private static extensionUri: vscode.Uri | undefined;
     private static currentPanel: vscode.WebviewPanel | undefined;
     private static currentDaemonSetName: string | undefined;
     private static currentNamespace: string | undefined;
@@ -37,6 +45,7 @@ export class DaemonSetDescribeWebview {
         contextName: string
     ): Promise<void> {
         releaseExclusiveDescribePanelBindings();
+        DaemonSetDescribeWebview.extensionUri = context.extensionUri;
         DaemonSetDescribeWebview.currentDaemonSetName = daemonSetName;
         DaemonSetDescribeWebview.currentNamespace = namespace;
         DaemonSetDescribeWebview.kubeconfigPath = kubeconfigPath;
@@ -76,10 +85,12 @@ export class DaemonSetDescribeWebview {
         }
 
         notifyMajorWebviewOpened('resource_describe');
-        const panel = vscode.window.createWebviewPanel('kube9Describe', `DaemonSet / ${daemonSetName}`, vscode.ViewColumn.One, {
-            enableScripts: true,
-            retainContextWhenHidden: true
-        });
+        const panel = vscode.window.createWebviewPanel(
+            'kube9Describe',
+            `DaemonSet / ${daemonSetName}`,
+            vscode.ViewColumn.One,
+            getLegacyDescribeWebviewPanelOptions(context.extensionUri)
+        );
 
         DaemonSetDescribeWebview.currentPanel = panel;
         DescribeWebview.setSharedPanel(panel);
@@ -109,6 +120,7 @@ export class DaemonSetDescribeWebview {
     private static attachPanelBindings(panel: vscode.WebviewPanel): void {
         DaemonSetDescribeWebview.detachPanelSubscriptions();
         DaemonSetDescribeWebview.setupMessageHandlers(panel);
+        setupLegacyDescribeHelpHandler(panel.webview);
 
         DaemonSetDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
             if (DaemonSetDescribeWebview.currentPanel === panel) {
@@ -308,22 +320,16 @@ export class DaemonSetDescribeWebview {
     }
 
     private static getWebviewContent(webview: vscode.Webview): string {
-        const csp = webview.cspSource;
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src ${csp} 'unsafe-inline';" />
-  <title>DaemonSet Describe</title>
-  <style>
-    body { font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); color: var(--vscode-foreground); background: var(--vscode-editor-background); margin: 0; padding: 0; }
-    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-    .hdr { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 12px; margin-bottom: 16px; }
-    .hdr h1 { margin: 0; font-size: 22px; font-weight: 600; }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .action-btn { padding: 6px 12px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; border-radius: 2px; cursor: pointer; font: inherit; }
-    .action-btn:hover { background: var(--vscode-button-hoverBackground); }
+        const extensionUri = DaemonSetDescribeWebview.extensionUri;
+        if (!extensionUri) {
+            throw new Error('DaemonSet describe requires extension context');
+        }
+
+        const headerFragment = buildLegacyHeaderFragment({
+            titleInnerHtml: 'DaemonSet / <span id="ds-name">…</span>'
+        });
+
+        const panelCss = `    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
     .section { margin-bottom: 28px; }
     .section h2 { margin: 0 0 10px; font-size: 17px; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 6px; }
     .info-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
@@ -355,18 +361,10 @@ export class DaemonSetDescribeWebview {
     .status-bad { color: var(--vscode-errorForeground); }
     .annotation-item { padding: 10px 0; border-bottom: 1px solid var(--vscode-panel-border); }
     .annotation-key { font-weight: 600; margin-bottom: 4px; }
-    .annotation-val { font-family: var(--vscode-editor-font-family); white-space: pre-wrap; word-break: break-all; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="hdr">
-      <h1>DaemonSet / <span id="ds-name">…</span></h1>
-      <div class="actions">
-        <button class="action-btn" id="btn-refresh">Refresh</button>
-        <button class="action-btn" id="btn-yaml">View YAML</button>
-      </div>
-    </div>
+    .annotation-val { font-family: var(--vscode-editor-font-family); white-space: pre-wrap; word-break: break-all; }`;
+
+        const bodyHtml = `  <div class="container">
+    ${headerFragment}
     <div id="loading" class="loading">Loading DaemonSet…</div>
     <div id="err" class="error-message"></div>
     <div id="main" class="hidden">
@@ -381,11 +379,9 @@ export class DaemonSetDescribeWebview {
       <div class="section" id="sec-events"><h2>Events</h2><div id="events-banner"></div><table><thead><tr><th>Type</th><th>Reason</th><th>Message</th><th>Age</th><th>From</th><th>Count</th></tr></thead><tbody id="events-body"></tbody></table></div>
       <div class="section" id="sec-annotations"><h2>Annotations</h2><div id="ann-body"></div></div>
     </div>
-  </div>
-  <script>
-  (function(){
-    const vscode = acquireVsCodeApi();
-    const $ = id => document.getElementById(id);
+  </div>`;
+
+        const script = `    const $ = id => document.getElementById(id);
     function esc(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     window.addEventListener('message', ev => {
       const m = ev.data;
@@ -512,11 +508,16 @@ export class DaemonSetDescribeWebview {
         : '<div class="empty-state">No annotations</div>';
       ab.querySelectorAll('.copy-btn').forEach(b => b.addEventListener('click', () => vscode.postMessage({ command:'copyValue', value: b.getAttribute('data-copy') })));
     }
-    $('btn-refresh').addEventListener('click', () => { $('loading').classList.remove('hidden'); vscode.postMessage({ command:'refresh' }); });
-    $('btn-yaml').addEventListener('click', () => vscode.postMessage({ command:'viewYaml' }));
-  })();
-  </script>
-</body>
-</html>`;
+    $('refresh-btn').addEventListener('click', () => { $('loading').classList.remove('hidden'); vscode.postMessage({ command:'refresh' }); });
+${buildLegacyHeaderActionScript({ showRefresh: false })}`;
+
+        return buildLegacyDescribeDocumentShell({
+            webview,
+            extensionUri,
+            pageTitle: 'DaemonSet Describe',
+            bodyHtml,
+            panelCss,
+            script
+        });
     }
 }

@@ -16,14 +16,18 @@ export class WebviewHelpHandler {
      */
     public setupHelpMessageHandler(webview: vscode.Webview): void {
         webview.onDidReceiveMessage(async (message) => {
-            if (message.type === 'openHelp') {
-                try {
-                    await this.helpController.openContextualHelp(message.context);
-                } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : String(error);
-                    console.error('Error handling help message:', errorMessage);
-                    // Don't show error to user - help failures shouldn't break webview functionality
-                }
+            const isReactHelp = message?.type === 'openHelp' && message.context;
+            const isLegacyHelp = message?.command === 'openHelp' && message.context;
+            if (!isReactHelp && !isLegacyHelp) {
+                return;
+            }
+
+            try {
+                await this.helpController.openContextualHelp(message.context);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Error handling help message:', errorMessage);
+                // Don't show error to user - help failures shouldn't break webview functionality
             }
         });
     }

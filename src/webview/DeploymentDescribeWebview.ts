@@ -4,13 +4,20 @@ import { transformDeploymentData, DeploymentDescribeData } from './deploymentDat
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
 import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
+import {
+    buildLegacyDescribeHeadAssets,
+    buildLegacyHeaderActionScript,
+    buildLegacyHeaderFragment,
+    getLegacyDescribeWebviewPanelOptions,
+    setupLegacyDescribeHelpHandler
+} from './legacyDescribeHeaderShell';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Message sent from webview to extension.
  */
 interface WebviewMessage {
-    command: 'refresh' | 'navigateToReplicaSet' | 'copyValue';
+    command: 'refresh' | 'navigateToReplicaSet' | 'copyValue' | 'viewYaml';
     replicaSetName?: string;
     name?: string;
     namespace?: string;
@@ -140,10 +147,7 @@ export class DeploymentDescribeWebview {
             'kube9Describe',  // Use the shared panel ID
             title,
             vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
+            getLegacyDescribeWebviewPanelOptions(context.extensionUri)
         );
 
         DeploymentDescribeWebview.currentPanel = panel;
@@ -164,6 +168,7 @@ export class DeploymentDescribeWebview {
     private static attachPanelBindings(panel: vscode.WebviewPanel): void {
         DeploymentDescribeWebview.releaseMessageBindings();
         DeploymentDescribeWebview.setupMessageHandlers(panel);
+        setupLegacyDescribeHelpHandler(panel.webview);
 
         DeploymentDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
             if (DeploymentDescribeWebview.currentPanel === panel) {
@@ -381,6 +386,31 @@ export class DeploymentDescribeWebview {
                         }
                         break;
                     }
+
+                    case 'viewYaml': {
+                        const deploymentName = DeploymentDescribeWebview.currentDeploymentName;
+                        const namespace = DeploymentDescribeWebview.currentNamespace;
+                        const cluster = DeploymentDescribeWebview.contextName;
+                        if (!deploymentName || !namespace || !cluster) {
+                            vscode.window.showErrorMessage('Deployment context not available');
+                            break;
+                        }
+                        try {
+                            const { getYAMLEditorManager } = await import('../extension');
+                            const yamlEditorManager = getYAMLEditorManager();
+                            await yamlEditorManager.openYAMLEditor({
+                                kind: 'Deployment',
+                                name: deploymentName,
+                                namespace,
+                                apiVersion: 'apps/v1',
+                                cluster
+                            });
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            vscode.window.showErrorMessage(`Failed to open YAML: ${errorMessage}`);
+                        }
+                        break;
+                    }
                     
                     default: {
                         console.log('Unknown message command:', message.command);
@@ -400,76 +430,34 @@ export class DeploymentDescribeWebview {
     private static getWebviewContent(
         webview: vscode.Webview
     ): string {
-        const cspSource = webview.cspSource;
+        const extensionUri = DeploymentDescribeWebview.extensionContext?.extensionUri;
+        if (!extensionUri) {
+            throw new Error('Deployment describe requires extension context');
+        }
+        const { headerLink, codiconsLink, csp } = buildLegacyDescribeHeadAssets(webview, extensionUri);
+        const headerFragment = buildLegacyHeaderFragment({
+            titleInnerHtml:
+                'Deployment / <span class="deployment-name" id="deployment-name">Loading...</span>'
+        });
 
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src ${cspSource} 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="${csp}">
+    ${headerLink}
+    ${codiconsLink}
     <title>Deployment Describe</title>
     <style>
-        body {
-            font-family: var(--vscode-font-family);
-            font-size: var(--vscode-font-size);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 0;
-            margin: 0;
-        }
-
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
 
-        .deployment-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--vscode-panel-border);
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-
-        .deployment-title {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-        }
-
         .deployment-name {
             color: var(--vscode-textLink-foreground);
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .action-btn {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: var(--vscode-font-size);
-            font-family: var(--vscode-font-family);
-        }
-
-        .action-btn:hover {
-            background-color: var(--vscode-button-hoverBackground);
-        }
-
-        .btn-icon {
-            font-size: 14px;
         }
 
         .section {
@@ -816,16 +804,7 @@ export class DeploymentDescribeWebview {
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <div class="deployment-header">
-            <h1 class="deployment-title">Deployment / <span class="deployment-name" id="deployment-name">Loading...</span></h1>
-            <div class="header-actions">
-                <button id="refresh-btn" class="action-btn">
-                    <span class="btn-icon">🔄</span>
-                    <span class="btn-text">Refresh</span>
-                </button>
-            </div>
-        </div>
+        ${headerFragment}
 
         <!-- Loading Indicator -->
         <div id="loading" class="loading">Loading deployment details...</div>
@@ -1585,6 +1564,7 @@ export class DeploymentDescribeWebview {
                     showLoading();
                 });
             }
+${buildLegacyHeaderActionScript({ showRefresh: false })}
         })();
     </script>
 </body>

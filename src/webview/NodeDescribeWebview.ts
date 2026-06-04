@@ -5,13 +5,20 @@ import { transformNodeData, NodeDescribeData } from './nodeDescribeTransformer';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
 import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
+import {
+    buildLegacyDescribeHeadAssets,
+    buildLegacyHeaderActionScript,
+    buildLegacyHeaderFragment,
+    getLegacyDescribeWebviewPanelOptions,
+    setupLegacyDescribeHelpHandler
+} from './legacyDescribeHeaderShell';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Message sent from webview to extension.
  */
 interface WebviewMessage {
-    command: 'refresh' | 'navigateToPod' | 'copyValue';
+    command: 'refresh' | 'navigateToPod' | 'copyValue' | 'viewYaml';
     podName?: string;
     name?: string;
     namespace?: string;
@@ -129,10 +136,7 @@ export class NodeDescribeWebview {
             'kube9Describe',  // Use the shared panel ID
             title,
             vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
+            getLegacyDescribeWebviewPanelOptions(context.extensionUri)
         );
 
         NodeDescribeWebview.currentPanel = panel;
@@ -153,6 +157,7 @@ export class NodeDescribeWebview {
     private static attachPanelBindings(panel: vscode.WebviewPanel): void {
         NodeDescribeWebview.releaseMessageBindings();
         NodeDescribeWebview.setupMessageHandlers(panel);
+        setupLegacyDescribeHelpHandler(panel.webview);
 
         NodeDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
             if (NodeDescribeWebview.currentPanel === panel) {
@@ -312,6 +317,29 @@ export class NodeDescribeWebview {
                         }
                         break;
                     }
+
+                    case 'viewYaml': {
+                        const nodeName = NodeDescribeWebview.currentNodeName;
+                        const cluster = NodeDescribeWebview.contextName;
+                        if (!nodeName || !cluster) {
+                            vscode.window.showErrorMessage('Node context not available');
+                            break;
+                        }
+                        try {
+                            const { getYAMLEditorManager } = await import('../extension');
+                            const yamlEditorManager = getYAMLEditorManager();
+                            await yamlEditorManager.openYAMLEditor({
+                                kind: 'Node',
+                                name: nodeName,
+                                apiVersion: 'v1',
+                                cluster
+                            });
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            vscode.window.showErrorMessage(`Failed to open YAML: ${errorMessage}`);
+                        }
+                        break;
+                    }
                     
                     default: {
                         console.log('Unknown message command:', message.command);
@@ -331,76 +359,33 @@ export class NodeDescribeWebview {
     private static getWebviewContent(
         webview: vscode.Webview
     ): string {
-        const cspSource = webview.cspSource;
+        const extensionUri = NodeDescribeWebview.extensionContext?.extensionUri;
+        if (!extensionUri) {
+            throw new Error('Node describe requires extension context');
+        }
+        const { headerLink, codiconsLink, csp } = buildLegacyDescribeHeadAssets(webview, extensionUri);
+        const headerFragment = buildLegacyHeaderFragment({
+            titleInnerHtml: 'Node / <span class="node-name" id="node-name">Loading...</span>'
+        });
 
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src ${cspSource} 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="${csp}">
+    ${headerLink}
+    ${codiconsLink}
     <title>Node Describe</title>
     <style>
-        body {
-            font-family: var(--vscode-font-family);
-            font-size: var(--vscode-font-size);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 0;
-            margin: 0;
-        }
-
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
 
-        .node-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--vscode-panel-border);
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-
-        .node-title {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-        }
-
         .node-name {
             color: var(--vscode-textLink-foreground);
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .action-btn {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: var(--vscode-font-size);
-            font-family: var(--vscode-font-family);
-        }
-
-        .action-btn:hover {
-            background-color: var(--vscode-button-hoverBackground);
-        }
-
-        .btn-icon {
-            font-size: 14px;
         }
 
         .status-banner {
@@ -688,16 +673,7 @@ export class NodeDescribeWebview {
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <div class="node-header">
-            <h1 class="node-title">Node / <span class="node-name" id="node-name">Loading...</span></h1>
-            <div class="header-actions">
-                <button id="refresh-btn" class="action-btn">
-                    <span class="btn-icon">🔄</span>
-                    <span class="btn-text">Refresh</span>
-                </button>
-            </div>
-        </div>
+        ${headerFragment}
 
         <!-- Status Banner -->
         <div class="status-banner" id="status-banner">
@@ -1209,6 +1185,7 @@ export class NodeDescribeWebview {
         document.getElementById('refresh-btn').addEventListener('click', () => {
             vscode.postMessage({ command: 'refresh' });
         });
+${buildLegacyHeaderActionScript({ showRefresh: false })}
     </script>
 </body>
 </html>`;

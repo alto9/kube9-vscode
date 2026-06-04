@@ -5,13 +5,20 @@ import { CronJobDescribeData } from '../providers/CronJobDescribeProvider';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { DescribeWebview } from './DescribeWebview';
 import { releaseExclusiveDescribePanelBindings } from './describeSharedPanelBindings';
+import {
+    buildLegacyDescribeHeadAssets,
+    buildLegacyHeaderActionScript,
+    buildLegacyHeaderFragment,
+    getLegacyDescribeWebviewPanelOptions,
+    setupLegacyDescribeHelpHandler
+} from './legacyDescribeHeaderShell';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
 
 /**
  * Message sent from webview to extension.
  */
 interface WebviewMessage {
-    command: 'refresh' | 'navigateToJob' | 'copyValue';
+    command: 'refresh' | 'navigateToJob' | 'copyValue' | 'viewYaml';
     jobName?: string;
     name?: string;
     namespace?: string;
@@ -138,10 +145,7 @@ export class CronJobDescribeWebview {
             'kube9Describe',  // Use the shared panel ID
             title,
             vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                retainContextWhenHidden: true
-            }
+            getLegacyDescribeWebviewPanelOptions(context.extensionUri)
         );
 
         CronJobDescribeWebview.currentPanel = panel;
@@ -162,6 +166,7 @@ export class CronJobDescribeWebview {
     private static attachPanelBindings(panel: vscode.WebviewPanel): void {
         CronJobDescribeWebview.releaseMessageBindings();
         CronJobDescribeWebview.setupMessageHandlers(panel);
+        setupLegacyDescribeHelpHandler(panel.webview);
 
         CronJobDescribeWebview.panelDisposeSubscription = panel.onDidDispose(() => {
             if (CronJobDescribeWebview.currentPanel === panel) {
@@ -330,6 +335,31 @@ export class CronJobDescribeWebview {
                         }
                         break;
                     }
+
+                    case 'viewYaml': {
+                        const cronjobName = CronJobDescribeWebview.currentCronJobName;
+                        const namespace = CronJobDescribeWebview.currentNamespace;
+                        const cluster = CronJobDescribeWebview.contextName;
+                        if (!cronjobName || !namespace || !cluster) {
+                            vscode.window.showErrorMessage('CronJob context not available');
+                            break;
+                        }
+                        try {
+                            const { getYAMLEditorManager } = await import('../extension');
+                            const yamlEditorManager = getYAMLEditorManager();
+                            await yamlEditorManager.openYAMLEditor({
+                                kind: 'CronJob',
+                                name: cronjobName,
+                                namespace,
+                                apiVersion: 'batch/v1',
+                                cluster
+                            });
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            vscode.window.showErrorMessage(`Failed to open YAML: ${errorMessage}`);
+                        }
+                        break;
+                    }
                     
                     default: {
                         console.log('Unknown message command:', message.command);
@@ -349,76 +379,33 @@ export class CronJobDescribeWebview {
     private static getWebviewContent(
         webview: vscode.Webview
     ): string {
-        const cspSource = webview.cspSource;
+        const extensionUri = CronJobDescribeWebview.extensionContext?.extensionUri;
+        if (!extensionUri) {
+            throw new Error('CronJob describe requires extension context');
+        }
+        const { headerLink, codiconsLink, csp } = buildLegacyDescribeHeadAssets(webview, extensionUri);
+        const headerFragment = buildLegacyHeaderFragment({
+            titleInnerHtml: 'CronJob / <span class="cronjob-name" id="cronjob-name">Loading...</span>'
+        });
 
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src ${cspSource} 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="${csp}">
+    ${headerLink}
+    ${codiconsLink}
     <title>CronJob Describe</title>
     <style>
-        body {
-            font-family: var(--vscode-font-family);
-            font-size: var(--vscode-font-size);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 0;
-            margin: 0;
-        }
-
         .container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
 
-        .cronjob-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--vscode-panel-border);
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-
-        .cronjob-title {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-        }
-
         .cronjob-name {
             color: var(--vscode-textLink-foreground);
-        }
-
-        .header-actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .action-btn {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            border: none;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: var(--vscode-font-size);
-            font-family: var(--vscode-font-family);
-        }
-
-        .action-btn:hover {
-            background-color: var(--vscode-button-hoverBackground);
-        }
-
-        .btn-icon {
-            font-size: 14px;
         }
 
         .status-banner {
@@ -707,16 +694,7 @@ export class CronJobDescribeWebview {
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
-        <div class="cronjob-header">
-            <h1 class="cronjob-title">CronJob / <span class="cronjob-name" id="cronjob-name">Loading...</span></h1>
-            <div class="header-actions">
-                <button id="refresh-btn" class="action-btn">
-                    <span class="btn-icon">🔄</span>
-                    <span class="btn-text">Refresh</span>
-                </button>
-            </div>
-        </div>
+        ${headerFragment}
 
         <!-- Loading Indicator -->
         <div id="loading" class="loading">Loading CronJob details...</div>
@@ -1307,6 +1285,7 @@ export class CronJobDescribeWebview {
                     showLoading();
                 });
             }
+${buildLegacyHeaderActionScript({ showRefresh: false })}
         })();
     </script>
 </body>
