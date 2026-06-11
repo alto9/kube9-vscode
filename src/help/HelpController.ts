@@ -66,6 +66,7 @@ What you expected to happen.
       'helm-package-manager': HelpController.DOCS_URL,
       'operator-health-report': HelpController.DOCS_URL,
       'well-architected-assessment': HelpController.DOCS_URL,
+      'kubernetes-ai-conformance': HelpController.DOCS_URL,
       'default': HelpController.DOCS_URL
     };
     

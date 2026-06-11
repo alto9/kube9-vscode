@@ -5,6 +5,7 @@ import { NamespaceWebview } from './webview/NamespaceWebview';
 import { DescribeWebview, ConfigMapTreeItemConfig } from './webview/DescribeWebview';
 import { HealthReportPanel } from './webview/HealthReportPanel';
 import { WellArchitectedAssessmentPanel } from './webview/WellArchitectedAssessmentPanel';
+import { AIConformanceReportPanel } from './webview/AIConformanceReportPanel';
 import {
     WELL_ARCHITECTED_PILLARS,
     parseWellArchitectedReportId,
@@ -719,6 +720,48 @@ function registerCommands(): void {
 
     context.subscriptions.push(openWellArchitectedAssessmentCommand);
     disposables.push(openWellArchitectedAssessmentCommand);
+
+    const openAIConformanceReportCommand = registerInstrumentedKube9Command(
+        'kube9.openAIConformanceReport',
+        async (contextName?: string) => {
+            try {
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
+
+                if (!kubeconfigPath) {
+                    vscode.window.showWarningMessage('No cluster selected');
+                    return;
+                }
+
+                if (!contextName) {
+                    const contextInfo = await getContextInfo();
+                    contextName = contextInfo.contextName;
+                }
+
+                if (!contextName) {
+                    vscode.window.showWarningMessage('No cluster context available');
+                    return;
+                }
+
+                const operatorStatusClient = new OperatorStatusClient();
+                await AIConformanceReportPanel.createOrShow(
+                    context,
+                    operatorStatusClient,
+                    kubeconfigPath,
+                    contextName
+                );
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Kubernetes AI Conformance report:', errorMessage);
+                vscode.window.showErrorMessage(
+                    `Failed to open Kubernetes AI Conformance report: ${errorMessage}`
+                );
+            }
+        }
+    );
+
+    context.subscriptions.push(openAIConformanceReportCommand);
+    disposables.push(openAIConformanceReportCommand);
     
     // Register open Cluster Organizer command
     const openClusterManagerCmd = registerInstrumentedKube9Command(

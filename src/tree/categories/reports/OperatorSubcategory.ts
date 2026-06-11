@@ -1,22 +1,24 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem } from '../../ClusterTreeItem';
 import { TreeItemData } from '../../TreeItemTypes';
+import { AIConformanceReportCategory } from './AIConformanceReportCategory';
 import { WellArchitectedFrameworkCategory } from './WellArchitectedFrameworkCategory';
 
 /**
  * Kube9 Operator subcategory handler.
- * Provides the Health report and Well-Architected Assessment pillar reports (require the operator).
+ * Provides operator-backed reports (require operated-mode operator status).
  */
 export class OperatorSubcategory {
     /**
      * Retrieves operator report items for the Kube9 Operator subcategory.
      *
      * @param resourceData Cluster context and cluster information
-     * @returns Health report item first, then Well Architected Assessment folder
+     * @returns Health, Kubernetes AI Conformance, then Well Architected Assessment folder
      */
     public static getOperatorReportItems(resourceData: TreeItemData): ClusterTreeItem[] {
         return [
             this.createHealthReport(resourceData),
+            AIConformanceReportCategory.createReportItem(resourceData),
             WellArchitectedFrameworkCategory.createFolder(resourceData),
         ];
     }

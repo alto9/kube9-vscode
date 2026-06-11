@@ -76,6 +76,11 @@
         "category": "Kube9"
       },
       {
+        "command": "kube9.openAIConformanceReport",
+        "title": "Open Kubernetes AI Conformance Report",
+        "category": "Kube9"
+      },
+      {
         "command": "kube9.openClusterManager",
         "title": "Cluster Organizer",
         "category": "Kube9"
@@ -379,6 +384,9 @@
         },
         {
           "command": "kube9.openWellArchitectedAssessmentReport"
+        },
+        {
+          "command": "kube9.openAIConformanceReport"
         },
         {
           "command": "kube9.applyYAML"
