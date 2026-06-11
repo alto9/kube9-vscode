@@ -29,7 +29,7 @@ const extensionConfig = {
     rules: [
       {
         test: /\.ts$/,
-        exclude: [/node_modules/, /src\/webview\/argocd-application/, /src\/webview\/event-viewer/, /src\/webview\/pod-logs/, /src\/webview\/pod-describe/, /src\/webview\/pvc-describe/, /src\/webview\/pv-describe/, /src\/webview\/secret-describe/, /src\/webview\/service-describe/, /src\/webview\/configmap-describe/, /src\/webview\/storageclass-describe/, /src\/webview\/crd-describe/, /src\/webview\/operator-health-report/, /src\/webview\/helm-package-manager/],
+        exclude: [/node_modules/, /src\/webview\/argocd-application/, /src\/webview\/event-viewer/, /src\/webview\/pod-logs/, /src\/webview\/pod-describe/, /src\/webview\/pvc-describe/, /src\/webview\/pv-describe/, /src\/webview\/secret-describe/, /src\/webview\/service-describe/, /src\/webview\/configmap-describe/, /src\/webview\/storageclass-describe/, /src\/webview\/crd-describe/, /src\/webview\/operator-health-report/, /src\/webview\/well-architected-assessment-report/, /src\/webview\/ai-conformance-report/, /src\/webview\/helm-package-manager/],
         use: [
           {
             loader: 'ts-loader',
