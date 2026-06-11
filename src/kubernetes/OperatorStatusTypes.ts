@@ -61,6 +61,70 @@ export interface AssessmentCheckStatusSummary {
     remediation?: string | null;
 }
 
+/** Closed vocabulary for Kubernetes AI Conformance requirement and rollup statuses. */
+export type AIConformanceStatus =
+    | 'passed'
+    | 'failed'
+    | 'warning'
+    | 'not-applicable'
+    | 'not-evaluated'
+    | 'needs-evidence';
+
+/** Aggregate counts for the latest Kubernetes AI Conformance readiness run. */
+export interface AIConformanceTotals {
+    totalRequirements: number;
+    mustRequirements: number;
+    shouldRequirements: number;
+    passed: number;
+    failed: number;
+    warning: number;
+    notApplicable: number;
+    notEvaluated: number;
+    needsEvidence: number;
+}
+
+/** Rollup counts for one checklist category in the published status payload. */
+export interface AIConformanceCategoryRollup {
+    total: number;
+    passed: number;
+    failed: number;
+    warning: number;
+    notApplicable: number;
+    notEvaluated: number;
+    needsEvidence: number;
+}
+
+/** Bounded per-requirement row for operator status JSON (no raw evidence fields). */
+export interface AIConformanceRequirementRow {
+    id: string;
+    category: string;
+    level: 'MUST' | 'SHOULD';
+    title: string;
+    status: AIConformanceStatus;
+    rationale: string;
+}
+
+/**
+ * Bounded Kubernetes AI Conformance readiness summary from kube9-operator.
+ * Kube9 readiness assessment, not official CNCF certification.
+ */
+export interface AIConformanceSummary {
+    checklistVersion: string;
+    kubernetesMinor: string;
+    sourceRevision: string | null;
+    lastCompletedAt: string | null;
+    lastOutcome: 'none' | 'success' | 'failed';
+    runState: 'completed' | 'failed' | 'partial' | null;
+    runId: string | null;
+    totals: AIConformanceTotals;
+    categories: Record<string, AIConformanceCategoryRollup>;
+    requirements: AIConformanceRequirementRow[];
+    error: string | null;
+    schedulingEnabled: boolean;
+    scheduleIntervalSeconds: number | null;
+    checklistSource: string | null;
+}
+
 /** Summary of scheduled in-cluster assessments published by kube9-operator. */
 export interface AssessmentStatusSummary {
     lastScheduledCompletedAt: string | null;
@@ -152,5 +216,8 @@ export interface OperatorStatus {
 
     /** Optional: last scheduled Well-Architected assessment (newer operators) */
     assessment?: AssessmentStatusSummary;
+
+    /** Optional: bounded Kubernetes AI Conformance readiness summary (newer operators) */
+    aiConformance?: AIConformanceSummary;
 }
 

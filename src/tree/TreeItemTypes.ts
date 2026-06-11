@@ -54,6 +54,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - argocdApplication: Individual ArgoCD Application item (under ArgoCD)
  * - crd: Individual Custom Resource Definition item
  * - operatorHealth: Individual operator health report item (under Kube9 Operator)
+ * - aiConformanceReport: Kubernetes AI Conformance report (under Kube9 Operator)
  * - wellArchitectedReport: Pillar-specific Well-Architected assessment report (under Well Architected Assessment)
  */
 export type TreeItemType = 
@@ -103,6 +104,7 @@ export type TreeItemType =
     | 'wellArchitectedSubcategory'
     | 'crd'
     | 'operatorHealth'
+    | 'aiConformanceReport'
     | 'wellArchitectedReport';
 
 /**

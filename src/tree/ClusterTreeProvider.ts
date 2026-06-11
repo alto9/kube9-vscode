@@ -551,6 +551,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'operatorSubcategory' ||
                type === 'operatorHealth' ||
                type === 'wellArchitectedSubcategory' ||
+               type === 'aiConformanceReport' ||
                type === 'wellArchitectedReport';
     }
 
@@ -809,6 +810,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 break;
             
             case 'operatorHealth':
+            case 'aiConformanceReport':
                 items = [];
                 break;
 

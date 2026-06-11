@@ -54,6 +54,13 @@ suite('webviewHeaderParityAudit @unit', () => {
         assert.ok(source.includes('codicon-refresh'));
     });
 
+    test('ai conformance report uses themed refresh and help context', () => {
+        const source = readWebviewSource('ai-conformance-report/index.tsx');
+        assert.ok(source.includes('helpContext="kubernetes-ai-conformance"'));
+        assert.ok(source.includes('codicon-refresh'));
+        assert.ok(source.includes("command: 'refresh'"));
+    });
+
     test('helm package manager header is help-only', () => {
         const source = readWebviewSource('helm-package-manager/HelmPackageManager.tsx');
         assert.ok(source.includes('helpContext="helm-package-manager"'));

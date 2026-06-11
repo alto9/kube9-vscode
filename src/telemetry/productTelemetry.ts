@@ -24,6 +24,7 @@ export const SHIPPED_WEBVIEW_TELEMETRY_SURFACES_CONST = [
     'cluster_manager',
     'operator_health_report',
     'well_architected_assessment_report',
+    'ai_conformance_report',
     'events_viewer',
     'pod_logs',
     'helm_package_manager',
