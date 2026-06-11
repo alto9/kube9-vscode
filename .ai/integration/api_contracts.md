@@ -152,6 +152,37 @@ kube9-operator Argo CD module:
 
 Extension continues to use operator status for **detection** only unless a future operator contract adds graph snapshots.
 
+## Operator status — AI Conformance report
+
+The Kubernetes AI Conformance report is an operated-mode report sourced from the existing `kube9-operator-status` ConfigMap. kube9-vscode reads the ConfigMap through `OperatorStatusClient` and parses an optional `aiConformance` object from the status JSON.
+
+### Expected bounded payload
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `checklistVersion` | yes | Version of the readiness checklist used by the operator. |
+| `kubernetesMinor` | no | Kubernetes minor evaluated, when the operator can determine it. |
+| `runId` | no | Stable id for the latest conformance run. |
+| `observedAt` | yes | ISO 8601 timestamp for the report snapshot or run completion. |
+| `status` | yes | Overall status using the conformance vocabulary. |
+| `totals` | yes | Total, passed, failed, warning, not-applicable, not-evaluated, and needs-evidence counts. |
+| `categoryRollups[]` | yes | Category-level rollups, including MUST and SHOULD counts. |
+| `requirements[]` | yes | Bounded requirement rows with id, category, level, status, message, and optional remediation. |
+
+The status vocabulary is `passed`, `failed`, `warning`, `not-applicable`, `not-evaluated`, and `needs-evidence`. The client treats unknown statuses as `not-evaluated` for display, logs the unexpected value, and avoids showing false-positive readiness.
+
+### Failure and degradation
+
+| Condition | Host → webview |
+|-----------|----------------|
+| Operator not installed / ConfigMap not found | Empty state explaining the report requires kube9-operator. |
+| Operator status degraded or stale | Report may render last bounded summary with stale/degraded banner when present; otherwise empty/error state. |
+| `aiConformance` missing | Empty state explaining no conformance run has been published yet. |
+| JSON parse or validation failure | Error state with safe message; raw ConfigMap JSON stays out of the webview. |
+| Permission denied reading ConfigMap | Permission guidance consistent with other operator status surfaces. |
+
+The report does not shell out beyond the existing operator status read path. It does not request raw evidence, run kubectl conformance checks locally, or call external conformance services.
+
 ## Error mapping (Argo CD flows)
 
 | Condition | Host → webview | User notification |

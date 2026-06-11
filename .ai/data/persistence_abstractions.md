@@ -8,7 +8,7 @@ kube9-vscode does not persist application or graph data to disk. Persistence bou
 |--------|---------|--------|
 | Application CRD | `spec`, `status.sync`, `status.health`, `status.resources`, `status.operationState` | kubectl / Kubernetes client |
 | Optional Argo CD HTTP API | Resource-tree topology (`parentRefs`, extended node metadata) | Integration path when enabled |
-| Optional kube9-operator status | Argo CD detection, bounded application summaries | ConfigMap read in operated mode |
+| Optional kube9-operator status | Argo CD detection, bounded application summaries, bounded AI Conformance readiness summary | ConfigMap read in operated mode |
 
 The extension reads and parses remote state; it does not write graph structures back to the cluster.
 
@@ -30,6 +30,12 @@ The extension reads and parses remote state; it does not write graph structures 
 
 - Open Application webview panels keyed by `ApplicationKey` (`context:namespace:name`).
 - Panel map lifetime follows VS Code panel disposal; no cross-session restore.
+
+### AI conformance status cache
+
+- `OperatorStatusClient` owns the same TTL cache boundary for `OperatorStatus.aiConformance` as for other operator status fields.
+- Forced refresh from the conformance report bypasses the cache and rereads `kube9-operator-status`; the extension does not persist previous conformance runs locally.
+- Missing, stale, malformed, or degraded operator status produces empty/error/stale report states rather than a separate local fallback dataset.
 
 ## Webview session state
 

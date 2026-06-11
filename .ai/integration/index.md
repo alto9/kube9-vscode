@@ -15,5 +15,6 @@ How **kube9-vscode** connects to external systems: Kubernetes API, kubectl, opti
 
 1. **CRD-first Argo CD** — Application list, detail, sync/refresh, and baseline graph nodes work with Kubernetes API access to `applications.argoproj.io` only.
 2. **Optional enrichment** — Resource-tree topology and server-native semantics require a separate, explicit Argo CD REST path; failure degrades to CRD baseline without blocking the panel.
-3. **Extension hosts secrets and credentials** — Webviews never receive kubeconfig paths, bearer tokens, or raw API endpoints.
-4. **Kind actions use Kubernetes RBAC** — Graph tile operations (for example Deployment rollout restart) invoke existing workload integration surfaces under the active context, not Argo CD server APIs.
+3. **Operator reports are bounded summaries** — Report webviews may consume operator-published summaries from `kube9-operator-status`, but raw evidence and evaluator internals stay outside the VS Code client contract.
+4. **Extension hosts secrets and credentials** — Webviews never receive kubeconfig paths, bearer tokens, or raw API endpoints.
+5. **Kind actions use Kubernetes RBAC** — Graph tile operations (for example Deployment rollout restart) invoke existing workload integration surfaces under the active context, not Argo CD server APIs.

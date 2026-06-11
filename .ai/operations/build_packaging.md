@@ -21,6 +21,7 @@
 | Extension host (`src/extension.ts`) | webpack | `dist/extension.js` |
 | Describe / cluster-manager webviews | webpack (`webpack.config.js`) | `dist/media/<surface>/index.js` |
 | Argo CD application detail webview | esbuild (`build:webview`) | `media/argocd-application/main.js` |
+| Kubernetes AI Conformance report webview | esbuild (`build:webview`) | `media/ai-conformance-report/main.js` |
 
 The Argo CD application webview source lives under `src/webview/argocd-application/` and is **excluded from the extension webpack ts-loader** (`webpack.config.js` extension `module.rules` exclude) so it is not compiled twice. The esbuild entry is `src/webview/argocd-application/index.tsx`.
 
@@ -69,6 +70,17 @@ Graph-specific overrides (node tiles, edge dash patterns, toolbar) belong in app
 **Rationale:** The canvas and layout libraries are user-facing value for topology; they stay out of the extension host bundle and ship as one minified IIFE so install size stays predictable relative to other webview copies in `build:webview`.
 
 `build:webview` runs with esbuild **`--minify`**. There is no separate size gate in CI today; maintainers should spot-check the Argo CD bundle after dependency changes. The VSIX total size should remain acceptable for marketplace download; this webview artifact is the primary size growth vector when graph dependencies are present.
+
+## Kubernetes AI Conformance Report Webview
+
+The conformance report follows the existing operator report bundle pattern:
+
+- React source under `src/webview/ai-conformance-report/`.
+- Host panel/provider source under `src/webview/AIConformanceReportPanel.ts` or equivalent.
+- Tree category source under `src/tree/categories/reports/`.
+- Built artifact under `media/ai-conformance-report/main.js`, with `styles.css` copied beside it when the surface uses a separate stylesheet.
+
+`npm run build:webview` must include the conformance report bundle and style copy before the feature is considered packaged. `npm run build`, `npm run compile`, and CI must therefore exercise the new webview bundle. If packaging adds a new media path, `.vscodeignore` must continue to include `media/` artifacts in the VSIX.
 
 ## Packaging Contract
 

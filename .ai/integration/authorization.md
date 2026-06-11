@@ -59,7 +59,9 @@ If REST returns 401/403 or connection failure, the extension **falls back** to C
 
 ## Operator status ConfigMap
 
-Read access to `kube9-operator-status` (namespace from discovery flow) for operated detection metadata. Does not grant graph topology by itself.
+Read access to `kube9-operator-status` (namespace from discovery flow) is required for operated detection metadata and operated report summaries such as Kubernetes AI Conformance. This permission does not grant graph topology by itself.
+
+The AI Conformance report must not require additional Kubernetes RBAC beyond the ConfigMap read already used by operator status. If the ConfigMap cannot be read, the report shows permission guidance and does not attempt alternate local checks.
 
 ## Failure and disclosure
 

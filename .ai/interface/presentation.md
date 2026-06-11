@@ -3,7 +3,7 @@
 ## Presentation Surfaces
 
 - **Tree View**: clusters -> categories -> resources.
-- **Webviews**: structured resource detail/describe views, events viewer, pod logs, operator report, Helm package manager, tutorial/help.
+- **Webviews**: structured resource detail/describe views, events viewer, pod logs, operator reports, Kubernetes AI Conformance report, Helm package manager, tutorial/help.
 - **Argo CD Application detail (webview)**: When opened from the cluster tree, the default view is an interactive **resource graph** (left-to-right layout). **Details** is the secondary tab for app metadata and tabular drift review; see **Argo CD Application Detail (webview)** below.
 - **Status Bar**: current context and namespace.
 - **Notifications/Output**: operation outcomes and diagnostic details.
@@ -101,3 +101,27 @@ When node count exceeds a practical layout threshold, the graph uses **progressi
 ### Loading and errors
 
 Loading and error states for the webview remain **full-panel** (blocking graph until data is available or a recoverable error is shown). In-graph partial updates during sync/refresh should not dismiss the panel.
+
+## Kubernetes AI Conformance Report (webview)
+
+The report appears under the operated cluster **Reports** tree branch, alongside other operator-backed report surfaces. Opening it launches a dedicated webview panel for the active cluster context.
+
+### Header and summary
+
+- Header title: **Kubernetes AI Conformance** or equivalent readiness-safe title.
+- Primary action: **Refresh**, which forces a fresh operator status ConfigMap read.
+- Summary area: checklist version, Kubernetes minor when present, observed timestamp, overall readiness status, and MUST/SHOULD totals.
+- Copy uses readiness language only. It must not say the cluster is officially certified, CNCF-conformant, or vendor-attested.
+
+### Grouped requirements
+
+Rows are grouped by conformance category, such as accelerators, networking, scheduling, storage, observability, or security when present in the operator payload. The UI does not hard-code category completeness; it renders categories supplied by the bounded summary.
+
+Each category shows MUST and SHOULD rollups. Requirement rows show id/title, level, status, and expandable details for message and remediation text. `needs-evidence` and `not-evaluated` rows use neutral styling and explanatory copy rather than failure or success coloring.
+
+### Empty, stale, and degraded states
+
+- Operator not installed: show an empty state that the report requires kube9-operator.
+- No `aiConformance` summary: show an empty state that no conformance run has been published.
+- Stale cache or degraded operator: show a banner consistent with the Well-Architected assessment report pattern and keep any bounded summary clearly marked as stale when present.
+- Invalid payload: show a safe error state without raw ConfigMap JSON.

@@ -24,4 +24,6 @@
 ## Enhancement Stories
 
 - As a user with kube9-operator installed, I get richer status/reporting surfaces.
+- As a platform engineer preparing clusters for AI workloads, I can open a Kubernetes AI Conformance readiness report in VS Code so I can see requirement rollups, failed or warning rows, and remediation-style notes without leaving my editor.
+- As a compliance or platform reviewer, I can distinguish observed readiness checks from items that require external evidence so the report does not overstate cluster conformance.
 - As a Helm user, I can manage chart repositories and releases in the extension.

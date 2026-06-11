@@ -12,6 +12,43 @@ No durable graph or layout store is required for the resource graph initiative.
 
 ## Core entities (existing)
 
+### AIConformanceSummary
+
+Parsed from `OperatorStatus.aiConformance` in the operator status ConfigMap. It is a bounded report DTO for VS Code display, not a durable local model and not a raw evidence archive.
+
+| Field | Role |
+|-------|------|
+| `checklistVersion` | Version of the Kubernetes AI Conformance readiness checklist used by the operator. |
+| `kubernetesMinor` | Kubernetes minor version evaluated, when reported by the operator. |
+| `runId` | Stable id for the last conformance run, when present. |
+| `observedAt` | ISO 8601 timestamp for the report snapshot or run completion. |
+| `status` | Overall readiness status derived by the operator from row and rollup statuses. |
+| `totals` | Aggregate counts across all included requirements. |
+| `categoryRollups` | One `AIConformanceCategoryRollup` per checklist category. |
+| `requirements` | Bounded `AIConformanceRequirementRow[]`; raw evidence is excluded. |
+
+### AIConformanceCategoryRollup
+
+| Field | Role |
+|-------|------|
+| `categoryId`, `categoryLabel` | Stable category identity and display label. |
+| `must`, `should` | Totals and status counts split by requirement level. |
+| `status` | Category readiness status using the shared conformance status vocabulary. |
+
+### AIConformanceRequirementRow
+
+| Field | Role |
+|-------|------|
+| `id` | Stable checklist requirement id. |
+| `categoryId`, `categoryLabel` | Category grouping for the report. |
+| `level` | `MUST` or `SHOULD`. |
+| `title` | Human-readable requirement name. |
+| `status` | One of `passed`, `failed`, `warning`, `not-applicable`, `not-evaluated`, `needs-evidence`. |
+| `message` | Optional status explanation. |
+| `remediation` | Optional readiness guidance. |
+
+The webview groups rows by `categoryId`, shows MUST and SHOULD rollups separately, and preserves row order from the operator when provided. Unknown optional fields are ignored by the client; unknown statuses render as `not-evaluated` with muted styling rather than as passed.
+
 ### ArgoCDApplication
 
 Parsed from the Application CRD. Carries application metadata, sync/health, source/destination, operation state, and a **flat** managed-resource list.

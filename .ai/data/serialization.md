@@ -22,6 +22,49 @@ Optional CRD fields such as `group` / `version` are not yet modeled on `ArgoCDRe
 
 Extension → webview payloads include full `ArgoCDApplication` on `applicationData` and partial status on `updateStatus`. Types are plain JSON-serializable objects (no `Date`, no class instances).
 
+## Operator status → extension types (AI Conformance)
+
+`OperatorStatusClient` parses `OperatorStatus.aiConformance` from the JSON string stored under the `status` key in the `kube9-operator-status` ConfigMap. The extension type mirrors the bounded summary in [data_model.md](./data_model.md):
+
+| ConfigMap JSON field | Extension field |
+|----------------------|-----------------|
+| `aiConformance.checklistVersion` | `AIConformanceSummary.checklistVersion` |
+| `aiConformance.kubernetesMinor` | `AIConformanceSummary.kubernetesMinor` |
+| `aiConformance.runId` | `AIConformanceSummary.runId` |
+| `aiConformance.observedAt` | `AIConformanceSummary.observedAt` |
+| `aiConformance.status` | `AIConformanceSummary.status` |
+| `aiConformance.totals` | `AIConformanceSummary.totals` |
+| `aiConformance.categoryRollups[]` | `AIConformanceSummary.categoryRollups[]` |
+| `aiConformance.requirements[]` | `AIConformanceSummary.requirements[]` |
+
+Status strings are normalized to `passed`, `failed`, `warning`, `not-applicable`, `not-evaluated`, or `needs-evidence`. Unknown status strings must be treated as `not-evaluated` for rendering and must be logged for diagnostics.
+
+## Extension ↔ webview messages (AI Conformance)
+
+The conformance webview receives JSON-safe report payloads from the extension host. Minimal payload:
+
+```json
+{
+  "command": "update",
+  "data": {
+    "clusterContext": "...",
+    "reportTitle": "Kubernetes AI Conformance",
+    "operatorStatus": { "...": "bounded operator status or null" },
+    "aiConformance": {
+      "checklistVersion": "...",
+      "kubernetesMinor": "...",
+      "totals": {},
+      "categoryRollups": [],
+      "requirements": []
+    },
+    "timestamp": 0,
+    "cacheAge": 0
+  }
+}
+```
+
+The webview posts `{ "command": "refresh" }` for explicit refresh. The host handles Kubernetes access and cache invalidation; the webview never reads kubeconfig paths, namespaces for the ConfigMap, or raw kubectl output.
+
 ## Extension ↔ webview messages (graph)
 
 Graph delivery should use **JSON-safe DTOs** derived from [data_model.md](./data_model.md), not live React Flow class instances.

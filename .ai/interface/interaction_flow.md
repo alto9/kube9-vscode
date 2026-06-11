@@ -6,6 +6,7 @@
 2. **Operate**: select resource -> execute scale/restart/delete/apply action -> refresh affected tree nodes.
 3. **Debug**: open events/logs -> correlate with resource health/status -> iterate on YAML or workload commands.
 4. **GitOps (application detail):** select Argo CD Application in the **tree** (unchanged list/category) -> webview opens on the **resource graph** -> scan topology and per-tile sync/health -> use tile overflow or header for sync/refresh/hard-refresh/view-in-tree -> optional **Details** tab for metadata and drift table -> graph refreshes after operations without closing the panel.
+5. **AI conformance readiness:** select operated cluster -> Reports -> Kubernetes AI Conformance -> webview opens with summary rollups and grouped requirements -> expand non-passing or evidence-needed rows -> refresh when operator status changes.
 
 ## Argo CD Application Detail Flow
 
@@ -47,6 +48,27 @@ The tree **does not** embed the graph; it continues to list applications with st
 - Missing permissions, unreachable application, or empty resource set: show dedicated empty/error presentation on the graph or full-panel error (consistent with other webviews).
 - If topology cannot be built (integration provides a flat list only), graph still renders nodes with **no inferred edges** and surfaces a non-blocking hint that relationships are unavailable; **Details** drift table remains usable.
 
+## Kubernetes AI Conformance Flow
+
+### Open and scan
+
+1. User expands an operated cluster; Reports is available only when operator status is not Basic.
+2. User opens **Kubernetes AI Conformance** from the reports tree or matching command.
+3. Webview loads from cached operator status, then supports explicit **Refresh** for a forced ConfigMap read.
+4. User scans overall status, checklist version, Kubernetes minor, and MUST/SHOULD rollups.
+
+### Inspect requirements
+
+- Categories render in the order supplied by the operator summary.
+- Failed, warning, `needs-evidence`, and `not-evaluated` rows expose message/remediation detail without requiring a separate terminal command.
+- The report keeps `needs-evidence` distinct from failed checks so users know which items require external proof or policy review.
+
+### Degraded states
+
+- Missing operator status shows an operator-required empty state.
+- Missing conformance summary shows a no-run-published empty state.
+- Permission denied, stale status, degraded operator, and invalid payload use the same safe disclosure patterns as other operator report webviews.
+
 ## Webview header and overflow flows
 
 ### Page-level actions (all in-scope webviews)
@@ -75,3 +97,4 @@ The tree **does not** embed the graph; it continues to list applications with st
 - Namespace/context switches must be reflected across tree and status indicators promptly.
 - Left-click and context-menu Describe entry points for the same resource kind must route to the same detail surface and preserve context, namespace, name, and scope.
 - Structured detail pages should degrade to missing-permission, missing-resource, or unsupported-kind states instead of showing placeholder content for resources the extension claims to support.
+- Kubernetes AI Conformance report flows require operated mode but must degrade to explicit empty/error states when the operator or conformance summary is absent.

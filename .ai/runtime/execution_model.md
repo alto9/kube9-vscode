@@ -18,6 +18,7 @@
 |---------|----------------|---------|
 | kubectl / K8s API | yes | no |
 | Argo CD CRD patch (sync, refresh) | yes | no |
+| Operator status ConfigMap read | yes | no |
 | Graph layout (dagre) | optional pre-layout in host, or in webview | primary candidate |
 | User input / rendering | forwards actions | React UI |
 
@@ -76,6 +77,18 @@ The webview **listens** for `updateStatus` (application-level sync/health patch)
 Integration SME owns DTO field shapes. Runtime requires **stable node ids** across refreshes so React Flow state and selection survive merge-style updates.
 
 **Peer note (today):** `ArgoCDService.trackOperation` implements **2 s** polling and **5 min** default timeout for operation phase; graph and sync UX should **wire** that (or equivalent) when driving long-running operations instead of relying on a single post-patch `getApplication` only.
+
+### Kubernetes AI Conformance report messages
+
+The conformance report follows the operator-report command style:
+
+| Direction | Message | Purpose |
+|-----------|---------|---------|
+| Webview → extension | `{ command: 'refresh' }` | Force a fresh `OperatorStatusClient.getStatus(..., true)` read. |
+| Extension → webview | `{ command: 'update', data }` | Send bounded conformance report payload and cache metadata. |
+| Extension → webview | `{ command: 'error', message }` | Safe load, permission, parse, or validation error. |
+
+The extension host owns ConfigMap access, cache invalidation, JSON validation, and status normalization. The webview owns rendering, filtering/group expansion if added, and accessible disclosure state only.
 
 ## Polling And Refresh Merge
 

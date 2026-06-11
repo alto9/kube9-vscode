@@ -13,6 +13,8 @@ When operated mode is available, the extension reads **detection metadata** from
 
 The operator peer today calls Argo CD **`GET /api/v1/applications`** for drift/status cycles only. It does **not** publish resource-tree or per-resource graph DTOs to the extension. Resource graph topology for kube9-vscode is **extension-local** unless a later cross-repo contract adds operator export.
 
+The operator status ConfigMap may also publish bounded report summaries for VS Code report surfaces. For Kubernetes AI Conformance, kube9-vscode consumes `status.aiConformance` as a readiness summary only. The operator remains the evaluator and publisher; the extension is the viewer/parser and does not run conformance checks itself.
+
 ## Argo CD
 
 Two distinct integration surfaces:

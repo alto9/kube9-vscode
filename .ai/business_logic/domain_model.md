@@ -14,6 +14,30 @@
 - **Resource Graph Node**: one tile in the Application Resource Graph representing either the Application root or a single managed resource; carries kind, name, scope, sync status, health status, and eligible actions.
 - **Kind Capability**: declarative rule that maps a resource kind (and optionally API group) to the user actions allowed on matching graph nodes.
 - **Operator Status**: optional in-cluster signal indicating operated capabilities.
+- **AI Conformance Report**: bounded readiness report parsed from operator status, showing Kubernetes AI workload readiness checks without claiming official Kubernetes or CNCF conformance.
+- **AI Conformance Category Rollup**: summary row for one checklist category, including MUST/SHOULD totals and status counts.
+- **AI Conformance Requirement Row**: one checklist requirement with stable id, category, level, status, message, and optional remediation guidance.
+
+## Kubernetes AI Conformance Report
+
+The VS Code extension presents Kubernetes AI Conformance as a **readiness report** under operated-cluster reports. It is not an attestation, certification, or official conformance result. Copy must use readiness language such as "AI workload readiness" and "Kubernetes AI Conformance readiness" rather than implying vendor, CNCF, or Kubernetes project approval.
+
+The report is sourced from the existing operator status ConfigMap. The extension consumes a bounded summary only: checklist version, Kubernetes minor, run metadata, totals, category rollups, and requirement rows. Raw evidence, policy documents, vendor attestations, and user-provided proof are not rendered as accepted facts by the client. When the operator cannot evaluate a requirement from observed cluster state, the row uses `needs-evidence` or `not-evaluated`.
+
+### Status vocabulary
+
+Requirement and rollup status uses this closed client vocabulary:
+
+| Value | Meaning |
+|-------|---------|
+| `passed` | Observed signal satisfies the requirement for the current checklist version. |
+| `failed` | Observed signal does not satisfy a MUST-level or SHOULD-level requirement. |
+| `warning` | Observed signal is incomplete or concerning but not a direct failure. |
+| `not-applicable` | Requirement does not apply to the detected cluster or Kubernetes minor. |
+| `not-evaluated` | Operator did not run or could not evaluate this requirement. |
+| `needs-evidence` | Requirement requires vendor, policy, user, or attestation evidence outside cluster observation. |
+
+The extension must not invent pass/fail conclusions for `needs-evidence` or `not-evaluated` rows.
 
 ## ArgoCD Application Detail Model
 

@@ -35,6 +35,13 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 - **Actions overflow menu:** The overflow trigger and menu items are keyboard operable with visible focus; **Escape** closes the menu and returns focus to the trigger. Menu items use the same accessible names as visible primary buttons would. Overflow must not trap focus.
 - **Sub-header row** controls (Events export/search, Argo hard refresh/view in tree) follow the same button semantics and disabled/in-progress labeling as primary header actions.
 
+## Kubernetes AI Conformance report
+
+- Status badges include text labels for `passed`, `failed`, `warning`, `not-applicable`, `not-evaluated`, and `needs-evidence`; color is not the only signal.
+- Category rollups use headings or labelled regions so keyboard and screen-reader users can move between sections.
+- Requirement detail disclosure controls expose expanded/collapsed state and keep focus on the invoking row when toggled.
+- `needs-evidence` and `not-evaluated` rows are announced as neutral evidence states, not as passed or failed.
+
 ## Operations and safety
 
 - Destructive or cluster-mutating tile actions (e.g. rollout restart) require the same **confirmation or progress feedback** patterns as tree/context commands; errors are announced via existing notification channels, not only inline color change.
@@ -45,3 +52,4 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 - Manual keyboard pass: open application from tree, traverse toolbar and at least two tiles, open overflow and cancel with Escape, switch to **Details** and activate a navigate action.
 - Verify badge/icon pairs have non-empty accessible names in high-contrast themes.
 - Graph changes should be reviewed for focus loss after polling updates (focus should remain on the current tile when possible).
+- AI Conformance report changes should include a keyboard pass through Refresh, category headings, expandable requirement rows, and high-contrast badge review.
