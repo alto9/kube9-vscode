@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ConfigurationCommands } from '../kubectl/ConfigurationCommands';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
+import { normalizeOperatorStatusPayload } from '../kubernetes/parseOperatorStatus';
 import { OperatorStatusMode, OperatorStatus } from '../kubernetes/OperatorStatusTypes';
 import { getOperatorNamespaceResolver } from './OperatorNamespaceResolver';
 
@@ -213,7 +214,11 @@ export class OperatorStatusClient {
             // Parse JSON status
             let operatorStatus: OperatorStatus;
             try {
-                operatorStatus = JSON.parse(statusJson) as OperatorStatus;
+                const parsed = JSON.parse(statusJson) as OperatorStatus;
+                operatorStatus = normalizeOperatorStatusPayload(
+                    parsed,
+                    (message) => getOutputChannel().appendLine(message)
+                );
             } catch (parseError) {
                 // Invalid JSON - log error and fall back
                 const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
