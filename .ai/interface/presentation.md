@@ -15,6 +15,17 @@
 - Keep technical details available but not forced in primary success paths.
 - Resource detail views are the primary inspection surface: supported built-in workloads and custom resources should expose status, related objects, events, and YAML through resource-appropriate sections while preserving a generic fallback only for unsupported kinds.
 
+## Cross-product reference (kube9-desktop parity baseline)
+
+kube9-desktop consumes this repo as the **interaction and supplementary-fetch baseline** for resource describe views. Desktop shell chrome, tab strip, and kinds without a dedicated vscode describe app are owned in kube9-desktop contracts; do not infer Desktop layout from vscode webview CSS here.
+
+- **Default inspect path:** Tree primary activation opens structured **describe**, not YAML.
+- **Describe read-only:** Describe headers expose **Refresh** and **View YAML** on implemented describe surfaces (not on the generic stub). **Save, apply, delete, scale, and restart** belong to **YAML Session** and **tree context menu**, not describe header chrome (see business_logic **Resource Detail Surface**).
+- **View YAML handoff:** **View YAML** (describe header or tree context menu) opens or focuses a **YAML Session** for the same resource identity; describe does not embed editable YAML as primary content.
+- **Parity bar (twelve overlap kinds):** Pod, Deployment, StatefulSet, DaemonSet, CronJob, Node, PVC, PV, Secret, Service, ConfigMap, and StorageClass reference implementations define the **supplementary query depth** peer products must match (related lists, events, API fan-out), not section layout alone.
+- **In-webview section tabs:** Kind-specific section tabs below the header (Overview, Events, Metadata, etc.) are the shipped navigation model; public docs Form|YAML wording is not vscode behavior.
+- **Generic stub (vscode today):** Kinds without a dedicated describe app use a title-only header and **Coming soon** body without Refresh/View YAML. ReplicaSet, Job, Ingress, NetworkPolicy, and IngressClass are **not vscode tree leaves**; kube9-desktop v1 requires **dedicated describe pages** for those kinds, not this stub.
+
 ## Webview page header contract
 
 Every **in-scope webview content panel** uses one shared header presentation contract. **Helm Package Manager** is the **chrome reference** for spacing, border, title typography, and VS Code-themed action buttons (`--vscode-button-*`); other panels keep their operational actions while matching that chrome.

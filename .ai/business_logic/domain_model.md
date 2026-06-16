@@ -5,8 +5,8 @@
 - **Cluster Context**: active kubeconfig context selected by user.
 - **Namespace Scope**: active namespace for scoped resource actions.
 - **Kubernetes Resource**: tree-addressable built-in or custom workload/config/storage/network object.
-- **Resource Detail Surface**: read-only inspection model for a resource, combining metadata, status, relationships, events, and YAML according to kind and scope.
-- **YAML Session**: editable or read-only document bound to a resource identifier.
+- **Resource Detail Surface**: read-only inspection model for a resource, presenting structured metadata, status, relationships, and events according to kind and scope. **View YAML** hands off to a **YAML Session** for the same resource identity; describe does not embed editable YAML as primary content.
+- **YAML Session**: editable or read-only document bound to a resource identifier; cluster writes use editor save (validate → apply) or separate apply flows where defined.
 - **Port Forward Session**: managed kubectl port-forward process with lifecycle state.
 - **ArgoCD Application**: GitOps application surfaced from the cluster tree with application-level sync and health state, Git source metadata, and managed-resource inventory.
 - **ArgoCD Managed Resource**: a Kubernetes object tracked in an Application's managed set, with resource-level sync and health signals distinct from the Application root.
@@ -119,6 +119,35 @@ Page-level commands on webview panels (header, **Actions** overflow, documented 
 **Disabled actions:** Remain **visible** when inapplicable (for example Clear Filters with no active filters) unless a future story chooses hide-when-inapplicable.
 
 Argo CD application-level **sync**, **refresh**, **hard refresh**, and **view in tree** stay **page-level** (header/sub-header), not on the graph canvas toolbar. Graph node overflow and canvas toolbar remain separate surfaces.
+
+## Resource inspection and mutation surfaces
+
+Rules below are the **kube9-vscode reference baseline** for built-in Kubernetes resources opened from the cluster tree. **kube9-desktop** Resources work-area parity targets this split: structured describe as default inspection, mutations off the describe surface. Legacy workload describes and React describe apps share the same non-mutating header set (Refresh, View YAML, Help where defined).
+
+### Surface × action matrix
+
+| Action | Resource Detail Surface | YAML Session | Tree context menu |
+|--------|-------------------------|--------------|-------------------|
+| **Refresh / re-fetch** | Allowed (Tier A primary) | Not a page-level header action | — |
+| **View YAML** | Allowed (Tier A primary); opens or focuses YAML Session for same identity | N/A (user is already in session) | Allowed |
+| **Describe** | Default left-click / menu route to detail surface | — | Allowed (same surface as left-click) |
+| **Save / update manifest** | Forbidden | Allowed via editor save → validation → apply; read-only when RBAC blocks writes | — |
+| **Apply YAML (multi-document / arbitrary file)** | Forbidden | Allowed via separate apply command for generic `.yaml`/`.yml` editor files, not the primary bound-resource save path | — |
+| **Delete** | Forbidden | Forbidden on YAML chrome | Allowed; requires explicit confirmation naming resource identity |
+| **Scale** | Forbidden | Forbidden on YAML chrome | Allowed for **Deployment**, **StatefulSet**, **ReplicaSet** only; input dialog, not inline on detail surfaces |
+| **Restart rollout** | Forbidden | Forbidden on YAML chrome | Allowed for **Deployment**, **StatefulSet**, **DaemonSet** only |
+| **Navigate to related resource** | Allowed (in-content links only; not cluster writes) | — | — |
+| **View Logs, Open Terminal, port forward** | Forbidden on describe header | — | Allowed where kind/context supports (separate from describe/YAML mutation set) |
+
+**Kind notes:** Job and CronJob describe surfaces exist; scale and restart tree entries do not apply to them today. DaemonSet receives restart, not scale. In-content describe actions are navigational only (for example open related object detail), not cluster mutations.
+
+**Desktop consumer note:** kube9-desktop may add YAML-tab affordances (for example inline replica controls or Apply manifest paste) while preserving **describe read-only**, **tree context-menu mutation parity** for scale/restart/delete, and **View YAML** hand-off from describe. Those extensions belong on the YAML Session surface or tree menu, not on describe headers.
+
+### Open implementation decisions
+
+- **Post-mutation refresh:** which surfaces (describe, YAML tab, tree) auto-refresh after save, delete, scale, or restart is a tier-TW coordination item between business_logic and runtime; vscode refreshes via existing tree/describe coordinators after mutations.
+- **Confirmation copy:** delete and scale dialogs must name kind, namespace (when namespaced), and resource name; restart follows the same explicit-intent pattern as other tree-menu mutations.
+- **Kinds without dedicated describe apps** (ReplicaSet, Job, Ingress, NetworkPolicy, IngressClass on Desktop): tree mutation eligibility follows the same kind rules as overlapping entries in this matrix; generic describe fallback remains read-only with Refresh and View YAML where implemented.
 
 ## Core Invariants
 

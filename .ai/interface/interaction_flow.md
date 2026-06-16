@@ -8,6 +8,30 @@
 4. **GitOps (application detail):** select Argo CD Application in the **tree** (unchanged list/category) -> webview opens on the **resource graph** -> scan topology and per-tile sync/health -> use tile overflow or header for sync/refresh/hard-refresh/view-in-tree -> optional **Details** tab for metadata and drift table -> graph refreshes after operations without closing the panel.
 5. **AI conformance readiness:** select operated cluster -> Reports -> Kubernetes AI Conformance -> webview opens with summary rollups and grouped requirements -> expand non-passing or evidence-needed rows -> refresh when operator status changes.
 
+## Resource describe and YAML flows (reference for kube9-desktop)
+
+### Open from tree
+
+1. User selects context and expands the cluster tree to a resource leaf.
+2. **Primary activation** (left-click or equivalent) opens or focuses **describe** for that kind when implemented; YAML is not the default inspect path.
+3. **Context menu** lists **Describe** and **View YAML**; both preserve context, namespace, name, and scope and converge on the same surfaces as left-click describe and YAML Session routing.
+
+### View YAML handoff
+
+1. User chooses **View YAML** from describe header or tree context menu.
+2. Host opens or focuses **YAML Session** (`YAMLEditorManager`) for the same resource identity; save/apply, read-only RBAC, and conflict detection follow YAML Session rules.
+3. Describe and YAML remain **separate surfaces**; describe headers do not become editor chrome.
+
+### Mutations (tree and YAML)
+
+1. **Scale**, **restart** (Deployment, StatefulSet, DaemonSet where supported), and **delete** run from **tree context menu** commands, not from describe headers.
+2. **Save** and **apply** run on YAML Session after validation; describe **Refresh** re-fetches read models only (manual refresh; no always-on watches on describe in v1).
+
+### Degrade paths
+
+- Missing permission, missing resource, or unsupported kind: describe shows recoverable error/empty states, not placeholder content for kinds the product claims to support.
+- Generic describe stub: title-only header, **Coming soon** body, no Refresh/View YAML. Not the kube9-desktop acceptance target for ReplicaSet, Job, Ingress, NetworkPolicy, or IngressClass (see `presentation.md` cross-product reference).
+
 ## Argo CD Application Detail Flow
 
 ### Open and default focus
