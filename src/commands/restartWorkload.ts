@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import { strategicMergePatch } from '../kubernetes/strategicMergePatch';
+import * as k8s from '@kubernetes/client-node';
 
 
 /**
@@ -85,10 +87,6 @@ export async function applyRestartAnnotation(
     // Create annotation key
     const annotationKey = 'kubectl.kubernetes.io/restartedAt';
     
-    // Set context on API client
-    const apiClient = getKubernetesApiClient();
-    apiClient.setContext(contextName);
-    
     // Use strategic merge patch - this automatically creates nested objects if they don't exist
     // and merges the annotation into existing annotations
     const mergePatch = {
@@ -104,37 +102,21 @@ export async function applyRestartAnnotation(
     };
     
     try {
-        // Route to appropriate patch method based on workload type
         if (!namespace) {
             throw new Error('Workload resources must have a namespace');
         }
-        
-        switch (kind) {
-            case 'Deployment':
-                await apiClient.apps.patchNamespacedDeployment({
-                    name,
-                    namespace,
-                    body: mergePatch
-                });
-                break;
-            case 'StatefulSet':
-                await apiClient.apps.patchNamespacedStatefulSet({
-                    name,
-                    namespace,
-                    body: mergePatch
-                });
-                break;
-            case 'DaemonSet':
-                await apiClient.apps.patchNamespacedDaemonSet({
-                    name,
-                    namespace,
-                    body: mergePatch
-                });
-                break;
-            default:
-                throw new Error(`Unsupported workload kind: ${kind}`);
+
+        if (kind !== 'Deployment' && kind !== 'StatefulSet' && kind !== 'DaemonSet') {
+            throw new Error(`Unsupported workload kind: ${kind}`);
         }
-        
+
+        await strategicMergePatch({
+            apiVersion: 'apps/v1',
+            kind,
+            metadata: { name, namespace },
+            ...mergePatch
+        } as k8s.KubernetesObject, contextName);
+
         console.log(`Successfully applied restart annotation to ${kind}/${name}`);
     } catch (error: unknown) {
         // Convert execution error to structured KubectlError
