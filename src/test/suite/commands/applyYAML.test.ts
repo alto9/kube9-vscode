@@ -16,11 +16,9 @@ let isProxyActive = false;
 
 // Track API client calls
 let createPodCalls: Array<{ namespace: string; body: unknown }> = [];
-let patchPodCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
 let createServiceCalls: Array<{ namespace: string; body: unknown }> = [];
-let patchServiceCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
 let createDeploymentCalls: Array<{ namespace: string; body: unknown }> = [];
-let patchDeploymentCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
+let strategicMergePatchCalls: Array<{ resource: k8s.KubernetesObject; contextName: string; dryRun?: string }> = [];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let mockApiResponse: { type: 'success'; resource?: unknown } | { type: 'error'; error: unknown } | null = null;
 
@@ -67,11 +65,9 @@ suite('applyYAML Command Tests', () => {
         
         // Reset API client call tracking
         createPodCalls = [];
-        patchPodCalls = [];
+        strategicMergePatchCalls = [];
         createServiceCalls = [];
-        patchServiceCalls = [];
         createDeploymentCalls = [];
-        patchDeploymentCalls = [];
         mockApiResponse = null;
         
         // Reset and mock API client
@@ -94,13 +90,6 @@ suite('applyYAML Command Tests', () => {
                 }
                 return { metadata: { name: 'test-pod', namespace: options.namespace } } as k8s.V1Pod;
             },
-            patchNamespacedPod: async (options: { name: string; namespace: string; body: unknown }) => {
-                patchPodCalls.push(options);
-                if (mockApiResponse && mockApiResponse.type === 'error') {
-                    throw mockApiResponse.error;
-                }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1Pod;
-            },
             createNamespacedService: async (options: { namespace: string; body: unknown }) => {
                 createServiceCalls.push(options);
                 if (mockApiResponse && mockApiResponse.type === 'error') {
@@ -112,13 +101,6 @@ suite('applyYAML Command Tests', () => {
                 }
                 return { metadata: { name: 'test-service', namespace: options.namespace } } as k8s.V1Service;
             },
-            patchNamespacedService: async (options: { name: string; namespace: string; body: unknown }) => {
-                patchServiceCalls.push(options);
-                if (mockApiResponse && mockApiResponse.type === 'error') {
-                    throw mockApiResponse.error;
-                }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1Service;
-            },
             createNamespacedConfigMap: async (options: { namespace: string; body: unknown }) => {
                 if (mockApiResponse && mockApiResponse.type === 'error') {
                     const apiError = mockApiResponse.error as { statusCode?: number };
@@ -129,12 +111,6 @@ suite('applyYAML Command Tests', () => {
                 }
                 return { metadata: { name: 'test-configmap', namespace: options.namespace } } as k8s.V1ConfigMap;
             },
-            patchNamespacedConfigMap: async (options: { name: string; namespace: string; body: unknown }) => {
-                if (mockApiResponse && mockApiResponse.type === 'error') {
-                    throw mockApiResponse.error;
-                }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1ConfigMap;
-            },
             createNamespacedSecret: async (options: { namespace: string; body: unknown }) => {
                 if (mockApiResponse && mockApiResponse.type === 'error') {
                     const apiError = mockApiResponse.error as { statusCode?: number };
@@ -144,12 +120,6 @@ suite('applyYAML Command Tests', () => {
                     throw mockApiResponse.error;
                 }
                 return { metadata: { name: 'test-secret', namespace: options.namespace } } as k8s.V1Secret;
-            },
-            patchNamespacedSecret: async (options: { name: string; namespace: string; body: unknown }) => {
-                if (mockApiResponse && mockApiResponse.type === 'error') {
-                    throw mockApiResponse.error;
-                }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1Secret;
             }
         };
         
@@ -165,13 +135,6 @@ suite('applyYAML Command Tests', () => {
                     throw mockApiResponse.error;
                 }
                 return { metadata: { name: 'test-deployment', namespace: options.namespace } } as k8s.V1Deployment;
-            },
-            patchNamespacedDeployment: async (options: { name: string; namespace: string; body: unknown }) => {
-                patchDeploymentCalls.push(options);
-                if (mockApiResponse && mockApiResponse.type === 'error') {
-                    throw mockApiResponse.error;
-                }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1Deployment;
             }
         };
         
@@ -354,6 +317,22 @@ suite('applyYAML Command Tests', () => {
         (vscode.window as any)._clearMessages();
 
         // Clear module cache to force reload with mocked execFile AND mocked window
+        const strategicMergePatchPath = require.resolve('../../../kubernetes/strategicMergePatch');
+        delete require.cache[strategicMergePatchPath];
+        // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+        const strategicMergePatchModule = require('../../../kubernetes/strategicMergePatch');
+        strategicMergePatchModule.strategicMergePatch = async (
+            resource: k8s.KubernetesObject,
+            contextName: string,
+            dryRun?: string
+        ) => {
+            strategicMergePatchCalls.push({ resource, contextName, dryRun });
+            if (mockApiResponse && mockApiResponse.type === 'error') {
+                throw mockApiResponse.error;
+            }
+            return resource;
+        };
+
         const applyYAMLPath = require.resolve('../../../commands/applyYAML');
         delete require.cache[applyYAMLPath];
         
@@ -459,7 +438,7 @@ suite('applyYAML Command Tests', () => {
             // Should show quick pick for mode selection
             assert.strictEqual(quickPickCalls.length, 1, 'Should show quick pick for mode selection');
             // Should call API to create deployment
-            assert.ok(createDeploymentCalls.length > 0 || patchDeploymentCalls.length > 0, 'Should call API to create or patch deployment');
+            assert.ok(createDeploymentCalls.length > 0 || strategicMergePatchCalls.length > 0, 'Should call API to create or patch deployment');
         });
 
         test('uses active editor when no URI and YAML file open', async () => {
@@ -487,7 +466,7 @@ suite('applyYAML Command Tests', () => {
             // Should not show file picker
             assert.strictEqual(openDialogCalls.length, 0, 'Should not show file picker when YAML file is open');
             // Should call API to create service
-            assert.ok(createServiceCalls.length > 0 || patchServiceCalls.length > 0, 'Should call API to create or patch service');
+            assert.ok(createServiceCalls.length > 0 || strategicMergePatchCalls.length > 0, 'Should call API to create or patch service');
         });
 
         test('shows file picker when no URI and no YAML file', async () => {
@@ -507,7 +486,7 @@ suite('applyYAML Command Tests', () => {
             assert.strictEqual(openDialogCalls.length, 1, 'Should show file picker when no URI and no YAML file');
             assert.deepStrictEqual(openDialogCalls[0].filters?.['YAML files'], ['yaml', 'yml'], 'Should filter for YAML files');
             // Should call API (checking for Pod creation since the YAML is for a Pod)
-            assert.ok(createPodCalls.length > 0 || patchPodCalls.length > 0, 'Should call API');
+            assert.ok(createPodCalls.length > 0 || strategicMergePatchCalls.length > 0, 'Should call API');
         });
 
         test('cancels when file picker dismissed', async () => {
@@ -566,7 +545,7 @@ suite('applyYAML Command Tests', () => {
             await applyYAMLCommand(testUri);
 
             // Should call API to create deployment (apply mode)
-            assert.ok(createDeploymentCalls.length > 0 || patchDeploymentCalls.length > 0, 'Should call API to create or patch deployment');
+            assert.ok(createDeploymentCalls.length > 0 || strategicMergePatchCalls.length > 0, 'Should call API to create or patch deployment');
         });
 
         test('executes with --dry-run=server for server mode', async () => {

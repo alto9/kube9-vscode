@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { getContextInfo } from '../utils/kubectlContext';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import { strategicMergePatch } from '../kubernetes/strategicMergePatch';
 import * as yaml from 'js-yaml';
 import * as k8s from '@kubernetes/client-node';
 
@@ -12,6 +13,14 @@ export interface ApplyYAMLResult {
   success: boolean;
   output: string;
   resourcesAffected: string[];
+}
+
+async function patchExistingResource(
+    resource: Record<string, unknown>,
+    contextName: string,
+    dryRun?: string
+): Promise<void> {
+    await strategicMergePatch(resource as k8s.KubernetesObject, contextName, dryRun);
 }
 
 /**
@@ -59,12 +68,7 @@ async function applyResource(
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
                         // Resource exists, use strategic merge patch
-                        await apiClient.core.patchNamespacedPod({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -80,12 +84,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.core.patchNamespacedService({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -101,12 +100,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.core.patchNamespacedConfigMap({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -122,12 +116,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.core.patchNamespacedSecret({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -143,12 +132,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.apps.patchNamespacedDeployment({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -164,12 +148,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.apps.patchNamespacedStatefulSet({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -185,12 +164,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.apps.patchNamespacedDaemonSet({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -206,12 +180,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.apps.patchNamespacedReplicaSet({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -227,12 +196,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.batch.patchNamespacedJob({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -248,12 +212,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.batch.patchNamespacedCronJob({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -269,12 +228,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.core.patchNamespacedPersistentVolumeClaim({
-                            name,
-                            namespace,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -297,11 +251,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.core.patchNamespace({
-                            name,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -316,11 +266,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.core.patchPersistentVolume({
-                            name,
-                            body: resource,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;
@@ -335,11 +281,7 @@ async function applyResource(
                 } catch (error: unknown) {
                     const apiError = error as { statusCode?: number };
                     if (apiError.statusCode === 409) {
-                        await apiClient.storage.patchStorageClass({
-                            name,
-                            body: resource as unknown as k8s.V1StorageClass,
-                            dryRun
-                        });
+                        await patchExistingResource(resource, contextName, dryRun);
                         return mode !== 'apply' ? `${kind}/${name} validated (dry-run)` : `${kind}/${name} configured`;
                     }
                     throw error;

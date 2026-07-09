@@ -6,6 +6,7 @@ import { WorkloadEntry, WorkloadHealth } from '../types/workloadData';
 import { fetchPods, fetchDeployments } from '../kubernetes/resourceFetchers';
 import { getResourceCache, CACHE_TTL } from '../kubernetes/cache';
 import { getKubernetesApiClient } from '../kubernetes/apiClient';
+import { strategicMergePatch } from '../kubernetes/strategicMergePatch';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -2172,39 +2173,12 @@ export class WorkloadCommands {
         replicas: number
     ): Promise<ScaleResult> {
         try {
-            // Set context on API client
-            const apiClient = getKubernetesApiClient();
-            apiClient.setContext(contextName);
-            
-            // Prepare patch body with replicas update
-            const patchBody = {
-                spec: {
-                    replicas: replicas
-                }
-            };
-            
-            // Use appropriate API based on workload kind
-            if (kind === 'Deployment') {
-                await apiClient.apps.patchNamespacedDeployment({
-                    name,
-                    namespace,
-                    body: patchBody
-                });
-            } else if (kind === 'StatefulSet') {
-                await apiClient.apps.patchNamespacedStatefulSet({
-                    name,
-                    namespace,
-                    body: patchBody
-                });
-            } else if (kind === 'ReplicaSet') {
-                await apiClient.apps.patchNamespacedReplicaSet({
-                    name,
-                    namespace,
-                    body: patchBody
-                });
-            } else {
-                throw new Error(`Unsupported workload kind: ${kind}`);
-            }
+            await strategicMergePatch({
+                apiVersion: 'apps/v1',
+                kind,
+                metadata: { name, namespace },
+                spec: { replicas }
+            } as k8s.KubernetesObject, contextName);
 
             // Scale operation succeeded
             return { success: true };

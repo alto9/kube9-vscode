@@ -25,10 +25,9 @@ let mockTreeProviderRefreshCalled = false;
 let mockNamespaceWebviewRefreshCalled = false;
 let mockNamespaceWebviewRefreshNamespace: string | undefined = undefined;
 
-// Track API client calls
-let patchDeploymentCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
-let patchStatefulSetCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
-let patchDaemonSetCalls: Array<{ name: string; namespace: string; body: unknown }> = [];
+// Track strategic merge patch calls
+let strategicMergePatchCalls: Array<{ resource: k8s.KubernetesObject; contextName: string }> = [];
+let strategicMergePatchError: unknown = null;
 let readDeploymentCalls: Array<{ name: string; namespace: string }> = [];
 let readStatefulSetCalls: Array<{ name: string; namespace: string }> = [];
 let readDaemonSetCalls: Array<{ name: string; namespace: string }> = [];
@@ -66,10 +65,9 @@ suite('restartWorkload Command Tests', () => {
         mockNamespaceWebviewRefreshNamespace = undefined;
         mockExecFileResponse = null;
         
-        // Reset API client call tracking
-        patchDeploymentCalls = [];
-        patchStatefulSetCalls = [];
-        patchDaemonSetCalls = [];
+        // Reset strategic merge patch call tracking
+        strategicMergePatchCalls = [];
+        strategicMergePatchError = null;
         readDeploymentCalls = [];
         readStatefulSetCalls = [];
         readDaemonSetCalls = [];
@@ -82,42 +80,6 @@ suite('restartWorkload Command Tests', () => {
         
         // Create mock Apps API
         mockAppsApi = {
-            patchNamespacedDeployment: async (options: { name: string; namespace: string; body: unknown }) => {
-                patchDeploymentCalls.push(options);
-                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
-                    if (mockApiResponse.type === 'error') {
-                        throw mockApiResponse.error;
-                    }
-                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
-                        return mockApiResponse.resource as k8s.V1Deployment;
-                    }
-                }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1Deployment;
-            },
-            patchNamespacedStatefulSet: async (options: { name: string; namespace: string; body: unknown }) => {
-                patchStatefulSetCalls.push(options);
-                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
-                    if (mockApiResponse.type === 'error') {
-                        throw mockApiResponse.error;
-                    }
-                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
-                        return mockApiResponse.resource as k8s.V1StatefulSet;
-                    }
-                }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1StatefulSet;
-            },
-            patchNamespacedDaemonSet: async (options: { name: string; namespace: string; body: unknown }) => {
-                patchDaemonSetCalls.push(options);
-                if (mockApiResponse && !Array.isArray(mockApiResponse)) {
-                    if (mockApiResponse.type === 'error') {
-                        throw mockApiResponse.error;
-                    }
-                    if (mockApiResponse.type === 'success' && mockApiResponse.resource) {
-                        return mockApiResponse.resource as k8s.V1DaemonSet;
-                    }
-                }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1DaemonSet;
-            },
             readNamespacedDeployment: async (options: { name: string; namespace: string }) => {
                 readDeploymentCalls.push(options);
                 // Support sequential responses for rollout watch tests
@@ -368,6 +330,21 @@ suite('restartWorkload Command Tests', () => {
         (vscode.window as any)._clearMessages();
 
         // Clear module cache for restartWorkload to ensure it uses mocked execFile
+        const strategicMergePatchPath = require.resolve('../../../kubernetes/strategicMergePatch');
+        delete require.cache[strategicMergePatchPath];
+        // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+        const strategicMergePatchModule = require('../../../kubernetes/strategicMergePatch');
+        strategicMergePatchModule.strategicMergePatch = async (
+            resource: k8s.KubernetesObject,
+            contextName: string
+        ) => {
+            strategicMergePatchCalls.push({ resource, contextName });
+            if (strategicMergePatchError) {
+                throw strategicMergePatchError;
+            }
+            return resource;
+        };
+
         const restartWorkloadPath = require.resolve('../../../commands/restartWorkload');
         delete require.cache[restartWorkloadPath];
         
@@ -432,6 +409,7 @@ suite('restartWorkload Command Tests', () => {
      */
     function mockApiSuccess(resource?: unknown): void {
         mockApiResponse = { type: 'success', resource };
+        strategicMergePatchError = null;
     }
     
     /**
@@ -439,6 +417,7 @@ suite('restartWorkload Command Tests', () => {
      */
     function mockApiError(error: unknown): void {
         mockApiResponse = { type: 'error', error };
+        strategicMergePatchError = error;
     }
     
     /**
@@ -555,12 +534,13 @@ suite('restartWorkload Command Tests', () => {
                 '/test/kubeconfig'
             );
 
-            assert.strictEqual(patchDeploymentCalls.length, 1, 'Should call patchNamespacedDeployment');
-            const call = patchDeploymentCalls[0];
-            assert.strictEqual(call.name, 'my-deployment', 'Should include resource name');
-            assert.strictEqual(call.namespace, 'default', 'Should include namespace');
-            assert.ok(call.body, 'Should have patch body');
-            const patchBody = call.body as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
+            assert.strictEqual(strategicMergePatchCalls.length, 1, 'Should call strategicMergePatch');
+            const call = strategicMergePatchCalls[0];
+            assert.strictEqual(call.resource.metadata?.name, 'my-deployment', 'Should include resource name');
+            assert.strictEqual(call.resource.metadata?.namespace, 'default', 'Should include namespace');
+            assert.strictEqual(call.resource.apiVersion, 'apps/v1', 'Should include apiVersion');
+            assert.strictEqual(call.resource.kind, 'Deployment', 'Should include kind');
+            const patchBody = call.resource as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
             assert.ok(patchBody.spec?.template?.metadata?.annotations, 'Should have annotations in patch');
             assert.ok(patchBody.spec.template.metadata.annotations!['kubectl.kubernetes.io/restartedAt'], 'Should have restart annotation');
             assert.ok(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(patchBody.spec.template.metadata.annotations!['kubectl.kubernetes.io/restartedAt']!), 'Should have ISO 8601 timestamp');
@@ -602,11 +582,11 @@ suite('restartWorkload Command Tests', () => {
             );
 
             // Should only make one patch call (merge patch handles missing annotations)
-            assert.strictEqual(patchDeploymentCalls.length, 1, 'Should make single patch call');
-            const call = patchDeploymentCalls[0];
+            assert.strictEqual(strategicMergePatchCalls.length, 1, 'Should make single patch call');
+            const call = strategicMergePatchCalls[0];
             
             // Verify patch structure includes nested path to annotations
-            const patchBody = call.body as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
+            const patchBody = call.resource as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
             assert.ok(patchBody.spec?.template?.metadata?.annotations, 'Should have full nested structure in patch');
         });
 
@@ -623,8 +603,8 @@ suite('restartWorkload Command Tests', () => {
             );
 
             const afterTime = new Date().toISOString();
-            const call = patchDeploymentCalls[0];
-            const patchBody = call.body as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
+            const call = strategicMergePatchCalls[0];
+            const patchBody = call.resource as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
             const timestamp = patchBody.spec?.template?.metadata?.annotations?.['kubectl.kubernetes.io/restartedAt'];
             
             assert.ok(timestamp, 'Should have timestamp');
@@ -646,10 +626,11 @@ suite('restartWorkload Command Tests', () => {
                 '/test/kubeconfig'
             );
 
-            assert.strictEqual(patchStatefulSetCalls.length, 1, 'Should call patchNamespacedStatefulSet');
-            const call = patchStatefulSetCalls[0];
-            assert.strictEqual(call.name, 'my-statefulset', 'Should include resource name');
-            assert.strictEqual(call.namespace, 'default', 'Should include namespace');
+            assert.strictEqual(strategicMergePatchCalls.length, 1, 'Should call strategicMergePatch');
+            const call = strategicMergePatchCalls[0];
+            assert.strictEqual(call.resource.metadata?.name, 'my-statefulset', 'Should include resource name');
+            assert.strictEqual(call.resource.metadata?.namespace, 'default', 'Should include namespace');
+            assert.strictEqual(call.resource.kind, 'StatefulSet', 'Should include kind');
         });
     });
 
@@ -665,10 +646,11 @@ suite('restartWorkload Command Tests', () => {
                 '/test/kubeconfig'
             );
 
-            assert.strictEqual(patchDaemonSetCalls.length, 1, 'Should call patchNamespacedDaemonSet');
-            const call = patchDaemonSetCalls[0];
-            assert.strictEqual(call.name, 'my-daemonset', 'Should include resource name');
-            assert.strictEqual(call.namespace, 'default', 'Should include namespace');
+            assert.strictEqual(strategicMergePatchCalls.length, 1, 'Should call strategicMergePatch');
+            const call = strategicMergePatchCalls[0];
+            assert.strictEqual(call.resource.metadata?.name, 'my-daemonset', 'Should include resource name');
+            assert.strictEqual(call.resource.metadata?.namespace, 'default', 'Should include namespace');
+            assert.strictEqual(call.resource.kind, 'DaemonSet', 'Should include kind');
         });
 
         test('extracts status using DaemonSet-specific fields', async () => {
@@ -909,7 +891,7 @@ suite('restartWorkload Command Tests', () => {
             }
             
             // Should only have patch call, no get status calls
-            assert.strictEqual(patchDeploymentCalls.length, 1, 'Should only call patchNamespacedDeployment');
+            assert.strictEqual(strategicMergePatchCalls.length, 1, 'Should only call strategicMergePatch');
             assert.strictEqual(readDeploymentCalls.length, 0, 'Should not call readNamespacedDeployment');
         });
 
@@ -1016,7 +998,7 @@ suite('restartWorkload Command Tests', () => {
             const confirmation = await restartWorkloadModule.showRestartConfirmationDialog('my-deployment');
             if (!confirmation) {
                 // Should return early, no API calls
-                assert.strictEqual(patchDeploymentCalls.length, 0, 'Should not call API when cancelled');
+                assert.strictEqual(strategicMergePatchCalls.length, 0, 'Should not call API when cancelled');
             }
         });
     });
@@ -1025,48 +1007,50 @@ suite('restartWorkload Command Tests', () => {
         test('updates annotation timestamp on multiple restarts', async () => {
             const timestamps: string[] = [];
             
-            // Override mock to capture timestamps
-            const originalPatch = mockAppsApi.patchNamespacedDeployment;
-            mockAppsApi.patchNamespacedDeployment = async (options: { name: string; namespace: string; body: unknown }) => {
-                patchDeploymentCalls.push(options);
-                const patchBody = options.body as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
+            const strategicMergePatchPath = require.resolve('../../../kubernetes/strategicMergePatch');
+            delete require.cache[strategicMergePatchPath];
+            // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+            const strategicMergePatchModule = require('../../../kubernetes/strategicMergePatch');
+            strategicMergePatchModule.strategicMergePatch = async (resource: k8s.KubernetesObject, contextName: string) => {
+                strategicMergePatchCalls.push({ resource, contextName });
+                const patchBody = resource as { spec?: { template?: { metadata?: { annotations?: Record<string, string> } } } };
                 const timestamp = patchBody.spec?.template?.metadata?.annotations?.['kubectl.kubernetes.io/restartedAt'];
                 if (timestamp) {
                     timestamps.push(timestamp);
                 }
-                return { metadata: { name: options.name, namespace: options.namespace } } as k8s.V1Deployment;
+                return resource;
             };
+
+            const restartWorkloadPath = require.resolve('../../../commands/restartWorkload');
+            delete require.cache[restartWorkloadPath];
+            // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+            restartWorkloadModule = require('../../../commands/restartWorkload');
+
+            // First restart
+            await restartWorkloadModule.applyRestartAnnotation(
+                'my-deployment',
+                'default',
+                'Deployment',
+                'test-context',
+                '/test/kubeconfig'
+            );
             
-            try {
-                // First restart
-                await restartWorkloadModule.applyRestartAnnotation(
-                    'my-deployment',
-                    'default',
-                    'Deployment',
-                    'test-context',
-                    '/test/kubeconfig'
-                );
-                
-                // Wait a bit to ensure different timestamp
-                await new Promise(resolve => setTimeout(resolve, 10));
-                
-                // Second restart
-                await restartWorkloadModule.applyRestartAnnotation(
-                    'my-deployment',
-                    'default',
-                    'Deployment',
-                    'test-context',
-                    '/test/kubeconfig'
-                );
-                
-                // Should have two timestamps
-                assert.strictEqual(timestamps.length, 2, 'Should have two timestamps');
-                assert.notStrictEqual(timestamps[0], timestamps[1], 'Timestamps should be different');
-                assert.ok(timestamps[0] < timestamps[1], 'Second timestamp should be later');
-            } finally {
-                // Restore original mock
-                mockAppsApi.patchNamespacedDeployment = originalPatch;
-            }
+            // Wait a bit to ensure different timestamp
+            await new Promise(resolve => setTimeout(resolve, 10));
+            
+            // Second restart
+            await restartWorkloadModule.applyRestartAnnotation(
+                'my-deployment',
+                'default',
+                'Deployment',
+                'test-context',
+                '/test/kubeconfig'
+            );
+            
+            // Should have two timestamps
+            assert.strictEqual(timestamps.length, 2, 'Should have two timestamps');
+            assert.notStrictEqual(timestamps[0], timestamps[1], 'Timestamps should be different');
+            assert.ok(timestamps[0] < timestamps[1], 'Second timestamp should be later');
         });
     });
 
