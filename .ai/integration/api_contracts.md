@@ -6,6 +6,22 @@
 - Context switching rebinds API clients to the selected kubeconfig context.
 - Resource detail providers may compose typed Kubernetes API clients, dynamic custom-resource access, discovery metadata, and events. They must preserve Kubernetes scope rules instead of assuming every resource is namespaced.
 
+### Kubernetes PATCH (strategic merge)
+
+Workload and YAML apply flows that PATCH with **partial object bodies** (for example rollout restart annotations, replica scale, or apply-on-conflict updates) must **not** call generated `patchNamespaced*` / `patch*` methods with merge objects alone. In `@kubernetes/client-node` 1.4.x those methods prefer **`application/json-patch+json`**, which requires an RFC 6902 **operation array**, not a merge object. Sending a merge object under that Content-Type yields HTTP 400 (`cannot unmarshal object into Go value of type []handlers.jsonPatchOp`).
+
+| Requirement | Contract |
+|-------------|----------|
+| **Content-Type** | `application/strategic-merge-patch+json` (`PatchStrategy.StrategicMergePatch`) for partial-object patches that mirror `kubectl patch --type=strategic` semantics |
+| **Implementation** | Shared host helper (for example `src/kubernetes/strategicMergePatch.ts`) using `KubernetesObjectApi.makeApiClient(kubeConfig).patch(..., PatchStrategy.StrategicMergePatch)` with a resource stub `{ apiVersion, kind, metadata: { name, namespace? }, ...patchFields }` |
+| **Restart rollout** | Set `spec.template.metadata.annotations['kubectl.kubernetes.io/restartedAt']` to an ISO 8601 timestamp; preserve other template annotations via strategic merge |
+| **Scale** | Patch `spec.replicas` on Deployment, StatefulSet, or ReplicaSet through the same helper |
+| **Apply YAML 409 fallback** | On create conflict, PATCH the parsed manifest through the same helper (not generated patch methods with object bodies) |
+| **JSON Patch arrays** | Only when intentionally sending RFC 6902 ops; then body must be an array and Content-Type must remain `application/json-patch+json` |
+| **Tests** | Unit tests assert outgoing Content-Type and body shape for the helper (not only that a generated client method was invoked) |
+
+Tree **`kube9.restartWorkload`**, Argo CD graph **`deployment.restartRollout`**, and **`scaleWorkload`** all depend on this contract. Port-forward restart (`kube9.restartPortForward`) is unrelated (kubectl process lifecycle only).
+
 ## CLI-backed Contracts
 
 - `kubectl` is used for selected workflows (Argo CD Application CRD get/patch/list, port forwarding when Argo CD REST enrichment is enabled, and other flows documented in operations).
@@ -97,7 +113,7 @@ Graph tile menus invoke **host-executed** actions by stable `actionId`. Initial 
 | `application.sync` | Application root | Application CRD refresh annotation (`normal`) + existing operation tracking |
 | `application.refresh` | Application root | Same as sync refresh path |
 | `application.hardRefresh` | Application root | Annotation `hard` + confirmation |
-| `deployment.restartRollout` | `Deployment` | Kubernetes workload layer (rollout restart via Deployment patch or kubectl rollout); **not** Argo CD API |
+| `deployment.restartRollout` | `Deployment` | Kubernetes workload layer: strategic merge patch adding `kubectl.kubernetes.io/restartedAt` on `spec.template.metadata.annotations` (same path as tree restart); **not** Argo CD API |
 | `resource.navigateTree` | All graph nodes with tree mapping | Existing `navigateToResource` / tree reveal |
 | `resource.openDescribe` | Kinds with describe support | Route to describe webview command surface |
 
