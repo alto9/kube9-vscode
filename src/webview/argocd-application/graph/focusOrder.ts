@@ -1,12 +1,12 @@
 import type { Node } from '@xyflow/react';
-import type { GraphNodeData } from './types';
+import type { FlowNodeData } from './types';
 
 const ROW_TOLERANCE_PX = 8;
 
 /**
  * Stable focus sequence: left-to-right, then top-to-bottom (`.ai/interface/accessibility.md`).
  */
-export function sortNodesForFocusOrder(nodes: Node<GraphNodeData>[]): Node<GraphNodeData>[] {
+export function sortNodesForFocusOrder(nodes: Node<FlowNodeData>[]): Node<FlowNodeData>[] {
     return [...nodes].sort((left, right) => {
         const rowDelta = left.position.y - right.position.y;
         if (Math.abs(rowDelta) > ROW_TOLERANCE_PX) {

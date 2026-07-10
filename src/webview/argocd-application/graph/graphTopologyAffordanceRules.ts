@@ -1,4 +1,5 @@
 import type { ApplicationResourceGraph } from '../../../types/applicationResourceGraph';
+import { isKindGroupingActive } from './applyKindGrouping';
 
 export const LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE =
     'Limited topology: this graph may not show every parent/child relationship. Enable full resource-tree data when available for native Argo CD-style topology.';
@@ -6,8 +7,8 @@ export const LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE =
 export const OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE =
     'Inferred topology: parent/child links come from Kubernetes owner references, not Argo CD resource-tree. Some relationships may be missing when reads fail or owners are outside this application.';
 
-export const GRAPH_TRUNCATION_AFFORDANCE_MESSAGE =
-    'Graph truncated: some resources were omitted because the node limit was reached.';
+export const LARGE_APP_GROUPING_AFFORDANCE_MESSAGE =
+    'Large application: resources are grouped by kind. Expand a group or open the Details tab to reach every managed resource.';
 
 export function countManagedResourceNodes(graph: ApplicationResourceGraph): number {
     return graph.nodes.filter((node) => node.role === 'managed_resource').length;
@@ -22,8 +23,8 @@ export function shouldShowLimitedTopologyAffordance(graph: ApplicationResourceGr
     return graph.topologyMode === 'limited' && hasVisibleManagedTopology(graph);
 }
 
-export function shouldShowTruncationAffordance(graph: ApplicationResourceGraph): boolean {
-    return graph.truncated === true && hasVisibleManagedTopology(graph);
+export function shouldShowLargeAppGroupingAffordance(graph: ApplicationResourceGraph): boolean {
+    return isKindGroupingActive(countManagedResourceNodes(graph));
 }
 
 export function getLimitedTopologyAffordanceMessage(graph: ApplicationResourceGraph): string {

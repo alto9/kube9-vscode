@@ -81,16 +81,16 @@ suite('ApplicationResourceGraphTruncation', () => {
         assert.notStrictEqual(graph.truncated, true);
     });
 
-    test('assembler truncates at 201 managed resources with truncated flag', () => {
+    test('assembler delivers complete graph at 201 managed resources without truncation', () => {
         const { graph } = buildCrdFlatApplicationResourceGraph({
             application: baseApplication({ resources: managedResourceRows(201) }),
             applicationKey: APPLICATION_KEY
         });
 
-        assert.strictEqual(graph.truncated, true);
-        assert.strictEqual(graph.nodes.filter((node) => node.role === 'managed_resource').length, 200);
-        assert.strictEqual(graph.nodes.length, 201);
-        assert.strictEqual(graph.edges.length, 200);
+        assert.notStrictEqual(graph.truncated, true);
+        assert.strictEqual(graph.nodes.filter((node) => node.role === 'managed_resource').length, 201);
+        assert.strictEqual(graph.nodes.length, 202);
+        assert.strictEqual(graph.edges.length, 201);
         assert.strictEqual(
             graph.structureVersion,
             computeStructureVersion({ nodes: graph.nodes, edges: graph.edges })
@@ -126,13 +126,14 @@ suite('ApplicationResourceGraphTruncation', () => {
         );
     });
 
-    test('application root is always present when truncated', () => {
+    test('application root is always present for large complete graphs', () => {
         const { graph } = buildCrdFlatApplicationResourceGraph({
             application: baseApplication({ resources: managedResourceRows(250) }),
             applicationKey: APPLICATION_KEY
         });
 
-        assert.strictEqual(graph.truncated, true);
+        assert.notStrictEqual(graph.truncated, true);
+        assert.strictEqual(graph.nodes.filter((node) => node.role === 'managed_resource').length, 250);
         const root = graph.nodes.find((node) => node.role === 'application');
         assert.ok(root);
         assert.strictEqual(root.id, buildApplicationRootNodeId('argocd', 'guestbook'));

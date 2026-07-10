@@ -18,11 +18,28 @@ import {
     type ResourceGraphEdge,
     type ResourceGraphNode
 } from '../types/applicationResourceGraph';
-import { truncateApplicationResourceGraph } from './ApplicationResourceGraphTruncation';
 import type { ResourceOwnerRefsResult, KubernetesOwnerReference } from './ManagedResourceOwnerRefReader';
 
 const CRD_FLAT_TOPOLOGY_SOURCE = 'crd_flat' as const;
 const OWNER_REF_TOPOLOGY_SOURCE = 'kubernetes_owner_ref' as const;
+
+function finalizeApplicationResourceGraph(
+    applicationKey: ApplicationKey,
+    nodes: ResourceGraphNode[],
+    edges: ResourceGraphEdge[],
+    topologySource: ApplicationResourceGraph['topologySource'],
+    observedAt: string
+): ApplicationResourceGraph {
+    return {
+        applicationKey,
+        nodes,
+        edges,
+        topologySource,
+        topologyMode: topologyModeFromSource(topologySource),
+        structureVersion: computeStructureVersion({ nodes, edges }),
+        observedAt
+    };
+}
 
 export const INVALID_RESOURCE_ROW_WARNING = 'Skipped resource row: missing kind or name';
 
@@ -258,15 +275,13 @@ export function buildResourceTreeApplicationResourceGraph(
     }
 
     const nodes = [rootNode, ...managedNodes];
-    const graph: ApplicationResourceGraph = truncateApplicationResourceGraph({
+    const graph = finalizeApplicationResourceGraph(
         applicationKey,
         nodes,
         edges,
-        topologySource: RESOURCE_TREE_TOPOLOGY_SOURCE,
-        topologyMode: topologyModeFromSource(RESOURCE_TREE_TOPOLOGY_SOURCE),
-        structureVersion: computeStructureVersion({ nodes, edges }),
+        RESOURCE_TREE_TOPOLOGY_SOURCE,
         observedAt
-    });
+    );
 
     return { graph, assemblyWarnings };
 }
@@ -405,15 +420,13 @@ export function buildCrdFlatApplicationResourceGraph(
         relationship: 'manages' as const
     }));
 
-    const graph: ApplicationResourceGraph = truncateApplicationResourceGraph({
+    const graph = finalizeApplicationResourceGraph(
         applicationKey,
         nodes,
         edges,
-        topologySource: CRD_FLAT_TOPOLOGY_SOURCE,
-        topologyMode: topologyModeFromSource(CRD_FLAT_TOPOLOGY_SOURCE),
-        structureVersion: computeStructureVersion({ nodes, edges }),
+        CRD_FLAT_TOPOLOGY_SOURCE,
         observedAt
-    });
+    );
 
     return { graph, assemblyWarnings };
 }
@@ -554,15 +567,13 @@ export function buildOwnerRefApplicationResourceGraph(
     }
 
     const nodes = baseline.graph.nodes;
-    const graph: ApplicationResourceGraph = truncateApplicationResourceGraph({
+    const graph = finalizeApplicationResourceGraph(
         applicationKey,
         nodes,
         edges,
-        topologySource: OWNER_REF_TOPOLOGY_SOURCE,
-        topologyMode: topologyModeFromSource(OWNER_REF_TOPOLOGY_SOURCE),
-        structureVersion: computeStructureVersion({ nodes, edges }),
+        OWNER_REF_TOPOLOGY_SOURCE,
         observedAt
-    });
+    );
 
     return { graph, assemblyWarnings };
 }

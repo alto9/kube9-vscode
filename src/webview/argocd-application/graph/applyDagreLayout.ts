@@ -8,13 +8,13 @@ import {
 } from './constants';
 import { graphHasCycle } from './detectCycle';
 import { applyTierFallbackLayout } from './applyTierFallbackLayout';
-import type { GraphNodeData } from './types';
+import type { FlowNodeData } from './types';
 
 function applyDagreLayoutInternal(
-    nodes: Node<GraphNodeData>[],
+    nodes: Node<FlowNodeData>[],
     edges: Edge[],
     rankdir: 'LR' | 'RL' | 'TB' | 'BT'
-): Node<GraphNodeData>[] {
+): Node<FlowNodeData>[] {
     const graph = new dagre.graphlib.Graph();
     graph.setDefaultEdgeLabel(() => ({}));
     graph.setGraph({
@@ -48,9 +48,9 @@ function applyDagreLayoutInternal(
 }
 
 export function applyGraphLayout(
-    nodes: Node<GraphNodeData>[],
+    nodes: Node<FlowNodeData>[],
     edges: Edge[]
-): Node<GraphNodeData>[] {
+): Node<FlowNodeData>[] {
     if (nodes.length === 0) {
         return nodes;
     }

@@ -1,8 +1,8 @@
 import type { ApplicationResourceGraph } from '../../../types/applicationResourceGraph';
 import {
     countManagedResourceNodes,
-    shouldShowLimitedTopologyAffordance,
-    shouldShowTruncationAffordance
+    shouldShowLargeAppGroupingAffordance,
+    shouldShowLimitedTopologyAffordance
 } from './graphTopologyAffordanceRules';
 
 export interface GraphPresentationContext {
@@ -45,7 +45,7 @@ export function shouldShowGraphTopologyAffordances(context: GraphPresentationCon
     }
     return (
         shouldShowLimitedTopologyAffordance(context.resourceGraph) ||
-        shouldShowTruncationAffordance(context.resourceGraph)
+        shouldShowLargeAppGroupingAffordance(context.resourceGraph)
     );
 }
 

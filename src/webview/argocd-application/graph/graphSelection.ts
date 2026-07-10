@@ -1,20 +1,27 @@
 import type { Node } from '@xyflow/react';
-import type { GraphNodeData } from './types';
+import type { FlowNodeData } from './types';
 
 export function resolveSelectionAfterMerge(
     previousSelectedId: string | null,
-    nextNodeIds: ReadonlySet<string>
+    nextVisibleNodeIds: ReadonlySet<string>,
+    dtoNodeIds?: ReadonlySet<string>
 ): string | null {
     if (!previousSelectedId) {
         return null;
     }
-    return nextNodeIds.has(previousSelectedId) ? previousSelectedId : null;
+    if (nextVisibleNodeIds.has(previousSelectedId)) {
+        return previousSelectedId;
+    }
+    if (dtoNodeIds?.has(previousSelectedId)) {
+        return previousSelectedId;
+    }
+    return null;
 }
 
 export function applyNodeSelection(
-    nodes: Node<GraphNodeData>[],
+    nodes: Node<FlowNodeData>[],
     selectedNodeId: string | null
-): Node<GraphNodeData>[] {
+): Node<FlowNodeData>[] {
     if (!selectedNodeId) {
         return nodes.map((node) => (node.selected ? { ...node, selected: false } : node));
     }

@@ -5,15 +5,16 @@ import {
     GRAPH_NODE_SEP,
     GRAPH_RANK_SEP
 } from './constants';
-import type { GraphNodeData } from './types';
+import type { FlowNodeData } from './types';
+import { isGraphNodeData } from './types';
 
 function buildRankMap(
-    nodes: Node<GraphNodeData>[],
+    nodes: Node<FlowNodeData>[],
     edges: Edge[]
 ): Map<string, number> {
     const ranks = new Map<string, number>();
     const rootIds = nodes
-        .filter((node) => node.data.dto.role === 'application')
+        .filter((node) => isGraphNodeData(node.data) && node.data.dto.role === 'application')
         .map((node) => node.id);
     const startIds = rootIds.length > 0 ? rootIds : [nodes[0]?.id].filter(Boolean) as string[];
 
@@ -52,11 +53,11 @@ function buildRankMap(
 }
 
 export function applyTierFallbackLayout(
-    nodes: Node<GraphNodeData>[],
+    nodes: Node<FlowNodeData>[],
     edges: Edge[]
-): Node<GraphNodeData>[] {
+): Node<FlowNodeData>[] {
     const ranks = buildRankMap(nodes, edges);
-    const columns = new Map<number, Node<GraphNodeData>[]>();
+    const columns = new Map<number, Node<FlowNodeData>[]>();
 
     for (const node of nodes) {
         const rank = ranks.get(node.id) ?? 0;

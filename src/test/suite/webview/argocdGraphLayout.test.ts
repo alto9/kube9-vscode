@@ -5,11 +5,20 @@ import {
     type ApplicationResourceGraph,
     type ResourceGraphNode
 } from '../../../types/applicationResourceGraph';
+import { applyGraphLayout } from '../../../webview/argocd-application/graph/applyDagreLayout';
+import {
+    GRAPH_NODE_HEIGHT,
+    GRAPH_NODE_SEP,
+    GRAPH_NODE_WIDTH,
+    GRAPH_RANK_SEP
+} from '../../../webview/argocd-application/graph/constants';
 import { applyNodeSelection, resolveSelectionAfterMerge } from '../../../webview/argocd-application/graph/graphSelection';
 import {
+    collectMappedDtoNodeIds,
     createEmptyLayoutCache,
     mergeGraphFlowState
 } from '../../../webview/argocd-application/graph/mergeGraphFlowState';
+import { buildKindGroupNodeId } from '../../../webview/argocd-application/graph/applyKindGrouping';
 import {
     applicationKeyChanged,
     shouldPreserveViewport,
@@ -64,6 +73,26 @@ function sampleGraph(overrides: Partial<ApplicationResourceGraph> = {}): Applica
         observedAt: '2026-05-28T00:00:00.000Z',
         ...overrides
     };
+}
+
+function largeSampleGraph(): ApplicationResourceGraph {
+    const root = rootNode({ label: 'large-app' });
+    const managed = Array.from({ length: 45 }, (_, index) =>
+        managedNode(`res:guestbook/Deployment/app-${index}`)
+    );
+    const nodes = [root, ...managed];
+    const edges = managed.map((node) => ({
+        id: `${root.id}->${node.id}:manages`,
+        source: root.id,
+        target: node.id,
+        relationship: 'manages' as const
+    }));
+
+    return sampleGraph({
+        nodes,
+        edges,
+        structureVersion: computeStructureVersion({ nodes, edges })
+    });
 }
 
 suite('argocd graph layout', () => {
@@ -186,6 +215,87 @@ suite('argocd graph layout', () => {
             assert.strictEqual(merged.relayouted, true);
             assert.strictEqual(merged.shouldAutoFit, true);
         });
+
+        test('group expand/collapse relayouts without auto-fit', () => {
+            const graph = largeSampleGraph();
+            const initial = mergeGraphFlowState({
+                graph,
+                cache: createEmptyLayoutCache()
+            });
+
+            const expanded = mergeGraphFlowState({
+                graph,
+                cache: initial.cache,
+                expandedKinds: new Set(['Deployment']),
+                groupPresentationChanged: true
+            });
+
+            assert.strictEqual(expanded.relayouted, true);
+            assert.strictEqual(expanded.shouldAutoFit, false);
+        });
+    });
+
+    suite('layout constants', () => {
+        test('dagre layout constants match 220x72 tile box with ranksep 96 and nodesep 48', () => {
+            assert.strictEqual(GRAPH_NODE_WIDTH, 220);
+            assert.strictEqual(GRAPH_NODE_HEIGHT, 72);
+            assert.strictEqual(GRAPH_RANK_SEP, 96);
+            assert.strictEqual(GRAPH_NODE_SEP, 48);
+        });
+
+        test('star graph ranks managed nodes to the right of application root', () => {
+            const root = rootNode();
+            const deployment = managedNode('res:guestbook/Deployment/ui');
+            const service = managedNode('res:guestbook/Service/ui');
+            const nodes = [
+                {
+                    id: root.id,
+                    type: 'resourceGraph' as const,
+                    position: { x: 0, y: 0 },
+                    data: { dto: root },
+                    draggable: false,
+                    selectable: true
+                },
+                {
+                    id: deployment.id,
+                    type: 'resourceGraph' as const,
+                    position: { x: 0, y: 0 },
+                    data: { dto: deployment },
+                    draggable: false,
+                    selectable: true
+                },
+                {
+                    id: service.id,
+                    type: 'resourceGraph' as const,
+                    position: { x: 0, y: 0 },
+                    data: { dto: service },
+                    draggable: false,
+                    selectable: true
+                }
+            ];
+            const edges = [
+                {
+                    id: `${root.id}->${deployment.id}:manages`,
+                    source: root.id,
+                    target: deployment.id
+                },
+                {
+                    id: `${root.id}->${service.id}:manages`,
+                    source: root.id,
+                    target: service.id
+                }
+            ];
+
+            const laidOut = applyGraphLayout(nodes, edges);
+            const rootPosition = laidOut.find((node) => node.id === root.id)!.position;
+            const managedPositions = laidOut
+                .filter((node) => node.id !== root.id)
+                .map((node) => node.position.x);
+
+            for (const managedX of managedPositions) {
+                assert.ok(managedX > rootPosition.x);
+            }
+        });
     });
 
     suite('graphSelection', () => {
@@ -197,9 +307,24 @@ suite('argocd graph layout', () => {
             );
         });
 
-        test('clears selection when previously selected node id is absent', () => {
+        test('clears selection when previously selected node id is absent from DTO', () => {
             const nodeIds = new Set(['app:argocd/guestbook']);
             assert.strictEqual(resolveSelectionAfterMerge('res:guestbook/Deployment/ui', nodeIds), null);
+        });
+
+        test('preserves selection when node is hidden in collapsed kind group but still in DTO', () => {
+            const graph = largeSampleGraph();
+            const dtoNodeIds = collectMappedDtoNodeIds(graph);
+            const selectedId = 'res:guestbook/Deployment/app-0';
+            const collapsedVisibleIds = new Set([
+                buildApplicationRootNodeId('argocd', 'guestbook'),
+                buildKindGroupNodeId('Deployment')
+            ]);
+
+            assert.strictEqual(
+                resolveSelectionAfterMerge(selectedId, collapsedVisibleIds, dtoNodeIds),
+                selectedId
+            );
         });
 
         test('applyNodeSelection marks only the selected node', () => {

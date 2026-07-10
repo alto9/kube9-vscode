@@ -2,9 +2,9 @@ import React from 'react';
 import type { ApplicationResourceGraph } from '../../../types/applicationResourceGraph';
 import {
     getLimitedTopologyAffordanceMessage,
-    GRAPH_TRUNCATION_AFFORDANCE_MESSAGE,
-    shouldShowLimitedTopologyAffordance,
-    shouldShowTruncationAffordance
+    LARGE_APP_GROUPING_AFFORDANCE_MESSAGE,
+    shouldShowLargeAppGroupingAffordance,
+    shouldShowLimitedTopologyAffordance
 } from './graphTopologyAffordanceRules';
 
 interface GraphTopologyAffordancesProps {
@@ -21,10 +21,10 @@ export function GraphTopologyAffordances({
     }
 
     const showLimited = shouldShowLimitedTopologyAffordance(resourceGraph);
-    const showTruncated = shouldShowTruncationAffordance(resourceGraph);
+    const showGrouped = shouldShowLargeAppGroupingAffordance(resourceGraph);
     const limitedMessage = getLimitedTopologyAffordanceMessage(resourceGraph);
 
-    if (!showLimited && !showTruncated) {
+    if (!showLimited && !showGrouped) {
         return null;
     }
 
@@ -40,14 +40,14 @@ export function GraphTopologyAffordances({
                     <span>{limitedMessage}</span>
                 </p>
             )}
-            {showTruncated && (
+            {showGrouped && (
                 <p
-                    className="argocd-graph-affordance argocd-graph-affordance--truncated"
+                    className="argocd-graph-affordance argocd-graph-affordance--grouped"
                     role="note"
-                    data-testid="graph-truncation-affordance"
+                    data-testid="graph-grouping-affordance"
                 >
-                    <span className="codicon codicon-warning" aria-hidden="true" />
-                    <span>{GRAPH_TRUNCATION_AFFORDANCE_MESSAGE}</span>
+                    <span className="codicon codicon-info" aria-hidden="true" />
+                    <span>{LARGE_APP_GROUPING_AFFORDANCE_MESSAGE}</span>
                 </p>
             )}
         </div>
