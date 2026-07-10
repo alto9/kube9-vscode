@@ -64,6 +64,13 @@ After every successful application fetch:
 
 If a resource appears in `status.resources` but fails graph node construction (missing name/kind), omit the node and surface a non-fatal warning in the UI layer; do not invent placeholder keys.
 
+**Invalid-row surfacing (CRD-flat):**
+
+1. Assembler records `assemblyWarnings` (see [api_contracts.md](../integration/api_contracts.md) Tier A).
+2. Host logs each warning to the **`kube9 ArgoCD Service`** output channel.
+3. When at least one invalid row was skipped, the graph viewport shows a non-blocking info banner (for example: "Some managed resources could not be shown because Argo CD returned incomplete resource rows."). The banner must not include raw CRD JSON or cluster credentials.
+4. The Details drift table still lists all parsed `ArgoCDResource` rows from `parseResources`; graph omission affects canvas nodes only.
+
 ## Operation in progress
 
 While `operationState.phase` is `Running` or `Terminating`:

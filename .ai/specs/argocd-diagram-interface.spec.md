@@ -24,13 +24,32 @@ Kubernetes and Argo CD I/O happen only in the extension host. The required basel
 
 The graph data contract is `ApplicationResourceGraph`, a derived JSON-safe DTO with `applicationKey`, `nodes`, `edges`, `topologySource`, `topologyMode`, `structureVersion`, optional `layoutHint`, `observedAt`, and optional `truncated`. Stable identity is based on `ManagedResourceKey` and `GraphNodeId`, not visible labels or React Flow internals. `ArgoCDApplication.resources` remains the sync and health authority for CRD-backed resources.
 
+**CRD-flat baseline assembly (`topologySource: crd_flat`):**
+
+- Parse each `ArgoCDResource` to `ManagedResourceKey` (namespace trimmed; kind and name required).
+- Emit one Application root node plus one managed-resource node per valid row.
+- Emit one `manages` edge per managed node from root to resource.
+- Set `topologyMode: limited` and show the limited-topology affordance when managed nodes are visible.
+- Skip invalid rows (missing kind/name) and duplicate keys (keep first); log assembly warnings to the output channel and show a non-blocking graph banner when invalid rows were skipped.
+- Managed-resource node count must equal valid `application.resources` row count after assembly.
+
 The canonical webview protocol uses `resourceGraph` for complete graph snapshots and `resourceAction` for tile actions. `resourceActionProgress` and `resourceActionResult` communicate action progress and terminal state. Legacy naming such as `graphData`, `graphPatch`, and `graphAction` is treated as implementation cleanup, not the durable contract. The host preserves panel identity by `context:namespace:applicationName`, owns polling and cancellation, and pushes graph refreshes without disposing the panel.
 
 The webview owns rendering, selection, viewport, focus, menu state, and layout cache for the panel session. Refresh merges preserve selection, viewport, and positions when stable node ids survive; structural changes use `structureVersion` to determine when relayout or selection clearing is needed.
 
 ## Testing Strategy
 
-Contract validation should prove the CRD-flat baseline first: every `ArgoCDApplication.resources` row produces a managed-resource node, the Application root exists, sync/health status matches the flat list, and limited topology is disclosed when full topology is unavailable. Resource-tree and owner-reference enrichment tests should verify that optional edges do not override CRD sync/health for matching resource keys.
+Contract validation should prove the CRD-flat baseline first:
+
+- Every **valid** `ArgoCDApplication.resources` row produces exactly one managed-resource node; invalid rows are omitted with warnings.
+- `countManagedResourceNodes(graph) === validResourceRowCount` for `topologySource: crd_flat`.
+- Application root exists with application-level sync/health.
+- Managed tile sync/health matches the corresponding `ArgoCDResource` row.
+- Star topology: one `manages` edge per managed node from Application root; `topologyMode: limited`.
+- Limited-topology affordance visible when CRD-flat graph has managed nodes.
+- Invalid-row path: assembly warnings logged; non-blocking graph banner when rows were skipped.
+
+Resource-tree and owner-reference enrichment tests should verify that optional edges do not override CRD sync/health for matching resource keys.
 
 Runtime and serialization tests should cover `resourceGraph`, `resourceAction`, `resourceActionProgress`, and `resourceActionResult` message handling, including stable node ids, `structureVersion` merge behavior, selected-node preservation, removed-node selection clearing, and host-owned polling after sync, refresh, hard refresh, or rollout restart.
 
