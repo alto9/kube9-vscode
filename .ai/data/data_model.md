@@ -120,7 +120,7 @@ The **Application resource graph** is a derived, directed view model for React F
 | `structureVersion` | string | Fingerprint that changes when the **set of node ids** or **edge endpoints** changes. Used with polling merge (see [consistency.md](./consistency.md)). Attribute-only sync/health updates do not bump it. |
 | `layoutHint` | optional object | Non-authoritative hints from the assembler (for example `{ "algorithm": "dagre-lr", "version": "1" }`). Webview ignores when `structureVersion` changes or may omit hints entirely. |
 | `observedAt` | ISO 8601 string | When this graph snapshot was assembled |
-| `truncated` | boolean (optional) | `true` when the host omitted managed nodes because the application exceeded the product node cap; Application root is always present. Omitted or `false` when the full managed set is included. |
+| `truncated` | boolean (optional) | `true` when the delivered graph is presentation-limited for a large application. The Application root is always present, and the interface must still preserve a path to every returned managed resource through grouping, expansion, Details, or tree navigation rather than silently losing resources. Omitted or `false` when the full managed set is directly visible. |
 
 ### ResourceGraphNode
 
@@ -202,7 +202,7 @@ ArgoCDApplication
 Rules:
 
 1. **`ArgoCDApplication.resources` remains the sync/health authority** for every managed resource that appears in `status.resources` when using CRD-only ingestion.
-2. In **`crd_flat`** mode, graph nodes for managed resources are in **1:1 correspondence** with `resources[]`; edges are only Application → resource (`manages`).
+2. In **`crd_flat`** mode, graph nodes for managed resources are in **1:1 correspondence** with `resources[]`; edges are only Application → resource (`manages`). If the UI groups or collapses nodes for large applications, that grouping is a presentation layer over the same returned resources, not a data-layer reduction.
 3. When a **topology source** adds nodes not present in `status.resources` (e.g. ReplicaSet from resource-tree), those nodes use status from the topology payload where available; sync/health may be partial or `Unknown` until reconciled with CRD rows sharing the same `ManagedResourceKey`.
 4. **Matching** a graph node to a flat-list row uses `ManagedResourceKey` equality, not display label or React Flow internal id.
 5. The flat list is **unordered**; graph layout order is computed (e.g. dagre) and is not stored in the Application CR.

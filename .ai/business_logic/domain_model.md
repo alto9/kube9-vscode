@@ -54,7 +54,7 @@ Dependency accuracy follows a **tiered topology** model:
 ### Graph structure
 
 - The **root node** is always the Application itself.
-- **Child nodes** represent managed resources and reflect dependency topology (not a flat inventory table).
+- **Child nodes** represent every returned managed resource for the Application. When full topology is available they reflect dependency topology; when only CRD data is available they still render as complete managed-resource nodes with limited edge accuracy.
 - **Edges** express parent/child or dependency relationships between nodes; direction flows left to right in the layout.
 - Each node has a **stable identity** within an Application (kind, API group/version, namespace when namespaced, name) so status refreshes and in-flight operations can merge updates without reordering unrelated nodes.
 
@@ -90,6 +90,7 @@ The registry is extensible: new kinds add capability entries without changing th
 - Mutating actions (sync, restart rollout) require **explicit user intent** via menu or command invocation.
 - Actions target the **specific node** the user selected; they do not implicitly cascade to unrelated nodes unless the underlying operation naturally affects dependents (for example, sync at Application root).
 - Read-only or insufficient RBAC must block write actions while preserving read-only graph inspection where permitted.
+- **View In Tree** from a managed-resource graph node resolves that node's `ManagedResourceKey` to the existing Kubernetes tree navigation path when a tree item can be mapped. Failure to map a node is a navigation limitation, not permission to mutate or invent resource identity.
 
 ## Webview page-level actions
 
@@ -160,3 +161,13 @@ Rules below are the **kube9-vscode reference baseline** for built-in Kubernetes 
 7. Application-level sync, refresh, hard refresh, and view-in-tree flows remain available from the webview header/sub-header and Application root overflow; they are not replaced by the graph canvas toolbar.
 8. Graph presentation and actions must not require the user to leave VS Code or open the native Argo CD server UI.
 9. **Extension-local graph assembly** for the first delivery: the extension owns graph DTO assembly and refresh paths; kube9-operator does not supply resource-tree snapshots today and is **not** required for this capability set. A future operator-mediated snapshot may align later without changing Kind Capability Registry rules stated here.
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD diagram interface
+- Define how selected graph nodes visually distinguish focus, selection, and open overflow states without changing the selected resource action scope.
+- Decide whether unsupported or non-navigable resource nodes hide the overflow menu or show disabled explanatory entries.
+- Specify how progressive disclosure for very large Applications preserves access to every returned managed resource.
+- Align final action labels and disabled-state copy for Application root overflow versus managed-resource overflow menus.

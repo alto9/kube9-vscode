@@ -28,7 +28,7 @@ On extension deactivate, all open webviews are torn down by VS Code. Host code s
 
 ## Graph-Specific Lifecycle
 
-- **Initial load:** Full `graphData` (or `applicationData` from which the webview derives graph) after `ready`.
-- **Poll updates:** Prefer `graphPatch` for sync/health-only deltas during operations.
-- **Structural change:** Full `graphData` when nodes/edges set changes (sync finished, hard refresh, resource added/removed).
-- **Panel hidden:** Retained context keeps React Flow viewport; polling continues only while an operation is active, not as a background watch on hidden panels unless explicitly started by user action.
+- **Initial load:** Full `resourceGraph` (or `applicationData` from which the webview derives graph) after `ready`.
+- **Poll updates:** Prefer complete `resourceGraph` snapshots when sync, health, or topology changes; future patch-style messages must preserve the same stable node identity rules.
+- **Structural change:** Full `resourceGraph` when the node or edge set changes (sync finished, hard refresh, resource added/removed).
+- **Panel hidden:** Retained context keeps React Flow viewport, selected node, and layout cache when stable node ids survive. Polling continues only while an operation is active, not as a background watch on hidden panels unless explicitly started by user action.

@@ -53,3 +53,11 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 - Verify badge/icon pairs have non-empty accessible names in high-contrast themes.
 - Graph changes should be reviewed for focus loss after polling updates (focus should remain on the current tile when possible).
 - AI Conformance report changes should include a keyboard pass through Refresh, category headings, expandable requirement rows, and high-contrast badge review.
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD diagram accessibility
+- Define the exact manual keyboard and high-contrast acceptance pass for selectable tiles, overflow menus, limited-topology hints, and View In Tree from a selected node.
+- Decide whether parent/child edge relationships need explicit accessible descriptions beyond tile names and Details table navigation.

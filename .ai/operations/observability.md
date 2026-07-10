@@ -23,8 +23,17 @@ Operational expectations:
 - **Google Analytics (GA4)** is the planned **shared backend** for product analytics across IDE extension and desktop surfaces; dashboards and funnel analysis live there subject to `.ai/integration/external_systems.md`—still only allowlisted, non-identifying fields.
 - **Local diagnostics** remain the default for troubleshooting; product telemetry complements aggregate product insight, not per-user debugging.
 
+Argo CD graph telemetry, when added, follows the same allowlist: event names may describe coarse feature use or outcome categories such as graph opened, topology fallback shown, resource action succeeded, or resource action failed. Payloads must not include cluster context, namespace, Application name, resource kind/name, manifest content, kubeconfig data, Argo CD URLs, tokens, or raw API payloads.
+
 ## Operational Principle
 
 Diagnostics should be rich enough for troubleshooting while keeping end-user messaging concise and action-oriented.
 
 Product telemetry (when shipped) must stay **minimal, enumerated, and reviewable**, consistent with `.ai/operations/security.md`.
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD diagram telemetry
+- If graph telemetry is included, define catalog entries and allowed payload shapes through the existing telemetry catalog workflow before implementation emits events.

@@ -72,6 +72,14 @@
             ".ai/operations/observability.md",
             ".ai/operations/security.md"
           ]
+        },
+        {
+          "name": "specs",
+          "primary_doc": ".ai/specs/index.md",
+          "description": "Durable capability-level architecture and behavior specifications.",
+          "children": [
+            ".ai/specs/argocd-diagram-interface.spec.md"
+          ]
         }
       ]
     }

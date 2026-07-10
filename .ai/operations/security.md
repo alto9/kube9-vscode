@@ -11,6 +11,8 @@
 
 Kube9 desktop IDE surfaces prioritize **explicit user control** consistent with VS Code settings. Telemetry is for **aggregate product insight**—not a substitute for support logs—and must remain guardrailed via code-reviewable event APIs so engineers cannot accidentally attach cluster context to payloads.
 
+Argo CD diagram actions preserve the local-first trust model. The webview never receives kubeconfig paths, Argo CD bearer tokens, raw REST endpoints, or raw API responses; it sends selected-resource intent to the extension host, and the host validates context, RBAC, action eligibility, and optional Argo CD REST credentials before any cluster or server call.
+
 ## Supply Chain And Release
 
 - CI-managed release flow with repository secrets for marketplace publishing.
