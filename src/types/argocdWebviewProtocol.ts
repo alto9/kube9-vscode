@@ -103,6 +103,7 @@ export interface ResourceGraphExtensionMessage {
     refreshedAt: string;
     truncated?: boolean;
     totalManagedCount?: number;
+    skippedInvalidResourceRows?: boolean;
 }
 
 export interface ResourceActionProgressExtensionMessage {
@@ -279,7 +280,8 @@ function validateExtensionPayload(type: string, payload: Record<string, unknown>
                 TOPOLOGY_SOURCES.has(String(payload.topologySource)) &&
                 isNonEmptyString(payload.refreshedAt) &&
                 isOptionalBoolean(payload.truncated) &&
-                (payload.totalManagedCount === undefined || typeof payload.totalManagedCount === 'number')
+                (payload.totalManagedCount === undefined || typeof payload.totalManagedCount === 'number') &&
+                isOptionalBoolean(payload.skippedInvalidResourceRows)
             );
         case 'resourceActionProgress':
             return (
@@ -349,6 +351,7 @@ export function buildResourceGraphMessage(input: {
     refreshedAt: string;
     truncated?: boolean;
     totalManagedCount?: number;
+    skippedInvalidResourceRows?: boolean;
 }): ResourceGraphExtensionMessage {
     return {
         type: 'resourceGraph',
@@ -356,6 +359,9 @@ export function buildResourceGraphMessage(input: {
         topologySource: input.topologySource,
         refreshedAt: input.refreshedAt,
         ...(input.truncated !== undefined ? { truncated: input.truncated } : {}),
-        ...(input.totalManagedCount !== undefined ? { totalManagedCount: input.totalManagedCount } : {})
+        ...(input.totalManagedCount !== undefined ? { totalManagedCount: input.totalManagedCount } : {}),
+        ...(input.skippedInvalidResourceRows !== undefined
+            ? { skippedInvalidResourceRows: input.skippedInvalidResourceRows }
+            : {})
     };
 }

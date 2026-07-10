@@ -33,6 +33,7 @@ function App(): React.JSX.Element {
     const [resourceGraph, setResourceGraph] = React.useState<ApplicationResourceGraph | null>(null);
     const [graphError, setGraphError] = React.useState<string | null>(null);
     const [graphDegradation, setGraphDegradation] = React.useState<string | null>(null);
+    const [skippedInvalidResourceRows, setSkippedInvalidResourceRows] = React.useState<boolean>(false);
     const [syncing, setSyncing] = React.useState<boolean>(false);
     const [refreshing, setRefreshing] = React.useState<boolean>(false);
     const [appOperationRunning, setAppOperationRunning] = React.useState<boolean>(false);
@@ -109,6 +110,7 @@ function App(): React.JSX.Element {
                     setResourceGraph(message.graph);
                     setGraphError(null);
                     setGraphDegradation(null);
+                    setSkippedInvalidResourceRows(message.skippedInvalidResourceRows === true);
                     break;
 
                 case 'graphError':
@@ -205,6 +207,7 @@ function App(): React.JSX.Element {
             resourceGraph={resourceGraph}
             graphError={graphError}
             graphDegradation={graphDegradation}
+            skippedInvalidResourceRows={skippedInvalidResourceRows}
             graphMerging={graphMerging}
             graphInteraction={graphInteraction}
         />

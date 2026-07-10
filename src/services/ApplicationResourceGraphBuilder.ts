@@ -4,7 +4,8 @@ import type { ApplicationKey, ApplicationResourceGraph, TopologySource } from '.
 import {
     buildCrdFlatApplicationResourceGraph,
     buildOwnerRefApplicationResourceGraph,
-    buildResourceTreeApplicationResourceGraph
+    buildResourceTreeApplicationResourceGraph,
+    hasSkippedInvalidResourceRows
 } from './ApplicationResourceGraphAssembler';
 import { fetchApplicationResourceTree } from './ArgoCDRestClient';
 import { ArgoCDRestAuthResolver } from './ArgoCDRestAuthResolver';
@@ -22,10 +23,22 @@ export interface BuildApplicationResourceGraphResult {
     graph: ApplicationResourceGraph;
     topologySource: TopologySource;
     assemblyWarnings: string[];
+    skippedInvalidResourceRows: boolean;
 }
 
 function getOutputChannel(): vscode.OutputChannel {
     return vscode.window.createOutputChannel('kube9 ArgoCD Service');
+}
+
+export function logAssemblyWarnings(prefix: string, warnings: string[]): void {
+    if (warnings.length === 0) {
+        return;
+    }
+
+    const channel = getOutputChannel();
+    for (const warning of warnings) {
+        channel.appendLine(`[WARNING] ${prefix}: ${warning}`);
+    }
 }
 
 export async function buildApplicationResourceGraph(
@@ -56,7 +69,8 @@ export async function buildApplicationResourceGraph(
             return {
                 graph,
                 topologySource: 'argocd_resource_tree',
-                assemblyWarnings
+                assemblyWarnings,
+                skippedInvalidResourceRows: hasSkippedInvalidResourceRows(assemblyWarnings)
             };
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -79,7 +93,8 @@ export async function buildApplicationResourceGraph(
         return {
             graph: ownerRefAttempt.graph,
             topologySource: 'kubernetes_owner_ref',
-            assemblyWarnings: ownerRefAttempt.assemblyWarnings
+            assemblyWarnings: ownerRefAttempt.assemblyWarnings,
+            skippedInvalidResourceRows: hasSkippedInvalidResourceRows(ownerRefAttempt.assemblyWarnings)
         };
     }
 
@@ -89,10 +104,13 @@ export async function buildApplicationResourceGraph(
         observedAt
     });
 
+    logAssemblyWarnings('crd_flat graph assembly', assemblyWarnings);
+
     return {
         graph,
         topologySource: 'crd_flat',
-        assemblyWarnings
+        assemblyWarnings,
+        skippedInvalidResourceRows: hasSkippedInvalidResourceRows(assemblyWarnings)
     };
 }
 

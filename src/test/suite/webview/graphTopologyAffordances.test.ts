@@ -15,6 +15,10 @@ import {
     shouldShowLimitedTopologyAffordance,
     shouldShowTruncationAffordance
 } from '../../../webview/argocd-application/graph/graphTopologyAffordanceRules';
+import {
+    GRAPH_ASSEMBLY_INVALID_ROW_BANNER_MESSAGE,
+    shouldShowGraphAssemblyInfoBanner
+} from '../../../webview/argocd-application/graph/graphAssemblyInfoRules';
 function rootOnlyGraph(topologyMode: 'full' | 'limited' = 'limited'): ApplicationResourceGraph {
     const nodes: ResourceGraphNode[] = [
         {
@@ -123,5 +127,13 @@ suite('graph topology affordances', () => {
         assert.strictEqual(getLimitedTopologyAffordanceMessage(graph), OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE);
         assert.match(OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE, /owner references/i);
         assert.match(OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE, /inferred/i);
+    });
+
+    test('shows assembly info banner only when invalid rows were skipped', () => {
+        assert.strictEqual(shouldShowGraphAssemblyInfoBanner(true), true);
+        assert.strictEqual(shouldShowGraphAssemblyInfoBanner(false), false);
+        assert.strictEqual(shouldShowGraphAssemblyInfoBanner(undefined), false);
+        assert.match(GRAPH_ASSEMBLY_INVALID_ROW_BANNER_MESSAGE, /incomplete resource rows/i);
+        assert.doesNotMatch(GRAPH_ASSEMBLY_INVALID_ROW_BANNER_MESSAGE, /CRD/i);
     });
 });

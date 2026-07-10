@@ -34,6 +34,11 @@ import { GraphLoadingOverlay } from '../graph/GraphLoadingOverlay';
 import { GraphEmptyState } from '../graph/GraphEmptyState';
 import { GraphErrorState } from '../graph/GraphErrorState';
 import { GraphDegradationBanner } from '../graph/GraphDegradationBanner';
+import { GraphAssemblyInfoBanner } from '../graph/GraphAssemblyInfoBanner';
+import {
+    GRAPH_ASSEMBLY_INVALID_ROW_BANNER_MESSAGE,
+    shouldShowGraphAssemblyInfoBanner
+} from '../graph/graphAssemblyInfoRules';
 import {
     deriveGraphMerging,
     isGraphEmptyManaged,
@@ -47,6 +52,7 @@ interface GraphTabProps {
     resourceGraph: ApplicationResourceGraph | null;
     graphError: string | null;
     graphDegradation: string | null;
+    skippedInvalidResourceRows: boolean;
     graphMerging: boolean;
     graphInteraction: GraphInteractionContextValue;
     panelId?: string;
@@ -63,6 +69,7 @@ interface GraphCanvasProps {
     resourceGraph: ApplicationResourceGraph;
     graphMerging: boolean;
     graphDegradation: string | null;
+    skippedInvalidResourceRows: boolean;
     hideAffordances: boolean;
     showEmptyManaged: boolean;
     graphInteraction: GraphInteractionContextValue;
@@ -115,6 +122,7 @@ function GraphCanvas({
     resourceGraph,
     graphMerging,
     graphDegradation,
+    skippedInvalidResourceRows,
     hideAffordances,
     showEmptyManaged,
     graphInteraction
@@ -214,6 +222,9 @@ function GraphCanvas({
                 </div>
             )}
             {graphDegradation && <GraphDegradationBanner message={graphDegradation} />}
+            {shouldShowGraphAssemblyInfoBanner(skippedInvalidResourceRows) && (
+                <GraphAssemblyInfoBanner message={GRAPH_ASSEMBLY_INVALID_ROW_BANNER_MESSAGE} />
+            )}
             <GraphToolbar
                 onZoomIn={() => zoomIn({ duration: zoomDuration })}
                 onZoomOut={() => zoomOut({ duration: zoomDuration })}
@@ -264,6 +275,7 @@ export function GraphTab({
     resourceGraph,
     graphError,
     graphDegradation,
+    skippedInvalidResourceRows,
     graphMerging,
     graphInteraction,
     panelId = ARGOCD_APP_PANEL_IDS.graph,
@@ -333,6 +345,7 @@ export function GraphTab({
                         resourceGraph={resourceGraph}
                         graphMerging={graphMerging}
                         graphDegradation={graphDegradation}
+                        skippedInvalidResourceRows={skippedInvalidResourceRows}
                         hideAffordances={hideAffordances}
                         showEmptyManaged={emptyManaged}
                         graphInteraction={graphInteraction}

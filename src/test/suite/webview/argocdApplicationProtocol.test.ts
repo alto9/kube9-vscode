@@ -133,10 +133,12 @@ suite('argocdApplicationProtocol', () => {
                 topologySource: 'crd_flat',
                 refreshedAt: '2026-05-26T12:00:00.000Z',
                 truncated: true,
-                totalManagedCount: 42
+                totalManagedCount: 42,
+                skippedInvalidResourceRows: true
             });
             assert.strictEqual(isExtensionMessage(message), true);
             assert.strictEqual(isResourceGraphMessage(message), true);
+            assert.strictEqual(message.skippedInvalidResourceRows, true);
         });
 
         test('rejects resourceGraph with invalid topologySource', () => {
