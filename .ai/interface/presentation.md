@@ -145,6 +145,19 @@ Each category shows MUST and SHOULD rollups. Requirement rows show id/title, lev
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
 ### ArgoCD diagram interface
-- Choose concrete graph spacing constants, fit-view behavior, and tile sizing that keep large Applications readable without encoding pixel values as a product contract.
-- Define the selected-tile visual treatment across normal, focus, hover, selected, and overflow-open states.
-- Define the user-facing copy and placement for limited-topology and large-application grouping hints.
+
+**Resolved (graph tile chrome, issue #224):**
+
+- **Tile sizing baseline:** 220px width, minimum 72px height, VS Code widget background and panel border — implementation constants in `styles.css`, not product-level pixel mandates. Large-application spacing and fit-view thresholds remain issue #222.
+- **Visual states:**
+
+| State | Treatment |
+|-------|-----------|
+| Default | Widget background, 1px panel border; root tile uses 2px focus-border-colored border |
+| Hover | `--vscode-list-hoverBackground` on tile surface when not selected |
+| Focus | `:focus-visible` 2px `--vscode-focusBorder` outline, 2px offset |
+| Selected | `box-shadow: 0 0 0 2px var(--focus-border)` (`argocd-graph-node--selected`) |
+| Overflow open | `argocd-graph-node--overflow-open` on tile; menu uses VS Code menu background tokens |
+
+- Sync and health badges, kind icon, truncated name, and ⋮ overflow align with the **Graph tiles (nodes)** table above in this document.
+- **Limited-topology and large-application hints** — copy and placement for `topologyMode: limited` and grouping affordances are defined in graph topology components and issue #222; not repeated here.

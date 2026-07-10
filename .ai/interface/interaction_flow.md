@@ -78,9 +78,23 @@ The tree **does not** embed the graph; it continues to list applications with st
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
 ### ArgoCD diagram interaction
-- Define exact click, keyboard activation, drag, pan, and overflow interactions so selection does not conflict with graph movement.
-- Specify final tile menu contents per initial Kind Capability entry and whether unsupported actions are hidden or disabled.
-- Add focused acceptance for View In Tree from selected managed-resource nodes, including the fallback when no tree item can be revealed.
+
+**Resolved (graph tiles and overflow, issue #224):**
+
+- **Pointer:** Primary click on a tile selects it (`stopPropagation` on overflow controls). Canvas **pan** uses drag on the graph background (React Flow `panOnDrag`); dragging a tile does not move nodes (`nodesDraggable: false`). Overflow ⋮ click toggles the menu without selecting a different node.
+- **Keyboard:** Each tile is one tab stop (`tabIndex={0}`, `role="group"`). **Enter** or **Space** on a focused tile mirrors primary click (selection). **Context Menu** or **Shift+F10** on a focused tile with eligible actions opens the overflow menu. Menu items support **ArrowUp** / **ArrowDown** roving focus; **Escape** closes the menu and returns focus to the tile. Overflow trigger is not in the tab order (`tabIndex={-1}`); keyboard users open the menu from the tile shortcuts above.
+- **Tile overflow contents (v1):**
+
+| Node role | Kind | Menu items | Message path |
+|-----------|------|------------|--------------|
+| Application root | Application | View in tree | `viewInTree` |
+| Managed resource | Deployment | Restart rollout; Navigate to resource in tree | `resourceAction` (`deployment.restartRollout`, `resource.navigateTree`) |
+| Managed resource | StatefulSet, DaemonSet, CronJob, Pod, Service, ConfigMap, Secret | Navigate to resource in tree | `resourceAction` (`resource.navigateTree`) |
+| Managed resource | Other kinds (Job, Ingress, CRD, unknown) | _(overflow hidden)_ | — |
+
+- **Hidden vs disabled:** When no rows apply, the overflow control is not rendered. During application-level sync/refresh or per-node in-flight `resourceAction`, menus disable (busy nodes show optional “Action in progress…” in the open menu).
+- **Action results:** Terminal `resourceActionResult` with `success: false` shows a dismissible graph action-notice banner. User-cancelled restart confirmation does not show the banner. Unknown `actionId` or unsupported kind for a known id returns explicit host messages without crashing the panel.
+- **View In Tree from managed-resource nodes** — success/failure semantics and tree-reveal fallback copy are specified in issue #221; #224 exposes the menu entry and routes `resource.navigateTree` through the host registry.
 
 ## Kubernetes AI Conformance Flow
 
