@@ -20,36 +20,60 @@ Graph-relevant data updates on:
 
 Each trigger produces a new `observedAt` on the graph DTO or application payload.
 
-## Merge on refresh (webview)
+## Merge on refresh (two layers)
 
-Goal: update sync/health and topology without resetting pan/zoom or discarding user-dragged positions.
+Goal: update sync/health and topology without resetting pan/zoom, tile selection, or known React Flow positions when `ApplicationKey` and stable `GraphNodeId` values survive.
 
-### When ApplicationKey is unchanged
+Refresh merge runs in **two layers**:
 
-1. **Build incoming graph** from latest `ArgoCDApplication` (+ topology if available).
-2. **Index existing layout** by `GraphNodeId`.
-3. **For each incoming node** with an existing id:
-   - Replace `status`, `label`, and `kindLabel` from incoming data.
-   - Retain `position` (and optional `measured`) from layout cache.
-4. **For new ids**: insert node with layout algorithm default position (or append column in dagre pass).
-5. **For removed ids**: drop node, incident edges, and layout cache entries.
-6. **Edges**: replace edge set from incoming graph; stable edge ids prevent React Flow duplicate-key issues. If only status changed, skip edge relayout unless `topologySource` or node count changed.
+1. **Host DTO merge** (`mergeApplicationResourceGraphSnapshots`) before posting `resourceGraph`. Shallow-merges attribute fields on unchanged topology; posts a full incoming snapshot when structure changes.
+2. **Webview layout merge** (`mergeGraphFlowState`) when applying each `resourceGraph` message. Maps DTO nodes to React Flow nodes, decides relayout vs position retention, and updates session layout cache, viewport, and selection refs.
 
-7. **Structural fingerprint**: when the incoming graph includes **`structureVersion`**, a change versus the prior snapshot forces the same posture as topology upgrade (new subgraph layout, optional fit). When **`structureVersion` matches**, treat the tick as attribute-only: apply shallow node status updates (steps 3–6) and preserve viewport/selection unless another rule contradicts.
+Both layers use the same **`structureVersion`** fingerprint (see [serialization.md](./serialization.md)). Attribute-only ticks keep the same version; node-id or edge-endpoint changes bump it.
 
-8. **Viewport**: preserve unless node count changed dramatically, **`structureVersion` changed**, or user invokes fit-view.
+### Host DTO merge (`ApplicationKey` unchanged)
 
-9. **Selection**: clear selection if selected node was removed; otherwise keep.
+Given `previous` (last posted graph for the panel) and `incoming` (newly assembled graph):
 
-### When ApplicationKey changes
+| Condition | Result |
+|-----------|--------|
+| No `previous`, or `applicationKey` differs | Return `incoming` unchanged; `structureChanged: true` |
+| `structureVersion` differs | Return `incoming` unchanged; `structureChanged: true` |
+| Node id set differs | Return `incoming` unchanged; `structureChanged: true` |
+| `structureVersion` matches but recomputed fingerprint from `incoming.nodes` / `incoming.edges` differs | Treat as structural mismatch; return `incoming` unchanged; `structureChanged: true` |
+| Otherwise (attribute-only tick) | For each incoming node id, replace `status`, `label`, and `kindLabel` from incoming; keep incoming `edges`, `topologySource`, `topologyMode`, `observedAt`, and metadata; `structureChanged: false` |
 
-Full replace: discard prior graph and layout cache. Equivalent to opening a different Application.
+The host stores the merged graph on the panel (`lastGraph`) and posts it as `resourceGraph`. The webview never receives stale nodes after a structural change.
+
+### Webview layout merge (`ApplicationKey` unchanged)
+
+When `applicationKey` on the incoming graph differs from the panel session key, discard layout cache, viewport cache, and selection. Equivalent to opening a different Application.
+
+Otherwise:
+
+1. Map incoming DTO to React Flow nodes and edges.
+2. **Relayout** when any of: initial load (no prior `structureVersion` in cache), user **fit view**, incoming `structureVersion` differs from cache, `topologySource` differs from cache, or managed node count delta exceeds `NODE_COUNT_RELAYOUT_THRESHOLD` (currently `0`, so any add/remove relayouts).
+3. **Retain positions** from the layout cache for matching node ids when relayout is false.
+4. Replace the edge set from incoming data (stable edge ids prevent duplicate-key issues).
+5. **Viewport**: after merge, auto-fit only on initial load or explicit fit-view. Otherwise restore the cached pan/zoom from `onMoveEnd` when available.
+6. **Selection**: keep `selectedNodeId` when it exists in the post-merge node id set; clear selection when the id is absent (resource removed or identity changed). Do not clear on attribute-only status updates.
 
 ### When topologySource upgrades (e.g. crd_flat → argocd_resource_tree)
 
-- Recompute edges and possibly add nodes.
-- Preserve positions for nodes whose `GraphNodeId` survives the transition (same `ManagedResourceKey`).
-- Run layout only for new nodes or when user requests fit-view / re-layout.
+- Host posts a new graph with updated edges and possibly supplemental nodes; `structureVersion` and/or node ids typically change → structural path above.
+- Webview relayouts because `topologySource` changed.
+- Preserve positions for nodes whose `GraphNodeId` survives (same `ManagedResourceKey`) when relayout runs; new ids receive layout defaults.
+- Do not auto-fit viewport unless initial load or user invokes fit-view.
+
+### Grouping and progressive disclosure (presentation layer)
+
+Large-application grouping (#222) is a **webview presentation transform** over the complete DTO node set unless a future contract explicitly adds grouped DTO nodes.
+
+Until then:
+
+- **Selection** is keyed by `GraphNodeId` on the DTO. A selected resource stays selected across refresh while that id remains in `resourceGraph.nodes`.
+- **Clear selection** when the selected id disappears from the incoming DTO (removed resource, renamed resource, or `ApplicationKey` change).
+- Collapsing or hiding a tile in the UI must not clear selection if the underlying id is still present in the DTO; expanding again should restore the selected styling on that tile.
 
 ## Flat list vs graph consistency
 
@@ -98,6 +122,6 @@ While `operationState.phase` is `Running` or `Terminating`:
 
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
-### ArgoCD large graph consistency
+### ArgoCD large graph consistency (M16 #222)
 - Specify how grouping or progressive disclosure preserves access to every returned `ArgoCDResource` while keeping `crd_flat` count checks meaningful.
-- Define the refresh behavior for selected nodes when grouping, expansion, or topology upgrades change the visible tile set.
+- If grouped nodes are represented in the DTO, define how grouped tiles map to underlying `GraphNodeId` values for selection and merge. Until then, selection and merge rules above apply to the flat DTO node set.
