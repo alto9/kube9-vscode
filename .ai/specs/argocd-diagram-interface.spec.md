@@ -22,7 +22,7 @@ The capability runs in the existing VS Code extension model: Node.js extension h
 
 Kubernetes and Argo CD I/O happen only in the extension host. The required baseline source is the Argo CD Application CRD, including `status.resources`. Optional enrichment may use Argo CD REST `resource-tree` when explicitly configured and authorized, or Kubernetes owner references when enabled and permitted. Optional enrichment failure falls back to CRD-flat graph rendering without failing the whole panel when the Application CRD remains readable.
 
-The graph data contract is `ApplicationResourceGraph`, a derived JSON-safe DTO with `applicationKey`, `nodes`, `edges`, `topologySource`, `topologyMode`, `structureVersion`, optional `layoutHint`, `observedAt`, and optional `truncated`. Stable identity is based on `ManagedResourceKey` and `GraphNodeId`, not visible labels or React Flow internals. `ArgoCDApplication.resources` remains the sync and health authority for CRD-backed resources.
+The graph data contract is `ApplicationResourceGraph`, a derived JSON-safe DTO with `applicationKey`, `nodes`, `edges`, `topologySource`, `topologyMode`, `structureVersion`, optional `layoutHint`, `observedAt`, and optional `truncated` (reserved; host omits in v1 — see [data_model.md](../data/data_model.md)). Stable identity is based on `ManagedResourceKey` and `GraphNodeId`, not visible labels or React Flow internals. `ArgoCDApplication.resources` remains the sync and health authority for CRD-backed resources.
 
 **CRD-flat baseline assembly (`topologySource: crd_flat`):**
 
@@ -97,6 +97,19 @@ Interface validation should include graph layout readability, selectable tiles, 
 | Provider stubs | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | `viewInTree` calls `revealTreeApplication` with panel namespace; `navigateToResource` delegates to shared reveal helper (no info-toast stub) |
 | Parity | `argocdGraphNodeCapabilities.test.ts` | Webview navigate kinds still match host `NAVIGATE_TREE_SUPPORTED_KINDS` |
 | Manual | Extension Development Host + Argo CD cluster | Application View In Tree selects app in tree; Deployment tile Navigate reveals workload; Job tile has no overflow; wrong-context cluster shows context-mismatch message |
+
+**Large-application layout and grouping test matrix (issue #222):**
+
+| Area | Module / suite | Must prove |
+|------|----------------|------------|
+| Host completeness | `ApplicationResourceGraphAssembler.test.ts` | Assembler does not call `truncateApplicationResourceGraph` in production paths; managed node count equals valid `resources[]` rows for graphs above 40 managed resources |
+| Layout constants | `argocdGraphLayout.test.ts` | Dagre uses 220×72 node box; left-to-right rank ordering; ranksep/nodesep constants match `constants.ts` |
+| Kind grouping | `argocdGraphGrouping.test.ts` (new) | Above threshold, initial render shows collapsed kind groups; expand reveals all member `GraphNodeId` values; collapse hides leaves without clearing DTO selection |
+| Reachability | `argocdGraphGrouping.test.ts` | `countManagedResourceNodes(dto)` unchanged by grouping transform; every DTO managed id reachable after expand or via Details row fixture |
+| Fit-view | `argocdGraphLayout.test.ts` | Auto-fit on initial load only; explicit Fit triggers fit; structural tick and group expand/collapse do not set `shouldAutoFit` |
+| Affordances | `graphTopologyAffordances.test.ts` | Large-app grouping message when grouped mode active; truncation omission message removed; limited-topology message unchanged |
+| Refresh merge | `argocdGraphLayout.test.ts` + `mergeGraphFlowState` | Grouped presentation preserves positions on attribute-only ticks; relayout on `structureVersion` change; selection survives collapse when id remains in DTO (#227) |
+| Manual | Extension Development Host + Application with 50+ managed resources | Initial grouped view readable; expand one kind group; Fit resets viewport; Details lists all resources; refresh preserves expanded group selection when possible |
 
 Build and packaging checks should run the existing repository commands for the affected scope: `npm run compile`, `npm run build`, `npm run test:unit`, and `npm run package` as appropriate for implementation changes. Packaging review should confirm Argo CD webview scripts, CSS, React Flow styles, and shared webview header CSS are present in the VSIX, and bundle-size changes to `media/argocd-application/main.js` remain within the documented target or are explicitly justified.
 

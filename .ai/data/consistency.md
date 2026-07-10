@@ -67,13 +67,18 @@ Otherwise:
 
 ### Grouping and progressive disclosure (presentation layer)
 
-Large-application grouping (#222) is a **webview presentation transform** over the complete DTO node set unless a future contract explicitly adds grouped DTO nodes.
+Large-application grouping (#222) is a **webview presentation transform** over the complete DTO node set. The host always posts every valid managed-resource node; it does not omit nodes to meet a render cap.
 
-Until then:
+**Kind-based grouping (v1):**
 
+- When managed-resource count exceeds **40** (`LARGE_APP_KIND_GROUP_THRESHOLD`), the webview initially renders **kind group** summary tiles (synthetic React Flow nodes, not DTO entities) collapsed by default.
+- Each kind group aggregates managed resources sharing the same `kind` (case-sensitive Kubernetes kind string). The Application root tile is always visible.
+- Expanding a kind group reveals the member leaf tiles using stable `GraphNodeId` values from the incoming DTO. Collapsing a group hides leaf tiles in the canvas only; DTO identity is unchanged.
+- **Reachability:** every returned managed resource remains reachable through at least one of: expand its kind group on the canvas, the **Details** drift table, or **Navigate to resource in tree** for supported kinds.
 - **Selection** is keyed by `GraphNodeId` on the DTO. A selected resource stays selected across refresh while that id remains in `resourceGraph.nodes`.
 - **Clear selection** when the selected id disappears from the incoming DTO (removed resource, renamed resource, or `ApplicationKey` change).
-- Collapsing or hiding a tile in the UI must not clear selection if the underlying id is still present in the DTO; expanding again should restore the selected styling on that tile.
+- Collapsing a kind group must not clear selection if the underlying id is still present in the DTO; re-expanding restores selected styling on that leaf tile.
+- Grouped presentation does not change `structureVersion` or host merge behavior; only the webview render layer maps DTO nodes to visible React Flow nodes.
 
 ## Flat list vs graph consistency
 
@@ -122,6 +127,4 @@ While `operationState.phase` is `Running` or `Terminating`:
 
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
-### ArgoCD large graph consistency (M16 #222)
-- Specify how grouping or progressive disclosure preserves access to every returned `ArgoCDResource` while keeping `crd_flat` count checks meaningful.
-- If grouped nodes are represented in the DTO, define how grouped tiles map to underlying `GraphNodeId` values for selection and merge. Until then, selection and merge rules above apply to the flat DTO node set.
+_(No open bullets for ArgoCD large graph consistency — resolved in **Grouping and progressive disclosure** above, issue #222.)_

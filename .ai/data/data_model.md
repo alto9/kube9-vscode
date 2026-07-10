@@ -120,7 +120,7 @@ The **Application resource graph** is a derived, directed view model for React F
 | `structureVersion` | string | Fingerprint that changes when the **set of node ids** or **edge endpoints** changes. Used with polling merge (see [consistency.md](./consistency.md)). Attribute-only sync/health updates do not bump it. |
 | `layoutHint` | optional object | Non-authoritative hints from the assembler (for example `{ "algorithm": "dagre-lr", "version": "1" }`). Webview ignores when `structureVersion` changes or may omit hints entirely. |
 | `observedAt` | ISO 8601 string | When this graph snapshot was assembled |
-| `truncated` | boolean (optional) | `true` when the delivered graph is presentation-limited for a large application. The Application root is always present, and the interface must still preserve a path to every returned managed resource through grouping, expansion, Details, or tree navigation rather than silently losing resources. Omitted or `false` when the full managed set is directly visible. |
+| `truncated` | boolean (optional) | **Reserved; omit in v1.** Host must not use this flag to omit managed-resource nodes from `nodes[]`. Large-application kind grouping is a webview-only presentation transform (issue #222). If a future contract adds grouped DTO nodes, this field may signal presentation-limited delivery while preserving reachability through expansion, Details, or tree navigation. |
 
 ### ResourceGraphNode
 

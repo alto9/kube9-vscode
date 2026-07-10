@@ -110,7 +110,11 @@ Drift table presentation inside **Details** is unchanged in intent: filter for o
 
 ### Large applications
 
-When node count exceeds a practical layout threshold, the graph uses **progressive disclosure** (grouping, collapse, or capped initial render with explicit expand) so layout and polling updates stay responsive. Empty or single-node graphs show an explicit empty state, not a blank canvas.
+When managed-resource count exceeds **40**, the graph enters **kind-based grouping** on initial render: collapsed kind summary tiles replace direct leaf tiles until the user expands a group. At or below 40 managed resources, all leaf tiles render directly without grouping.
+
+**Affordance placement:** Limited-topology and large-application hints render in the `GraphTopologyAffordances` strip between the canvas toolbar and the React Flow viewport (same region as today). Large-application copy when grouping is active: _"Large application: resources are grouped by kind. Expand a group or open the Details tab to reach every managed resource."_
+
+**Empty and root-only graphs:** Zero managed resources show the explicit empty state (`GraphEmptyState`), not a blank canvas. A single managed resource renders a normal Application root plus one leaf tile without an extra banner.
 
 ### Loading and errors
 
@@ -148,7 +152,10 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 **Resolved (graph tile chrome, issue #224):**
 
-- **Tile sizing baseline:** 220px width, minimum 72px height, VS Code widget background and panel border — implementation constants in `styles.css`, not product-level pixel mandates. Large-application spacing and fit-view thresholds remain issue #222.
+- **Tile sizing baseline:** 220px width, minimum 72px height, VS Code widget background and panel border — implementation constants in `styles.css`, not product-level pixel mandates.
+- **Layout spacing (issue #222):** Dagre and tier-fallback layout use the same 220×72 node box; rank separation 96px and node separation 48px are implementation constants in `constants.ts`.
+- **Fit-view (issue #222):** Auto-fit runs on initial graph load and when the user activates **Fit** on the canvas toolbar. Structural refresh, kind-group expand/collapse, and attribute-only ticks preserve viewport per refresh-merge contracts (#227).
+- **Large-application hints (issue #222):** Copy and placement defined under **Large applications** above; limited-topology copy remains in `graphTopologyAffordanceRules.ts`.
 - **Visual states:**
 
 | State | Treatment |
@@ -160,4 +167,4 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 | Overflow open | `argocd-graph-node--overflow-open` on tile; menu uses VS Code menu background tokens |
 
 - Sync and health badges, kind icon, truncated name, and ⋮ overflow align with the **Graph tiles (nodes)** table above in this document.
-- **Limited-topology and large-application hints** — copy and placement for `topologyMode: limited` and grouping affordances are defined in graph topology components and issue #222; not repeated here.
+- **Limited-topology and large-application hints** — resolved under **Large applications** in this document and in `graphTopologyAffordanceRules.ts` (issue #222).
