@@ -214,16 +214,34 @@ suite('KindCapabilityRegistry', () => {
         );
         const messages = capturePostMessages(panel);
 
-        await dispatch(buildContext(panel), resourceActionMessage());
+        await dispatch(
+            buildContext(panel),
+            resourceActionMessage({ group: 'apps', version: 'v1' })
+        );
 
         assert.strictEqual(applyCalls, 1);
         assert.strictEqual(watchCalls, 0);
         const progress = messages.filter((m) => m.type === 'resourceActionProgress');
         assert.ok(progress.some((m) => m.phase === 'Running'));
         assert.ok(progress.some((m) => m.phase === 'Succeeded'));
+        const running = progress.find((m) => m.phase === 'Running');
+        assert.deepStrictEqual(running?.nodeRef, {
+            kind: 'Deployment',
+            name: 'guestbook-ui',
+            namespace: 'guestbook',
+            group: 'apps',
+            version: 'v1'
+        });
         const result = lastResult(messages);
         assert.ok(result);
         assert.strictEqual(result.success, true);
+        assert.deepStrictEqual(result.nodeRef, {
+            kind: 'Deployment',
+            name: 'guestbook-ui',
+            namespace: 'guestbook',
+            group: 'apps',
+            version: 'v1'
+        });
         panel.dispose();
     });
 

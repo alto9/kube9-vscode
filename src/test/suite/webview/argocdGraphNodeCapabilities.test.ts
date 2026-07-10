@@ -75,5 +75,6 @@ suite('argocd graph node capabilities', () => {
             apiGroup: 'networking.k8s.io'
         });
         assert.strictEqual(payload.group, 'networking.k8s.io');
+        assert.strictEqual('apiGroup' in payload, false);
     });
 });

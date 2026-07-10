@@ -94,6 +94,20 @@ suite('argocdApplicationProtocol', () => {
             );
         });
 
+        test('rejects resourceAction with apiGroup wire field', () => {
+            assert.strictEqual(
+                isResourceActionMessage({
+                    type: 'resourceAction',
+                    actionId: 'deployment.restartRollout',
+                    kind: 'Deployment',
+                    name: 'api',
+                    namespace: 'prod',
+                    apiGroup: 'apps'
+                }),
+                false
+            );
+        });
+
         test('rejects unknown webview type', () => {
             assert.strictEqual(isWebviewMessage({ type: 'graphData' }), false);
             assert.strictEqual(isWebviewMessage({ type: 'graphPatch' }), false);
@@ -183,6 +197,8 @@ suite('argocdApplicationProtocol', () => {
 
         test('rejects unknown extension type', () => {
             assert.strictEqual(isExtensionMessage({ type: 'graphPatch' }), false);
+            assert.strictEqual(isExtensionMessage({ type: 'graphData' }), false);
+            assert.strictEqual(isExtensionMessage({ type: 'actionResult' }), false);
         });
     });
 

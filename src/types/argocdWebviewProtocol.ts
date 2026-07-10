@@ -198,6 +198,10 @@ function isOptionalString(value: unknown): boolean {
     return value === undefined || typeof value === 'string';
 }
 
+function rejectsApiGroupWireField(payload: Record<string, unknown>): boolean {
+    return !('apiGroup' in payload);
+}
+
 function isResourceNodeRef(value: unknown): value is ResourceNodeRef {
     if (!isRecord(value)) {
         return false;
@@ -247,6 +251,7 @@ function validateWebviewPayload(type: string, payload: Record<string, unknown>):
             return isOptionalBoolean(payload.bypassCache);
         case 'resourceAction':
             return (
+                rejectsApiGroupWireField(payload) &&
                 isNonEmptyString(payload.actionId) &&
                 isNonEmptyString(payload.kind) &&
                 isNonEmptyString(payload.name) &&
