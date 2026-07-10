@@ -92,7 +92,7 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 | Managed resource | StatefulSet, DaemonSet, CronJob, Pod, Service, ConfigMap, Secret | Navigate to resource in tree | `resourceAction` (`resource.navigateTree`) |
 | Managed resource | Other kinds (Job, Ingress, CRD, unknown) | _(overflow hidden)_ | — |
 
-- **Hidden vs disabled:** When no rows apply, the overflow control is not rendered. During application-level sync/refresh or per-node in-flight `resourceAction`, menus disable (busy nodes show optional “Action in progress…” in the open menu).
+- **Hidden vs disabled:** When no rows apply, the overflow control is not rendered. During application-level sync/refresh (`operationProgress` Running or webview `menusDisabled`), all tile overflow menus disable. During a per-node in-flight `resourceAction` (`resourceActionProgress` Running with `nodeRef`), only that tile's overflow disables (optional in-menu copy: "Action in progress…"). The webview is the primary guard; the host does not queue overlapping `resourceAction` messages in v1.
 - **Action results:** Terminal `resourceActionResult` with `success: false` shows a dismissible graph action-notice banner. User-cancelled restart confirmation does not show the banner. Unknown `actionId` or unsupported kind for a known id returns explicit host messages without crashing the panel.
 
 ### View In Tree and tree reveal (resolved, issue #221)

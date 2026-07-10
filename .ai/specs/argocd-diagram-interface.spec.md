@@ -59,6 +59,17 @@ Resource-tree and owner-reference enrichment tests should verify that optional e
 
 Runtime and serialization tests should cover `resourceGraph`, `resourceAction`, `resourceActionProgress`, and `resourceActionResult` message handling, including stable node ids, `structureVersion` merge behavior, selected-node preservation, removed-node selection clearing, and host-owned polling after sync, refresh, hard refresh, or rollout restart.
 
+**Canonical protocol alignment test matrix (issue #223):**
+
+| Area | Module / suite | Must prove |
+|------|----------------|------------|
+| Webview validation | `argocdApplicationProtocol.test.ts` | Accepts `resourceAction` with required fields and optional `group`/`version`; rejects legacy types (`graphData`, `graphPatch`, `graphAction`); rejects `apiGroup` on webview messages |
+| Extension validation | `argocdApplicationProtocol.test.ts` | Accepts `resourceGraph`, `resourceActionProgress`, `resourceActionResult`; rejects legacy extension types (`graphPatch`, `actionResult`, `graphData`) |
+| Payload mapping | `argocdGraphNodeCapabilities.test.ts` | `buildResourceActionPayload` maps `ManagedResourceKey.apiGroup` to wire `group`; omits `group` when `apiGroup` absent |
+| Host nodeRef | `kindCapabilityRegistry.test.ts` | Progress/result `nodeRef` mirrors incoming `group`/`version`; navigate and restart handlers emit progress then terminal result |
+| Provider push | `ArgoCDApplicationWebviewProvider.graph.test.ts` | Open and refresh post `applicationData` then `resourceGraph` (not legacy graph message names) |
+| Busy state (webview) | `useGraphInteractionState` or component tests | App-level `menusDisabled` during sync/refresh; per-node `busyNodeKeys` from `resourceActionProgress` Running and cleared on terminal phases |
+
 **Refresh merge test matrix (unit):**
 
 | Area | Module / suite | Must prove |

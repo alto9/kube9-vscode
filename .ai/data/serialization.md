@@ -152,6 +152,7 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 **Resolved (tree reveal v1, issue #221):**
 
-- **`apiGroup` for tree navigation:** Not required for v1 reveal of core kinds in `NAVIGATE_TREE_SUPPORTED_KINDS`. Host reveal uses `kind`, `name`, and trimmed `namespace` from `ManagedResourceKey`. When `apiGroup` is present on the key or `resourceAction` payload, forward it for future CRD-kind routing; omitting it must not block core-kind reveal. Canonical `group` vs `apiGroup` naming on the wire remains in #223.
+- **`apiGroup` for tree navigation:** Not required for v1 reveal of core kinds in `NAVIGATE_TREE_SUPPORTED_KINDS`. Host reveal uses `kind`, `name`, and trimmed `namespace` from `ManagedResourceKey`. When `apiGroup` is present on the key, forward it for future CRD-kind routing; omitting it must not block core-kind reveal.
+- **`group` vs `apiGroup` on the wire (issue #223):** DTO field `apiGroup`; webview protocol field `group` on `resourceAction` and `ResourceNodeRef`. Map at the webview boundary (`buildResourceActionPayload` / `buildResourceNodeRef`). Validators reject `apiGroup` on webview messages. Do not emit both fields on the same message.
 
 - **Large-application grouping (issue #222):** Remains an **interface-only transform** over the complete flat DTO node set in v1. Kind group tiles are synthetic webview nodes; they are not serialized in `ApplicationResourceGraph.nodes`. The host does not set `truncated: true` to omit managed-resource nodes.
