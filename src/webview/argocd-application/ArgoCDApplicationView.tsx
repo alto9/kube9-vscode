@@ -27,6 +27,7 @@ interface ArgoCDApplicationViewProps {
     resourceGraph: ApplicationResourceGraph | null;
     graphError: string | null;
     graphDegradation: string | null;
+    skippedInvalidResourceRows: boolean;
     graphMerging: boolean;
     graphInteraction: GraphInteractionContextValue;
 }
@@ -55,6 +56,7 @@ export function ArgoCDApplicationView({
     resourceGraph,
     graphError,
     graphDegradation,
+    skippedInvalidResourceRows,
     graphMerging,
     graphInteraction
 }: ArgoCDApplicationViewProps): React.JSX.Element {
@@ -124,6 +126,7 @@ export function ArgoCDApplicationView({
                         resourceGraph={resourceGraph}
                         graphError={graphError}
                         graphDegradation={graphDegradation}
+                        skippedInvalidResourceRows={skippedInvalidResourceRows}
                         graphMerging={graphMerging}
                         graphInteraction={graphInteraction}
                         panelId={ARGOCD_APP_PANEL_IDS.graph}

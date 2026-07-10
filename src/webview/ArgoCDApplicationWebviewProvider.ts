@@ -3,8 +3,11 @@ import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { ArgoCDNotFoundError, ArgoCDPermissionError } from '../types/argocd';
 import type { ApplicationKey, ApplicationResourceGraph, TopologySource } from '../types/applicationResourceGraph';
-import { buildApplicationResourceGraph } from '../services/ApplicationResourceGraphBuilder';
-import { buildCrdFlatApplicationResourceGraph } from '../services/ApplicationResourceGraphAssembler';
+import { buildApplicationResourceGraph, logAssemblyWarnings } from '../services/ApplicationResourceGraphBuilder';
+import {
+    buildCrdFlatApplicationResourceGraph,
+    hasSkippedInvalidResourceRows
+} from '../services/ApplicationResourceGraphAssembler';
 import { mergeApplicationResourceGraphSnapshots } from '../services/ApplicationResourceGraphMerger';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 import { notifyMajorWebviewOpened } from '../telemetry/webviewTelemetryOpen';
@@ -329,6 +332,7 @@ export class ArgoCDApplicationWebviewProvider {
             refreshedAt: string;
             truncated?: boolean;
             totalManagedCount?: number;
+            skippedInvalidResourceRows?: boolean;
         }
     ): void {
         panel.webview.postMessage(
@@ -337,7 +341,8 @@ export class ArgoCDApplicationWebviewProvider {
                 topologySource: meta.topologySource,
                 refreshedAt: meta.refreshedAt,
                 truncated: meta.truncated,
-                totalManagedCount: meta.totalManagedCount
+                totalManagedCount: meta.totalManagedCount,
+                skippedInvalidResourceRows: meta.skippedInvalidResourceRows
             })
         );
     }
@@ -586,6 +591,7 @@ export class ArgoCDApplicationWebviewProvider {
 
             let incoming;
             let topologySource: TopologySource;
+            let skippedInvalidResourceRows = false;
 
             if (extensionContext) {
                 const built = await buildApplicationResourceGraph({
@@ -596,13 +602,16 @@ export class ArgoCDApplicationWebviewProvider {
                 });
                 incoming = built.graph;
                 topologySource = built.topologySource;
+                skippedInvalidResourceRows = built.skippedInvalidResourceRows;
             } else {
                 const built = buildCrdFlatApplicationResourceGraph({
                     application,
                     applicationKey
                 });
+                logAssemblyWarnings('crd_flat graph assembly', built.assemblyWarnings);
                 incoming = built.graph;
                 topologySource = 'crd_flat';
+                skippedInvalidResourceRows = hasSkippedInvalidResourceRows(built.assemblyWarnings);
             }
 
             const { graph } = mergeApplicationResourceGraphSnapshots(panelInfo?.lastGraph, incoming);
@@ -614,7 +623,8 @@ export class ArgoCDApplicationWebviewProvider {
             ArgoCDApplicationWebviewProvider.postResourceGraph(panel, graph, {
                 topologySource,
                 refreshedAt: new Date().toISOString(),
-                truncated: graph.truncated
+                truncated: graph.truncated,
+                skippedInvalidResourceRows
             });
         } catch (error) {
             const userFriendlyMessage = ArgoCDApplicationWebviewProvider.formatGraphRebuildErrorMessage(

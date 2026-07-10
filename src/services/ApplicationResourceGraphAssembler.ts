@@ -24,6 +24,8 @@ import type { ResourceOwnerRefsResult, KubernetesOwnerReference } from './Manage
 const CRD_FLAT_TOPOLOGY_SOURCE = 'crd_flat' as const;
 const OWNER_REF_TOPOLOGY_SOURCE = 'kubernetes_owner_ref' as const;
 
+export const INVALID_RESOURCE_ROW_WARNING = 'Skipped resource row: missing kind or name';
+
 export interface CrdFlatGraphAssemblyResult {
     graph: ApplicationResourceGraph;
     assemblyWarnings: string[];
@@ -278,6 +280,32 @@ function isValidResourceRow(row: ArgoCDResource): boolean {
     return trimOrEmpty(row.kind) !== '' && trimOrEmpty(row.name) !== '';
 }
 
+export function hasSkippedInvalidResourceRows(warnings: string[]): boolean {
+    return warnings.some((warning) => warning === INVALID_RESOURCE_ROW_WARNING);
+}
+
+export function countValidCrdFlatResourceRows(resources: ArgoCDResource[]): number {
+    const seenKeys: ManagedResourceKey[] = [];
+    let count = 0;
+
+    for (const row of resources) {
+        if (!isValidResourceRow(row)) {
+            continue;
+        }
+
+        const resourceKey = toManagedResourceKey(row);
+        const isDuplicate = seenKeys.some((seen) => managedResourceKeysEqual(seen, resourceKey));
+        if (isDuplicate) {
+            continue;
+        }
+
+        seenKeys.push(resourceKey);
+        count += 1;
+    }
+
+    return count;
+}
+
 function toSyncStatusCode(status: string): SyncStatusCode {
     if (status === 'Synced' || status === 'OutOfSync' || status === 'Unknown') {
         return status;
@@ -352,7 +380,7 @@ export function buildCrdFlatApplicationResourceGraph(
 
     for (const row of application.resources) {
         if (!isValidResourceRow(row)) {
-            assemblyWarnings.push('Skipped resource row: missing kind or name');
+            assemblyWarnings.push(INVALID_RESOURCE_ROW_WARNING);
             continue;
         }
 

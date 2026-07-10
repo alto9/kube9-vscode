@@ -1168,3 +1168,23 @@ body {
     margin-top: 1px;
 }
 
+.argocd-graph-assembly-info-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    margin: 0 var(--spacing-md) var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--info-border, var(--focus-border));
+    background: var(--info-bg, var(--editor-background));
+    color: var(--foreground);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-family);
+}
+
+.argocd-graph-assembly-info-banner__icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--info-foreground, var(--description-foreground));
+}
+

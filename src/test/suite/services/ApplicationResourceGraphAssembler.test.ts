@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { buildCrdFlatApplicationResourceGraph } from '../../../services/ApplicationResourceGraphAssembler';
+import { buildCrdFlatApplicationResourceGraph, countValidCrdFlatResourceRows, INVALID_RESOURCE_ROW_WARNING } from '../../../services/ApplicationResourceGraphAssembler';
 import {
     buildApplicationRootNodeId,
     buildManagedResourceNodeId,
@@ -7,6 +7,7 @@ import {
     type ApplicationKey
 } from '../../../types/applicationResourceGraph';
 import type { ArgoCDApplication, ArgoCDResource } from '../../../types/argocd';
+import { countManagedResourceNodes } from '../../../webview/argocd-application/graph/graphTopologyAffordanceRules';
 
 const APPLICATION_KEY: ApplicationKey = {
     context: 'minikube',
@@ -191,9 +192,30 @@ suite('ApplicationResourceGraphAssembler', () => {
         assert.strictEqual(graph.nodes.filter((node) => node.role === 'managed_resource').length, 1);
         assert.strictEqual(graph.edges.length, 1);
         assert.strictEqual(
-            assemblyWarnings.filter((warning) => warning === 'Skipped resource row: missing kind or name').length,
+            assemblyWarnings.filter((warning) => warning === INVALID_RESOURCE_ROW_WARNING).length,
             2
         );
+    });
+
+    test('countManagedResourceNodes matches valid CRD-flat resource row count', () => {
+        const resources = [
+            deploymentRow(),
+            serviceRow(),
+            { kind: '', name: 'missing-kind', namespace: 'guestbook', syncStatus: 'Synced' },
+            { kind: 'Service', name: '   ', namespace: 'guestbook', syncStatus: 'Synced' },
+            deploymentRow({ syncStatus: 'OutOfSync', healthStatus: 'Degraded', message: 'duplicate' })
+        ];
+        const application = baseApplication({ resources });
+
+        const { graph } = buildCrdFlatApplicationResourceGraph({
+            application,
+            applicationKey: APPLICATION_KEY
+        });
+
+        const validRowCount = countValidCrdFlatResourceRows(resources);
+        assert.strictEqual(graph.topologySource, 'crd_flat');
+        assert.strictEqual(countManagedResourceNodes(graph), validRowCount);
+        assert.strictEqual(validRowCount, 2);
     });
 
     test('keeps first duplicate managed resource key and warns deterministically', () => {
