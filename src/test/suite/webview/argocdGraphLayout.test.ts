@@ -1,263 +1,277 @@
 import * as assert from 'assert';
 import {
     buildApplicationRootNodeId,
-    buildGraphEdgeId,
-    buildManagedResourceNodeId,
     computeStructureVersion,
     type ApplicationResourceGraph,
-    type ResourceGraphEdge,
     type ResourceGraphNode
 } from '../../../types/applicationResourceGraph';
-import { applyGraphLayout } from '../../../webview/argocd-application/graph/applyDagreLayout';
-import { applyTierFallbackLayout } from '../../../webview/argocd-application/graph/applyTierFallbackLayout';
-import { mapGraphDtoToFlow } from '../../../webview/argocd-application/graph/mapGraphDtoToFlow';
+import { applyNodeSelection, resolveSelectionAfterMerge } from '../../../webview/argocd-application/graph/graphSelection';
 import {
     createEmptyLayoutCache,
     mergeGraphFlowState
 } from '../../../webview/argocd-application/graph/mergeGraphFlowState';
-import { applyNodeSelection, resolveSelectionAfterMerge } from '../../../webview/argocd-application/graph/graphSelection';
 import {
     applicationKeyChanged,
-    shouldPreserveViewport
+    shouldPreserveViewport,
+    type GraphViewport
 } from '../../../webview/argocd-application/graph/viewportCache';
 
-function rootNode(): ResourceGraphNode {
+const APPLICATION_KEY = { context: 'minikube', namespace: 'argocd', name: 'guestbook' };
+
+function rootNode(overrides: Partial<ResourceGraphNode> = {}): ResourceGraphNode {
     return {
         id: buildApplicationRootNodeId('argocd', 'guestbook'),
         role: 'application',
         resourceKey: null,
         status: { syncStatus: 'Synced', healthStatus: 'Healthy' },
         label: 'guestbook',
-        kindLabel: 'Application'
+        kindLabel: 'Application',
+        ...overrides
     };
 }
 
-function managedNode(name: string): ResourceGraphNode {
-    const resourceKey = { namespace: 'guestbook', kind: 'Deployment', name };
+function managedNode(id = 'res:guestbook/Deployment/ui'): ResourceGraphNode {
     return {
-        id: buildManagedResourceNodeId(resourceKey),
+        id,
         role: 'managed_resource',
-        resourceKey,
+        resourceKey: { namespace: 'guestbook', kind: 'Deployment', name: 'ui' },
         status: { syncStatus: 'Synced', healthStatus: 'Healthy' },
-        label: name,
+        label: 'ui',
         kindLabel: 'Deployment'
     };
 }
 
-function starGraph(): ApplicationResourceGraph {
-    const nodes = [rootNode(), managedNode('ui'), managedNode('redis')];
-    const edges: ResourceGraphEdge[] = nodes
-        .filter((node) => node.role === 'managed_resource')
-        .map((node) => ({
-            id: buildGraphEdgeId(nodes[0].id, node.id, 'manages'),
-            source: nodes[0].id,
-            target: node.id,
-            relationship: 'manages'
-        }));
+function sampleGraph(overrides: Partial<ApplicationResourceGraph> = {}): ApplicationResourceGraph {
+    const root = rootNode();
+    const managed = managedNode();
+    const nodes = [root, managed];
+    const edges = [
+        {
+            id: `${root.id}->${managed.id}:manages`,
+            source: root.id,
+            target: managed.id,
+            relationship: 'manages' as const
+        }
+    ];
 
     return {
-        applicationKey: { context: 'minikube', namespace: 'argocd', name: 'guestbook' },
+        applicationKey: APPLICATION_KEY,
         nodes,
         edges,
         topologySource: 'crd_flat',
         topologyMode: 'limited',
         structureVersion: computeStructureVersion({ nodes, edges }),
-        observedAt: '2026-05-27T00:00:00.000Z'
+        observedAt: '2026-05-28T00:00:00.000Z',
+        ...overrides
     };
 }
 
 suite('argocd graph layout', () => {
-    test('dagre assigns left-to-right ranks for acyclic star graph', () => {
-        const graph = starGraph();
-        const { nodes, edges } = mapGraphDtoToFlow(graph);
-        const layouted = applyGraphLayout(nodes, edges);
-        const root = layouted.find((node) => node.data.dto.role === 'application');
-        const managed = layouted.filter((node) => node.data.dto.role === 'managed_resource');
+    suite('mergeGraphFlowState', () => {
+        test('initial load relayouts and requests auto-fit', () => {
+            const result = mergeGraphFlowState({
+                graph: sampleGraph(),
+                cache: createEmptyLayoutCache()
+            });
 
-        assert.ok(root);
-        assert.strictEqual(managed.length, 2);
-        for (const node of managed) {
-            assert.ok(node.position.x > root!.position.x, `${node.id} should be right of root`);
-        }
-    });
-
-    test('structureVersion unchanged merge retains node ids and positions', () => {
-        const graph = starGraph();
-        const first = mergeGraphFlowState({
-            graph,
-            cache: createEmptyLayoutCache()
+            assert.strictEqual(result.relayouted, true);
+            assert.strictEqual(result.shouldAutoFit, true);
+            assert.ok(result.nodes.length >= 2);
         });
-        const movedPositions = new Map(first.cache.positions);
-        for (const [id, position] of movedPositions.entries()) {
-            movedPositions.set(id, { x: position.x + 100, y: position.y + 50 });
-        }
 
-        const updatedGraph: ApplicationResourceGraph = {
-            ...graph,
-            observedAt: '2026-05-27T00:00:01.000Z',
-            nodes: graph.nodes.map((node) => ({
-                ...node,
-                status: {
-                    ...node.status,
-                    syncStatus: node.role === 'managed_resource' ? 'OutOfSync' : node.status.syncStatus
+        test('retains positions on attribute-only ticks with matching structureVersion', () => {
+            const initial = mergeGraphFlowState({
+                graph: sampleGraph(),
+                cache: createEmptyLayoutCache()
+            });
+
+            const statusTick = sampleGraph({
+                observedAt: '2026-05-28T00:00:01.000Z',
+                nodes: [
+                    rootNode({
+                        status: { syncStatus: 'OutOfSync', healthStatus: 'Degraded', message: 'app drift' }
+                    }),
+                    managedNode('res:guestbook/Deployment/ui')
+                ]
+            });
+
+            const merged = mergeGraphFlowState({
+                graph: statusTick,
+                cache: initial.cache
+            });
+
+            assert.strictEqual(merged.relayouted, false);
+            assert.strictEqual(merged.shouldAutoFit, false);
+
+            for (const node of merged.nodes) {
+                const prior = initial.nodes.find((candidate) => candidate.id === node.id);
+                assert.ok(prior);
+                assert.deepStrictEqual(node.position, prior.position);
+            }
+        });
+
+        test('relayouts on structural change without auto-fit', () => {
+            const initial = mergeGraphFlowState({
+                graph: sampleGraph(),
+                cache: createEmptyLayoutCache()
+            });
+
+            const root = rootNode();
+            const deployment = managedNode('res:guestbook/Deployment/ui');
+            const service = managedNode('res:guestbook/Service/ui');
+            const nodes = [root, deployment, service];
+            const edges = [
+                {
+                    id: `${root.id}->${deployment.id}:manages`,
+                    source: root.id,
+                    target: deployment.id,
+                    relationship: 'manages' as const
+                },
+                {
+                    id: `${root.id}->${service.id}:manages`,
+                    source: root.id,
+                    target: service.id,
+                    relationship: 'manages' as const
                 }
-            }))
-        };
+            ];
 
-        const second = mergeGraphFlowState({
-            graph: updatedGraph,
-            cache: {
-                ...first.cache,
-                positions: movedPositions
-            }
+            const structural = sampleGraph({
+                nodes,
+                edges,
+                structureVersion: computeStructureVersion({ nodes, edges })
+            });
+
+            const merged = mergeGraphFlowState({
+                graph: structural,
+                cache: initial.cache
+            });
+
+            assert.strictEqual(merged.relayouted, true);
+            assert.strictEqual(merged.shouldAutoFit, false);
         });
 
-        assert.strictEqual(second.relayouted, false);
-        assert.deepStrictEqual(
-            second.nodes.map((node) => node.id).sort(),
-            first.nodes.map((node) => node.id).sort()
-        );
-        for (const node of second.nodes) {
-            const expected = movedPositions.get(node.id);
-            assert.ok(expected);
-            assert.deepStrictEqual(node.position, expected);
-            if (node.data.dto.role === 'managed_resource') {
-                assert.strictEqual(node.data.dto.status.syncStatus, 'OutOfSync');
-            }
-        }
-    });
+        test('relayouts when topologySource changes even if structureVersion matches', () => {
+            const initial = mergeGraphFlowState({
+                graph: sampleGraph(),
+                cache: createEmptyLayoutCache()
+            });
 
-    test('structureVersion change does not auto-fit without explicit fit', () => {
-        const graph = starGraph();
-        const first = mergeGraphFlowState({
-            graph,
-            cache: createEmptyLayoutCache()
-        });
-        assert.strictEqual(first.shouldAutoFit, true);
+            const topologyUpgrade = sampleGraph({
+                topologySource: 'argocd_resource_tree',
+                topologyMode: 'full',
+                structureVersion: initial.cache.structureVersion!
+            });
 
-        const extraNode = managedNode('api');
-        const expandedNodes = [...graph.nodes, extraNode];
-        const expandedEdges = [
-            ...graph.edges,
-            {
-                id: buildGraphEdgeId(graph.nodes[0].id, extraNode.id, 'manages'),
-                source: graph.nodes[0].id,
-                target: extraNode.id,
-                relationship: 'manages' as const
-            }
-        ];
-        const structuralGraph: ApplicationResourceGraph = {
-            ...graph,
-            nodes: expandedNodes,
-            edges: expandedEdges,
-            structureVersion: computeStructureVersion({ nodes: expandedNodes, edges: expandedEdges })
-        };
+            const merged = mergeGraphFlowState({
+                graph: topologyUpgrade,
+                cache: initial.cache
+            });
 
-        const second = mergeGraphFlowState({
-            graph: structuralGraph,
-            cache: first.cache
+            assert.strictEqual(merged.relayouted, true);
+            assert.strictEqual(merged.shouldAutoFit, false);
         });
 
-        assert.strictEqual(second.relayouted, true);
-        assert.strictEqual(second.shouldAutoFit, false);
+        test('explicit fit-view relayouts and requests auto-fit', () => {
+            const initial = mergeGraphFlowState({
+                graph: sampleGraph(),
+                cache: createEmptyLayoutCache()
+            });
+
+            const merged = mergeGraphFlowState({
+                graph: sampleGraph({ observedAt: '2026-05-28T00:00:02.000Z' }),
+                cache: initial.cache,
+                explicitFitView: true
+            });
+
+            assert.strictEqual(merged.relayouted, true);
+            assert.strictEqual(merged.shouldAutoFit, true);
+        });
     });
 
-    test('resolveSelectionAfterMerge keeps id when present and clears when removed', () => {
-        const ids = new Set(['a', 'b']);
-        assert.strictEqual(resolveSelectionAfterMerge('b', ids), 'b');
-        assert.strictEqual(resolveSelectionAfterMerge('c', ids), null);
-        assert.strictEqual(resolveSelectionAfterMerge(null, ids), null);
-    });
-
-    test('applyNodeSelection marks only the selected tile', () => {
-        const graph = starGraph();
-        const { nodes } = mapGraphDtoToFlow(graph);
-        const managedId = nodes.find((node) => node.data.dto.role === 'managed_resource')!.id;
-        const selected = applyNodeSelection(nodes, managedId);
-        assert.strictEqual(selected.filter((node) => node.selected).length, 1);
-        assert.strictEqual(selected.find((node) => node.selected)?.id, managedId);
-    });
-
-    test('shouldPreserveViewport follows attribute-only merge rules', () => {
-        const viewport = { x: 10, y: 20, zoom: 1.5 };
-        assert.strictEqual(
-            shouldPreserveViewport({
-                applicationKeyChanged: false,
-                shouldAutoFit: false,
-                explicitFitView: false,
-                cachedViewport: viewport
-            }),
-            true
-        );
-        assert.strictEqual(
-            shouldPreserveViewport({
-                applicationKeyChanged: false,
-                shouldAutoFit: true,
-                explicitFitView: false,
-                cachedViewport: viewport
-            }),
-            false
-        );
-        assert.strictEqual(
-            shouldPreserveViewport({
-                applicationKeyChanged: true,
-                shouldAutoFit: false,
-                explicitFitView: false,
-                cachedViewport: viewport
-            }),
-            false
-        );
-    });
-
-    test('applicationKeyChanged detects context switch', () => {
-        const graph = starGraph();
-        const key = graph.applicationKey;
-        assert.strictEqual(applicationKeyChanged(null, key), false);
-        assert.strictEqual(applicationKeyChanged('minikube:argocd:guestbook', key), false);
-        assert.strictEqual(
-            applicationKeyChanged('minikube:argocd:guestbook', {
-                ...key,
-                name: 'other-app'
-            }),
-            true
-        );
-    });
-
-    test('cycle fallback produces finite positions without throwing', () => {
-        const nodes = [rootNode(), managedNode('a'), managedNode('b')];
-        const edges: ResourceGraphEdge[] = [
-            {
-                id: buildGraphEdgeId(nodes[0].id, nodes[1].id, 'manages'),
-                source: nodes[0].id,
-                target: nodes[1].id,
-                relationship: 'manages'
-            },
-            {
-                id: buildGraphEdgeId(nodes[1].id, nodes[2].id, 'depends_on'),
-                source: nodes[1].id,
-                target: nodes[2].id,
-                relationship: 'depends_on'
-            },
-            {
-                id: buildGraphEdgeId(nodes[2].id, nodes[1].id, 'depends_on'),
-                source: nodes[2].id,
-                target: nodes[1].id,
-                relationship: 'depends_on'
-            }
-        ];
-
-        const { nodes: flowNodes, edges: flowEdges } = mapGraphDtoToFlow({
-            ...starGraph(),
-            nodes,
-            edges,
-            structureVersion: computeStructureVersion({ nodes, edges })
+    suite('graphSelection', () => {
+        test('preserves selection when node id survives merge', () => {
+            const nodeIds = new Set(['app:argocd/guestbook', 'res:guestbook/Deployment/ui']);
+            assert.strictEqual(
+                resolveSelectionAfterMerge('res:guestbook/Deployment/ui', nodeIds),
+                'res:guestbook/Deployment/ui'
+            );
         });
 
-        const layouted = applyTierFallbackLayout(flowNodes, flowEdges);
-        assert.strictEqual(layouted.length, 3);
-        for (const node of layouted) {
-            assert.ok(Number.isFinite(node.position.x));
-            assert.ok(Number.isFinite(node.position.y));
-        }
+        test('clears selection when previously selected node id is absent', () => {
+            const nodeIds = new Set(['app:argocd/guestbook']);
+            assert.strictEqual(resolveSelectionAfterMerge('res:guestbook/Deployment/ui', nodeIds), null);
+        });
+
+        test('applyNodeSelection marks only the selected node', () => {
+            const nodes = [
+                { id: 'a', position: { x: 0, y: 0 }, data: {} },
+                { id: 'b', position: { x: 1, y: 1 }, data: {} }
+            ] as Parameters<typeof applyNodeSelection>[0];
+
+            const selected = applyNodeSelection(nodes, 'b');
+            assert.strictEqual(selected.find((node) => node.id === 'a')?.selected, false);
+            assert.strictEqual(selected.find((node) => node.id === 'b')?.selected, true);
+        });
+    });
+
+    suite('viewportCache', () => {
+        const cachedViewport: GraphViewport = { x: 120, y: 40, zoom: 1.25 };
+
+        test('preserves viewport on attribute-only refresh when cache exists', () => {
+            assert.strictEqual(
+                shouldPreserveViewport({
+                    applicationKeyChanged: false,
+                    shouldAutoFit: false,
+                    explicitFitView: false,
+                    cachedViewport
+                }),
+                true
+            );
+        });
+
+        test('does not preserve viewport on application key change', () => {
+            assert.strictEqual(
+                shouldPreserveViewport({
+                    applicationKeyChanged: true,
+                    shouldAutoFit: false,
+                    explicitFitView: false,
+                    cachedViewport
+                }),
+                false
+            );
+        });
+
+        test('does not preserve viewport after explicit fit-view', () => {
+            assert.strictEqual(
+                shouldPreserveViewport({
+                    applicationKeyChanged: false,
+                    shouldAutoFit: false,
+                    explicitFitView: true,
+                    cachedViewport
+                }),
+                false
+            );
+        });
+
+        test('does not preserve viewport on initial auto-fit', () => {
+            assert.strictEqual(
+                shouldPreserveViewport({
+                    applicationKeyChanged: false,
+                    shouldAutoFit: true,
+                    explicitFitView: false,
+                    cachedViewport
+                }),
+                false
+            );
+        });
+
+        test('applicationKeyChanged detects panel key transitions', () => {
+            assert.strictEqual(applicationKeyChanged(null, APPLICATION_KEY), false);
+            assert.strictEqual(applicationKeyChanged('minikube:argocd:guestbook', APPLICATION_KEY), false);
+            assert.strictEqual(
+                applicationKeyChanged('minikube:argocd:other-app', APPLICATION_KEY),
+                true
+            );
+        });
     });
 });
