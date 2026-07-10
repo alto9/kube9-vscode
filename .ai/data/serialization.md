@@ -129,11 +129,23 @@ Raw upstream JSON must not leak into the webview bundle; normalize in the extens
 - Changing `GraphNodeId` derivation is **breaking** for layout cache merge; avoid without migration logic.
 - Webview should tolerate unknown `topologySource` values by rendering nodes and ignoring unrecognized edge semantics while still honoring `topologyMode` when present.
 
+## `structureVersion` derivation
+
+`structureVersion` fingerprints **graph structure**, not tile status. Attribute-only sync/health updates must not change it.
+
+Algorithm (implementation may hash the canonical string; SHA-256 is acceptable):
+
+1. Collect all node `id` values; sort lexicographically.
+2. Collect all edges as `{source}\t{target}` pairs; sort lexicographically.
+3. Build payload: `nodes:{ids joined by newline}\nedges:{pairs joined by newline}`.
+4. Set `structureVersion` to a stable digest of that payload (for example SHA-256 hex).
+
+Bump `structureVersion` when node ids are added/removed or when any edge source/target pair changes. Do not bump for sync/health/message-only updates on existing ids.
+
 ## Open Implementation Decisions
 
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
 ### ArgoCD graph DTO details
-- Define the exact `structureVersion` derivation in implementation and tests without binding the contract to one hash function.
-- Decide when `apiGroup` / `group` is required for tree navigation and action routing, and update `ManagedResourceKey` parsing and serialization together.
-- Define whether large-application grouping is represented in the DTO as grouped nodes or remains an interface-only transform over complete resource nodes.
+- Decide when `apiGroup` / `group` is required for tree navigation and action routing, and update `ManagedResourceKey` parsing and serialization together. _(M16 protocol / tree-reveal issues.)_
+- Define whether large-application grouping is represented in the DTO as grouped nodes or remains an interface-only transform over complete resource nodes. _(M16 large-application issue.)_

@@ -47,13 +47,39 @@ The host sets `topologySource` on each push so the webview can label degraded vs
 | Item | Contract |
 |------|----------|
 | **Source** | Single Application CRD get (same as `getApplication`) |
-| **Nodes** | One node per `status.resources[]` row plus one **Application root** node |
-| **Edges** | Synthetic only: root → each resource (or implementation-defined grouping); no claim of Argo CD UI parity |
+| **Nodes** | One node per **valid** `status.resources[]` row plus one **Application root** node |
+| **Edges** | Synthetic star only: one `manages` edge from Application root to each managed node; no claim of Argo CD UI parent/child parity |
 | **Status on tiles** | Resource `syncStatus` + `healthStatus`; root uses application-level `syncStatus` / `healthStatus` |
 | **RBAC** | `applications` get (and list for refresh flows) — see [authorization.md](./authorization.md) |
 | **Failure** | If Application get fails, post `error`; no `resourceGraph` |
 
-This tier matches **current** `ArgoCDService.parseResources` behavior and is sufficient for MVP graph rendering.
+#### ManagedResourceKey parsing (Tier A)
+
+Each `ArgoCDResource` row from `ArgoCDService.parseResources` maps to `ManagedResourceKey` as follows:
+
+| Field | Rule |
+|-------|------|
+| `namespace` | Trim whitespace; use empty string when CRD omits namespace (cluster-scoped kinds) |
+| `kind` | Trim whitespace; **required** — blank or missing → invalid row |
+| `name` | Trim whitespace; **required** — blank or missing → invalid row |
+| `apiGroup` | Omitted in Tier A (CRD `status.resources[]` rows do not carry a stable group field in the current parser) |
+
+`GraphNodeId` for managed resources is `res:{namespace}/{kind}/{name}` (no `apiGroup` suffix in Tier A). Application root id is `app:{applicationNamespace}/{applicationName}`.
+
+#### Invalid and duplicate rows
+
+| Condition | Graph behavior | Warning |
+|-----------|----------------|---------|
+| Missing or whitespace-only `kind` or `name` | Omit node; do not invent placeholder keys | `Skipped resource row: missing kind or name` |
+| Duplicate `ManagedResourceKey` (same namespace/kind/name) | Keep **first** row's sync/health; omit later rows | `Skipped duplicate managed resource: {namespace}/{kind}/{name}` |
+
+Assembly warnings are non-fatal. The host logs each warning to the **`kube9 ArgoCD Service`** output channel with a `crd_flat graph assembly` prefix. When any invalid row was skipped, the webview shows a non-blocking graph info banner (no raw CRD fragments).
+
+#### Count consistency
+
+After assembly, managed-resource node count must equal the count of **valid** rows in `ArgoCDApplication.resources` (invalid and duplicate rows excluded). See [consistency.md](../data/consistency.md).
+
+This tier matches **current** `ArgoCDService.parseResources` behavior and is sufficient for baseline graph rendering. Optional Tier B/C enrichment runs only after Tier A completeness is shippable; enrichment failure falls back to Tier A without failing the panel.
 
 ### Tier B — `argocd_resource_tree` (optional enrichment)
 
@@ -198,6 +224,9 @@ The report does not shell out beyond the existing operator status read path. It 
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
 ### ArgoCD resource graph integration
-- Define the final `resourceAction` payload shape for selected nodes, including whether both `group` and `apiGroup` appear or one canonical field is used across parser, tree reveal, and action routing.
-- Decide whether owner-reference topology enrichment belongs in the first implementation slice or remains a documented optional extension after CRD-flat completeness ships.
-- Specify the safe user-facing fallback message when optional resource-tree topology fails without exposing raw upstream errors, endpoints, or credentials.
+- Define the final `resourceAction` payload shape for selected nodes, including whether both `group` and `apiGroup` appear or one canonical field is used across parser, tree reveal, and action routing. _(Tracked in M16 protocol issue; out of CRD-flat baseline scope.)_
+
+**Resolved (CRD-flat baseline):**
+
+- **Owner-reference enrichment** ships after CRD-flat completeness. Tier C is optional; when unavailable the host keeps Tier A (`crd_flat`) without failing the panel.
+- **Resource-tree fallback messaging:** When Tier B fails or is disabled, the webview shows the limited-topology affordance (`topologyMode: limited`) with user-facing copy that parent/child relationships may be incomplete. Raw upstream errors, endpoints, and credentials stay in the extension host output channel only, prefixed `[INFO] Argo CD resource-tree enrichment unavailable`.
