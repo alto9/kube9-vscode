@@ -174,7 +174,7 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - **Unsupported or non-navigable managed-resource nodes** hide the overflow control entirely when the Kind Capability Registry yields zero eligible actions. There is no disabled-only ⋮ affordance and no placeholder “No actions” menu.
 - **Application root overflow** shows **View in tree** only (`viewInTree` message). Sync, refresh, and hard refresh stay on the webview header and sub-header in v1; root overflow does not duplicate GitOps operations.
 - **Managed-resource overflow labels (v1):** Deployment — **Restart rollout**, **Navigate to resource in tree**; other navigate-supported kinds — **Navigate to resource in tree** only. Labels match `graphNodeCapabilities.ts` and host `actionId` registry entries.
-- **Progressive disclosure for very large Applications** (grouping, collapse, capped render) is owned by issue #222; tiles on visible nodes still follow the rules above.
+- **Progressive disclosure for very large Applications** — resolved in `.ai/interface/presentation.md` and `.ai/data/consistency.md` (issue #222): webview kind-based grouping over complete DTO; threshold 40 managed resources.
 
 **Resolved (View In Tree and tree reveal, issue #221):**
 

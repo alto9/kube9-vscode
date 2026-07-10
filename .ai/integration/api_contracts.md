@@ -107,7 +107,7 @@ Native Argo CD UI resource graphs use this API; kube9-vscode targets **visual pa
 
 - **Stable node id**: deterministic string from `(group/,)kind/namespace/name` (and Application root id from app metadata).
 - **Incremental refresh**: new `resourceGraph` messages merge by node id; layout cache is a data/runtime concern, and graph payloads are complete snapshots for the host-to-webview contract unless a future patch message is explicitly added.
-- **Caps**: when node count exceeds product limit, host sets `truncated: true` and groups or collapses visible nodes per data/interface contracts; never silently drop Application root or remove the user's path to a returned managed resource.
+- **Large applications**: the host delivers the complete managed-resource node set on every `resourceGraph` post. Kind-based grouping and collapse are webview presentation concerns (issue #222); the host does not omit nodes to meet a render cap. Do not set `truncated: true` to signal node omission in v1.
 
 ### Status semantics (integration boundary)
 
