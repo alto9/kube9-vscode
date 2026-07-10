@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import { buildGraphTileAccessibleName } from '../../../webview/argocd-application/graph/buildAccessibleName';
 import { sortNodesForFocusOrder } from '../../../webview/argocd-application/graph/focusOrder';
+import { shouldShowGraphActionNotice } from '../../../webview/argocd-application/graph/graphActionNotice';
 import { nextOverflowMenuIndex } from '../../../webview/components/overflowMenuKeyboard';
 import {
     ARGOCD_APP_PANEL_IDS,
@@ -31,6 +32,12 @@ function graphNode(id: string, x: number, y: number): Node<GraphNodeData> {
 }
 
 suite('argocd graph accessibility', () => {
+    test('shouldShowGraphActionNotice suppresses user-cancelled restart', () => {
+        assert.strictEqual(shouldShowGraphActionNotice(false, 'Cancelled'), false);
+        assert.strictEqual(shouldShowGraphActionNotice(false, 'Unknown action: foo'), true);
+        assert.strictEqual(shouldShowGraphActionNotice(true, 'Restarted Deployment guestbook-ui successfully'), false);
+    });
+
     test('buildGraphTileAccessibleName combines kind, name, sync, and health', () => {
         assert.strictEqual(
             buildGraphTileAccessibleName('Deployment', 'frontend', 'OutOfSync', 'Degraded'),
