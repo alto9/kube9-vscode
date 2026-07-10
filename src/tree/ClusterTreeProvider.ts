@@ -297,6 +297,102 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Resolve the parent of a tree element.
+     * Required for TreeView.reveal to expand ancestor nodes for nested items.
+     */
+    getParent(element: ClusterTreeItem): ClusterTreeItem | undefined {
+        const resourceData = element.resourceData;
+        if (!resourceData?.context?.name) {
+            return undefined;
+        }
+
+        const contextName = resourceData.context.name;
+
+        switch (element.type) {
+            case 'cluster':
+            case 'folder':
+            case 'helmPackageManager':
+                return undefined;
+
+            case 'dashboard':
+            case 'nodes':
+            case 'namespaces':
+            case 'workloads':
+            case 'storage':
+            case 'networking':
+            case 'helm':
+            case 'configuration':
+            case 'argocd':
+            case 'customResources':
+            case 'reports':
+            case 'events':
+                return this.resolveClusterItemForContext(contextName);
+
+            case 'argocdApplication':
+                return TreeItemFactory.createArgoCDCategory(resourceData);
+
+            case 'deployments':
+            case 'statefulsets':
+            case 'daemonsets':
+            case 'cronjobs':
+                return TreeItemFactory.createWorkloadsCategory(resourceData);
+
+            case 'deployment':
+                return this.findSubcategoryByType(
+                    WorkloadsCategory.getWorkloadSubcategories(resourceData),
+                    'deployments'
+                );
+
+            case 'statefulset':
+                return this.findSubcategoryByType(
+                    WorkloadsCategory.getWorkloadSubcategories(resourceData),
+                    'statefulsets'
+                );
+
+            case 'daemonset':
+                return this.findSubcategoryByType(
+                    WorkloadsCategory.getWorkloadSubcategories(resourceData),
+                    'daemonsets'
+                );
+
+            case 'cronjob':
+                return this.findSubcategoryByType(
+                    WorkloadsCategory.getWorkloadSubcategories(resourceData),
+                    'cronjobs'
+                );
+
+            case 'services':
+            case 'portForwarding':
+                return TreeItemFactory.createNetworkingCategory(resourceData);
+
+            case 'service':
+                return this.findSubcategoryByType(
+                    NetworkingCategory.getNetworkingSubcategories(resourceData),
+                    'services'
+                );
+
+            case 'configmaps':
+            case 'secrets':
+                return TreeItemFactory.createConfigurationCategory(resourceData);
+
+            case 'configmap':
+                return this.findSubcategoryByType(
+                    ConfigurationCategory.getConfigurationSubcategories(resourceData),
+                    'configmaps'
+                );
+
+            case 'secret':
+                return this.findSubcategoryByType(
+                    ConfigurationCategory.getConfigurationSubcategories(resourceData),
+                    'secrets'
+                );
+
+            default:
+                return undefined;
+        }
+    }
+
+    /**
      * Get the children of a tree element.
      * This method is called by VS Code to populate the tree view.
      * 
@@ -1986,16 +2082,16 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     });
                     
                     if (matchingPod) {
-                        // Found the pod! Reveal it
-                        await this.treeView.reveal(matchingPod, { 
-                            select: true, 
-                            focus: true, 
-                            expand: true 
-                        });
-                        
-                        // Focus the tree view
-                        await vscode.commands.executeCommand('kube9ClusterView.focus');
-                        return true;
+                        return this.revealAlongPath(
+                            [
+                                clusterItem,
+                                workloadsCategory,
+                                subcategory,
+                                workloadResource,
+                                matchingPod
+                            ],
+                            { select: true, focus: true, expand: true }
+                        );
                     }
                 }
             }
@@ -2227,6 +2323,96 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         return false;
     }
 
+    /**
+     * Reveal an Argo CD Application in the cluster tree by name and namespace.
+     *
+     * @returns true when the application was found and revealed.
+     */
+    public async revealTreeApplication(applicationName: string, applicationNamespace: string): Promise<boolean> {
+        if (!this.treeView || !this.kubeconfig) {
+            return false;
+        }
+
+        const clusterItem = await this.resolveClusterItemForReveal();
+        if (!clusterItem?.resourceData) {
+            return false;
+        }
+
+        try {
+            if (clusterItem.argoCDInstalled !== true) {
+                await this.checkArgoCDStatus(clusterItem, false);
+            }
+
+            if (clusterItem.argoCDInstalled !== true) {
+                return false;
+            }
+
+            const categories = this.getCategories(clusterItem);
+            const argocdCategory = categories.find((cat) => cat.type === 'argocd');
+            if (!argocdCategory) {
+                return false;
+            }
+
+            const applications = await this.getCategoryChildren(argocdCategory);
+            const matchingApplication = applications.find(
+                (app) =>
+                    app.type === 'argocdApplication' &&
+                    this.itemMatchesResource(app, applicationName, applicationNamespace)
+            );
+
+            if (!matchingApplication) {
+                return false;
+            }
+
+            return this.revealAlongPath(
+                [clusterItem, argocdCategory, matchingApplication],
+                { select: true, focus: true, expand: true }
+            );
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error revealing ArgoCD application ${applicationName}:`, errorMessage);
+            return false;
+        }
+    }
+
+    private resolveClusterItemForContext(contextName: string): ClusterTreeItem | undefined {
+        return this.clusterItemsCache.get(contextName);
+    }
+
+    private findSubcategoryByType(
+        subcategories: ClusterTreeItem[],
+        type: TreeItemType
+    ): ClusterTreeItem | undefined {
+        return subcategories.find((item) => item.type === type);
+    }
+
+    private async revealAlongPath(
+        path: ClusterTreeItem[],
+        targetOptions: { select?: boolean; focus?: boolean; expand?: boolean } = {
+            select: true,
+            focus: true,
+            expand: true
+        }
+    ): Promise<boolean> {
+        if (!this.treeView || path.length === 0) {
+            return false;
+        }
+
+        try {
+            for (let index = 0; index < path.length - 1; index += 1) {
+                await this.treeView.reveal(path[index], { expand: true, focus: false });
+            }
+
+            await this.treeView.reveal(path[path.length - 1], targetOptions);
+            await vscode.commands.executeCommand('kube9ClusterView.focus');
+            return true;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error revealing tree path:', errorMessage);
+            return false;
+        }
+    }
+
     private async resolveClusterItemForReveal(): Promise<ClusterTreeItem | undefined> {
         const currentContext = this.kubeconfig?.currentContext;
         if (!currentContext) {
@@ -2290,13 +2476,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 return false;
             }
 
-            await this.treeView.reveal(matchingResource, {
-                select: true,
-                focus: true,
-                expand: true
-            });
-            await vscode.commands.executeCommand('kube9ClusterView.focus');
-            return true;
+            return this.revealAlongPath(
+                [clusterItem, category, subcategory, matchingResource],
+                { select: true, focus: true, expand: true }
+            );
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error(

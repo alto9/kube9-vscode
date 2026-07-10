@@ -20,7 +20,11 @@ import {
     type ResourceActionWebviewMessage,
     type WebviewToExtensionMessage
 } from '../types/argocdWebviewProtocol';
-import { dispatchResourceAction } from '../services/KindCapabilityRegistry';
+import {
+    dispatchResourceAction,
+    NAVIGATE_TREE_SUPPORTED_KINDS
+} from '../services/KindCapabilityRegistry';
+import { revealApplicationInTree, revealManagedResourceInTree } from '../services/treeRevealHelper';
 import { getHelpController } from '../extension';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
@@ -716,13 +720,16 @@ export class ArgoCDApplicationWebviewProvider {
                     case 'viewInTree':
                         await ArgoCDApplicationWebviewProvider.handleViewInTree(
                             treeProvider,
-                            applicationName
+                            applicationName,
+                            namespace,
+                            context
                         );
                         break;
                     
                     case 'navigateToResource':
                         await ArgoCDApplicationWebviewProvider.handleNavigateToResource(
                             treeProvider,
+                            context,
                             message.kind,
                             message.name,
                             message.namespace
@@ -1042,26 +1049,49 @@ export class ArgoCDApplicationWebviewProvider {
 
     /**
      * Handle view in tree action from webview.
-     * Focuses the tree view and attempts to reveal the application.
-     * 
-     * @param treeProvider The cluster tree provider instance
-     * @param applicationName The name of the application
+     * Focuses the tree view and reveals the open Argo CD Application.
      */
     private static async handleViewInTree(
         treeProvider: ClusterTreeProvider,
-        applicationName: string
+        applicationName: string,
+        applicationNamespace: string,
+        panelContext: string
     ): Promise<void> {
+        const contextMatches = await treeProvider.isCurrentContext(panelContext);
+        if (!contextMatches) {
+            vscode.window.showWarningMessage(
+                `Cannot reveal ${applicationName} in tree: active cluster context does not match this application`
+            );
+            return;
+        }
+
         try {
-            // Focus tree view
-            await vscode.commands.executeCommand('kube9.treeView.focus');
+            const result = await revealApplicationInTree(
+                treeProvider,
+                applicationName,
+                applicationNamespace
+            );
 
-            // Refresh tree to ensure ArgoCD applications are loaded
-            treeProvider.refresh();
+            if (result.success) {
+                return;
+            }
 
-            // Note: revealApplication method may not exist yet, so we just refresh
-            // This can be enhanced when tree provider methods are available
-            vscode.window.showInformationMessage(
-                `Tree view focused. Look for ArgoCD Application: ${applicationName}`
+            if (result.treeUnavailable) {
+                vscode.window.showErrorMessage(
+                    'Cannot reveal application in tree: cluster tree is unavailable'
+                );
+                return;
+            }
+
+            if (result.notFound) {
+                vscode.window.showWarningMessage(
+                    `Argo CD Application "${applicationName}" was not found in the cluster tree`
+                );
+                return;
+            }
+
+            vscode.window.showErrorMessage(
+                `Failed to view in tree: ${result.error ?? 'unknown error'}`
             );
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1070,36 +1100,47 @@ export class ArgoCDApplicationWebviewProvider {
     }
 
     /**
-     * Handle navigate to resource action from webview.
-     * Focuses the tree view and attempts to reveal the resource.
-     * 
-     * @param treeProvider The cluster tree provider instance
-     * @param kind The resource kind
-     * @param name The resource name
-     * @param namespace The resource namespace
+     * Handle navigate to resource action from the Details tab.
+     * Delegates to the shared tree reveal helper for supported kinds.
      */
     private static async handleNavigateToResource(
         treeProvider: ClusterTreeProvider,
+        panelContext: string,
         kind: string,
         name: string,
         namespace: string
     ): Promise<void> {
-        try {
-            // Focus tree view
-            await vscode.commands.executeCommand('kube9.treeView.focus');
-
-            // Refresh tree to ensure resources are loaded
-            treeProvider.refresh();
-
-            // Note: revealResource method may not exist yet, so we just refresh
-            // This can be enhanced when tree provider methods are available
-            vscode.window.showInformationMessage(
-                `Tree view focused. Look for ${kind} ${name} in namespace ${namespace}`
+        if (!NAVIGATE_TREE_SUPPORTED_KINDS.has(kind)) {
+            vscode.window.showErrorMessage(
+                `Navigate to tree is not supported for kind ${kind}`
             );
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(`Failed to navigate to resource: ${errorMessage}`);
+            return;
         }
+
+        const result = await revealManagedResourceInTree(
+            { treeProvider, panelContext },
+            kind,
+            name,
+            namespace
+        );
+
+        if (result.success) {
+            return;
+        }
+
+        if (result.reason === 'tree_unavailable' || result.reason === 'context_mismatch') {
+            vscode.window.showWarningMessage(result.message ?? `Failed to navigate to ${kind} ${name}`);
+            return;
+        }
+
+        if (result.reason === 'not_found') {
+            vscode.window.showWarningMessage(result.message ?? `Failed to navigate to ${kind} ${name}`);
+            return;
+        }
+
+        vscode.window.showErrorMessage(
+            result.message ?? `Failed to navigate to resource: ${result.detail ?? 'unknown error'}`
+        );
     }
 
     /**

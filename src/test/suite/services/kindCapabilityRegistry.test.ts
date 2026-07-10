@@ -308,4 +308,59 @@ suite('KindCapabilityRegistry', () => {
         assert.match(result.message, /not found in cluster tree/);
         panel.dispose();
     });
+
+    test('resource.navigateTree posts failure on context mismatch', async () => {
+        const dispatch = loadDispatch();
+        const panel = vscode.window.createWebviewPanel(
+            'kube9.argocdApplication',
+            'test',
+            vscode.ViewColumn.One,
+            { enableScripts: true }
+        );
+        const messages = capturePostMessages(panel);
+        const ctx = buildContext(panel);
+        (ctx.treeProvider as unknown as { isCurrentContext: () => Promise<boolean> }).isCurrentContext =
+            async () => false;
+
+        await dispatch(
+            ctx,
+            resourceActionMessage({
+                actionId: ACTION_RESOURCE_NAVIGATE_TREE,
+                kind: 'Deployment'
+            })
+        );
+
+        const result = lastResult(messages);
+        assert.ok(result);
+        assert.strictEqual(result.success, false);
+        assert.match(result.message, /context does not match/i);
+        panel.dispose();
+    });
+
+    test('resource.navigateTree posts failure when tree is unavailable', async () => {
+        const dispatch = loadDispatch();
+        const panel = vscode.window.createWebviewPanel(
+            'kube9.argocdApplication',
+            'test',
+            vscode.ViewColumn.One,
+            { enableScripts: true }
+        );
+        const messages = capturePostMessages(panel);
+        const ctx = buildContext(panel);
+        (ctx.treeProvider as unknown as { getKubeconfigPath: () => string }).getKubeconfigPath = () => '';
+
+        await dispatch(
+            ctx,
+            resourceActionMessage({
+                actionId: ACTION_RESOURCE_NAVIGATE_TREE,
+                kind: 'Deployment'
+            })
+        );
+
+        const result = lastResult(messages);
+        assert.ok(result);
+        assert.strictEqual(result.success, false);
+        assert.match(result.message, /tree view is unavailable/i);
+        panel.dispose();
+    });
 });
