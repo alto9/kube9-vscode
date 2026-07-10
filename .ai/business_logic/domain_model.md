@@ -176,6 +176,13 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - **Managed-resource overflow labels (v1):** Deployment — **Restart rollout**, **Navigate to resource in tree**; other navigate-supported kinds — **Navigate to resource in tree** only. Labels match `graphNodeCapabilities.ts` and host `actionId` registry entries.
 - **Progressive disclosure for very large Applications** (grouping, collapse, capped render) is owned by issue #222; tiles on visible nodes still follow the rules above.
 
+**Resolved (View In Tree and tree reveal, issue #221):**
+
+- **Application-level View In Tree** (`viewInTree` message from header, sub-header, or Application root overflow) reveals the open Application's `argocdApplication` tree item under the **ArgoCD Applications** category when the panel's kubeconfig context matches the active context. It does not reveal managed Kubernetes resources.
+- **Managed-resource View In Tree** routes through `resource.navigateTree` with the tile's `ManagedResourceKey`. The host maps supported kinds to existing cluster-tree categories via `ClusterTreeProvider.revealTreeResource`; unsupported kinds remain without overflow (#224).
+- **Details tab parity:** `navigateToResource` from the Details view uses the same reveal helper as `resource.navigateTree` for supported kinds.
+- **Failure is non-mutating:** When no tree item can be mapped, the extension reports navigation failure with user-facing copy; it must not create tree nodes or alter resource identity.
+
 **Deferred:**
 
-- **`resource.openDescribe` on graph tiles** — registry entry exists for future direct describe routing from `ManagedResourceKey`; v1 graph overflow does not expose it. Users open describe via tree reveal (#221) or Details tab navigate affordances.
+- **`resource.openDescribe` on graph tiles** — registry entry exists for future direct describe routing from `ManagedResourceKey`; v1 graph overflow does not expose it. Users open describe via tree reveal or Details tab navigate affordances.

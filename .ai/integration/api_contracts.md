@@ -141,8 +141,8 @@ JSON messages over `webview.postMessage` / `onDidReceiveMessage`. Types are stri
 | `sync` | — | Patch Application, track operation, refresh data + graph |
 | `refresh` | — | Refresh annotation path, reload data + graph |
 | `hardRefresh` | — | Confirm, patch hard refresh, reload |
-| `viewInTree` | — | Focus cluster tree, refresh |
-| `navigateToResource` | `kind`, `name`, `namespace` | Focus tree / reveal resource (best effort) |
+| `viewInTree` | — | Focus `kube9ClusterView`, refresh tree, reveal open Application as `argocdApplication` item when context matches |
+| `navigateToResource` | `kind`, `name`, `namespace` | Same reveal path as `resource.navigateTree` for supported kinds; explicit error for unsupported kinds |
 | `graphRefresh` | optional `bypassCache?: boolean` | Reload Application and rebuild `ApplicationResourceGraph` |
 | `resourceAction` | `actionId`, `kind`, `name`, `namespace`, optional `group`, `version` | Run registry action; emit progress/result |
 
@@ -217,7 +217,23 @@ The report does not shell out beyond the existing operator status read path. It 
 | Kubernetes RBAC denied on CRD | `error` (`PERMISSION_DENIED` semantics) | Permission guidance |
 | Resource-tree / owner-ref partial failure | `resourceGraph` with lower tier + optional banner in UI | Informational (implementation) |
 | Resource action denied | `resourceActionResult` success false | Error message |
+| Tree reveal: context mismatch | `resourceActionResult` success false | Graph action-notice + result message |
+| Tree reveal: resource not in tree | `resourceActionResult` success false | Graph action-notice; message includes `not found in cluster tree` |
+| Application `viewInTree`: app not found | _(no webview message)_ | `showWarningMessage` naming application |
 | Network / timeout on CRD get | `error` | Warning or error per severity |
+
+### Tree reveal mapping (host)
+
+`ClusterTreeProvider.revealTreeResource(kind, name, namespace)` resolves existing tree items only:
+
+| Kind | Tree path |
+|------|-----------|
+| Pod | Workloads → Pods |
+| Deployment, StatefulSet, DaemonSet, CronJob | Workloads → matching subcategory |
+| Service | Networking → Services |
+| ConfigMap, Secret | Configuration → ConfigMaps / Secrets |
+
+`ClusterTreeProvider.revealTreeApplication(name, namespace)` resolves under **ArgoCD Applications** (`argocd` → `argocdApplication`) by matching `resourceName` and application namespace. Returns `false` when the category, application list, or matching item is unavailable.
 
 ## Open Implementation Decisions
 

@@ -88,6 +88,16 @@ Interface validation should include graph layout readability, selectable tiles, 
 
 **Implementation polish (#224):** Add tile `:hover` and `argocd-graph-node--overflow-open` styling; wire overflow-open class from `ResourceGraphNodeTile` when menu is open; suppress action-notice banner when result message is `Cancelled`.
 
+**View In Tree test matrix (issue #221):**
+
+| Area | Module / suite | Must prove |
+|------|----------------|------------|
+| Registry (existing) | `kindCapabilityRegistry.test.ts` | `resource.navigateTree` success when `revealTreeResource` returns true; failure when false; context mismatch and tree-unavailable paths |
+| Tree provider | `ClusterTreeProvider.reveal.test.ts` (or extend existing tree suite) | `revealTreeResource` maps Deployment/Pod/Service/ConfigMap to correct categories; `revealTreeApplication` finds `argocdApplication` by name+namespace; returns false when item missing |
+| Provider stubs | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | `viewInTree` calls `revealTreeApplication` with panel namespace; `navigateToResource` delegates to shared reveal helper (no info-toast stub) |
+| Parity | `argocdGraphNodeCapabilities.test.ts` | Webview navigate kinds still match host `NAVIGATE_TREE_SUPPORTED_KINDS` |
+| Manual | Extension Development Host + Argo CD cluster | Application View In Tree selects app in tree; Deployment tile Navigate reveals workload; Job tile has no overflow; wrong-context cluster shows context-mismatch message |
+
 Build and packaging checks should run the existing repository commands for the affected scope: `npm run compile`, `npm run build`, `npm run test:unit`, and `npm run package` as appropriate for implementation changes. Packaging review should confirm Argo CD webview scripts, CSS, React Flow styles, and shared webview header CSS are present in the VSIX, and bundle-size changes to `media/argocd-application/main.js` remain within the documented target or are explicitly justified.
 
 ## References
