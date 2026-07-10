@@ -18,14 +18,14 @@ const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
         disabled,
         busyMessage,
         onSelect,
-        onClose,
+        onOpenChange,
         tileRef
     }: {
         actions: GraphOverflowAction[];
         disabled: boolean;
         busyMessage?: string;
         onSelect: (action: GraphOverflowAction) => void;
-        onClose: () => void;
+        onOpenChange: (open: boolean) => void;
         tileRef: React.RefObject<HTMLDivElement>;
     },
     ref: React.Ref<GraphOverflowMenuHandle>
@@ -38,20 +38,21 @@ const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
 
     const closeMenu = React.useCallback((returnFocusToTile: boolean) => {
         setOpen(false);
-        onClose();
+        onOpenChange(false);
         if (returnFocusToTile) {
             tileRef.current?.focus();
         }
-    }, [onClose, tileRef]);
+    }, [onOpenChange, tileRef]);
 
     React.useImperativeHandle(ref, () => ({
         open: () => {
             if (!disabled && actions.length > 0) {
                 setFocusedItemIndex(0);
                 setOpen(true);
+                onOpenChange(true);
             }
         }
-    }), [actions.length, disabled]);
+    }), [actions.length, disabled, onOpenChange]);
 
     React.useEffect(() => {
         if (!open) {
@@ -116,6 +117,7 @@ const GraphOverflowMenu = React.forwardRef(function GraphOverflowMenu(
                     }
                     setFocusedItemIndex(0);
                     setOpen(true);
+                    onOpenChange(true);
                 }}
             >
                 <span className="codicon codicon-kebab-vertical" aria-hidden="true" />
@@ -171,6 +173,7 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
 
     const tileRef = React.useRef<HTMLDivElement>(null);
     const overflowMenuRef = React.useRef<GraphOverflowMenuHandle>(null);
+    const [overflowOpen, setOverflowOpen] = React.useState(false);
 
     const handleTileKeyDown = (event: React.KeyboardEvent): void => {
         if (event.key === 'Enter' || event.key === ' ') {
@@ -205,7 +208,8 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
             className={[
                 'argocd-graph-node',
                 isRoot ? 'argocd-graph-node--root' : '',
-                selected ? 'argocd-graph-node--selected' : ''
+                selected ? 'argocd-graph-node--selected' : '',
+                overflowOpen ? 'argocd-graph-node--overflow-open' : ''
             ]
                 .filter(Boolean)
                 .join(' ')}
@@ -231,7 +235,7 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
                         disabled={menusDisabled}
                         busyMessage={nodeBusy ? 'Action in progress…' : undefined}
                         onSelect={handleOverflowSelect}
-                        onClose={() => undefined}
+                        onOpenChange={setOverflowOpen}
                         tileRef={tileRef}
                     />
                 )}

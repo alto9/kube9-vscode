@@ -2,6 +2,7 @@ import React from 'react';
 import type { GraphInteractionContextValue } from './GraphInteractionContext';
 import type { ResourceNodeRef } from '../../../types/argocdWebviewProtocol';
 import { buildResourceActionPayload } from './graphNodeCapabilities';
+import { shouldShowGraphActionNotice } from './graphActionNotice';
 
 function nodeRefKey(ref: ResourceNodeRef): string {
     return `${ref.namespace}/${ref.kind}/${ref.name}`;
@@ -57,7 +58,7 @@ export function useGraphInteractionState(
                 return next;
             });
         }
-        if (!message.success) {
+        if (shouldShowGraphActionNotice(message.success, message.message)) {
             setActionNotice(message.message);
         }
     }, []);

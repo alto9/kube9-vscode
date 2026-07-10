@@ -837,6 +837,15 @@ body {
     box-shadow: 0 0 0 2px var(--focus-border);
 }
 
+.argocd-graph-node:hover:not(.argocd-graph-node--selected) {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.argocd-graph-node--overflow-open {
+    background-color: var(--vscode-list-hoverBackground);
+    box-shadow: 0 0 0 1px var(--focus-border);
+}
+
 .argocd-graph-node__header {
     display: flex;
     align-items: center;
