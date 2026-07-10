@@ -46,6 +46,7 @@ The tree **does not** embed the graph; it continues to list applications with st
 
 - **Glance:** Read sync and health from each tile and from the Application root without opening menus.
 - **Topology:** Follow dashed edges from parent to dependent resources.
+- **Selection:** Activate a tile to select it. Selection scopes resource-aware actions and should persist across refresh when the same `GraphNodeId` survives.
 - **Deeper metadata or drift scan:** Switch to **Details** for overview sections and the filterable resource table (same navigate-to-tree behavior as the former drift tab).
 
 ### Operate from tiles and header
@@ -71,6 +72,15 @@ The tree **does not** embed the graph; it continues to list applications with st
 
 - Missing permissions, unreachable application, or empty resource set: show dedicated empty/error presentation on the graph or full-panel error (consistent with other webviews).
 - If topology cannot be built (integration provides a flat list only), graph still renders nodes with **no inferred edges** and surfaces a non-blocking hint that relationships are unavailable; **Details** drift table remains usable.
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD diagram interaction
+- Define exact click, keyboard activation, drag, pan, and overflow interactions so selection does not conflict with graph movement.
+- Specify final tile menu contents per initial Kind Capability entry and whether unsupported actions are hidden or disabled.
+- Add focused acceptance for View In Tree from selected managed-resource nodes, including the fallback when no tree item can be revealed.
 
 ## Kubernetes AI Conformance Flow
 

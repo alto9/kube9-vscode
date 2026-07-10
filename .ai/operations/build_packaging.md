@@ -82,6 +82,15 @@ The conformance report follows the existing operator report bundle pattern:
 
 `npm run build:webview` must include the conformance report bundle and style copy before the feature is considered packaged. `npm run build`, `npm run compile`, and CI must therefore exercise the new webview bundle. If packaging adds a new media path, `.vscodeignore` must continue to include `media/` artifacts in the VSIX.
 
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD diagram delivery checks
+- Decide the exact validation checklist per implementation story, including which graph interactions are covered by unit tests, webview component tests, packaged build checks, and manual keyboard review.
+- Define how maintainers record Argo CD webview bundle-size spot checks when React Flow or layout dependencies change.
+- Add packaging verification for any new Argo CD graph CSS or asset paths copied beside `media/argocd-application/main.js`.
+
 ## Packaging Contract
 
 Release artifacts are VSIX packages built from current repository state. Versioning and publishing run in **[Cut Release](../../.github/workflows/cut-release.yml)** (`workflow_dispatch`), which maintainers start manually after merges to `main`; semantic-release updates the version and changelog before marketplaces publish.

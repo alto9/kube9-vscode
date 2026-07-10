@@ -69,16 +69,13 @@ The webview posts `{ "command": "refresh" }` for explicit refresh. The host hand
 
 Graph delivery should use **JSON-safe DTOs** derived from [data_model.md](./data_model.md), not live React Flow class instances.
 
-### Recommended payload shape
+### Canonical graph message
 
-Either extend the existing application message or add a dedicated graph message. Minimal contract:
-
-**Option A — bundled (preferred for single refresh tick):**
+The canonical host-to-webview graph update is `resourceGraph`. It may be emitted in the same refresh tick as `applicationData`, but it remains a graph-specific message so selection, layout, and action state can be merged independently.
 
 ```json
 {
-  "type": "applicationGraph",
-  "application": { "...": "ArgoCDApplication" },
+  "type": "resourceGraph",
   "graph": {
     "applicationKey": { "context": "...", "namespace": "...", "name": "..." },
     "nodes": [ "..." ],
@@ -94,10 +91,7 @@ Either extend the existing application message or add a dedicated graph message.
 
 `topologyMode`, `structureVersion`, and `layoutHint` follow [data_model.md](./data_model.md). Omit `layoutHint` when absent. Webviews MUST tolerate missing `structureVersion` (treat whole snapshot as structural) until producers always send it.
 
-**Option B — graph-only delta after initial load:**
-
-- Initial open: full `application` + `graph` as above.
-- Subsequent polls: `graph` with the same node ids where entities unchanged; webview merges status fields and layout.
+Initial open sends full `applicationData` plus full `resourceGraph`. Subsequent polls send complete `resourceGraph` snapshots with the same node ids where entities are unchanged; the webview merges status fields, selection, viewport, and layout.
 
 ### ResourceGraphNode JSON
 
@@ -116,7 +110,7 @@ Do not serialize React Flow internal fields (`position`, `data.measured`, handle
 
 ### Webview → extension (unchanged identifiers)
 
-Actions that target a resource continue to send `kind`, `name`, `namespace` (and add `apiGroup` only when product requires it). Graph node selection resolves to `ManagedResourceKey` before posting messages such as `navigateToResource`.
+Actions that target a resource continue to send `kind`, `name`, `namespace` (and add `apiGroup` only when product requires it). Graph node selection resolves to `ManagedResourceKey` before posting messages such as `navigateToResource` or `resourceAction`.
 
 ## Topology from non-CRD sources
 
@@ -134,3 +128,12 @@ Raw upstream JSON must not leak into the webview bundle; normalize in the extens
 - **`topologyMode`**, **`layoutHint`**, and **`structureVersion`** are additive; older webviews SHOULD ignore unknown fields and degrade merge behavior when `structureVersion` is absent.
 - Changing `GraphNodeId` derivation is **breaking** for layout cache merge; avoid without migration logic.
 - Webview should tolerate unknown `topologySource` values by rendering nodes and ignoring unrecognized edge semantics while still honoring `topologyMode` when present.
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD graph DTO details
+- Define the exact `structureVersion` derivation in implementation and tests without binding the contract to one hash function.
+- Decide when `apiGroup` / `group` is required for tree navigation and action routing, and update `ManagedResourceKey` parsing and serialization together.
+- Define whether large-application grouping is represented in the DTO as grouped nodes or remains an interface-only transform over complete resource nodes.

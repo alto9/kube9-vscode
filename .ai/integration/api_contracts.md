@@ -80,8 +80,8 @@ Native Argo CD UI resource graphs use this API; kube9-vscode targets **visual pa
 ### Topology and refresh merge
 
 - **Stable node id**: deterministic string from `(group/,)kind/namespace/name` (and Application root id from app metadata).
-- **Incremental refresh**: new `resourceGraph` messages merge by node id; layout cache is a data/runtime concern but graph payloads must be complete snapshots for the host→webview contract.
-- **Caps**: when node count exceeds product limit, host sets `truncated: true` and omits or collapses nodes per data contract; never silently drop Application root.
+- **Incremental refresh**: new `resourceGraph` messages merge by node id; layout cache is a data/runtime concern, and graph payloads are complete snapshots for the host-to-webview contract unless a future patch message is explicitly added.
+- **Caps**: when node count exceeds product limit, host sets `truncated: true` and groups or collapses visible nodes per data/interface contracts; never silently drop Application root or remove the user's path to a returned managed resource.
 
 ### Status semantics (integration boundary)
 
@@ -127,7 +127,7 @@ JSON messages over `webview.postMessage` / `onDidReceiveMessage`. Types are stri
 | `applicationData` | `data: ArgoCDApplication` | Full CRD parse (existing) |
 | `updateStatus` | `syncStatus`, `healthStatus` | Partial status update |
 | `operationProgress` | `phase`, `message?` | Application-level sync/refresh |
-| `resourceGraph` | `graph`, `topologySource`, `refreshedAt`, optional `truncated` | Graph snapshot for React Flow |
+| `resourceGraph` | `graph`, `topologySource`, `topologyMode`, `structureVersion`, `refreshedAt`, optional `truncated` | Complete graph snapshot for React Flow merge |
 | `resourceActionProgress` | `actionId`, `phase`, `message?`, optional node ref | Tile action in flight |
 | `resourceActionResult` | `actionId`, `success`, `message`, optional node ref | Tile action terminal state |
 | `error` | `message` | User-visible failure |
@@ -192,3 +192,12 @@ The report does not shell out beyond the existing operator status read path. It 
 | Resource-tree / owner-ref partial failure | `resourceGraph` with lower tier + optional banner in UI | Informational (implementation) |
 | Resource action denied | `resourceActionResult` success false | Error message |
 | Network / timeout on CRD get | `error` | Warning or error per severity |
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD resource graph integration
+- Define the final `resourceAction` payload shape for selected nodes, including whether both `group` and `apiGroup` appear or one canonical field is used across parser, tree reveal, and action routing.
+- Decide whether owner-reference topology enrichment belongs in the first implementation slice or remains a documented optional extension after CRD-flat completeness ships.
+- Specify the safe user-facing fallback message when optional resource-tree topology fails without exposing raw upstream errors, endpoints, or credentials.

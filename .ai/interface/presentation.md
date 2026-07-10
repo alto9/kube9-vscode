@@ -76,6 +76,7 @@ The cluster **tree list** for Argo CD Applications is unchanged: sync and health
 - **Edges:** Dependency relationships use **dashed** connectors distinct from node chrome so topology reads at a glance.
 - **Canvas toolbar:** A compact control strip on the graph viewport offers **zoom in**, **zoom out**, and **fit view** (re-center and scale to show all nodes). Pan is available on the canvas; toolbar actions are the primary zoom affordances for precision and reset.
 - **Theme:** Graph background, nodes, edges, and controls use **VS Code theme CSS variables** (`--vscode-*`) so light/dark and contrast follow the host editor.
+- **Completeness:** Every returned managed resource is reachable in the graph experience. If large-application grouping or collapse is used, the UI must make the grouped resources discoverable and keep Details/tree navigation available.
 
 ### Graph tiles (nodes)
 
@@ -88,6 +89,8 @@ Each node is a **tile** styled for quick scan (Argo CD UI–like density, adapte
 | Status | **Sync badge** and **health badge** on every tile, including the Application root. |
 | Trailing | **Overflow menu** (⋮) for kind-appropriate actions. |
 | Optional | **Age** or **revision** chip when the data model supplies it; omit the chip when absent rather than showing placeholders. |
+
+Tiles have separate focus and selected states. Primary activation selects the tile and makes resource-aware actions target that node; it does not execute a cluster operation unless the user invokes a menu item or command.
 
 **Status semantics on tiles:** Tiles show Argo CD **sync** (`Synced`, `OutOfSync`, etc.) and **health** (`Healthy`, `Degraded`, `Progressing`, `Missing`, `Suspended`, `Unknown`, etc.) from the application/resource model. They do **not** by default show Kubernetes **Ready** replica counts or pod-level readiness; if workload readiness is surfaced later, it must be labeled distinctly from Argo health so users are not misled.
 
@@ -136,3 +139,12 @@ Each category shows MUST and SHOULD rollups. Requirement rows show id/title, lev
 - No `aiConformance` summary: show an empty state that no conformance run has been published.
 - Stale cache or degraded operator: show a banner consistent with the Well-Architected assessment report pattern and keep any bounded summary clearly marked as stale when present.
 - Invalid payload: show a safe error state without raw ConfigMap JSON.
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD diagram interface
+- Choose concrete graph spacing constants, fit-view behavior, and tile sizing that keep large Applications readable without encoding pixel values as a product contract.
+- Define the selected-tile visual treatment across normal, focus, hover, selected, and overflow-open states.
+- Define the user-facing copy and placement for limited-topology and large-application grouping hints.

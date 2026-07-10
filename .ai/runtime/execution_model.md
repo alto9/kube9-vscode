@@ -51,9 +51,10 @@ See [Startup and bootstrap](startup_bootstrap.md): the extension may send `appli
 
 | type | Purpose |
 |------|---------|
-| `graphAction` | Kind-scoped action from a node menu; payload includes `action` (e.g. `restartRollout`), stable `nodeId`, `kind`, `name`, `namespace` |
+| `graphRefresh` | Explicit graph refresh request; host reloads Application CRD and optional topology inputs, then emits `resourceGraph` |
+| `resourceAction` | Kind-scoped action from a node menu; payload includes `actionId`, stable `nodeId`, `kind`, `name`, `namespace`, and optional `group` / `version` |
 
-Application-level actions stay on the root node or header; tile menus use `graphAction`.
+Application-level actions stay on the root node or header; tile menus use `resourceAction`.
 
 ### Extension → webview (shipped)
 
@@ -69,10 +70,10 @@ The webview **listens** for `updateStatus` (application-level sync/health patch)
 
 | type | Purpose |
 |------|---------|
-| `graphData` | Nodes, edges, stable ids, optional pre-computed positions |
-| `graphPatch` | Incremental node status updates without full graph replace (keeps panel open and preserves layout where possible) |
-| `updateStatus` | Narrow application-level sync/health-only updates (optional complement to `graphPatch` on root) |
-| `actionResult` | Outcome of a `graphAction` for tile or toast feedback |
+| `resourceGraph` | Complete `ApplicationResourceGraph` snapshot with stable ids, topology metadata, structure version, and optional layout hints |
+| `updateStatus` | Narrow application-level sync/health-only updates (optional complement on the root when a full graph snapshot is not needed) |
+| `resourceActionProgress` | In-flight state for a `resourceAction` |
+| `resourceActionResult` | Outcome of a `resourceAction` for tile or toast feedback |
 
 Integration SME owns DTO field shapes. Runtime requires **stable node ids** across refreshes so React Flow state and selection survive merge-style updates.
 
@@ -100,11 +101,20 @@ After triggering sync, refresh, hard refresh, or a graph action (e.g. rollout re
 
 1. Post `operationProgress` with `phase: 'Running'` and a clear `message`.
 2. Poll application (and graph DTO inputs) on a bounded interval with timeout and optional `CancellationToken` (service default: **2 s** interval, **300 s** timeout unless overridden).
-3. Push **`graphPatch` or `applicationData`** when state changes so the graph updates **without** disposing the `WebviewPanel`.
-4. On terminal phase (`Succeeded`, `Failed`, `Error`), post a matching `operationProgress`, then a final consistency push (`applicationData` and/or `graphData` as needed).
+3. Push **`resourceGraph` or `applicationData`** when state changes so the graph updates **without** disposing the `WebviewPanel`.
+4. On terminal phase (`Succeeded`, `Failed`, `Error`), post a matching `operationProgress`, then a final consistency push (`applicationData` and/or `resourceGraph` as needed).
 
-Prefer **`graphPatch`** for status-only deltas to limit layout thrash; reserve full `graphData` for topology changes or initial load.
+Prefer merge-style handling of `resourceGraph` snapshots for status-only deltas to limit layout thrash; reserve full relayout for topology changes, `structureVersion` changes, or initial load.
 
 ### Concurrent operations
 
 While `operationProgress.phase === 'Running'`, treat the application as busy: block conflicting header and node actions until terminal phase or `error`.
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD diagram protocol cleanup
+- Remove or alias legacy graph protocol names (`graphData`, `graphPatch`, `graphAction`, `actionResult`) in code and tests so the shipped host/webview protocol consistently uses `resourceGraph`, `resourceAction`, `resourceActionProgress`, and `resourceActionResult`.
+- Decide whether a future patch-style graph message is needed after complete `resourceGraph` snapshot merging is implemented and measured.
+- Define concurrent busy-state behavior when an Application-level operation and a selected resource action are requested close together.

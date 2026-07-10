@@ -15,9 +15,12 @@
 - As a GitOps engineer, when **resource-tree** topology is unavailable, I still get a **limited topology** graph from Application CR data with clear indication that dependency edges may be incomplete.
 - As a GitOps engineer, I can read **sync status** and **health status** on every graph tile at a glance, using the same status semantics as elsewhere in the extension's ArgoCD surfaces.
 - As a GitOps engineer, I can pan and zoom the graph and fit the view so I can explore large applications without losing context.
+- As a GitOps engineer, I can see every returned managed resource for the Application represented in the graph experience, even when large-application grouping or limited topology affects how relationships are displayed.
+- As a GitOps engineer, I can select a graph resource tile and keep that selection across refreshes while the same resource still exists.
+- As a GitOps engineer, I can open a three-dot actions menu on each eligible resource tile and only see actions that are valid for that resource kind and permission state.
 - As a GitOps engineer, I can run **application-level sync, refresh, and hard refresh** from the Application root node using the same flows already available for ArgoCD applications.
 - As a GitOps engineer, I can **restart rollout** on a Deployment node from the graph when I need to recycle pods without leaving the application detail panel.
-- As a GitOps engineer, I can **navigate to a managed resource in the cluster tree** or open its describe/detail surface from graph nodes where the extension supports that kind.
+- As a GitOps engineer, I can use **View In Tree** or resource navigation from a selected graph node to reveal the corresponding Kubernetes tree resource where the extension can map that resource identity.
 - As a GitOps engineer, after I sync or refresh an application, the graph **updates in place** with refreshed sync and health on affected nodes without requiring me to close and reopen the panel.
 - As a GitOps engineer working on a large application, I can still use the graph when node count is high because the experience avoids unusable clutter through progressive disclosure or grouping rather than failing silently.
 

@@ -86,3 +86,11 @@ While `operationState.phase` is `Running` or `Terminating`:
 - Avoid full graph object replacement when a shallow status patch on existing node ids suffices (same topology, same node set).
 - Cap layout recomputation: run dagre (or equivalent) on initial load, topology change, and explicit user re-layout — not on every 30s status tick.
 - Large applications: node count limits and grouping are presentation/runtime concerns; data layer still treats each included node as a distinct `GraphNodeId`.
+
+## Open Implementation Decisions
+
+Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+
+### ArgoCD large graph consistency
+- Specify how grouping or progressive disclosure preserves access to every returned `ArgoCDResource` while keeping `crd_flat` count checks meaningful.
+- Define the refresh behavior for selected nodes when grouping, expansion, or topology upgrades change the visible tile set.

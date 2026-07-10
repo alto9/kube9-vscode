@@ -23,7 +23,7 @@ See [api_contracts.md](./api_contracts.md#argo-cd-application-webview-protocol) 
 | Direction | Type | Behavior |
 |-----------|------|----------|
 | Webview → host | `graphRefresh` | Host reloads Application CRD (and optional resource-tree / owner-ref pass), rebuilds graph DTO, posts `resourceGraph`. Optional `bypassCache` flag mirrors application list cache invalidation. |
-| Host → webview | `resourceGraph` | Pushes `ApplicationResourceGraph` plus `topologySource` and `refreshedAt` ISO timestamp. |
+| Host → webview | `resourceGraph` | Pushes `ApplicationResourceGraph` plus topology metadata, `structureVersion`, and `refreshedAt` ISO timestamp. |
 | Webview → host | `resourceAction` | Host runs registered action by `actionId` (see api_contracts). |
 | Host → webview | `resourceActionProgress`, `resourceActionResult` | Per-action progress and terminal outcome for tile menus. |
 
