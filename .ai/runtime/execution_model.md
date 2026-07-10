@@ -52,7 +52,7 @@ See [Startup and bootstrap](startup_bootstrap.md): the extension may send `appli
 | type | Purpose |
 |------|---------|
 | `graphRefresh` | Explicit graph refresh request; host reloads Application CRD and optional topology inputs, then emits `resourceGraph` |
-| `resourceAction` | Kind-scoped action from a node menu; payload includes `actionId`, stable `nodeId`, `kind`, `name`, `namespace`, and optional `group` / `version` |
+| `resourceAction` | Kind-scoped action from a node menu; payload includes `actionId`, `kind`, `name`, `namespace`, and optional `group` / `version` (maps from `ManagedResourceKey.apiGroup` at the webview boundary). `GraphNodeId` stays on the graph DTO only. |
 
 Application-level actions stay on the root node or header; tile menus use `resourceAction`.
 
@@ -108,13 +108,22 @@ Prefer merge-style handling of `resourceGraph` snapshots for status-only deltas 
 
 ### Concurrent operations
 
-While `operationProgress.phase === 'Running'`, treat the application as busy: block conflicting header and node actions until terminal phase or `error`.
+**Application-level busy:** While `operationProgress.phase === 'Running'` for sync, refresh, or hard refresh, the host sets `operationInProgress` on the panel. Duplicate sync requests receive an `error` message. The webview sets `menusDisabled` from the same progress stream and disables all tile overflow menus until a terminal phase.
+
+**Per-node busy:** `resourceActionProgress` with `phase: 'Running'` and a `nodeRef` adds that resource key (`namespace/kind/name`) to webview `busyNodeKeys`, disabling only that tile's overflow (optional in-menu copy: "Action in progress…"). Terminal progress or `resourceActionResult` clears the key.
+
+**Cross-layer rule (v1):** The webview is the primary guard against conflicting menu clicks during app-level or per-node busy states. Host handlers remain safe when invoked; navigate is idempotent. No host-side queue for overlapping `resourceAction` messages is required in v1.
 
 ## Open Implementation Decisions
 
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
 ### ArgoCD diagram protocol cleanup
-- Remove or alias legacy graph protocol names (`graphData`, `graphPatch`, `graphAction`, `actionResult`) in code and tests so the shipped host/webview protocol consistently uses `resourceGraph`, `resourceAction`, `resourceActionProgress`, and `resourceActionResult`.
-- Decide whether a future patch-style graph message is needed after complete `resourceGraph` snapshot merging is implemented and measured.
-- Define concurrent busy-state behavior when an Application-level operation and a selected resource action are requested close together.
+
+**Resolved (canonical names, issue #223):**
+
+- Shipped host/webview protocol uses only `resourceGraph`, `resourceAction`, `resourceActionProgress`, and `resourceActionResult` for graph snapshots and tile actions. Legacy names (`graphData`, `graphPatch`, `graphAction`, `actionResult`) are rejected by validators; no runtime alias shim in v1.
+
+**Deferred:**
+
+- **Patch-style graph message:** Introduce only after complete `resourceGraph` snapshot merging is implemented and measured (#227). Until then, the host posts complete snapshots only.

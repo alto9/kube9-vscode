@@ -144,7 +144,7 @@ JSON messages over `webview.postMessage` / `onDidReceiveMessage`. Types are stri
 | `viewInTree` | — | Focus `kube9ClusterView`, refresh tree, reveal open Application as `argocdApplication` item when context matches |
 | `navigateToResource` | `kind`, `name`, `namespace` | Same reveal path as `resource.navigateTree` for supported kinds; explicit error for unsupported kinds |
 | `graphRefresh` | optional `bypassCache?: boolean` | Reload Application and rebuild `ApplicationResourceGraph` |
-| `resourceAction` | `actionId`, `kind`, `name`, `namespace`, optional `group`, `version` | Run registry action; emit progress/result |
+| `resourceAction` | `actionId`, `kind`, `name`, `namespace`, optional `group`, `version` | Run registry action; emit progress/result. Wire uses `group` (not `apiGroup`); maps from `ManagedResourceKey.apiGroup` at the webview boundary. No `nodeId` on the wire — identity is the resource reference fields above. |
 
 ### Extension → webview
 
@@ -240,7 +240,12 @@ The report does not shell out beyond the existing operator status read path. It 
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
 ### ArgoCD resource graph integration
-- Define the final `resourceAction` payload shape for selected nodes, including whether both `group` and `apiGroup` appear or one canonical field is used across parser, tree reveal, and action routing. _(Tracked in M16 protocol issue; out of CRD-flat baseline scope.)_
+
+**Resolved (`resourceAction` wire shape, issue #223):**
+
+- **`resourceAction` payload (webview → host):** Required fields: `actionId`, `kind`, `name`, `namespace`. Optional: `group`, `version`. `GraphNodeId` is not serialized on this message; the host routes by resource reference plus `actionId`.
+- **Canonical API group naming:** Internal DTOs and parsers use `ManagedResourceKey.apiGroup`. The webview protocol uses optional wire field `group` only. `buildResourceActionPayload` maps `apiGroup` → `group`; `buildResourceNodeRef` maps `group` → `ResourceNodeRef.group`. Validators reject `apiGroup` on webview messages. Tree reveal and action routing accept omitted `group` for core kinds in `NAVIGATE_TREE_SUPPORTED_KINDS`.
+- **`resourceActionProgress` / `resourceActionResult`:** Include `actionId`, `phase` or `success`/`message`, and optional `nodeRef` with the same `kind`, `name`, `namespace`, optional `group`, `version` shape.
 
 **Resolved (CRD-flat baseline):**
 
