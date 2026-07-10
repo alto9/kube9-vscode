@@ -94,7 +94,29 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 - **Hidden vs disabled:** When no rows apply, the overflow control is not rendered. During application-level sync/refresh or per-node in-flight `resourceAction`, menus disable (busy nodes show optional “Action in progress…” in the open menu).
 - **Action results:** Terminal `resourceActionResult` with `success: false` shows a dismissible graph action-notice banner. User-cancelled restart confirmation does not show the banner. Unknown `actionId` or unsupported kind for a known id returns explicit host messages without crashing the panel.
-- **View In Tree from managed-resource nodes** — success/failure semantics and tree-reveal fallback copy are specified in issue #221; #224 exposes the menu entry and routes `resource.navigateTree` through the host registry.
+
+### View In Tree and tree reveal (resolved, issue #221)
+
+Two navigation surfaces share one host tree-reveal implementation; neither mutates cluster state.
+
+| Source | Message / action | Host behavior | User feedback |
+|--------|------------------|---------------|---------------|
+| Application root overflow, sub-header, or header | `viewInTree` | Focus `kube9ClusterView`, refresh tree, call `ClusterTreeProvider.revealTreeApplication(applicationName, applicationNamespace)` bound to the open panel's `ApplicationKey` | On success: tree reveals and selects the matching `argocdApplication` item. On failure: `showWarningMessage` when the tree is focused but the application item is not found; `showErrorMessage` on unexpected host errors |
+| Managed-resource tile overflow | `resourceAction` with `actionId: resource.navigateTree` | Same pre-checks as registry handler: kubeconfig available, active context matches panel context; focus tree, refresh, `revealTreeResource(kind, name, namespace)` from the tile's `ManagedResourceKey` | `resourceActionProgress` then terminal `resourceActionResult`; failures also show the dismissible graph action-notice banner |
+| Details tab navigate affordance | `navigateToResource` with `kind`, `name`, `namespace` | Delegate to the same reveal helper as `resource.navigateTree` for kinds in `NAVIGATE_TREE_SUPPORTED_KINDS`; reject or no-op with explicit error for unsupported kinds | Unsupported kind: `showErrorMessage` with safe copy. Supported kind failure: same messages as `resource.navigateTree` result text (Details tab does not use the graph action-notice banner) |
+
+**Identity for reveal:** Use `ManagedResourceKey.namespace` (trimmed; empty only for cluster-scoped kinds when the CRD omits namespace), `kind`, and `name`. Optional `apiGroup` is forwarded when present but is not required for v1 reveal of core kinds in `NAVIGATE_TREE_SUPPORTED_KINDS`.
+
+**Failure copy (managed resource, terminal result message):**
+
+| Condition | `success` | Message pattern |
+|-----------|-----------|-----------------|
+| Kubeconfig / tree unavailable | false | `resource.navigateTree failed for {kind} {name}: tree view is unavailable` |
+| Active cluster context ≠ panel context | false | `resource.navigateTree failed for {kind} {name}: active cluster context does not match this application` |
+| Supported kind, no matching tree item | false | `resource.navigateTree failed for {kind} {name}: resource not found in cluster tree` |
+| Reveal succeeded | true | `Focused {kind} {name} in cluster tree` |
+
+Mapping failure is a navigation limitation: the host must not fabricate tree items or resource identity. List RBAC gaps that prevent category expansion may surface as "not found in cluster tree" when no item can be resolved.
 
 ## Kubernetes AI Conformance Flow
 

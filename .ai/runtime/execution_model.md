@@ -44,8 +44,8 @@ See [Startup and bootstrap](startup_bootstrap.md): the extension may send `appli
 | `sync` | Application-level sync (CRD patch) |
 | `refresh` | Normal refresh |
 | `hardRefresh` | Hard refresh (confirmation in host) |
-| `viewInTree` | Focus application in cluster tree |
-| `navigateToResource` | `kind`, `name`, `namespace` — navigate to tree / describe where supported |
+| `viewInTree` | Reveal open Application under ArgoCD Applications in cluster tree |
+| `navigateToResource` | `kind`, `name`, `namespace` — reveal matching cluster-tree resource when kind is in `NAVIGATE_TREE_SUPPORTED_KINDS` |
 
 ### Webview → extension (resource graph extension)
 

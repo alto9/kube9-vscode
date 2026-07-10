@@ -149,5 +149,9 @@ Producers MUST set `structureVersion` on every `resourceGraph` post. Consumers M
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
 ### ArgoCD graph DTO details
-- Decide when `apiGroup` / `group` is required for tree navigation and action routing, and update `ManagedResourceKey` parsing and serialization together. _(M16 protocol / tree-reveal issues.)_
+
+**Resolved (tree reveal v1, issue #221):**
+
+- **`apiGroup` for tree navigation:** Not required for v1 reveal of core kinds in `NAVIGATE_TREE_SUPPORTED_KINDS`. Host reveal uses `kind`, `name`, and trimmed `namespace` from `ManagedResourceKey`. When `apiGroup` is present on the key or `resourceAction` payload, forward it for future CRD-kind routing; omitting it must not block core-kind reveal. Canonical `group` vs `apiGroup` naming on the wire remains in #223.
+
 - Define whether large-application grouping is represented in the DTO as grouped nodes or remains an interface-only transform over complete resource nodes. _(M16 #222.)_
