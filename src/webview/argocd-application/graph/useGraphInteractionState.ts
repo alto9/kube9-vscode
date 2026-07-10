@@ -3,10 +3,10 @@ import type { GraphInteractionContextValue } from './GraphInteractionContext';
 import type { ResourceNodeRef } from '../../../types/argocdWebviewProtocol';
 import { buildResourceActionPayload } from './graphNodeCapabilities';
 import { shouldShowGraphActionNotice } from './graphActionNotice';
-
-function nodeRefKey(ref: ResourceNodeRef): string {
-    return `${ref.namespace}/${ref.kind}/${ref.name}`;
-}
+import {
+    reduceBusyNodeKeysForProgress,
+    reduceBusyNodeKeysForResult
+} from './graphInteractionBusyState';
 
 export interface GraphInteractionHandlers {
     handleResourceActionProgress: (message: { phase: string; nodeRef?: ResourceNodeRef }) => void;
@@ -28,21 +28,7 @@ export function useGraphInteractionState(
         phase: string;
         nodeRef?: ResourceNodeRef;
     }) => {
-        if (!message.nodeRef) {
-            return;
-        }
-        const key = nodeRefKey(message.nodeRef);
-        if (message.phase === 'Running') {
-            setBusyNodeKeys((previous) => new Set(previous).add(key));
-            return;
-        }
-        if (message.phase === 'Succeeded' || message.phase === 'Failed' || message.phase === 'Error') {
-            setBusyNodeKeys((previous) => {
-                const next = new Set(previous);
-                next.delete(key);
-                return next;
-            });
-        }
+        setBusyNodeKeys((previous) => reduceBusyNodeKeysForProgress(previous, message));
     }, []);
 
     const handleResourceActionResult = React.useCallback((message: {
@@ -50,14 +36,7 @@ export function useGraphInteractionState(
         message: string;
         nodeRef?: ResourceNodeRef;
     }) => {
-        if (message.nodeRef) {
-            const key = nodeRefKey(message.nodeRef);
-            setBusyNodeKeys((previous) => {
-                const next = new Set(previous);
-                next.delete(key);
-                return next;
-            });
-        }
+        setBusyNodeKeys((previous) => reduceBusyNodeKeysForResult(previous, message));
         if (shouldShowGraphActionNotice(message.success, message.message)) {
             setActionNotice(message.message);
         }
