@@ -1076,6 +1076,13 @@ export class ArgoCDApplicationWebviewProvider {
                 return;
             }
 
+            if (result.treeUnavailable) {
+                vscode.window.showErrorMessage(
+                    'Cannot reveal application in tree: cluster tree is unavailable'
+                );
+                return;
+            }
+
             if (result.notFound) {
                 vscode.window.showWarningMessage(
                     `Argo CD Application "${applicationName}" was not found in the cluster tree`

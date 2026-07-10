@@ -79,7 +79,11 @@ export async function revealApplicationInTree(
     treeProvider: ClusterTreeProvider,
     applicationName: string,
     applicationNamespace: string
-): Promise<{ success: boolean; notFound?: boolean; error?: string }> {
+): Promise<{ success: boolean; notFound?: boolean; treeUnavailable?: boolean; error?: string }> {
+    if (!treeProvider.getKubeconfigPath()) {
+        return { success: false, treeUnavailable: true };
+    }
+
     try {
         await focusAndRefreshClusterTree(treeProvider);
         const revealed = await treeProvider.revealTreeApplication(applicationName, applicationNamespace);
