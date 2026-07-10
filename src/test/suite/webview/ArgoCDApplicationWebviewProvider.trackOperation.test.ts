@@ -116,6 +116,9 @@ suite('ArgoCDApplicationWebviewProvider trackOperation', () => {
     let currentApplication: ArgoCDApplication;
     let syncApplicationCalls = 0;
     let trackOperationCalls = 0;
+    let invalidateCacheCalls = 0;
+    let lastInvalidateCacheContext: string | undefined;
+    let getApplicationCallOrder: string[] = [];
     let lastTrackOperationArgs:
         | {
               name: string;
@@ -130,6 +133,9 @@ suite('ArgoCDApplicationWebviewProvider trackOperation', () => {
     setup(() => {
         syncApplicationCalls = 0;
         trackOperationCalls = 0;
+        invalidateCacheCalls = 0;
+        lastInvalidateCacheContext = undefined;
+        getApplicationCallOrder = [];
         lastTrackOperationArgs = undefined;
         currentApplication = sampleApplication();
 
@@ -140,15 +146,19 @@ suite('ArgoCDApplicationWebviewProvider trackOperation', () => {
         } as unknown as vscode.ExtensionContext;
 
         mockArgoCDService = {
-            getApplication: async () => currentApplication,
+            getApplication: async () => {
+                getApplicationCallOrder.push('getApplication');
+                return currentApplication;
+            },
             syncApplication: async () => {
                 syncApplicationCalls += 1;
             },
             refreshApplication: async () => {
                 /**/
             },
-            invalidateCache: () => {
-                /**/
+            invalidateCache: (context: string) => {
+                invalidateCacheCalls += 1;
+                lastInvalidateCacheContext = context;
             },
             trackOperation: async (
                 name: string,
@@ -258,6 +268,24 @@ suite('ArgoCDApplicationWebviewProvider trackOperation', () => {
 
         const infoMessages = (vscode.window as unknown as { _getInfoMessages(): string[] })._getInfoMessages();
         assert.ok(infoMessages.some((message) => message.includes('Successfully synced')));
+    });
+
+    test('terminal sync success invalidates cache before posting fresh snapshots', async () => {
+        const { panel, messages } = await openPanel();
+        getApplicationCallOrder = [];
+        invalidateCacheCalls = 0;
+
+        const webview = panel.webview as unknown as MockWebviewWithFire;
+        webview._fireMessage({ type: 'sync' });
+
+        await flushUntil(() => trackOperationCalls === 1);
+        await flushUntil(() => messages.some((message) => message.type === 'resourceGraph'));
+
+        assert.strictEqual(invalidateCacheCalls, 1);
+        assert.strictEqual(lastInvalidateCacheContext, contextName);
+        assert.strictEqual(getApplicationCallOrder.length, 1);
+        assert.strictEqual(messages.some((message) => message.type === 'applicationData'), true);
+        assert.strictEqual(messages.some((message) => message.type === 'resourceGraph'), true);
     });
 
     test('sync failure from service posts error without success toast', async () => {
