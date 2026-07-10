@@ -779,13 +779,13 @@ body {
     color: var(--vscode-inputValidation-infoBorder);
 }
 
-.argocd-graph-affordance--truncated {
-    border: 1px solid var(--warning-border);
-    background: var(--warning-bg);
+.argocd-graph-affordance--grouped {
+    border: 1px solid var(--info-border);
+    background: var(--info-bg);
 }
 
-.argocd-graph-affordance--truncated .codicon {
-    color: var(--vscode-inputValidation-warningBorder);
+.argocd-graph-affordance--grouped .codicon {
+    color: var(--vscode-inputValidation-infoBorder);
 }
 
 .argocd-graph-action-notice {
@@ -881,6 +881,34 @@ body {
 
 .argocd-graph-node__badges {
     margin-top: 6px;
+}
+
+.argocd-graph-node--kind-group {
+    cursor: pointer;
+}
+
+.argocd-graph-node__kind-group-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin-left: auto;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--foreground);
+    cursor: pointer;
+}
+
+.argocd-graph-node__kind-group-toggle:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.argocd-graph-node__kind-group-toggle:focus-visible {
+    outline: 2px solid var(--focus-border);
+    outline-offset: 1px;
 }
 
 .argocd-graph-node__overflow {

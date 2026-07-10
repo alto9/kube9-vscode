@@ -1,29 +1,33 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { ApplicationResourceGraph } from '../../../types/applicationResourceGraph';
+import { applyKindGrouping } from './applyKindGrouping';
 import { applyGraphLayout } from './applyDagreLayout';
 import { mapGraphDtoToFlow } from './mapGraphDtoToFlow';
 import { shouldRelayout } from './shouldRelayout';
 import { sortNodesForFocusOrder } from './focusOrder';
-import type { GraphLayoutCache, GraphNodeData, LayoutPosition } from './types';
+import type { FlowNodeData, GraphLayoutCache, LayoutPosition } from './types';
 
 export interface MergeGraphFlowStateInput {
     graph: ApplicationResourceGraph;
     cache: GraphLayoutCache;
     explicitFitView?: boolean;
+    expandedKinds?: ReadonlySet<string>;
+    groupPresentationChanged?: boolean;
 }
 
 export interface MergeGraphFlowStateResult {
-    nodes: Node<GraphNodeData>[];
+    nodes: Node<FlowNodeData>[];
     edges: Edge[];
     cache: GraphLayoutCache;
     relayouted: boolean;
     shouldAutoFit: boolean;
+    isGrouped: boolean;
 }
 
 function retainPositions(
-    nodes: Node<GraphNodeData>[],
+    nodes: Node<FlowNodeData>[],
     positions: Map<string, LayoutPosition>
-): Node<GraphNodeData>[] {
+): Node<FlowNodeData>[] {
     return nodes.map((node) => {
         const cached = positions.get(node.id);
         if (!cached) {
@@ -37,8 +41,14 @@ function retainPositions(
 }
 
 export function mergeGraphFlowState(input: MergeGraphFlowStateInput): MergeGraphFlowStateResult {
-    const { graph, explicitFitView = false } = input;
-    const { nodes: mappedNodes, edges } = mapGraphDtoToFlow(graph);
+    const {
+        graph,
+        explicitFitView = false,
+        expandedKinds = new Set<string>(),
+        groupPresentationChanged = false
+    } = input;
+    const { nodes: mappedNodes, edges: mappedEdges } = mapGraphDtoToFlow(graph);
+    const grouped = applyKindGrouping(mappedNodes, mappedEdges, expandedKinds);
     const previousStructureVersion = input.cache.structureVersion;
     const structureVersionChanged =
         previousStructureVersion !== null && previousStructureVersion !== graph.structureVersion;
@@ -51,14 +61,15 @@ export function mergeGraphFlowState(input: MergeGraphFlowStateInput): MergeGraph
         topologySourceChanged,
         previousNodeCount: input.cache.nodeCount,
         nextNodeCount: graph.nodes.length,
-        explicitFitView
+        explicitFitView,
+        groupPresentationChanged
     });
 
-    let nodes = mappedNodes;
+    let nodes = grouped.nodes;
     if (relayout) {
-        nodes = applyGraphLayout(mappedNodes, edges);
+        nodes = applyGraphLayout(grouped.nodes, grouped.edges);
     } else {
-        nodes = retainPositions(mappedNodes, input.cache.positions);
+        nodes = retainPositions(grouped.nodes, input.cache.positions);
     }
 
     const positions = new Map<string, LayoutPosition>();
@@ -68,9 +79,10 @@ export function mergeGraphFlowState(input: MergeGraphFlowStateInput): MergeGraph
 
     return {
         nodes: sortNodesForFocusOrder(nodes),
-        edges,
+        edges: grouped.edges,
         relayouted: relayout,
-        shouldAutoFit: isInitial || explicitFitView,
+        shouldAutoFit: (isInitial || explicitFitView) && !groupPresentationChanged,
+        isGrouped: grouped.isGrouped,
         cache: {
             positions,
             structureVersion: graph.structureVersion,
@@ -87,4 +99,9 @@ export function createEmptyLayoutCache(): GraphLayoutCache {
         topologySource: null,
         nodeCount: 0
     };
+}
+
+export function collectMappedDtoNodeIds(graph: ApplicationResourceGraph): Set<string> {
+    const { nodes } = mapGraphDtoToFlow(graph);
+    return new Set(nodes.map((node) => node.id));
 }

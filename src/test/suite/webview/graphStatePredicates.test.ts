@@ -148,9 +148,27 @@ suite('graph state predicates', () => {
         assert.strictEqual(shouldShowGraphTopologyAffordances(loaded), true);
     });
 
-    test('show truncation affordance when loaded and truncated', () => {
+    test('show grouping affordance when loaded with large application', () => {
+        const managed: ResourceGraphNode[] = Array.from({ length: 45 }, (_, index) => ({
+            id: `res:guestbook/Deployment/app-${index}`,
+            role: 'managed_resource' as const,
+            resourceKey: { namespace: 'guestbook', kind: 'Deployment', name: `app-${index}` },
+            status: { syncStatus: 'Synced' as const, healthStatus: 'Healthy' as const },
+            label: `app-${index}`,
+            kindLabel: 'Deployment'
+        }));
+        const root = graphWithManagedResources().nodes[0];
         const loaded = context({
-            resourceGraph: graphWithManagedResources({ truncated: true })
+            resourceGraph: {
+                ...graphWithManagedResources(),
+                nodes: [root, ...managed],
+                edges: managed.map((node) => ({
+                    id: `${root.id}->${node.id}:manages`,
+                    source: root.id,
+                    target: node.id,
+                    relationship: 'manages' as const
+                }))
+            }
         });
         assert.strictEqual(shouldShowGraphTopologyAffordances(loaded), true);
     });

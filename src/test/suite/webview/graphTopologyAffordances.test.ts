@@ -6,19 +6,20 @@ import {
     type ResourceGraphNode
 } from '../../../types/applicationResourceGraph';
 import {
-    GRAPH_TRUNCATION_AFFORDANCE_MESSAGE,
+    LARGE_APP_GROUPING_AFFORDANCE_MESSAGE,
     LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE,
     OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE,
     countManagedResourceNodes,
     getLimitedTopologyAffordanceMessage,
     hasVisibleManagedTopology,
-    shouldShowLimitedTopologyAffordance,
-    shouldShowTruncationAffordance
+    shouldShowLargeAppGroupingAffordance,
+    shouldShowLimitedTopologyAffordance
 } from '../../../webview/argocd-application/graph/graphTopologyAffordanceRules';
 import {
     GRAPH_ASSEMBLY_INVALID_ROW_BANNER_MESSAGE,
     shouldShowGraphAssemblyInfoBanner
 } from '../../../webview/argocd-application/graph/graphAssemblyInfoRules';
+
 function rootOnlyGraph(topologyMode: 'full' | 'limited' = 'limited'): ApplicationResourceGraph {
     const nodes: ResourceGraphNode[] = [
         {
@@ -42,7 +43,7 @@ function rootOnlyGraph(topologyMode: 'full' | 'limited' = 'limited'): Applicatio
     };
 }
 
-function limitedGraphWithManagedResources(options?: { truncated?: boolean }): ApplicationResourceGraph {
+function limitedGraphWithManagedResources(): ApplicationResourceGraph {
     const root = rootOnlyGraph('limited').nodes[0];
     const managed: ResourceGraphNode = {
         id: 'res:guestbook/Deployment/ui',
@@ -65,11 +66,36 @@ function limitedGraphWithManagedResources(options?: { truncated?: boolean }): Ap
                 relationship: 'manages'
             }
         ],
-        truncated: options?.truncated,
         structureVersion: computeStructureVersion({
             nodes,
             edges: [{ source: root.id, target: managed.id }]
         })
+    };
+}
+
+function largeGraphWithManagedResources(count: number): ApplicationResourceGraph {
+    const root = rootOnlyGraph('limited').nodes[0];
+    const managed: ResourceGraphNode[] = Array.from({ length: count }, (_, index) => ({
+        id: `res:guestbook/Deployment/app-${index}`,
+        role: 'managed_resource' as const,
+        resourceKey: { namespace: 'guestbook', kind: 'Deployment', name: `app-${index}` },
+        status: { syncStatus: 'Synced' as const, healthStatus: 'Healthy' as const },
+        label: `app-${index}`,
+        kindLabel: 'Deployment'
+    }));
+    const nodes = [root, ...managed];
+    const edges = managed.map((node) => ({
+        id: `${root.id}->${node.id}:manages`,
+        source: root.id,
+        target: node.id,
+        relationship: 'manages' as const
+    }));
+
+    return {
+        ...rootOnlyGraph('limited'),
+        nodes,
+        edges,
+        structureVersion: computeStructureVersion({ nodes, edges })
     };
 }
 
@@ -96,15 +122,10 @@ suite('graph topology affordances', () => {
         assert.strictEqual(shouldShowLimitedTopologyAffordance(graph), false);
     });
 
-    test('shows truncation affordance separately from limited topology', () => {
-        const graph = limitedGraphWithManagedResources({ truncated: true });
-        assert.strictEqual(shouldShowLimitedTopologyAffordance(graph), true);
-        assert.strictEqual(shouldShowTruncationAffordance(graph), true);
-    });
-
-    test('hides truncation affordance when truncated is false or absent', () => {
-        const graph = limitedGraphWithManagedResources();
-        assert.strictEqual(shouldShowTruncationAffordance(graph), false);
+    test('shows large-app grouping affordance for graphs above threshold', () => {
+        const graph = largeGraphWithManagedResources(45);
+        assert.strictEqual(shouldShowLargeAppGroupingAffordance(graph), true);
+        assert.strictEqual(shouldShowLargeAppGroupingAffordance(largeGraphWithManagedResources(10)), false);
     });
 
     test('limited topology copy explains incomplete relationships', () => {
@@ -113,10 +134,10 @@ suite('graph topology affordances', () => {
         assert.doesNotMatch(LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE, /fully equivalent/i);
     });
 
-    test('truncation copy is distinct from limited topology copy', () => {
-        assert.notStrictEqual(LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE, GRAPH_TRUNCATION_AFFORDANCE_MESSAGE);
-        assert.match(GRAPH_TRUNCATION_AFFORDANCE_MESSAGE, /truncat/i);
-        assert.match(GRAPH_TRUNCATION_AFFORDANCE_MESSAGE, /node limit/i);
+    test('large-app grouping copy is distinct from limited topology copy', () => {
+        assert.notStrictEqual(LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE, LARGE_APP_GROUPING_AFFORDANCE_MESSAGE);
+        assert.match(LARGE_APP_GROUPING_AFFORDANCE_MESSAGE, /grouped by kind/i);
+        assert.match(LARGE_APP_GROUPING_AFFORDANCE_MESSAGE, /Details tab/i);
     });
 
     test('owner-ref topology uses inferred relationship copy', () => {

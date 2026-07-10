@@ -303,3 +303,27 @@ suite('ApplicationResourceGraphAssembler', () => {
         }
     });
 });
+
+function deploymentRows(count: number): ArgoCDResource[] {
+    return Array.from({ length: count }, (_, index) =>
+        deploymentRow({ name: `guestbook-${index}`, namespace: 'guestbook' })
+    );
+}
+
+suite('ApplicationResourceGraphAssembler large applications', () => {
+    test('delivers complete managed node set above grouping threshold without truncation', () => {
+        const resources = deploymentRows(45);
+        const application = baseApplication({ resources });
+
+        const { graph } = buildCrdFlatApplicationResourceGraph({
+            application,
+            applicationKey: APPLICATION_KEY,
+            observedAt: '2024-06-01T12:00:00.000Z'
+        });
+
+        assert.strictEqual(countManagedResourceNodes(graph), 45);
+        assert.strictEqual(graph.nodes.length, 46);
+        assert.strictEqual(countValidCrdFlatResourceRows(resources), 45);
+        assert.notStrictEqual(graph.truncated, true);
+    });
+});

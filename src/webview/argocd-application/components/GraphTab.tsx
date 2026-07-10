@@ -9,14 +9,17 @@ import {
 import type { ApplicationResourceGraph } from '../../../types/applicationResourceGraph';
 import { ArgoCDApplication } from '../../../types/argocd';
 import { ResourceGraphNodeTile } from '../graph/ResourceGraphNodeTile';
+import { KindGroupNodeTile } from '../graph/KindGroupNodeTile';
+import { KindGroupActionsProvider } from '../graph/KindGroupActionsContext';
 import { GraphInteractionProvider, type GraphInteractionContextValue } from '../graph/GraphInteractionContext';
 import {
+    collectMappedDtoNodeIds,
     createEmptyLayoutCache,
     mergeGraphFlowState,
     type GraphLayoutCache
 } from '../graph/mergeGraphFlowState';
 import { applyNodeSelection, resolveSelectionAfterMerge } from '../graph/graphSelection';
-import type { GraphNodeData } from '../graph/types';
+import type { FlowNodeData } from '../graph/types';
 import {
     applicationKeyChanged,
     serializeApplicationKey,
@@ -61,7 +64,8 @@ interface GraphTabProps {
 }
 
 const nodeTypes = {
-    resourceGraph: ResourceGraphNodeTile
+    resourceGraph: ResourceGraphNodeTile,
+    kindGroup: KindGroupNodeTile
 };
 
 interface GraphCanvasProps {
@@ -134,7 +138,8 @@ function GraphCanvas({
     const applicationKeyRef = React.useRef<string | null>(null);
     const viewportCacheRef = React.useRef<GraphViewport | null>(null);
     const selectedNodeIdRef = React.useRef<string | null>(null);
-    const [nodes, setNodes] = React.useState<Node<GraphNodeData>[]>([]);
+    const expandedKindsRef = React.useRef<Set<string>>(new Set());
+    const [nodes, setNodes] = React.useState<Node<FlowNodeData>[]>([]);
     const [edges, setEdges] = React.useState<Edge[]>([]);
 
     const persistViewport = React.useCallback(() => {
@@ -142,26 +147,42 @@ function GraphCanvas({
     }, [getViewport]);
 
     const applyGraph = React.useCallback(
-        (graph: ApplicationResourceGraph, options?: { explicitFitView?: boolean; autoFit?: boolean }) => {
+        (
+            graph: ApplicationResourceGraph,
+            options?: {
+                explicitFitView?: boolean;
+                autoFit?: boolean;
+                groupPresentationChanged?: boolean;
+            }
+        ) => {
             const explicitFitView = options?.explicitFitView ?? false;
+            const groupPresentationChanged = options?.groupPresentationChanged ?? false;
             const keyChanged = applicationKeyChanged(applicationKeyRef.current, graph.applicationKey);
 
             if (keyChanged) {
                 layoutCacheRef.current = createEmptyLayoutCache();
                 viewportCacheRef.current = null;
                 selectedNodeIdRef.current = null;
+                expandedKindsRef.current = new Set();
             }
             applicationKeyRef.current = serializeApplicationKey(graph.applicationKey);
 
             const merged = mergeGraphFlowState({
                 graph,
                 cache: layoutCacheRef.current,
-                explicitFitView
+                explicitFitView,
+                expandedKinds: expandedKindsRef.current,
+                groupPresentationChanged
             });
             layoutCacheRef.current = merged.cache;
 
             const nextNodeIds = new Set(merged.nodes.map((node) => node.id));
-            const nextSelectedId = resolveSelectionAfterMerge(selectedNodeIdRef.current, nextNodeIds);
+            const dtoNodeIds = collectMappedDtoNodeIds(graph);
+            const nextSelectedId = resolveSelectionAfterMerge(
+                selectedNodeIdRef.current,
+                nextNodeIds,
+                dtoNodeIds
+            );
             selectedNodeIdRef.current = nextSelectedId;
 
             setNodes(applyNodeSelection(merged.nodes, nextSelectedId));
@@ -182,9 +203,12 @@ function GraphCanvas({
                         shouldAutoFit: merged.shouldAutoFit,
                         explicitFitView,
                         cachedViewport
-                    })
+                    }) ||
+                    groupPresentationChanged
                 ) {
-                    setViewport(cachedViewport!, { duration: zoomDuration });
+                    if (cachedViewport) {
+                        setViewport(cachedViewport, { duration: zoomDuration });
+                    }
                 }
             });
         },
@@ -199,15 +223,30 @@ function GraphCanvas({
         applyGraph(resourceGraph, { explicitFitView: true, autoFit: true });
     }, [applyGraph, resourceGraph]);
 
+    const handleToggleKindGroup = React.useCallback(
+        (kind: string) => {
+            const nextExpanded = new Set(expandedKindsRef.current);
+            if (nextExpanded.has(kind)) {
+                nextExpanded.delete(kind);
+            } else {
+                nextExpanded.add(kind);
+            }
+            expandedKindsRef.current = nextExpanded;
+            applyGraph(resourceGraph, { groupPresentationChanged: true });
+        },
+        [applyGraph, resourceGraph]
+    );
+
     const handleSelectionChange = React.useCallback(
-        ({ nodes: selectedNodes }: { nodes: Node<GraphNodeData>[] }) => {
+        ({ nodes: selectedNodes }: { nodes: Node<FlowNodeData>[] }) => {
             selectedNodeIdRef.current = selectedNodes[0]?.id ?? null;
         },
         []
     );
 
     return (
-        <div className="argocd-graph-tab" data-testid="graph-tab-canvas">
+        <KindGroupActionsProvider value={{ onToggleKindGroup: handleToggleKindGroup }}>
+            <div className="argocd-graph-tab" data-testid="graph-tab-canvas">
             {graphInteraction.actionNotice && (
                 <div className="argocd-graph-action-notice" role="status">
                     <span>{graphInteraction.actionNotice}</span>
@@ -251,6 +290,7 @@ function GraphCanvas({
                 {graphMerging && <GraphLoadingOverlay />}
             </div>
         </div>
+        </KindGroupActionsProvider>
     );
 }
 
