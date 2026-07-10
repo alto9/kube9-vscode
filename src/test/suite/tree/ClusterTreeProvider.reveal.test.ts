@@ -121,6 +121,38 @@ suite('ClusterTreeProvider reveal', () => {
         assert.strictEqual(revealedItem, service);
     });
 
+    test('revealTreeResource maps Pod through workloads hierarchy', async () => {
+        const pod = treeItem(
+            'guestbook-ui-pod',
+            'pod',
+            resourceData({ resourceName: 'guestbook-ui-pod', namespace: 'guestbook' })
+        );
+        const deployment = treeItem(
+            'guestbook-ui',
+            'deployment',
+            resourceData({ resourceName: 'guestbook-ui', namespace: 'guestbook' })
+        );
+
+        providerInternals.getCategoryChildren = async (category) => {
+            if (category.type === 'workloads') {
+                return [treeItem('Deployments', 'deployments', resourceData())];
+            }
+            if (category.type === 'deployments') {
+                return [deployment];
+            }
+            if (category.type === 'deployment') {
+                return [pod];
+            }
+            return [];
+        };
+
+        const revealed = await provider.revealTreeResource('Pod', 'guestbook-ui-pod', 'guestbook');
+
+        assert.strictEqual(revealed, true);
+        assert.strictEqual(revealedItem, pod);
+        assert.strictEqual(focusCommandCalls, 1);
+    });
+
     test('revealTreeResource maps ConfigMap to configuration/configmaps', async () => {
         const configMap = treeItem(
             'guestbook-config',

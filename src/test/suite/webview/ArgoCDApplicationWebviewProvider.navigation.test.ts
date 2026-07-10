@@ -174,6 +174,33 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
         assert.strictEqual(getErrorMessages().length, 0);
     });
 
+    test('viewInTree shows warning on context mismatch', async () => {
+        mockTreeProvider = {
+            refresh: () => {
+                /**/
+            },
+            isCurrentContext: async () => false,
+            getKubeconfigPath: () => '/mock/kubeconfig',
+            revealTreeApplication: async () => {
+                revealTreeApplicationCalls += 1;
+                return true;
+            },
+            revealTreeResource: async () => true
+        } as unknown as ClusterTreeProvider;
+
+        const panel = await openPanel();
+        const webview = panel.webview as unknown as MockWebviewWithFire;
+
+        webview._fireMessage({ type: 'viewInTree' });
+        await flushUntil(() => getWarningMessages().length > 0);
+
+        assert.strictEqual(revealTreeApplicationCalls, 0);
+        assert.strictEqual(focusCommandCalls, 0);
+        const warning = getWarningMessages().at(-1);
+        assert.ok(warning);
+        assert.match(warning, /context does not match/i);
+    });
+
     test('viewInTree shows warning when application is not found', async () => {
         mockTreeProvider = {
             refresh: () => {
