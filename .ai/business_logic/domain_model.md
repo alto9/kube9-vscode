@@ -167,7 +167,15 @@ Rules below are the **kube9-vscode reference baseline** for built-in Kubernetes 
 Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
 
 ### ArgoCD diagram interface
-- Define how selected graph nodes visually distinguish focus, selection, and open overflow states without changing the selected resource action scope.
-- Decide whether unsupported or non-navigable resource nodes hide the overflow menu or show disabled explanatory entries.
-- Specify how progressive disclosure for very large Applications preserves access to every returned managed resource.
-- Align final action labels and disabled-state copy for Application root overflow versus managed-resource overflow menus.
+
+**Resolved (graph tiles and overflow, issue #224):**
+
+- **Tile visual states** do not change action scope. **Focus** uses `:focus-visible` with a 2px `--vscode-focusBorder` outline on the tile group. **Selection** adds `argocd-graph-node--selected` (2px focus-border box shadow) from React Flow selection. **Hover** applies `--vscode-list-hoverBackground` on the tile when the pointer is over it and the tile is not selected. **Overflow-open** adds `argocd-graph-node--overflow-open` while the menu is open; the ⋮ trigger exposes `aria-expanded=true`. Primary tile activation (click, Enter, Space) selects only; it does not run menu actions or mutate cluster state.
+- **Unsupported or non-navigable managed-resource nodes** hide the overflow control entirely when the Kind Capability Registry yields zero eligible actions. There is no disabled-only ⋮ affordance and no placeholder “No actions” menu.
+- **Application root overflow** shows **View in tree** only (`viewInTree` message). Sync, refresh, and hard refresh stay on the webview header and sub-header in v1; root overflow does not duplicate GitOps operations.
+- **Managed-resource overflow labels (v1):** Deployment — **Restart rollout**, **Navigate to resource in tree**; other navigate-supported kinds — **Navigate to resource in tree** only. Labels match `graphNodeCapabilities.ts` and host `actionId` registry entries.
+- **Progressive disclosure for very large Applications** (grouping, collapse, capped render) is owned by issue #222; tiles on visible nodes still follow the rules above.
+
+**Deferred:**
+
+- **`resource.openDescribe` on graph tiles** — registry entry exists for future direct describe routing from `ManagedResourceKey`; v1 graph overflow does not expose it. Users open describe via tree reveal (#221) or Details tab navigate affordances.

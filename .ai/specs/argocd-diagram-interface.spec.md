@@ -76,6 +76,18 @@ Runtime and serialization tests should cover `resourceGraph`, `resourceAction`, 
 
 Interface validation should include graph layout readability, selectable tiles, overflow menu behavior, View In Tree from a selected resource, Details fallback, limited-topology messaging, and large-application grouping or expansion. Accessibility review must include keyboard traversal through header, toolbar, tiles, overflow menus, Graph/Details tabs, high-contrast status badges, reduced-motion behavior, and focus preservation across refresh.
 
+**Graph tile and overflow test matrix (issue #224):**
+
+| Area | Module / suite | Must prove |
+|------|----------------|------------|
+| Overflow registry | `argocdGraphNodeCapabilities.test.ts` | Deployment exposes restart + navigate; application root exposes view-in-tree only; unknown kinds return empty actions; webview navigate kinds match host `NAVIGATE_TREE_SUPPORTED_KINDS` |
+| Host dispatch | `kindCapabilityRegistry.test.ts` | Unknown `actionId` and unsupported kind post `resourceActionResult` with explicit messages; restart progress/result sequence; cancelled restart does not throw |
+| Protocol | `argocdApplicationProtocol.test.ts` | `resourceAction` / progress / result shapes validate |
+| Accessibility helpers | `argocdGraphAccessibility.test.ts` | Accessible name format; focus order sort; overflow roving index; reduced-motion zoom duration |
+| Manual (pre-#225) | Argo CD cluster or Extension Development Host | Keyboard path in `.ai/interface/accessibility.md` **Resolved (graph tile manual pass)**; dismissible action-notice on failure |
+
+**Implementation polish (#224):** Add tile `:hover` and `argocd-graph-node--overflow-open` styling; wire overflow-open class from `ResourceGraphNodeTile` when menu is open; suppress action-notice banner when result message is `Cancelled`.
+
 Build and packaging checks should run the existing repository commands for the affected scope: `npm run compile`, `npm run build`, `npm run test:unit`, and `npm run package` as appropriate for implementation changes. Packaging review should confirm Argo CD webview scripts, CSS, React Flow styles, and shared webview header CSS are present in the VSIX, and bundle-size changes to `media/argocd-application/main.js` remain within the documented target or are explicitly justified.
 
 ## References

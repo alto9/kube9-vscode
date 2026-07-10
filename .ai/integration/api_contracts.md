@@ -124,10 +124,10 @@ Graph tile menus invoke **host-executed** actions by stable `actionId`. Initial 
 | `application.refresh` | Application root | Same as sync refresh path |
 | `application.hardRefresh` | Application root | Annotation `hard` + confirmation |
 | `deployment.restartRollout` | `Deployment` | Kubernetes workload layer (rollout restart via Deployment patch or kubectl rollout); **not** Argo CD API |
-| `resource.navigateTree` | All graph nodes with tree mapping | Existing `navigateToResource` / tree reveal |
-| `resource.openDescribe` | Kinds with describe support | Route to describe webview command surface |
+| `resource.navigateTree` | Kinds in `NAVIGATE_TREE_SUPPORTED_KINDS` (Deployment, StatefulSet, DaemonSet, CronJob, Pod, Service, ConfigMap, Secret) | Existing `navigateToResource` / tree reveal |
+| `resource.openDescribe` | Kinds with describe support | Route to describe webview command surface _(registry entry; graph tile overflow not wired in v1 — see domain_model)_ |
 
-Unknown `actionId` → `resourceActionResult` with `success: false` and clear message. Unsupported kind for a known id → same, without host crash.
+Unknown `actionId` → `resourceActionResult` with `success: false` and message `Unknown action: {actionId}`. Unsupported kind for a known id → `success: false` with message `Action {actionId} is not supported for kind {kind}`; host must not crash. User-cancelled restart confirmation → `success: false`, message `Cancelled`; webview suppresses the action-notice banner for that message.
 
 ## Argo CD application webview protocol
 
