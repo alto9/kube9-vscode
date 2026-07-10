@@ -140,7 +140,9 @@ Algorithm (implementation may hash the canonical string; SHA-256 is acceptable):
 3. Build payload: `nodes:{ids joined by newline}\nedges:{pairs joined by newline}`.
 4. Set `structureVersion` to a stable digest of that payload (for example SHA-256 hex).
 
-Bump `structureVersion` when node ids are added/removed or when any edge source/target pair changes. Do not bump for sync/health/message-only updates on existing ids.
+Bump `structureVersion` when node ids are added/removed or when any edge source/target pair changes. Do not bump for sync/health/message/label-only updates on existing ids. Edge **relationship** or edge **id** string changes do not bump the fingerprint when source/target pairs are unchanged.
+
+Producers MUST set `structureVersion` on every `resourceGraph` post. Consumers MUST treat a missing `structureVersion` as a structural update (full relayout, no position merge).
 
 ## Open Implementation Decisions
 
@@ -148,4 +150,4 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 ### ArgoCD graph DTO details
 - Decide when `apiGroup` / `group` is required for tree navigation and action routing, and update `ManagedResourceKey` parsing and serialization together. _(M16 protocol / tree-reveal issues.)_
-- Define whether large-application grouping is represented in the DTO as grouped nodes or remains an interface-only transform over complete resource nodes. _(M16 large-application issue.)_
+- Define whether large-application grouping is represented in the DTO as grouped nodes or remains an interface-only transform over complete resource nodes. _(M16 #222.)_

@@ -37,6 +37,12 @@ The canonical webview protocol uses `resourceGraph` for complete graph snapshots
 
 The webview owns rendering, selection, viewport, focus, menu state, and layout cache for the panel session. Refresh merges preserve selection, viewport, and positions when stable node ids survive; structural changes use `structureVersion` to determine when relayout or selection clearing is needed.
 
+**Refresh merge (host + webview):**
+
+- **Host:** `mergeApplicationResourceGraphSnapshots` shallow-merges status/labels when `structureVersion` and node id sets match; otherwise posts the full incoming snapshot. See `.ai/data/consistency.md`.
+- **Webview:** `mergeGraphFlowState` retains React Flow positions and restores viewport on attribute-only ticks; relayouts on `structureVersion` change, `topologySource` change, node add/remove, initial load, or explicit fit-view. Selection clears only when the selected `GraphNodeId` is absent from the incoming DTO.
+- **Terminal operations:** After sync/refresh/hard refresh polling reaches a terminal phase, the host invalidates application cache and posts fresh `applicationData` + `resourceGraph` before the panel considers the operation complete.
+
 ## Testing Strategy
 
 Contract validation should prove the CRD-flat baseline first:
@@ -52,6 +58,21 @@ Contract validation should prove the CRD-flat baseline first:
 Resource-tree and owner-reference enrichment tests should verify that optional edges do not override CRD sync/health for matching resource keys.
 
 Runtime and serialization tests should cover `resourceGraph`, `resourceAction`, `resourceActionProgress`, and `resourceActionResult` message handling, including stable node ids, `structureVersion` merge behavior, selected-node preservation, removed-node selection clearing, and host-owned polling after sync, refresh, hard refresh, or rollout restart.
+
+**Refresh merge test matrix (unit):**
+
+| Area | Module / suite | Must prove |
+|------|----------------|------------|
+| Fingerprint | `applicationResourceGraph.test.ts` → `computeStructureVersion` | Deterministic; unchanged on status/label-only edits; changes on node add/remove or edge endpoint change |
+| Host merge | `ApplicationResourceGraphMerger.test.ts` | Attribute-only tick (`structureChanged: false`); structural add/remove/rename; `ApplicationKey` change; structureVersion mismatch guard |
+| Webview layout | `argocdGraphLayout.test.ts` | Position retention on matching `structureVersion`; relayout on structural change without auto-fit; selection resolve/clear; viewport preserve rules |
+| Provider push | `ArgoCDApplicationWebviewProvider.graph.test.ts` | Open and refresh post `applicationData` then `resourceGraph`; second load with same topology preserves `structureVersion` |
+| Long operations | `ArgoCDApplicationWebviewProvider.trackOperation.test.ts` | Terminal sync posts fresh `applicationData` and `resourceGraph`; `operationProgress` sequence |
+
+**Gap tests to add during #227 implementation:**
+
+- Webview: `topologySource` change triggers relayout while preserving positions for surviving ids when feasible.
+- Host: terminal operation path calls cache invalidation before final graph post (`reloadApplicationAfterTerminalOperation`).
 
 Interface validation should include graph layout readability, selectable tiles, overflow menu behavior, View In Tree from a selected resource, Details fallback, limited-topology messaging, and large-application grouping or expansion. Accessibility review must include keyboard traversal through header, toolbar, tiles, overflow menus, Graph/Details tabs, high-contrast status badges, reduced-motion behavior, and focus preservation across refresh.
 
