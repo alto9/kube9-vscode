@@ -13,6 +13,7 @@ import type {
     ResourceNodeRef
 } from '../types/argocdWebviewProtocol';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
+import { revealManagedResourceInTree } from './treeRevealHelper';
 
 export const ACTION_DEPLOYMENT_RESTART_ROLLOUT = 'deployment.restartRollout';
 export const ACTION_RESOURCE_NAVIGATE_TREE = 'resource.navigateTree';
@@ -299,65 +300,43 @@ async function handleResourceNavigateTree(
         `Navigating to ${kind} ${name}...`
     );
 
-    if (!ctx.treeProvider.getKubeconfigPath()) {
-        postResourceActionProgress(ctx.panel, message, 'Failed', 'Tree view is unavailable');
+    const result = await revealManagedResourceInTree(
+        { treeProvider: ctx.treeProvider, panelContext: ctx.context },
+        kind,
+        name,
+        namespace
+    );
+
+    if (result.success) {
+        postResourceActionProgress(
+            ctx.panel,
+            message,
+            'Succeeded',
+            result.message ?? `Focused ${kind} ${name} in cluster tree`
+        );
         postResourceActionResult(
             ctx.panel,
             message,
-            false,
-            `${actionId} failed for ${kind} ${name}: tree view is unavailable`
+            true,
+            result.message ?? `Focused ${kind} ${name} in cluster tree`
         );
         return;
     }
 
-    const contextMatches = await ctx.treeProvider.isCurrentContext(ctx.context);
-    if (!contextMatches) {
-        postResourceActionProgress(ctx.panel, message, 'Failed', 'Cluster context mismatch');
-        postResourceActionResult(
-            ctx.panel,
-            message,
-            false,
-            `${actionId} failed for ${kind} ${name}: active cluster context does not match this application`
-        );
-        return;
-    }
+    const failureDetail =
+        result.reason === 'not_found'
+            ? 'Resource not found in tree'
+            : result.reason === 'context_mismatch'
+              ? 'Cluster context mismatch'
+              : result.reason === 'tree_unavailable'
+                ? 'Tree view is unavailable'
+                : result.detail ?? 'Navigation failed';
 
-    try {
-        await vscode.commands.executeCommand('kube9.treeView.focus');
-        ctx.treeProvider.refresh();
-
-        const revealed = await ctx.treeProvider.revealTreeResource(kind, name, namespace);
-        if (revealed) {
-            postResourceActionProgress(
-                ctx.panel,
-                message,
-                'Succeeded',
-                `Focused ${kind} ${name} in cluster tree`
-            );
-            postResourceActionResult(
-                ctx.panel,
-                message,
-                true,
-                `Focused ${kind} ${name} in cluster tree`
-            );
-            return;
-        }
-
-        postResourceActionProgress(ctx.panel, message, 'Failed', 'Resource not found in tree');
-        postResourceActionResult(
-            ctx.panel,
-            message,
-            false,
-            `${actionId} failed for ${kind} ${name}: resource not found in cluster tree`
-        );
-    } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
-        postResourceActionProgress(ctx.panel, message, 'Failed', detail);
-        postResourceActionResult(
-            ctx.panel,
-            message,
-            false,
-            `${actionId} failed for ${kind} ${name}: ${detail}`
-        );
-    }
+    postResourceActionProgress(ctx.panel, message, 'Failed', failureDetail);
+    postResourceActionResult(
+        ctx.panel,
+        message,
+        false,
+        result.message ?? `${actionId} failed for ${kind} ${name}: ${failureDetail}`
+    );
 }

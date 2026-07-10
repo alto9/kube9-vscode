@@ -2227,6 +2227,53 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         return false;
     }
 
+    /**
+     * Reveal an Argo CD Application in the cluster tree by name and namespace.
+     *
+     * @returns true when the application was found and revealed.
+     */
+    public async revealTreeApplication(applicationName: string, applicationNamespace: string): Promise<boolean> {
+        if (!this.treeView || !this.kubeconfig) {
+            return false;
+        }
+
+        const clusterItem = await this.resolveClusterItemForReveal();
+        if (!clusterItem?.resourceData) {
+            return false;
+        }
+
+        try {
+            const categories = this.getCategories(clusterItem);
+            let argocdCategory = categories.find((cat) => cat.type === 'argocd');
+            if (!argocdCategory) {
+                argocdCategory = TreeItemFactory.createArgoCDCategory(clusterItem.resourceData);
+            }
+
+            const applications = await this.getCategoryChildren(argocdCategory);
+            const matchingApplication = applications.find(
+                (app) =>
+                    app.type === 'argocdApplication' &&
+                    this.itemMatchesResource(app, applicationName, applicationNamespace)
+            );
+
+            if (!matchingApplication) {
+                return false;
+            }
+
+            await this.treeView.reveal(matchingApplication, {
+                select: true,
+                focus: true,
+                expand: true
+            });
+            await vscode.commands.executeCommand('kube9ClusterView.focus');
+            return true;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Error revealing ArgoCD application ${applicationName}:`, errorMessage);
+            return false;
+        }
+    }
+
     private async resolveClusterItemForReveal(): Promise<ClusterTreeItem | undefined> {
         const currentContext = this.kubeconfig?.currentContext;
         if (!currentContext) {
