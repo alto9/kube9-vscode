@@ -1,3 +1,35 @@
+# [1.37.0](https://github.com/alto9/kube9-vscode/compare/v1.36.0...v1.37.0) (2026-07-13)
+
+
+### Bug Fixes
+
+* **argocd:** harden canonical graph protocol validation ([#223](https://github.com/alto9/kube9-vscode/issues/223)) ([177c49b](https://github.com/alto9/kube9-vscode/commit/177c49bb276e237cce71221ed312496935b7ec7d))
+* **argocd:** make tree reveal work in live VS Code sidebar ([76063dc](https://github.com/alto9/kube9-vscode/commit/76063dc134ddda1fb8e45d8cec3b0d9642b235c6))
+* **argocd:** polish graph tile overflow states and cancelled notices ([5becf52](https://github.com/alto9/kube9-vscode/commit/5becf52dd0d963d26d4c712e59c26d8fb2e443b6))
+* **kubernetes:** use strategic merge PATCH for workload mutations ([1494f6a](https://github.com/alto9/kube9-vscode/commit/1494f6a4963dfae7df1fa0c3045a42a78fbea7f0)), closes [#217](https://github.com/alto9/kube9-vscode/issues/217)
+* remove old schema ([ef5c1a0](https://github.com/alto9/kube9-vscode/commit/ef5c1a056dc22664d1c4651f9fdef784811bb9f6))
+* **webview:** address PR review for shell codicons and overflow a11y ([265019a](https://github.com/alto9/kube9-vscode/commit/265019ae2ea03c4752f43ef7d3ee89f99210aa29))
+* **webview:** close M15 React header parity audit gaps ([1cf0aae](https://github.com/alto9/kube9-vscode/commit/1cf0aae192fe694742bdabbba4e38aaa9be0e98b))
+* **webview:** load header CSS from shipped media/styles ([#201](https://github.com/alto9/kube9-vscode/issues/201)) ([e38ef12](https://github.com/alto9/kube9-vscode/commit/e38ef12680f1774bff870a380cb388e073950a7d))
+
+
+### Features
+
+* **argocd:** add kind grouping and complete large-app graph delivery ([03be3b6](https://github.com/alto9/kube9-vscode/commit/03be3b6dfb9d9f57fb7e9f8b56277ac90223a4bb)), closes [#222](https://github.com/alto9/kube9-vscode/issues/222)
+* **argocd:** complete CRD-flat graph assembly surfacing for [#226](https://github.com/alto9/kube9-vscode/issues/226) ([7449a02](https://github.com/alto9/kube9-vscode/commit/7449a02635b515b18af8002a3342ff46d1a93463))
+* **argocd:** reveal graph resources in cluster tree ([#221](https://github.com/alto9/kube9-vscode/issues/221)) ([16b3f96](https://github.com/alto9/kube9-vscode/commit/16b3f9664fc752b498394e83ef55375cdd7e9ee1))
+* **argocd:** split application header into primary and sub-header rows ([c7e1399](https://github.com/alto9/kube9-vscode/commit/c7e139900fbba9d74894dc1c41d4c2c8376cd21c))
+* **build:** ship webview-header.css under media/styles ([70f930d](https://github.com/alto9/kube9-vscode/commit/70f930da22b0f54e56de39cc824ee947967e0941))
+* **describe:** shared legacy workload header shell ([#198](https://github.com/alto9/kube9-vscode/issues/198)) ([0a9a06e](https://github.com/alto9/kube9-vscode/commit/0a9a06e9579381785e606f9d216e4c4148d1944b))
+* **events-viewer:** adopt unified header and sub-header row ([0bf85db](https://github.com/alto9/kube9-vscode/commit/0bf85db0ba57f44e5237343acfa0f02e03cdbb00)), closes [#195](https://github.com/alto9/kube9-vscode/issues/195)
+* **operator-status:** add AI Conformance types and parsing ([36b183c](https://github.com/alto9/kube9-vscode/commit/36b183ca42737c030f56eed0ec2b3591f5068312))
+* **reports:** add AI Conformance tree entry and host panel ([#214](https://github.com/alto9/kube9-vscode/issues/214)) ([0796e29](https://github.com/alto9/kube9-vscode/commit/0796e29484f98ed77bd824b47cfff7b57619bdd7))
+* **reports:** build AI Conformance report React webview ([#215](https://github.com/alto9/kube9-vscode/issues/215)) ([12a20af](https://github.com/alto9/kube9-vscode/commit/12a20af536c26e45256b14a5f73d6d535d681d74))
+* **webview:** add Actions overflow and three-primary cap ([#203](https://github.com/alto9/kube9-vscode/issues/203)) ([5f8cd17](https://github.com/alto9/kube9-vscode/commit/5f8cd172d0d8007236695fbe7c040834c46be035))
+* **webview:** add WebviewSubheader secondary control row ([#204](https://github.com/alto9/kube9-vscode/issues/204)) ([6aeb816](https://github.com/alto9/kube9-vscode/commit/6aeb816606ff6586780751087bf17ef858f981df))
+* **webview:** migrate namespace explorer to shared header chrome ([1047413](https://github.com/alto9/kube9-vscode/commit/1047413dde546353ddac2446bb1c487f2e0f9a97)), closes [#199](https://github.com/alto9/kube9-vscode/issues/199)
+* **webview:** shared shell HTML helper for React bundles ([#205](https://github.com/alto9/kube9-vscode/issues/205)) ([229b339](https://github.com/alto9/kube9-vscode/commit/229b339c2e9782599cf471cc50615a63d8cc6fa0)), closes [#root](https://github.com/alto9/kube9-vscode/issues/root)
+
 # [1.36.0](https://github.com/alto9/kube9-vscode/compare/v1.35.1...v1.36.0) (2026-05-31)
 
 
