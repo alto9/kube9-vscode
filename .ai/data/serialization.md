@@ -114,11 +114,12 @@ Actions that target a resource continue to send `kind`, `name`, `namespace` (and
 
 ## Topology from non-CRD sources
 
-When Argo CD resource-tree or operator snapshots are integrated:
+When Argo CD resource-tree or operator CLI transport is integrated:
 
 1. Normalize external nodes to `ManagedResourceKey` + optional extended status.
 2. Normalize parent links to `ResourceGraphEdge` with stable ids.
-3. Set `topologySource` accordingly before serialization.
+3. Set `topologySource: argocd_resource_tree` when assembling from resource-tree shape (REST or operator raw JSON).
+4. Set `topologyMode: full` when the tree is complete; `limited` on partial fallback.
 
 Raw upstream JSON must not leak into the webview bundle; normalize in the extension host (or a shared pure module) first.
 
@@ -156,3 +157,10 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - **`group` vs `apiGroup` on the wire (issue #223):** DTO field `apiGroup`; webview protocol field `group` on `resourceAction` and `ResourceNodeRef`. Map at the webview boundary (`buildResourceActionPayload` / `buildResourceNodeRef`). Validators reject `apiGroup` on webview messages. Do not emit both fields on the same message.
 
 - **Large-application grouping (issue #222):** Remains an **interface-only transform** over the complete flat DTO node set in v1. Kind group tiles are synthetic webview nodes; they are not serialized in `ApplicationResourceGraph.nodes`. The host does not set `truncated: true` to omit managed-resource nodes.
+
+**Deferred (M17):**
+
+- Extension read path: dedicated `OperatorResourceTreeClient` vs inline exec in `ApplicationResourceGraphBuilder`.
+- In-memory memo keyed by `ApplicationKey` + fetch timestamp for same panel session.
+- CRD ↔ tree reconciliation edge cases for duplicate Application node in tree response.
+- Graph filter webview state shape and selection-when-filtered behavior.

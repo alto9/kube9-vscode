@@ -4,7 +4,7 @@
 
 The ArgoCD Diagram Interface is the default Argo CD Application detail surface in kube9-vscode. It turns an Application's managed-resource inventory into an interactive graph inside VS Code so GitOps users can inspect every returned resource, understand topology when it is available, select resources, invoke kind-appropriate actions, and reveal matching Kubernetes tree items without leaving the IDE.
 
-The capability is owned by kube9-vscode. It does not require kube9-operator, kube9-api, kube9-web, kube9-desktop, or the native Argo CD UI for baseline behavior. The native Argo CD UI is prior art for graph density, overflow affordances, and resource-tree topology, while kube9-vscode contracts remain authoritative for local-first trust, webview accessibility, and VS Code theme behavior.
+The capability is owned by kube9-vscode. **CRD-flat baseline** graph rendering does not require kube9-operator, kube9-api, kube9-web, kube9-desktop, or the native Argo CD UI. In **operated clusters**, kube9-operator supplies on-demand Argo CD resource-tree JSON so users reach full topology without extension bearer-token setup. The native Argo CD UI is prior art for graph density, overflow affordances, resource-tree topology, and graph-side filtering, while kube9-vscode contracts remain authoritative for local-first trust, webview accessibility, and VS Code theme behavior.
 
 ## Functional Specification
 
@@ -12,7 +12,9 @@ Opening an Argo CD Application from the cluster tree presents Graph as the defau
 
 Each graph tile shows kind, name, Argo CD sync status, Argo CD health status, and an overflow control for eligible actions. Tile selection is a visible, keyboard-operable state that scopes resource-aware actions. Selection does not mutate cluster state by itself; mutating actions require explicit menu or command intent and host-side validation.
 
-Application-level sync, refresh, hard refresh, and View In Tree remain available from the webview header, sub-header, or Application root affordances. Managed-resource tiles support View In Tree and open describe/detail where resource identity can be mapped into the existing Kubernetes tree and describe surfaces. Deployment tiles may expose rollout restart through the Kind Capability Registry when RBAC and action eligibility allow it.
+Application-level sync, refresh, and hard refresh remain available from the webview header and sub-header. **Application-level View In Tree** is demoted or removed from sub-header, Application root overflow, and related page-level chrome; **managed-resource** "Navigate to resource in tree" (`resource.navigateTree`) is the primary graph-first navigation affordance. Managed-resource tiles support tree reveal and open describe/detail where resource identity can be mapped into the existing Kubernetes tree and describe surfaces. Deployment tiles may expose rollout restart through the Kind Capability Registry when RBAC and action eligibility allow it.
+
+The graph toolbar exposes **presentation-only filters** for resource name search, kind, and sync status (minimum parity with native Argo CD resource graph filtering). Active filters use **AND** semantics across dimensions. The host continues posting the **complete** `resourceGraph` DTO; filters hide or de-emphasize non-matching managed-resource tiles without mutating cluster state or trimming the host payload.
 
 Large Applications must remain usable. Grouping, collapse, capped initial render, or progressive disclosure may be used, but the experience must preserve a path to every returned managed resource through the graph, Details, tree navigation, or explicit expansion. Empty, partial, permission-denied, and limited-topology states use explicit user-facing messaging instead of blank canvases or silent graph degradation.
 
@@ -20,7 +22,22 @@ Large Applications must remain usable. Grouping, collapse, capped initial render
 
 The capability runs in the existing VS Code extension model: Node.js extension host plus isolated browser webview. Repository metadata requires VS Code engine `^1.80.0`, Node `>=22.0.0`, and `.nvmrc` pins local Node `v22.14.0`. The Argo CD webview is bundled by esbuild from `src/webview/argocd-application/index.tsx` into `media/argocd-application/main.js`. Browser-side graph rendering uses React 18, `@xyflow/react`, and a layout engine such as `@dagrejs/dagre`; these stay in the webview bundle and not in the extension host bundle.
 
-Kubernetes and Argo CD I/O happen only in the extension host. The required baseline source is the Argo CD Application CRD, including `status.resources`. Optional enrichment may use Argo CD REST `resource-tree` when explicitly configured and authorized, or Kubernetes owner references when enabled and permitted. Optional enrichment failure falls back to CRD-flat graph rendering without failing the whole panel when the Application CRD remains readable.
+Kubernetes and Argo CD I/O happen only in the extension host. The required baseline source is the Argo CD Application CRD, including `status.resources`. **Topology enrichment** follows strict precedence (see `.ai/integration/api_contracts.md`):
+
+```text
+Operated mode (kube9-operator installed, Argo CD detected):
+  1. Extension REST resource-tree — when kube9.argocd.restEnabled and authorized (wins over operator)
+  2. Operator CLI resource-tree — on-demand fetch via kubectl exec; raw JSON → buildResourceTreeApplicationResourceGraph
+  3. kubernetes_owner_ref — optional inferred edges
+  4. crd_flat — required baseline
+
+Basic mode (no operator):
+  1. Extension REST resource-tree — when restEnabled and authorized
+  2. kubernetes_owner_ref
+  3. crd_flat
+```
+
+On operator or REST success, the host emits `topologySource: argocd_resource_tree` and `topologyMode: full` (operator is transport only). Enrichment failure falls back to lower tiers without failing the whole panel when the Application CRD remains readable. `resource.navigateTree` / `ClusterTreeProvider.revealTreeResource` must map managed resources to the correct **destination namespace** workloads, refresh the cluster tree before lookup, and surface actionable failure copy when reveal fails.
 
 The graph data contract is `ApplicationResourceGraph`, a derived JSON-safe DTO with `applicationKey`, `nodes`, `edges`, `topologySource`, `topologyMode`, `structureVersion`, optional `layoutHint`, `observedAt`, and optional `truncated` (reserved; host omits in v1 — see [data_model.md](../data/data_model.md)). Stable identity is based on `ManagedResourceKey` and `GraphNodeId`, not visible labels or React Flow internals. `ArgoCDApplication.resources` remains the sync and health authority for CRD-backed resources.
 
@@ -35,7 +52,7 @@ The graph data contract is `ApplicationResourceGraph`, a derived JSON-safe DTO w
 
 The canonical webview protocol uses `resourceGraph` for complete graph snapshots and `resourceAction` for tile actions. `resourceActionProgress` and `resourceActionResult` communicate action progress and terminal state. Legacy naming such as `graphData`, `graphPatch`, and `graphAction` is treated as implementation cleanup, not the durable contract. The host preserves panel identity by `context:namespace:applicationName`, owns polling and cancellation, and pushes graph refreshes without disposing the panel.
 
-The webview owns rendering, selection, viewport, focus, menu state, and layout cache for the panel session. Refresh merges preserve selection, viewport, and positions when stable node ids survive; structural changes use `structureVersion` to determine when relayout or selection clearing is needed.
+The webview owns rendering, selection, viewport, focus, menu state, **graph filter state**, and layout cache for the panel session. Filter state is session-local to the open Application panel (same boundary as layout cache); no extension `globalState` in v1. Refresh merges preserve filter inputs, selection, viewport, and positions when stable node ids survive; structural changes use `structureVersion` to determine when relayout or selection clearing is needed. Filter changes do not bump `structureVersion`.
 
 **Refresh merge (host + webview):**
 
@@ -85,7 +102,7 @@ Runtime and serialization tests should cover `resourceGraph`, `resourceAction`, 
 - Webview: `topologySource` change triggers relayout while preserving positions for surviving ids when feasible.
 - Host: terminal operation path calls cache invalidation before final graph post (`reloadApplicationAfterTerminalOperation`).
 
-Interface validation should include graph layout readability, selectable tiles, overflow menu behavior, View In Tree from a selected resource, Details fallback, limited-topology messaging, and large-application grouping or expansion. Accessibility review must include keyboard traversal through header, toolbar, tiles, overflow menus, Graph/Details tabs, high-contrast status badges, reduced-motion behavior, and focus preservation across refresh.
+Interface validation should include graph layout readability, selectable tiles, overflow menu behavior, **Navigate to resource in tree** from a managed-resource tile, graph toolbar filters (name, kind, sync status), Details fallback, limited-topology messaging (suppressed when `topologyMode: full`), and large-application grouping or expansion. Accessibility review must include keyboard traversal through header, toolbar (zoom controls then filter controls), tiles, overflow menus, Graph/Details tabs, high-contrast status badges, reduced-motion behavior, and focus preservation across refresh.
 
 **Graph tile and overflow test matrix (issue #224):**
 
@@ -99,15 +116,33 @@ Interface validation should include graph layout readability, selectable tiles, 
 
 **Implementation polish (#224):** Add tile `:hover` and `argocd-graph-node--overflow-open` styling; wire overflow-open class from `ResourceGraphNodeTile` when menu is open; suppress action-notice banner when result message is `Cancelled`.
 
-**View In Tree test matrix (issue #221):**
+**Tree navigation test matrix (M17):**
 
 | Area | Module / suite | Must prove |
 |------|----------------|------------|
 | Registry (existing) | `kindCapabilityRegistry.test.ts` | `resource.navigateTree` success when `revealTreeResource` returns true; failure when false; context mismatch and tree-unavailable paths |
-| Tree provider | `ClusterTreeProvider.reveal.test.ts` (or extend existing tree suite) | `revealTreeResource` maps Deployment/Pod/Service/ConfigMap to correct categories; `revealTreeApplication` finds `argocdApplication` by name+namespace; returns false when item missing |
-| Provider stubs | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | `viewInTree` calls `revealTreeApplication` with panel namespace; `navigateToResource` delegates to shared reveal helper (no info-toast stub) |
-| Parity | `argocdGraphNodeCapabilities.test.ts` | Webview navigate kinds still match host `NAVIGATE_TREE_SUPPORTED_KINDS` |
-| Manual | Extension Development Host + Argo CD cluster | Application View In Tree selects app in tree; Deployment tile Navigate reveals workload; Job tile has no overflow; wrong-context cluster shows context-mismatch message |
+| Tree provider | `ClusterTreeProvider.reveal.test.ts` (or extend existing tree suite) | `revealTreeResource` maps Deployment/Pod/Service/ConfigMap to correct categories using **destination namespace** for workload lookup; returns false when item missing after tree refresh |
+| Provider stubs | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | `navigateToResource` delegates to shared reveal helper; destination-namespace Deployment fixture (e.g. apisocial) reveals successfully |
+| Parity | `argocdGraphNodeCapabilities.test.ts` | Webview navigate kinds still match host `NAVIGATE_TREE_SUPPORTED_KINDS`; Application root overflow no longer exposes `viewInTree` |
+| Manual | Extension Development Host + Argo CD cluster | Deployment tile Navigate reveals workload in destination namespace; Job tile has no overflow; wrong-context cluster shows context-mismatch message |
+
+**Operator topology test matrix (M17):**
+
+| Area | Module / suite | Must prove |
+|------|----------------|------------|
+| Operator client | `OperatorResourceTreeClient.test.ts` (new) | Exec `query argocd resource-tree get`; parse raw JSON; structured error on CLI failure |
+| Assembler | `ApplicationResourceGraphAssembler.test.ts` | Operator-fed raw JSON → `topologySource: argocd_resource_tree`, `topologyMode: full`; pods/ReplicaSets visible under Deployment |
+| Precedence | `ApplicationResourceGraphBuilder.test.ts` | REST wins when `restEnabled` + authorized; operator path when REST not configured; fallback ladder on operator fail |
+| Affordance | `graphTopologyAffordances.test.ts` | Limited-topology suppressed on full topology; distinct copy tiers for `crd_flat`, `kubernetes_owner_ref`, enrichment-pending |
+
+**Graph filter test matrix (M17):**
+
+| Area | Module / suite | Must prove |
+|------|----------------|------------|
+| Filter state | `argocdGraphFilters.test.ts` (new) | AND semantics across name/kind/sync; topology-only nodes without CRD sync treated as Unknown |
+| DTO completeness | `argocdGraphFilters.test.ts` | Host posts full `resourceGraph`; filters do not trim DTO or bump `structureVersion` |
+| Selection | `useGraphInteractionState` or component tests | Selection clears or falls back when selected tile filtered out (TW picks behavior) |
+| Accessibility | `argocdGraphAccessibility.test.ts` | Filter controls keyboard-operable; tab order: header → zoom → filters → canvas |
 
 **Large-application layout and grouping test matrix (issue #222):**
 
@@ -145,3 +180,4 @@ Build and packaging checks should run the existing repository commands for the a
 - `.ai/operations/build_packaging.md`
 - `.ai/operations/observability.md`
 - `.ai/operations/security.md`
+- `kube9-operator/.ai/integration/api_contracts.md` (resource-tree CLI query; peer contract)

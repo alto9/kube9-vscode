@@ -11,7 +11,7 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 
 ### Keyboard and focus
 
-- **Tab order:** Webview header actions -> graph toolbar (zoom in, zoom out, fit view) -> graph canvas -> **Graph | Details** tabs -> panel content for the active tab.
+- **Tab order:** Webview header actions -> graph toolbar (zoom in, zoom out, fit view, **filter controls**) -> graph canvas -> **Graph | Details** tabs -> panel content for the active tab.
 - **Nodes:** Each graph tile is a single focus stop; **Enter** or **Space** activates the tile (selection/focus ring). Focus order among nodes follows a **stable, predictable** sequence (layout order left-to-right, then top-to-bottom within a column) so repeated visits do not jump arbitrarily after data refresh.
 - **Overflow menu (⋮):** Opens with keyboard from the focused tile; menu items are standard focusable actions; **Escape** closes the menu and returns focus to the tile.
 - **Canvas pan/zoom:** Pointer-first for pan; toolbar buttons are fully keyboard-operable with visible focus. Do not require drag-only gestures for essential information.
@@ -33,7 +33,8 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 - **Details** drift table: preserve header/row associations (`th`/`scope` or grid roles), expandable row state announced on toggle, and keyboard activation for navigate-to-tree links.
 - Header operation buttons expose **disabled** state and in-progress labels ("Syncing...", "Refreshing...") to assistive tech when operations run.
 - **Actions overflow menu:** The overflow trigger and menu items are keyboard operable with visible focus; **Escape** closes the menu and returns focus to the trigger. Menu items use the same accessible names as visible primary buttons would. Overflow must not trap focus.
-- **Sub-header row** controls (Events export/search, Argo hard refresh/view in tree) follow the same button semantics and disabled/in-progress labeling as primary header actions.
+- **Sub-header row** controls (Events export/search, Argo hard refresh) follow the same button semantics and disabled/in-progress labeling as primary header actions.
+- **Graph filter controls** use standard button/combobox semantics with visible `:focus-visible` rings consistent with toolbar rules. Live-region match-count announcements are optional TW (`/refine-issue`).
 
 ## Kubernetes AI Conformance report
 

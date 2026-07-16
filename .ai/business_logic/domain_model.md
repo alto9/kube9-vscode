@@ -107,7 +107,7 @@ Page-level commands on webview panels (header, **Actions** overflow, documented 
 | Tier | Placement | Examples |
 |------|-----------|----------|
 | **A — primary header** | Up to three labeled primaries | Refresh; View YAML on describe surfaces; Argo CD **Sync** and **Refresh**; Events **Refresh** |
-| **B — overflow or sub-header** | **Actions** menu when over cap, or sub-header when standardized | Argo **Hard refresh**, **View in tree** (sub-header); Events **Auto-refresh**, **Clear Filters** (primary or overflow per cap) |
+| **B — overflow or sub-header** | **Actions** menu when over cap, or sub-header when standardized | Argo **Hard refresh** (sub-header); Events **Auto-refresh**, **Clear Filters** (primary or overflow per cap) |
 | **C — sub-header or toolbar** | Below primary header or in-panel toolbar | Events **Export**, **Search**; Pod Logs stream controls; Helm section actions |
 | **D — never page header** | In-content or graph/tree only | Row actions, graph node overflow, graph canvas zoom/fit |
 
@@ -119,7 +119,7 @@ Page-level commands on webview panels (header, **Actions** overflow, documented 
 
 **Disabled actions:** Remain **visible** when inapplicable (for example Clear Filters with no active filters) unless a future story chooses hide-when-inapplicable.
 
-Argo CD application-level **sync**, **refresh**, **hard refresh**, and **view in tree** stay **page-level** (header/sub-header), not on the graph canvas toolbar. Graph node overflow and canvas toolbar remain separate surfaces.
+Argo CD application-level **sync**, **refresh**, and **hard refresh** stay **page-level** (header/sub-header), not on the graph canvas toolbar. Graph node overflow, canvas zoom/fit toolbar, and **graph filter controls** remain separate surfaces. Application-level **View In Tree** is demoted or removed from page-level chrome; managed-resource **Navigate to resource in tree** remains on tile overflow.
 
 ## Resource inspection and mutation surfaces
 
@@ -158,9 +158,9 @@ Rules below are the **kube9-vscode reference baseline** for built-in Kubernetes 
 4. Resource views should degrade gracefully when optional integrations are unavailable.
 5. Resource identity and scope must remain consistent across tree items, command routing, detail providers, YAML views, and Resource Graph Nodes.
 6. The Application Resource Graph must remain usable when dependency topology is partial; missing edges or unknown parentage must not prevent rendering available nodes and status.
-7. Application-level sync, refresh, hard refresh, and view-in-tree flows remain available from the webview header/sub-header and Application root overflow; they are not replaced by the graph canvas toolbar.
+7. Application-level sync, refresh, and hard refresh remain available from the webview header/sub-header; they are not replaced by the graph canvas toolbar. Application-level View In Tree is demoted or removed from sub-header and Application root overflow; managed-resource tree navigation via `resource.navigateTree` is the primary graph-first path.
 8. Graph presentation and actions must not require the user to leave VS Code or open the native Argo CD server UI.
-9. **Extension-local graph assembly** for the first delivery: the extension owns graph DTO assembly and refresh paths; kube9-operator does not supply resource-tree snapshots today and is **not** required for this capability set. A future operator-mediated snapshot may align later without changing Kind Capability Registry rules stated here.
+9. **Extension-owned graph assembly:** the extension owns `ApplicationResourceGraph` DTO assembly, webview rendering, graph filters, and tree reveal. In **operated clusters**, kube9-operator supplies on-demand Argo CD resource-tree JSON (raw passthrough); the extension normalizes via existing `buildResourceTreeApplicationResourceGraph` and emits `topologySource: argocd_resource_tree`. CRD-flat baseline remains when all enrichment tiers fail. Kind Capability Registry rules are unchanged by topology source or filters.
 
 ## Open Implementation Decisions
 
@@ -172,17 +172,21 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 - **Tile visual states** do not change action scope. **Focus** uses `:focus-visible` with a 2px `--vscode-focusBorder` outline on the tile group. **Selection** adds `argocd-graph-node--selected` (2px focus-border box shadow) from React Flow selection. **Hover** applies `--vscode-list-hoverBackground` on the tile when the pointer is over it and the tile is not selected. **Overflow-open** adds `argocd-graph-node--overflow-open` while the menu is open; the ⋮ trigger exposes `aria-expanded=true`. Primary tile activation (click, Enter, Space) selects only; it does not run menu actions or mutate cluster state.
 - **Unsupported or non-navigable managed-resource nodes** hide the overflow control entirely when the Kind Capability Registry yields zero eligible actions. There is no disabled-only ⋮ affordance and no placeholder “No actions” menu.
-- **Application root overflow** shows **View in tree** only (`viewInTree` message). Sync, refresh, and hard refresh stay on the webview header and sub-header in v1; root overflow does not duplicate GitOps operations.
+- **Application root overflow** does not expose View In Tree in M17; sync, refresh, and hard refresh stay on the webview header and sub-header. Root overflow may be hidden when no eligible actions remain.
 - **Managed-resource overflow labels (v1):** Deployment — **Restart rollout**, **Navigate to resource in tree**; other navigate-supported kinds — **Navigate to resource in tree** only. Labels match `graphNodeCapabilities.ts` and host `actionId` registry entries.
 - **Progressive disclosure for very large Applications** — resolved in `.ai/interface/presentation.md` and `.ai/data/consistency.md` (issue #222): webview kind-based grouping over complete DTO; threshold 40 managed resources.
 
-**Resolved (View In Tree and tree reveal, issue #221):**
+**Resolved (tree navigation, M17):**
 
-- **Application-level View In Tree** (`viewInTree` message from header, sub-header, or Application root overflow) reveals the open Application's `argocdApplication` tree item under the **ArgoCD Applications** category when the panel's kubeconfig context matches the active context. It does not reveal managed Kubernetes resources.
-- **Managed-resource View In Tree** routes through `resource.navigateTree` with the tile's `ManagedResourceKey`. The host maps supported kinds to existing cluster-tree categories via `ClusterTreeProvider.revealTreeResource`; unsupported kinds remain without overflow (#224).
+- **Application-level View In Tree** (`viewInTree` message) is **removed or demoted** from sub-header, Application root overflow, and related page-level chrome. It does not receive selection-aware behavior.
+- **Managed-resource navigation** routes through `resource.navigateTree` with the tile's `ManagedResourceKey`. The host maps supported kinds to cluster-tree categories via `ClusterTreeProvider.revealTreeResource`, using **destination namespace** for workload lookup where the managed resource key differs from the Application namespace. The host **refreshes the cluster tree before reveal lookup**.
 - **Details tab parity:** `navigateToResource` from the Details view uses the same reveal helper as `resource.navigateTree` for supported kinds.
 - **Failure is non-mutating:** When no tree item can be mapped, the extension reports navigation failure with user-facing copy; it must not create tree nodes or alter resource identity.
 
-**Deferred:**
+**Deferred (M17):**
+
+- **Graph filter UX:** Widget shape (chips vs dropdown), zero-match empty state, selection-when-filtered behavior, filter visibility (hide vs de-emphasize), and a11y live-region announcements (`/refine-issue`).
+- **Limited-topology affordance copy:** Per-`topologySource` strings for operator-absent, operator-degraded, REST-disabled, and enrichment-pending states (`/refine-issue`).
+- **Supported reveal kinds expansion:** Whether resource-tree-only kinds (ReplicaSet, etc.) gain overflow navigate actions (`/refine-issue`).
 
 - **`resource.openDescribe` on graph tiles** — registry entry exists for future direct describe routing from `ManagedResourceKey`; v1 graph overflow does not expose it. Users open describe via tree reveal or Details tab navigate affordances.

@@ -20,7 +20,9 @@
 - As a GitOps engineer, I can open a three-dot actions menu on each eligible resource tile and only see actions that are valid for that resource kind and permission state.
 - As a GitOps engineer, I can run **application-level sync, refresh, and hard refresh** from the Application root node using the same flows already available for ArgoCD applications.
 - As a GitOps engineer, I can **restart rollout** on a Deployment node from the graph when I need to recycle pods without leaving the application detail panel.
-- As a GitOps engineer, I can use **View In Tree** or resource navigation from a selected graph node to reveal the corresponding Kubernetes tree resource where the extension can map that resource identity.
+- As a GitOps engineer, I can **navigate to resource in tree** from a managed-resource graph tile to reveal the corresponding Kubernetes tree workload (including destination-namespace resources) where the extension can map that resource identity.
+- As a GitOps engineer in an operated cluster, I can see **full topology** (pods, replica sets, parent/child edges) when kube9-operator or extension REST resource-tree enrichment succeeds, without configuring a personal bearer token when the operator path is active.
+- As a GitOps engineer, I can **filter the graph** by resource name, kind, and sync status from the graph toolbar without mutating cluster state or losing the underlying complete resource inventory on refresh.
 - As a GitOps engineer, after I sync or refresh an application, the graph **updates in place** with refreshed sync and health on affected nodes without requiring me to close and reopen the panel.
 - As a GitOps engineer working on a large application, I can still use the graph when node count is high because the experience avoids unusable clutter through progressive disclosure or grouping rather than failing silently.
 

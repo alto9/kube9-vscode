@@ -45,7 +45,7 @@ Some panels need a **standardized sub-header row** directly under the primary he
 | Surface | Primary header | Sub-header row |
 |---------|----------------|----------------|
 | **Events Viewer** | Refresh, Auto-refresh, Clear Filters (within primary cap; overflow if needed) | **Export**, **Search** |
-| **Argo CD Application** | **Sync**, **Refresh** (within primary cap) | **Hard refresh**, **View in tree** |
+| **Argo CD Application** | **Sync**, **Refresh** (within primary cap) | **Hard refresh** |
 
 Other dense tooling (Pod Logs stream controls, Helm section actions) stays in documented toolbar or body regions, not competing with Tier A header actions (see business logic **Webview page-level actions**).
 
@@ -96,7 +96,11 @@ Tiles have separate focus and selected states. Primary activation selects the ti
 
 **Status iconography:** Sync and health badges reuse the **same visual language** as the tree and the existing drift table: codicon-based sync indicators, health-colored badge backgrounds mapped through `testing.iconPassed`, `testing.iconFailed`, `testing.iconQueued`, and related VS Code tokens. Unknown or missing health uses muted/description styling, not a false-positive green.
 
-**Application root tile:** Mirrors application-level sync and health on the tile; application-level **sync** and **refresh** sit on the **primary webview header**; **hard refresh** and **view in tree** sit on the **sub-header row** under the primary header (root tile overflow may duplicate subset actions for in-graph context).
+**Application root tile:** Mirrors application-level sync and health on the tile; application-level **sync** and **refresh** sit on the **primary webview header**; **hard refresh** sits on the **sub-header row** under the primary header. Application-level View In Tree is removed or demoted in M17; managed-resource overflow remains the primary tree-navigation path.
+
+### Graph toolbar filters (M17)
+
+The canvas-adjacent toolbar (zoom in, zoom out, fit view) also hosts **graph filter controls**: resource name search, kind filter, and sync-status filter. Filters are **webview presentation only**; the host posts the complete `resourceGraph` on every refresh. Combined active filters use **AND** semantics. Topology-only nodes without a CRD sync value are treated as **Unknown** for sync filtering. Filter state is session-local to the open Application panel.
 
 ### Secondary: Details (overview and drift)
 
@@ -167,4 +171,12 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 | Overflow open | `argocd-graph-node--overflow-open` on tile; menu uses VS Code menu background tokens |
 
 - Sync and health badges, kind icon, truncated name, and ⋮ overflow align with the **Graph tiles (nodes)** table above in this document.
-- **Limited-topology and large-application hints** — resolved under **Large applications** in this document and in `graphTopologyAffordanceRules.ts` (issue #222).
+- **Limited-topology and large-application hints** — resolved under **Large applications** in this document and in `graphTopologyAffordanceRules.ts` (issue #222). Limited-topology affordance is **suppressed** when `topologyMode: full`. Copy tiers distinguish `crd_flat`, `kubernetes_owner_ref`, and enrichment-pending/fallback states (exact strings TW).
+
+**Deferred (M17 graph filters):**
+
+- Filter control widgets (chips vs dropdown vs combobox), labels, placeholders, and clear/reset affordance placement.
+- Zero-match filter outcome (empty-filter state vs Application root only vs de-emphasized tiles).
+- Filter visibility model (hide non-matching tiles vs de-emphasize in place).
+- Filter + kind-grouping interaction when collapsed groups contain filtered-out members.
+- Live region announcements for filter match counts (a11y bar).

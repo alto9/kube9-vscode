@@ -51,7 +51,7 @@ The tree **does not** embed the graph; it continues to list applications with st
 
 ### Operate from tiles and header
 
-- **Application-level:** **Sync** and **Refresh** on the **primary webview header**; **Hard refresh** and **View in tree** on the **sub-header row** directly below (disabled while an operation is in progress, same semantics as today). The Application root tile may expose the same actions in its overflow menu.
+- **Application-level:** **Sync** and **Refresh** on the **primary webview header**; **Hard refresh** on the **sub-header row** directly below (disabled while an operation is in progress). Application-level View In Tree is removed or demoted in M17.
 - **Per-resource overflow (⋮):** Actions are **kind-driven** via a capability registry (not ad hoc per screen). Initial set:
   - **Deployment:** restart rollout (pods), with progress/error feedback through existing extension notification patterns.
   - **Supported workload/kinds:** navigate to resource in tree; open describe where the extension already supports that kind.
@@ -87,7 +87,7 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 | Node role | Kind | Menu items | Message path |
 |-----------|------|------------|--------------|
-| Application root | Application | View in tree | `viewInTree` |
+| Application root | Application | _(overflow hidden or empty in M17)_ | — |
 | Managed resource | Deployment | Restart rollout; Navigate to resource in tree | `resourceAction` (`deployment.restartRollout`, `resource.navigateTree`) |
 | Managed resource | StatefulSet, DaemonSet, CronJob, Pod, Service, ConfigMap, Secret | Navigate to resource in tree | `resourceAction` (`resource.navigateTree`) |
 | Managed resource | Other kinds (Job, Ingress, CRD, unknown) | _(overflow hidden)_ | — |
@@ -95,17 +95,16 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - **Hidden vs disabled:** When no rows apply, the overflow control is not rendered. During application-level sync/refresh (`operationProgress` Running or webview `menusDisabled`), all tile overflow menus disable. During a per-node in-flight `resourceAction` (`resourceActionProgress` Running with `nodeRef`), only that tile's overflow disables (optional in-menu copy: "Action in progress…"). The webview is the primary guard; the host does not queue overlapping `resourceAction` messages in v1.
 - **Action results:** Terminal `resourceActionResult` with `success: false` shows a dismissible graph action-notice banner. User-cancelled restart confirmation does not show the banner. Unknown `actionId` or unsupported kind for a known id returns explicit host messages without crashing the panel.
 
-### View In Tree and tree reveal (resolved, issue #221)
+### Tree navigation and reveal (M17)
 
-Two navigation surfaces share one host tree-reveal implementation; neither mutates cluster state.
+Managed-resource tree reveal is the primary graph-first navigation path. Application-level `viewInTree` is removed or demoted from sub-header and Application root overflow.
 
 | Source | Message / action | Host behavior | User feedback |
 |--------|------------------|---------------|---------------|
-| Application root overflow, sub-header, or header | `viewInTree` | Focus `kube9ClusterView`, refresh tree, call `ClusterTreeProvider.revealTreeApplication(applicationName, applicationNamespace)` bound to the open panel's `ApplicationKey` | On success: tree reveals and selects the matching `argocdApplication` item. On failure: `showWarningMessage` when the tree is focused but the application item is not found; `showErrorMessage` on unexpected host errors |
-| Managed-resource tile overflow | `resourceAction` with `actionId: resource.navigateTree` | Same pre-checks as registry handler: kubeconfig available, active context matches panel context; focus tree, refresh, `revealTreeResource(kind, name, namespace)` from the tile's `ManagedResourceKey` | `resourceActionProgress` then terminal `resourceActionResult`; failures also show the dismissible graph action-notice banner |
-| Details tab navigate affordance | `navigateToResource` with `kind`, `name`, `namespace` | Delegate to the same reveal helper as `resource.navigateTree` for kinds in `NAVIGATE_TREE_SUPPORTED_KINDS`; reject or no-op with explicit error for unsupported kinds | Unsupported kind: `showErrorMessage` with safe copy. Supported kind failure: same messages as `resource.navigateTree` result text (Details tab does not use the graph action-notice banner) |
+| Managed-resource tile overflow | `resourceAction` with `actionId: resource.navigateTree` | Kubeconfig available, active context matches panel context; focus tree, **refresh tree**, `revealTreeResource(kind, name, namespace)` using **destination namespace** for workload lookup when applicable | `resourceActionProgress` then terminal `resourceActionResult`; failures show dismissible graph action-notice banner |
+| Details tab navigate affordance | `navigateToResource` with `kind`, `name`, `namespace` | Delegate to the same reveal helper as `resource.navigateTree` for kinds in `NAVIGATE_TREE_SUPPORTED_KINDS` | Same messages as `resource.navigateTree` result text |
 
-**Identity for reveal:** Use `ManagedResourceKey.namespace` (trimmed; empty only for cluster-scoped kinds when the CRD omits namespace), `kind`, and `name`. Optional `apiGroup` is forwarded when present but is not required for v1 reveal of core kinds in `NAVIGATE_TREE_SUPPORTED_KINDS`.
+**Identity for reveal:** Use `ManagedResourceKey.namespace` (trimmed; destination namespace for workloads in multi-destination apps), `kind`, and `name`. The host refreshes the cluster tree before lookup. Optional `apiGroup` is forwarded when present.
 
 **Failure copy (managed resource, terminal result message):**
 
