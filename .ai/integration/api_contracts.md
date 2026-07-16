@@ -32,13 +32,26 @@ Each entry is a **flat** managed-resource row, not a graph edge list:
 
 ## Argo CD — resource graph data sourcing
 
-The application detail **resource graph** consumes a normalized **`ApplicationResourceGraph`** DTO (node/edge model owned in data contracts). The integration layer defines **how** that DTO is populated, in strict precedence:
+The application detail **resource graph** consumes a normalized **`ApplicationResourceGraph`** DTO (node/edge model owned in data contracts). The integration layer defines **how** that DTO is populated, in strict precedence.
+
+**Operated mode** (kube9-operator installed, `status.argocd.detected`):
 
 ```text
-1. argocd_resource_tree — Argo CD REST resource-tree (preferred when configured and reachable)
-2. kubernetes_owner_ref — Kubernetes metadata.ownerReferences (optional fallback for edges)
-3. crd_flat       — Application CRD status.resources only (required baseline)
+1. argocd_resource_tree — Extension REST when kube9.argocd.restEnabled and authorized (wins over operator)
+2. argocd_resource_tree — Operator CLI on-demand fetch (raw Argo CD JSON → buildResourceTreeApplicationResourceGraph)
+3. kubernetes_owner_ref — Kubernetes metadata.ownerReferences (optional fallback for edges)
+4. crd_flat       — Application CRD status.resources only (required baseline)
 ```
+
+**Basic mode** (no operator):
+
+```text
+1. argocd_resource_tree — Extension REST when restEnabled and authorized
+2. kubernetes_owner_ref
+3. crd_flat
+```
+
+On operator or REST success assembling from resource-tree shape, the host sets `topologySource: argocd_resource_tree` and `topologyMode: full`. Operator is transport only; it does not emit a separate `operator_snapshot` topology label on success.
 
 The host sets `topologySource` on each push so the webview can label degraded vs full topology.
 
@@ -88,11 +101,25 @@ This tier matches **current** `ArgoCDService.parseResources` behavior and is suf
 | **Source** | Argo CD server REST: `GET /api/v1/applications/{name}/resource-tree` with application namespace as query parameter when namespaced |
 | **Response use** | Map Argo CD `nodes[]` (`group`, `kind`, `namespace`, `name`, `version`, `parentRefs`, optional `network`, hook/health fields) into `ApplicationResourceGraph` nodes and directed edges (`parentRefs` → edges parent → child, layout left-to-right in UI) |
 | **Auth** | Bearer token (or equivalent) to argocd-server; TLS per settings; optional local access via **kubectl port-forward** to `argocd-server` Service — token and base URL remain in extension host only |
-| **Preconditions** | User-enabled REST path; server reachable; Argo CD RBAC allows resource-tree for the application |
+| **Preconditions** | User-enabled REST path; server reachable; Argo CD RBAC allows resource-tree for the application. In operated mode, extension REST **wins** over operator when both are available and authorized. |
 | **Failure** | Log, set `topologySource` to fallback tier, do not fail the whole panel solely for tree API errors |
-| **Peer note** | kube9-operator today implements **`GET /api/v1/applications`** list only, not resource-tree; extension must not depend on operator for this tier |
+| **Peer note** | kube9-operator exposes on-demand `query argocd resource-tree get` returning raw Argo CD JSON when extension REST is not configured or authorized |
 
 Native Argo CD UI resource graphs use this API; kube9-vscode targets **visual parity** when Tier B is active.
+
+### Tier B2 — Operator CLI resource-tree (operated mode)
+
+| Item | Contract |
+|------|----------|
+| **When** | Operated mode; extension REST not configured or not authorized; operator present with `status.argocd.detected` and resource-tree capability |
+| **Source** | `kubectl exec` → `kube9-operator query argocd resource-tree get <appName> --namespace=<appNamespace> [--format=json]` |
+| **Response use** | Raw Argo CD resource-tree JSON (`nodes[]`, `parentRefs[]`); extension reuses `buildResourceTreeApplicationResourceGraph` |
+| **Auth** | Operator authenticates to argocd-server with platform-supplied dedicated bearer token (Helm Secret); extension does not hold operator token |
+| **Preconditions** | Operator installed; Argo CD detected; operator `resourceTreeCapable` (or equivalent) true; extension exec RBAC |
+| **Failure** | Fall through to extension REST (if configured) → `kubernetes_owner_ref` → `crd_flat` |
+| **topologySource on success** | `argocd_resource_tree` (operator is transport only) |
+
+See peer contract: `kube9-operator/.ai/integration/api_contracts.md` (resource-tree query).
 
 ### Tier C — `kubernetes_owner_ref` (optional edge fallback)
 
@@ -167,16 +194,17 @@ Canonical values match [data model](../data/data_model.md#topologysource):
 | `argocd_resource_tree` | Edges primarily from resource-tree `parentRefs` |
 | `kubernetes_owner_ref` | Edges from Kubernetes owner references |
 | `crd_flat` | No real hierarchy; synthetic root edges only |
-| `operator_snapshot` | Reserved for future operator-normalized tree DTO |
+| `operator_snapshot` | Reserved for future operator-normalized tree DTO; M17 operator path emits `argocd_resource_tree` instead |
 
 ## Operator cross-read (informative)
 
 kube9-operator Argo CD module:
 
-- HTTP client: `GET /api/v1/applications` → normalized `ApplicationSnapshot` (sync/health/revision, optional `resourcesOutOfSyncCount` from list payload).
-- Does **not** expose resource-tree to kube9-vscode.
+- HTTP client: `GET /api/v1/applications` → normalized `ApplicationSnapshot` (sync/health/revision) into SQLite `argocd_apps`.
+- **Resource-tree:** `GET /api/v1/applications/{name}/resource-tree` on-demand via CLI query; returns raw Argo CD JSON to kube9-vscode.
+- Status ConfigMap: detection, bounded application summaries, and `resourceTreeCapable` (or equivalent) enrichment signal.
 
-Extension continues to use operator status for **detection** only unless a future operator contract adds graph snapshots.
+Extension uses operator status for **detection and enrichment gating**; per-application trees are fetched on graph open/refresh via CLI exec, not embedded in ConfigMap.
 
 ## Operator status — AI Conformance report
 

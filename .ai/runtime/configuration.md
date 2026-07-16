@@ -18,7 +18,7 @@ Separate from Kubernetes Application CRD RBAC. Credentials and base URL stay in 
 
 | Setting | Type | Scope | Default | Purpose |
 |---------|------|-------|---------|---------|
-| `kube9.argocd.restEnabled` | boolean | application | `false` | Gate Tier B `resource-tree` HTTP calls (#166). When `false`, graph stays on CRD / owner-ref tiers only. |
+| `kube9.argocd.restEnabled` | boolean | application | `false` | Gate Tier B extension REST `resource-tree` HTTP calls. When `false` in operated mode, graph uses operator CLI path when available; when `true` and authorized, extension REST **wins** over operator. |
 | `kube9.argocd.serverUrl` | string or object | application | `null` | HTTPS API base (no trailing path). **Object** keys are kubeconfig **context names** (same pattern as `kube9.operatorNamespace`). |
 | `kube9.argocd.accessMode` | string | application | `direct` | `direct` uses `serverUrl` as-is. `portForward` starts (or reuses) a host-managed `kubectl port-forward` to the detected `argocd-server` Service and uses `http://127.0.0.1:{localPort}` as the API base for that context. |
 | `kube9.argocd.tlsInsecure` | boolean | application | `false` | Skip TLS verification for HTTPS bases. Labs / local port-forward only; must not be the default for production ingress URLs. |

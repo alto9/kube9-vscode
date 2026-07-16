@@ -173,7 +173,7 @@ Initial delivery may emit only `manages` edges when topology is CRD-only; richer
 | `crd_flat` | Star: Application → each `status.resources` entry | Application root + one node per `ArgoCDResource` |
 | `argocd_resource_tree` | From Argo CD resource-tree `parentRefs` | Tree nodes mapped to `ManagedResourceKey` where possible |
 | `kubernetes_owner_ref` | Inferred ownerReference chain among known resources | Subset or superset of flat list |
-| `operator_snapshot` | From operator-normalized tree DTO when available | Peer contract; not required for vscode-only path |
+| `operator_snapshot` | Reserved for future operator-normalized tree DTO; M17 operator transport emits `argocd_resource_tree` on success |
 
 ### TopologyMode (`full` vs `limited`)
 
