@@ -19,18 +19,43 @@ export interface TreeRevealContext {
     panelContext: string;
 }
 
+export interface ManagedResourceRevealOptions {
+    /** Application spec.destination.namespace for empty resource-namespace fallback. */
+    destinationNamespace?: string;
+}
+
+/**
+ * Resolve the namespace used for cluster-tree reveal from a managed resource key.
+ * Never substitutes Application CR namespace; non-empty resource namespace wins.
+ */
+export function resolveManagedResourceRevealNamespace(
+    resourceNamespace: string,
+    destinationNamespace?: string
+): string {
+    const trimmedResource = resourceNamespace.trim();
+    if (trimmedResource.length > 0) {
+        return trimmedResource;
+    }
+
+    return (destinationNamespace ?? '').trim();
+}
+
 export async function focusAndRefreshClusterTree(treeProvider: ClusterTreeProvider): Promise<void> {
     await vscode.commands.executeCommand('kube9ClusterView.focus');
-    treeProvider.refresh();
+    treeProvider.invalidateCachesBeforeTreeReveal();
 }
 
 export async function revealManagedResourceInTree(
     ctx: TreeRevealContext,
     kind: string,
     name: string,
-    namespace: string
+    resourceNamespace: string,
+    options: ManagedResourceRevealOptions = {}
 ): Promise<ManagedResourceRevealResult> {
-    const trimmedNamespace = namespace.trim();
+    const resolvedNamespace = resolveManagedResourceRevealNamespace(
+        resourceNamespace,
+        options.destinationNamespace
+    );
 
     if (!ctx.treeProvider.getKubeconfigPath()) {
         return {
@@ -51,7 +76,7 @@ export async function revealManagedResourceInTree(
 
     try {
         await focusAndRefreshClusterTree(ctx.treeProvider);
-        const revealed = await ctx.treeProvider.revealTreeResource(kind, name, trimmedNamespace);
+        const revealed = await ctx.treeProvider.revealTreeResource(kind, name, resolvedNamespace);
         if (revealed) {
             return {
                 success: true,

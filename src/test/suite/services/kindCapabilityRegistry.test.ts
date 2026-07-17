@@ -108,6 +108,9 @@ suite('KindCapabilityRegistry', () => {
             refresh: () => {
                 /**/
             },
+            invalidateCachesBeforeTreeReveal: () => {
+                /**/
+            },
             isCurrentContext: async () => true,
             revealTreeResource: async () => true
         } as unknown as ClusterTreeProvider;
@@ -379,6 +382,42 @@ suite('KindCapabilityRegistry', () => {
         assert.ok(result);
         assert.strictEqual(result.success, false);
         assert.match(result.message, /tree view is unavailable/i);
+        panel.dispose();
+    });
+
+    test('resource.navigateTree resolves destination namespace when resource namespace is empty', async () => {
+        const dispatch = loadDispatch();
+        const panel = vscode.window.createWebviewPanel(
+            'kube9.argocdApplication',
+            'test',
+            vscode.ViewColumn.One,
+            { enableScripts: true }
+        );
+        const messages = capturePostMessages(panel);
+        const ctx = buildContext(panel);
+        ctx.destinationNamespace = 'apisocial-ns';
+        let revealNamespace = '';
+        (ctx.treeProvider as unknown as {
+            revealTreeResource: (kind: string, name: string, namespace: string) => Promise<boolean>;
+        }).revealTreeResource = async (_kind, _name, namespace) => {
+            revealNamespace = namespace;
+            return true;
+        };
+
+        await dispatch(
+            ctx,
+            resourceActionMessage({
+                actionId: ACTION_RESOURCE_NAVIGATE_TREE,
+                kind: 'Deployment',
+                name: 'apisocial',
+                namespace: ''
+            })
+        );
+
+        const result = lastResult(messages);
+        assert.ok(result);
+        assert.strictEqual(result.success, true);
+        assert.strictEqual(revealNamespace, 'apisocial-ns');
         panel.dispose();
     });
 });
