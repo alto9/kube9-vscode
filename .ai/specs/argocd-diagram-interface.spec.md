@@ -12,7 +12,7 @@ Opening an Argo CD Application from the cluster tree presents Graph as the defau
 
 Each graph tile shows kind, name, Argo CD sync status, Argo CD health status, and an overflow control for eligible actions. Tile selection is a visible, keyboard-operable state that scopes resource-aware actions. Selection does not mutate cluster state by itself; mutating actions require explicit menu or command intent and host-side validation.
 
-Application-level sync, refresh, and hard refresh remain available from the webview header and sub-header. **Application-level View In Tree** is demoted or removed from sub-header, Application root overflow, and related page-level chrome; **managed-resource** "Navigate to resource in tree" (`resource.navigateTree`) is the primary graph-first navigation affordance. Managed-resource tiles support tree reveal and open describe/detail where resource identity can be mapped into the existing Kubernetes tree and describe surfaces. Deployment tiles may expose rollout restart through the Kind Capability Registry when RBAC and action eligibility allow it.
+Application-level sync, refresh, and hard refresh remain available from the webview header and sub-header. **Application-level View In Tree is removed** from sub-header, Application root overflow, Details Overview action buttons, and all other Application panel chrome. The webview→host `viewInTree` message is not part of the accepted protocol. **Managed-resource** "Navigate to resource in tree" (`resource.navigateTree`) is the only in-panel graph-to-tree path. Managed-resource tiles support tree reveal and open describe/detail where resource identity can be mapped into the existing Kubernetes tree and describe surfaces. Deployment tiles may expose rollout restart through the Kind Capability Registry when RBAC and action eligibility allow it.
 
 The graph toolbar exposes **presentation-only filters** for resource name search, kind, and sync status (minimum parity with native Argo CD resource graph filtering). Active filters use **AND** semantics across dimensions. The host continues posting the **complete** `resourceGraph` DTO; filters hide or de-emphasize non-matching managed-resource tiles without mutating cluster state or trimming the host payload.
 
@@ -125,7 +125,7 @@ Interface validation should include graph layout readability, selectable tiles, 
 
 | Area | Module / suite | Must prove |
 |------|----------------|------------|
-| Overflow registry | `argocdGraphNodeCapabilities.test.ts` | Deployment exposes restart + navigate; application root exposes view-in-tree only; unknown kinds return empty actions; webview navigate kinds match host `NAVIGATE_TREE_SUPPORTED_KINDS` |
+| Overflow registry | `argocdGraphNodeCapabilities.test.ts` | Deployment exposes restart + navigate; application root returns empty actions (no View In Tree); unknown kinds return empty actions; webview navigate kinds match host `NAVIGATE_TREE_SUPPORTED_KINDS` |
 | Host dispatch | `kindCapabilityRegistry.test.ts` | Unknown `actionId` and unsupported kind post `resourceActionResult` with explicit messages; restart progress/result sequence; cancelled restart does not throw |
 | Protocol | `argocdApplicationProtocol.test.ts` | `resourceAction` / progress / result shapes validate |
 | Accessibility helpers | `argocdGraphAccessibility.test.ts` | Accessible name format; focus order sort; overflow roving index; reduced-motion zoom duration |
@@ -146,6 +146,16 @@ Interface validation should include graph layout readability, selectable tiles, 
 | Provider stubs | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | `navigateToResource` delegates to same reveal helper and namespace rules as `resource.navigateTree` |
 | Parity | `argocdGraphNodeCapabilities.test.ts` | Webview navigate kinds still match host `NAVIGATE_TREE_SUPPORTED_KINDS`; Application root overflow no longer exposes `viewInTree` (covered by #243; #242 must not regress registry kinds) |
 | Manual | Extension Development Host + Argo CD cluster | Open Application that manages Deployment `apisocial` in destination namespace ≠ Application CR namespace; tile **Navigate to resource in tree** selects that Deployment in the cluster tree (not "resource not found"); Job tile has no overflow; wrong-context cluster shows context-mismatch message |
+
+**Application View In Tree removal test matrix (M17 / issue #243):**
+
+| Area | Module / suite | Must prove |
+|------|----------------|------------|
+| Overflow registry | `argocdGraphNodeCapabilities.test.ts` | `getOverflowActions('application', …)` returns `[]`; no `viewInTree` messageType |
+| Protocol | `argocdApplicationProtocol.test.ts` | `viewInTree` is **not** an accepted webview→host message |
+| Host | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | No `viewInTree` handler path; managed-resource / `navigateToResource` coverage unchanged |
+| Chrome | Component or manual | Sub-header has Hard Refresh only (no View In Tree); Details Overview has no View In Tree link; primary header still has Sync and Refresh |
+| Keyboard / no-selection | Manual | Empty or Application-only selection has no Application-reveal control; keyboard tree nav is managed-resource overflow (Context Menu / Shift+F10 → Navigate) plus Details drift links |
 
 **Operator topology test matrix (issue #241):**
 

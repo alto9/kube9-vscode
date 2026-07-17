@@ -173,7 +173,6 @@ JSON messages over `webview.postMessage` / `onDidReceiveMessage`. Types are stri
 | `sync` | — | Patch Application, track operation, refresh data + graph |
 | `refresh` | — | Refresh annotation path, reload data + graph |
 | `hardRefresh` | — | Confirm, patch hard refresh, reload |
-| `viewInTree` | — | Focus `kube9ClusterView`, refresh tree, reveal open Application as `argocdApplication` item when context matches |
 | `navigateToResource` | `kind`, `name`, `namespace` | Same reveal path as `resource.navigateTree` for supported kinds; explicit error for unsupported kinds |
 | `graphRefresh` | optional `bypassCache?: boolean` | Reload Application and rebuild `ApplicationResourceGraph` |
 | `resourceAction` | `actionId`, `kind`, `name`, `namespace`, optional `group`, `version` | Run registry action; emit progress/result. Wire uses `group` (not `apiGroup`); maps from `ManagedResourceKey.apiGroup` at the webview boundary. No `nodeId` on the wire — identity is the resource reference fields above. |
@@ -252,7 +251,6 @@ The report does not shell out beyond the existing operator status read path. It 
 | Resource action denied | `resourceActionResult` success false | Error message |
 | Tree reveal: context mismatch | `resourceActionResult` success false | Graph action-notice + result message |
 | Tree reveal: resource not in tree | `resourceActionResult` success false | Graph action-notice; message includes `not found in cluster tree` |
-| Application `viewInTree`: app not found | _(no webview message)_ | `showWarningMessage` naming application |
 | Network / timeout on CRD get | `error` | Warning or error per severity |
 
 ### Tree reveal mapping (host)
@@ -268,7 +266,7 @@ The report does not shell out beyond the existing operator status read path. It 
 
 Before managed-resource reveal, the host focuses the cluster tree, invalidates the current-context resource cache and any prefetch/category children cache used by tree loading, fires tree data change, then awaits this lookup (issue #242). No debounce.
 
-`ClusterTreeProvider.revealTreeApplication(name, namespace)` resolves under **ArgoCD Applications** (`argocd` → `argocdApplication`) by matching `resourceName` and application namespace. Returns `false` when the category, application list, or matching item is unavailable.
+`ClusterTreeProvider.revealTreeApplication(name, namespace)` resolves under **ArgoCD Applications** (`argocd` → `argocdApplication`) by matching `resourceName` and application namespace. Returns `false` when the category, application list, or matching item is unavailable. The Application webview does **not** expose this path (issue #243 removed `viewInTree`); the method may remain for cluster-tree utilities or tests outside the panel.
 
 ## Open Implementation Decisions
 

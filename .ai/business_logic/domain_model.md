@@ -90,17 +90,17 @@ The registry is extensible: new kinds add capability entries without changing th
 - Mutating actions (sync, restart rollout) require **explicit user intent** via menu or command invocation.
 - Actions target the **specific node** the user selected; they do not implicitly cascade to unrelated nodes unless the underlying operation naturally affects dependents (for example, sync at Application root).
 - Read-only or insufficient RBAC must block write actions while preserving read-only graph inspection where permitted.
-- **View In Tree** from a managed-resource graph node resolves that node's `ManagedResourceKey` to the existing Kubernetes tree navigation path when a tree item can be mapped. Failure to map a node is a navigation limitation, not permission to mutate or invent resource identity.
+- **Navigate to resource in tree** from a managed-resource graph node resolves that node's `ManagedResourceKey` to the existing Kubernetes tree navigation path when a tree item can be mapped. Failure to map a node is a navigation limitation, not permission to mutate or invent resource identity. Application-level View In Tree is not offered from the Application panel.
 
 ## Webview page-level actions
 
-Page-level commands on webview panels (header, **Actions** overflow, documented sub-header rows) follow a frozen semantics rule: **handlers and message payloads do not change** for this initiative; only placement, grouping, and chrome change.
+Page-level commands on webview panels (header, **Actions** overflow, documented sub-header rows) follow a frozen semantics rule for the header-unification initiative: **handlers and message payloads do not change** for that work; only placement, grouping, and chrome change. **Exception (M17 / issue #243):** Application-level View In Tree is intentionally removed from the Application panel (UI and `viewInTree` protocol), so managed-resource Navigate remains the sole in-panel graph-to-tree path.
 
 ### Global header rules
 
 - **Primary cap:** At most **three** labeled primary header buttons per panel (excluding Help and the overflow control). Additional page-level operations use the **Actions** overflow menu.
 - **Help:** Only where **`helpContext`** or an equivalent help link exists; Help posts `openHelp` with that context and is **trailing**, outside overflow. Help failures must not break the panel.
-- **No capability removal:** Every action reachable before header unification remains reachable (primary, overflow, or documented sub-header/toolbar slot).
+- **No capability removal:** Every action reachable before header unification remains reachable (primary, overflow, or documented sub-header/toolbar slot), except Application-level View In Tree removed per issue #243.
 
 ### Action tiers (placement)
 
@@ -119,7 +119,7 @@ Page-level commands on webview panels (header, **Actions** overflow, documented 
 
 **Disabled actions:** Remain **visible** when inapplicable (for example Clear Filters with no active filters) unless a future story chooses hide-when-inapplicable.
 
-Argo CD application-level **sync**, **refresh**, and **hard refresh** stay **page-level** (header/sub-header), not on the graph canvas toolbar. Graph node overflow, canvas zoom/fit toolbar, and **graph filter controls** remain separate surfaces. Application-level **View In Tree** is demoted or removed from page-level chrome; managed-resource **Navigate to resource in tree** remains on tile overflow.
+Argo CD application-level **sync**, **refresh**, and **hard refresh** stay **page-level** (header/sub-header), not on the graph canvas toolbar. Graph node overflow, canvas zoom/fit toolbar, and **graph filter controls** remain separate surfaces. Application-level **View In Tree** is **removed** from Application panel chrome (sub-header, Application root overflow, Details Overview); managed-resource **Navigate to resource in tree** is the only in-panel graph-to-tree path.
 
 ## Resource inspection and mutation surfaces
 
@@ -158,7 +158,7 @@ Rules below are the **kube9-vscode reference baseline** for built-in Kubernetes 
 4. Resource views should degrade gracefully when optional integrations are unavailable.
 5. Resource identity and scope must remain consistent across tree items, command routing, detail providers, YAML views, and Resource Graph Nodes.
 6. The Application Resource Graph must remain usable when dependency topology is partial; missing edges or unknown parentage must not prevent rendering available nodes and status.
-7. Application-level sync, refresh, and hard refresh remain available from the webview header/sub-header; they are not replaced by the graph canvas toolbar. Application-level View In Tree is demoted or removed from sub-header and Application root overflow; managed-resource tree navigation via `resource.navigateTree` is the primary graph-first path.
+7. Application-level sync, refresh, and hard refresh remain available from the webview header/sub-header; they are not replaced by the graph canvas toolbar. Application-level View In Tree is removed from the Application panel; managed-resource tree navigation via `resource.navigateTree` is the only in-panel graph-to-tree path.
 8. Graph presentation and actions must not require the user to leave VS Code or open the native Argo CD server UI.
 9. **Extension-owned graph assembly:** the extension owns `ApplicationResourceGraph` DTO assembly, webview rendering, graph filters, and tree reveal. In **operated clusters**, kube9-operator supplies on-demand Argo CD resource-tree JSON (raw passthrough); the extension normalizes via existing `buildResourceTreeApplicationResourceGraph` and emits `topologySource: argocd_resource_tree`. CRD-flat baseline remains when all enrichment tiers fail. Kind Capability Registry rules are unchanged by topology source or filters.
 
@@ -178,12 +178,18 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 **Resolved (tree navigation, M17 / issue #242):**
 
-- **Application-level View In Tree** (`viewInTree` message) is **removed or demoted** from sub-header, Application root overflow, and related page-level chrome. It does not receive selection-aware behavior.
 - **Managed-resource navigation** routes through `resource.navigateTree` with the tile's `ManagedResourceKey`. The host maps supported kinds to cluster-tree categories via `ClusterTreeProvider.revealTreeResource`.
 - **Reveal namespace:** trimmed `ManagedResourceKey.namespace` is authoritative. Never use `ApplicationKey.namespace`. Do not override a non-empty resource namespace with Application `spec.destination.namespace`. Empty namespaced-kind namespace may fall back to `spec.destination.namespace`; cluster-scoped stays empty. Full rules in `.ai/interface/interaction_flow.md`.
 - **Refresh before reveal:** focus tree; invalidate resource cache and tree prefetch/category caches for the current context; fire tree data change; then await reveal lookup in the same async chain. No debounce. Do not depend on TreeView re-render for correctness.
 - **Details tab parity:** `navigateToResource` from the Details view uses the same reveal helper and namespace rules as `resource.navigateTree` for supported kinds.
 - **Failure is non-mutating:** When no tree item can be mapped, the extension reports navigation failure with user-facing copy; it must not create tree nodes or alter resource identity. False "not found in cluster tree" for a supported kind present under the resolved reveal namespace is a defect.
+
+**Resolved (Application View In Tree removal, M17 / issue #243):**
+
+- **Full remove** from the Application panel: sub-header, Application root overflow, and Details Overview action buttons. No Application-reveal affordance remains in the panel for empty selection, Application-root-only selection, or non-navigable kinds.
+- **Protocol:** Webview→host `viewInTree` is removed from the accepted protocol; host `handleViewInTree` and unused `revealApplicationInTree` helper are removed with the UI. `ClusterTreeProvider.revealTreeApplication` may remain as a tree-provider utility for cluster-tree tests or future non-panel UX; it is not wired through the Application webview.
+- **Keyboard:** No dedicated Application View In Tree shortcut. In-panel tree navigation is managed-resource overflow (Context Menu / Shift+F10 → Navigate to resource in tree) plus Details drift navigate links.
+- Application-level sync, refresh, and hard refresh stay on header/sub-header unchanged.
 
 **Resolved (operator topology affordances, issue #241):**
 
