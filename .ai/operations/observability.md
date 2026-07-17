@@ -31,9 +31,8 @@ Diagnostics should be rich enough for troubleshooting while keeping end-user mes
 
 Product telemetry (when shipped) must stay **minimal, enumerated, and reviewable**, consistent with `.ai/operations/security.md`.
 
-## Open Implementation Decisions
+## ArgoCD Diagram Telemetry (issue #225)
 
-Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
+Graph-specific product telemetry is **optional** and not required for the Argo CD diagram to be release-ready. The existing `kube9.product.feature_usage.webview_open` event with `webviewSurface: argocd_application` (see `docs/telemetry-event-catalog.md`) already provides the open-panel signal for this surface.
 
-### ArgoCD diagram telemetry
-- If graph telemetry is included, define catalog entries and allowed payload shapes through the existing telemetry catalog workflow before implementation emits events.
+If a graph implementation PR adds **new** telemetry event keys or payload fields (for example a coarse "topology fallback shown" or "resource action outcome" event), the same PR must add the corresponding row(s) to `docs/telemetry-event-catalog.md` under **Proposed** or **Shipped** before the emitting code merges, following the existing catalog review workflow (author adds/updates rows, maintainer confirms allowlisted-only payload shapes, no cluster identifiers). Validation for #225 is a catalog review plus a negative check: confirm graph action/navigation/topology code paths do not emit raw resource names, namespaces, Application names, kind/name pairs beyond the enumerated event keys, Argo CD URLs, kubeconfig data, or tokens via product telemetry, consistent with the **Never send** list above.
