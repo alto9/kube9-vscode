@@ -789,6 +789,7 @@
     "prepackage": "npm run build",
     "package": "vsce package",
     "verify:vsix-header-css": "bash scripts/verify-vsix-header-css.sh",
+    "verify:vsix-argocd-media": "bash scripts/verify-vsix-argocd-media.sh",
     "release": "semantic-release",
     "release:dry-run": "semantic-release --dry-run",
     "prepare": "husky"

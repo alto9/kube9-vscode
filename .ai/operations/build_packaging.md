@@ -69,7 +69,29 @@ Graph-specific overrides (node tiles, edge dash patterns, toolbar) belong in app
 
 **Rationale:** The canvas and layout libraries are user-facing value for topology; they stay out of the extension host bundle and ship as one minified IIFE so install size stays predictable relative to other webview copies in `build:webview`.
 
-`build:webview` runs with esbuild **`--minify`**. There is no separate size gate in CI today; maintainers should spot-check the Argo CD bundle after dependency changes. The VSIX total size should remain acceptable for marketplace download; this webview artifact is the primary size growth vector when graph dependencies are present.
+`build:webview` runs with esbuild **`--minify`**. There is no hard CI size gate on `media/argocd-application/main.js`; maintainers spot-check after dependency or graph-source changes. The VSIX total size should remain acceptable for marketplace download; this webview artifact is the primary size growth vector when graph dependencies are present.
+
+**Bundle-size spot check (issue #225):** After `npm run build` or `npm run compile`, run `ls -lh media/argocd-application/main.js` and record the reported size in the PR description when graph webview sources or dependencies change. Target is **≤ 450 KB** minified. If a change exceeds the target, justify the overage in the PR and in the release notes/changelog for the shipping version. No CI job fails on size alone.
+
+## Argo CD application webview packaging (CI gate)
+
+After `npm run package`, CI runs `scripts/verify-vsix-argocd-media.sh` (also `npm run verify:vsix-argocd-media`) in the **Build Extension** job alongside `verify:vsix-header-css`. The script fails if the VSIX zip lacks any of:
+
+- `extension/media/argocd-application/main.js` (esbuild IIFE bundle)
+- `extension/media/argocd-application/style.css` (React Flow base stylesheet copied from `@xyflow/react`)
+- `extension/media/argocd-application/styles.css` (application graph/tile overrides)
+
+vsce prefixes packaged paths with `extension/` inside the archive (same convention as the header CSS assert).
+
+## Argo CD diagram delivery checks (issue #225)
+
+**Validation checklist tiers:**
+
+1. **Unit / component tests** — Fastest feedback; cover accessible name computation, focus order, filter AND-semantics, layout constants, protocol validation, and capability registry behavior (see `.ai/specs/argocd-diagram-interface.spec.md` test matrices). Run via `npm run test:unit`.
+2. **Packaged-build assertions** — Automated, run after `npm run package` in CI; assert the VSIX contains the required Argo CD webview entries (above). These catch missing `build:webview` outputs or `.vscodeignore` regressions that unit tests cannot see.
+3. **Manual keyboard / high-contrast / reduced-motion review** — Human verification in the Extension Development Host against a running Argo CD Application, covering interaction paths that require a real VS Code theme and focus system (see `.ai/interface/accessibility.md` **M16 close-out sweep (issue #225)**).
+
+**Bundle-size spot-check:** After `npm run build` (or `npm run compile`, both of which invoke `build:webview`), maintainers run `ls -lh media/argocd-application/main.js` and record the reported size in the PR description whenever the PR changes React Flow, the layout engine, or graph webview source under `src/webview/argocd-application/`. The target remains **≤ 450 KB** minified (see Bundle Size Expectations above). There is no hard CI size gate; PRs that exceed the target justify the overage in the PR description, and releases that ship the overage note it in the release changelog entry for that version.
 
 ## Kubernetes AI Conformance Report Webview
 
@@ -81,24 +103,6 @@ The conformance report follows the existing operator report bundle pattern:
 - Built artifact under `media/ai-conformance-report/main.js`, with `styles.css` copied beside it when the surface uses a separate stylesheet.
 
 `npm run build:webview` must include the conformance report bundle and style copy before the feature is considered packaged. `npm run build`, `npm run compile`, and CI must therefore exercise the new webview bundle. If packaging adds a new media path, `.vscodeignore` must continue to include `media/` artifacts in the VSIX.
-
-## ArgoCD Diagram Delivery Checks (issue #225)
-
-**Validation checklist tiers:**
-
-1. **Unit / component tests** — Fastest feedback; cover accessible name computation, focus order, filter AND-semantics, layout constants, protocol validation, and capability registry behavior (see `.ai/specs/argocd-diagram-interface.spec.md` test matrices). Run via `npm run test:unit`.
-2. **Packaged-build assertions** — Automated, run after `npm run package` in CI; assert the VSIX contains the required Argo CD webview entries (below). These catch missing `build:webview` outputs or `.vscodeignore` regressions that unit tests cannot see.
-3. **Manual keyboard / high-contrast / reduced-motion review** — Human verification in the Extension Development Host against a running Argo CD Application, covering interaction paths that require a real VS Code theme and focus system (see `.ai/interface/accessibility.md` **Resolved (#225 M16 close-out sweep)**).
-
-**Packaging verification (VSIX asset assertions):** Extend the `scripts/verify-vsix-header-css.sh` pattern with a sibling script `scripts/verify-vsix-argocd-media.sh` (wired to `npm run verify:vsix-argocd-media`) that asserts the packaged VSIX contains:
-
-- `extension/media/argocd-application/main.js` (esbuild output from `build:webview`)
-- `extension/media/argocd-application/style.css` (React Flow base styles, copied by `build:webview` from `node_modules/@xyflow/react/dist/style.css`)
-- `extension/media/argocd-application/styles.css` (application styles, copied by `build:webview` from `src/webview/argocd-application/styles.css`)
-
-Run this script in the same **Build Extension** CI job as `verify:vsix-header-css`, immediately after `npm run package`, so a missing Argo CD media path fails the build the same way a missing header CSS path does today.
-
-**Bundle-size spot-check:** After `npm run build` (or `npm run compile`, both of which invoke `build:webview`), maintainers run `ls -lh media/argocd-application/main.js` and record the reported size in the PR description whenever the PR changes React Flow, the layout engine, or graph webview source under `src/webview/argocd-application/`. The target remains **≤ 450 KB** minified (see Bundle Size Expectations above). There is no hard CI size gate; PRs that exceed the target justify the overage in the PR description, and releases that ship the overage note it in the release changelog entry for that version. No separate perpetual bundle-size log file is required.
 
 ## Packaging Contract
 
