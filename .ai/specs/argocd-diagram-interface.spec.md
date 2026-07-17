@@ -14,7 +14,7 @@ Each graph tile shows kind, name, Argo CD sync status, Argo CD health status, an
 
 Application-level sync, refresh, and hard refresh remain available from the webview header and sub-header. **Application-level View In Tree is removed** from sub-header, Application root overflow, Details Overview action buttons, and all other Application panel chrome. The webview→host `viewInTree` message is not part of the accepted protocol. **Managed-resource** "Navigate to resource in tree" (`resource.navigateTree`) is the only in-panel graph-to-tree path. Managed-resource tiles support tree reveal and open describe/detail where resource identity can be mapped into the existing Kubernetes tree and describe surfaces. Deployment tiles may expose rollout restart through the Kind Capability Registry when RBAC and action eligibility allow it.
 
-The graph toolbar exposes **presentation-only filters** for resource name search, kind, and sync status (minimum parity with native Argo CD resource graph filtering). Active filters use **AND** semantics across dimensions. The host continues posting the **complete** `resourceGraph` DTO; filters hide or de-emphasize non-matching managed-resource tiles without mutating cluster state or trimming the host payload.
+The graph toolbar exposes **presentation-only filters** for resource name search, kind, and sync status (minimum parity with native Argo CD resource graph filtering). Active filters use **AND** semantics across dimensions. The host continues posting the **complete** `resourceGraph` DTO; filters **hide** non-matching managed-resource tiles without mutating cluster state or trimming the host payload.
 
 Large Applications must remain usable. Grouping, collapse, capped initial render, or progressive disclosure may be used, but the experience must preserve a path to every returned managed resource through the graph, Details, tree navigation, or explicit expansion. Empty, partial, permission-denied, and limited-topology states use explicit user-facing messaging instead of blank canvases or silent graph degradation.
 
@@ -176,8 +176,10 @@ Acceptance for #241 is **mocked operator CLI / fixtures** against the kube9-oper
 |------|----------------|------------|
 | Filter state | `argocdGraphFilters.test.ts` (new) | AND semantics across name/kind/sync; topology-only nodes without CRD sync treated as Unknown |
 | DTO completeness | `argocdGraphFilters.test.ts` | Host posts full `resourceGraph`; filters do not trim DTO or bump `structureVersion` |
-| Selection | `useGraphInteractionState` or component tests | Selection clears or falls back when selected tile filtered out (TW picks behavior) |
-| Accessibility | `argocdGraphAccessibility.test.ts` | Filter controls keyboard-operable; tab order: header → zoom → filters → canvas |
+| Selection | `useGraphInteractionState` or component tests | Selection **clears** (no fallback tile) when selected `GraphNodeId` is not in the visible set after filter change |
+| Kind grouping | `argocdGraphFilters.test.ts` + `argocdGraphGrouping.test.ts` | Kind summary visible when any member matches; expanded group shows only matching members; zero-match kind groups hidden |
+| Zero-match | `argocdGraphFilters.test.ts` | Filter-active zero managed visibility shows affordance copy; `GraphEmptyState` not used |
+| Accessibility | `argocdGraphAccessibility.test.ts` | Filter controls keyboard-operable; tab order: header → zoom → filters → canvas; `aria-pressed` on chips; polite live region on filter change |
 
 **Large-application layout and grouping test matrix (issue #222):**
 

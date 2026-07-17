@@ -11,7 +11,7 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 
 ### Keyboard and focus
 
-- **Tab order:** Webview header actions -> graph toolbar (zoom in, zoom out, fit view, **filter controls**) -> graph canvas -> **Graph | Details** tabs -> panel content for the active tab.
+- **Tab order:** Webview header actions -> graph toolbar zoom controls (zoom in, zoom out, fit view) -> graph filter controls (name search, kind chips, sync chips, clear filters when visible) -> graph canvas tiles -> **Graph | Details** tabs -> panel content for the active tab.
 - **Nodes:** Each graph tile is a single focus stop; **Enter** or **Space** activates the tile (selection/focus ring). Focus order among nodes follows a **stable, predictable** sequence (layout order left-to-right, then top-to-bottom within a column) so repeated visits do not jump arbitrarily after data refresh.
 - **Overflow menu (⋮):** Opens with keyboard from the focused tile; menu items are standard focusable actions; **Escape** closes the menu and returns focus to the tile.
 - **Canvas pan/zoom:** Pointer-first for pan; toolbar buttons are fully keyboard-operable with visible focus. Do not require drag-only gestures for essential information.
@@ -20,6 +20,7 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 
 - Each tile exposes an accessible name combining **kind**, **resource name**, **sync status**, and **health status** (e.g. "Deployment frontend OutOfSync Degraded").
 - Toolbar buttons have concise **accessible names** ("Zoom in", "Zoom out", "Fit graph to view").
+- **Filter controls:** Name field labeled **Filter resources by name**; kind and sync chips use `aria-pressed` for toggle state; **Clear filters** is a standard button. A polite **`aria-live="polite"`** region announces result summaries when filters change (for example "Showing 3 of 12 resources" or "No resources match filters").
 - Dashed edges are decorative for screen readers unless they encode unique information; parent/child relationships should be inferable from node names and optional **Details** table, or from explicit accessible descriptions when edge semantics become critical.
 
 ### Motion and density
@@ -82,6 +83,15 @@ Manual acceptance before marking #224 done (full M16 packaging/high-contrast swe
 - Empty selection or Application-root-only selection has no Application-reveal fallback in the panel.
 
 **Edge semantics:** Parent/child relationships do not require per-edge accessible descriptions in v1; tile accessible names plus **Details** drift table navigation are sufficient.
+
+**Resolved (graph toolbar filters, issue #244):**
+
+Manual acceptance adds to the graph keyboard pass:
+
+1. Tab from Fit control into name search and at least one kind/sync chip; confirm `:focus-visible` rings.
+2. Toggle a sync chip with **Space**; confirm `aria-pressed` updates and live region announces the result summary.
+3. Apply filters that hide the selected tile; confirm selection clears without moving focus off the filter control unexpectedly.
+4. Activate **Clear filters** by keyboard; confirm full managed-resource visibility returns and live region updates.
 
 **Resolved (#225 M16 close-out sweep):**
 

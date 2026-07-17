@@ -165,6 +165,6 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - **Session memo:** Optional in-memory memo keyed by `ApplicationKey` plus fetch timestamp for the open panel session. Invalidate on explicit `graphRefresh` with `bypassCache: true`, on panel dispose, and after terminal sync/refresh/hard refresh before the final graph rebuild. Memo must not outlive the panel.
 - **CRD ↔ tree duplicate Application node:** When the resource-tree payload includes an Application node that matches the panel Application identity, keep a single Application **root** from CRD/application metadata and do not emit a second managed-resource node for that Application. Prefer CRD sync/health for the root; use tree `parentRefs` for managed-resource edges only.
 
-**Deferred (M17, sibling #244):**
+**Resolved (graph toolbar filters, issue #244):**
 
-- Graph filter webview state shape and selection-when-filtered behavior.
+- Filter state is webview-only (not serialized in `ApplicationResourceGraph`). Shape: debounced name string, selected kind set, selected sync set; session-local to the panel. Selection clears when the selected `GraphNodeId` is not visible after filter application. Host DTO and wire protocol unchanged.
