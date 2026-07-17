@@ -65,6 +65,9 @@ jobs:
 
       - name: Verify VSIX includes webview-header.css
         run: npm run verify:vsix-header-css
+
+      - name: Verify VSIX includes Argo CD application media
+        run: npm run verify:vsix-argocd-media
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4

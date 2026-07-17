@@ -56,15 +56,9 @@ Accessibility expectations for Kube9 VS Code **webview** surfaces, with emphasis
 - Graph changes should be reviewed for focus loss after polling updates (focus should remain on the current tile when possible).
 - AI Conformance report changes should include a keyboard pass through Refresh, category headings, expandable requirement rows, and high-contrast badge review.
 
-## Open Implementation Decisions
+## Argo CD diagram manual acceptance
 
-Implementation-level items not yet fully specified. `/refine-issue` resolves these into timeless contract prose and removes or collapses bullets when done.
-
-### ArgoCD diagram accessibility
-
-**Resolved (graph tile manual pass, issue #224):**
-
-Manual acceptance before marking #224 done (full M16 packaging/high-contrast sweep remains #225):
+### Graph tile keyboard pass (issue #224)
 
 1. Open an Application graph from the tree with at least two managed-resource tiles.
 2. Tab through header actions → graph toolbar (Zoom in, Zoom out, Fit) → first tile → second tile. Confirm visible `:focus-visible` rings.
@@ -75,7 +69,7 @@ Manual acceptance before marking #224 done (full M16 packaging/high-contrast swe
 7. Switch **Graph | Details** tabs with keyboard; confirm `aria-selected` on the active tab.
 8. In a high-contrast theme, confirm sync/health badges are not color-only (icon + visible label in accessible name on the tile group).
 
-**Resolved (Application View In Tree removal, issue #243):**
+### Application View In Tree removal (issue #243)
 
 - Sub-header and Details Overview must not expose Application View In Tree; Application root overflow is empty/hidden.
 - Tab order through header/sub-header must not include an Application-reveal control.
@@ -84,16 +78,14 @@ Manual acceptance before marking #224 done (full M16 packaging/high-contrast swe
 
 **Edge semantics:** Parent/child relationships do not require per-edge accessible descriptions in v1; tile accessible names plus **Details** drift table navigation are sufficient.
 
-**Resolved (graph toolbar filters, issue #244):**
-
-Manual acceptance adds to the graph keyboard pass:
+### Graph toolbar filters (issue #244)
 
 1. Tab from Fit control into name search and at least one kind/sync chip; confirm `:focus-visible` rings.
 2. Toggle a sync chip with **Space**; confirm `aria-pressed` updates and live region announces the result summary.
 3. Apply filters that hide the selected tile; confirm selection clears without moving focus off the filter control unexpectedly.
 4. Activate **Clear filters** by keyboard; confirm full managed-resource visibility returns and live region updates.
 
-**Resolved (#225 M16 close-out sweep):**
+### M16 close-out sweep (issue #225)
 
 Before the M16 Argo CD Application diagram is release-ready, run the full manual sweep below in the Extension Development Host against a running Argo CD Application (or a fixture cluster). This sweep supersedes the #224 tile pass as the release gate; it repeats the #224 steps and adds the packaging-era extras that only exist once graph filters, large-application grouping, and the packaged VSIX are in place:
 
