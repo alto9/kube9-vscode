@@ -32,7 +32,10 @@ suite('argocdApplicationProtocol', () => {
             assert.strictEqual(isWebviewMessage({ type: 'sync' }), true);
             assert.strictEqual(isWebviewMessage({ type: 'refresh' }), true);
             assert.strictEqual(isWebviewMessage({ type: 'hardRefresh' }), true);
-            assert.strictEqual(isWebviewMessage({ type: 'viewInTree' }), true);
+        });
+
+        test('rejects removed viewInTree message', () => {
+            assert.strictEqual(isWebviewMessage({ type: 'viewInTree' }), false);
         });
 
         test('accepts navigateToResource with required fields', () => {

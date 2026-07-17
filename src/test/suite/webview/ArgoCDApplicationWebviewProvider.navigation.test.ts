@@ -108,14 +108,12 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
     let mockExtensionContext: vscode.ExtensionContext;
     let mockArgoCDService: ArgoCDService;
     let mockTreeProvider: ClusterTreeProvider;
-    let revealTreeApplicationCalls = 0;
     let revealTreeResourceCalls = 0;
     let focusCommandCalls = 0;
     let invalidateNavigateCacheCalls = 0;
     let lastRevealNamespace = '';
 
     setup(() => {
-        revealTreeApplicationCalls = 0;
         revealTreeResourceCalls = 0;
         focusCommandCalls = 0;
         invalidateNavigateCacheCalls = 0;
@@ -154,10 +152,6 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
             },
             isCurrentContext: async () => true,
             getKubeconfigPath: () => '/mock/kubeconfig',
-            revealTreeApplication: async () => {
-                revealTreeApplicationCalls += 1;
-                return true;
-            },
             revealTreeResource: async (_kind: string, _name: string, namespace: string) => {
                 revealTreeResourceCalls += 1;
                 lastRevealNamespace = namespace;
@@ -190,72 +184,17 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
         return panel;
     }
 
-    test('viewInTree calls revealTreeApplication with panel namespace', async () => {
+    test('viewInTree message is ignored by the host handler', async () => {
         const panel = await openPanel();
         const webview = panel.webview as unknown as MockWebviewWithFire;
 
         webview._fireMessage({ type: 'viewInTree' });
-        await flushUntil(() => revealTreeApplicationCalls === 1);
+        await flushAsyncWork();
 
-        assert.strictEqual(revealTreeApplicationCalls, 1);
-        assert.strictEqual(focusCommandCalls, 1);
+        assert.strictEqual(revealTreeResourceCalls, 0);
+        assert.strictEqual(focusCommandCalls, 0);
         assert.strictEqual(getWarningMessages().length, 0);
         assert.strictEqual(getErrorMessages().length, 0);
-    });
-
-    test('viewInTree shows warning on context mismatch', async () => {
-        mockTreeProvider = {
-            refresh: () => {
-                /**/
-            },
-            invalidateCachesBeforeTreeReveal: () => {
-                /**/
-            },
-            isCurrentContext: async () => false,
-            getKubeconfigPath: () => '/mock/kubeconfig',
-            revealTreeApplication: async () => {
-                revealTreeApplicationCalls += 1;
-                return true;
-            },
-            revealTreeResource: async () => true
-        } as unknown as ClusterTreeProvider;
-
-        const panel = await openPanel();
-        const webview = panel.webview as unknown as MockWebviewWithFire;
-
-        webview._fireMessage({ type: 'viewInTree' });
-        await flushUntil(() => getWarningMessages().length > 0);
-
-        assert.strictEqual(revealTreeApplicationCalls, 0);
-        assert.strictEqual(focusCommandCalls, 0);
-        const warning = getWarningMessages().at(-1);
-        assert.ok(warning);
-        assert.match(warning, /context does not match/i);
-    });
-
-    test('viewInTree shows warning when application is not found', async () => {
-        mockTreeProvider = {
-            refresh: () => {
-                /**/
-            },
-            invalidateCachesBeforeTreeReveal: () => {
-                /**/
-            },
-            isCurrentContext: async () => true,
-            getKubeconfigPath: () => '/mock/kubeconfig',
-            revealTreeApplication: async () => false,
-            revealTreeResource: async () => true
-        } as unknown as ClusterTreeProvider;
-
-        const panel = await openPanel();
-        const webview = panel.webview as unknown as MockWebviewWithFire;
-
-        webview._fireMessage({ type: 'viewInTree' });
-        await flushUntil(() => getWarningMessages().length > 0);
-
-        const warning = getWarningMessages().at(-1);
-        assert.ok(warning);
-        assert.match(warning, /guestbook/);
     });
 
     test('navigateToResource delegates to revealTreeResource for supported kinds', async () => {

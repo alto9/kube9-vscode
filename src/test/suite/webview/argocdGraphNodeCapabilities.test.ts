@@ -20,11 +20,9 @@ suite('argocd graph node capabilities', () => {
         assert.ok(actionIds.includes(ACTION_RESOURCE_NAVIGATE_TREE));
     });
 
-    test('application role only exposes view in tree', () => {
+    test('application role returns empty overflow actions', () => {
         const actions = getOverflowActions('application', 'Application');
-        assert.strictEqual(actions.length, 1);
-        assert.strictEqual(actions[0].messageType, 'viewInTree');
-        assert.strictEqual(actions[0].label, 'View in tree');
+        assert.deepStrictEqual(actions, []);
     });
 
     test('unknown kind has no overflow actions', () => {

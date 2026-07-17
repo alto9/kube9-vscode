@@ -48,9 +48,6 @@ export function useGraphInteractionState(
             busyNodeKeys,
             actionNotice,
             onDismissActionNotice: () => setActionNotice(null),
-            postViewInTree: () => {
-                vscode?.postMessage({ type: 'viewInTree' });
-            },
             postResourceAction: (actionId, resourceKey) => {
                 if (!vscode) {
                     return;

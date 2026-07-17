@@ -13,7 +13,6 @@ interface OverviewTabProps {
     onSync: () => void;
     onRefresh: () => void;
     onHardRefresh: () => void;
-    onViewInTree: () => void;
 }
 
 /**
@@ -25,8 +24,7 @@ export function OverviewTab({
     refreshing = false,
     onSync,
     onRefresh,
-    onHardRefresh,
-    onViewInTree
+    onHardRefresh
 }: OverviewTabProps): React.JSX.Element {
     return (
         <div>
@@ -38,7 +36,6 @@ export function OverviewTab({
                 onSync={onSync}
                 onRefresh={onRefresh}
                 onHardRefresh={onHardRefresh}
-                onViewInTree={onViewInTree}
                 syncing={syncing}
                 refreshing={refreshing}
             />

@@ -39,10 +39,6 @@ export interface HardRefreshWebviewMessage {
     type: 'hardRefresh';
 }
 
-export interface ViewInTreeWebviewMessage {
-    type: 'viewInTree';
-}
-
 export interface NavigateToResourceWebviewMessage {
     type: 'navigateToResource';
     kind: string;
@@ -70,7 +66,6 @@ export type WebviewToExtensionMessage =
     | SyncWebviewMessage
     | RefreshWebviewMessage
     | HardRefreshWebviewMessage
-    | ViewInTreeWebviewMessage
     | NavigateToResourceWebviewMessage
     | GraphRefreshWebviewMessage
     | ResourceActionWebviewMessage;
@@ -155,7 +150,6 @@ const WEBVIEW_MESSAGE_TYPES = new Set<string>([
     'sync',
     'refresh',
     'hardRefresh',
-    'viewInTree',
     'navigateToResource',
     'graphRefresh',
     'resourceAction'
@@ -243,7 +237,6 @@ function validateWebviewPayload(type: string, payload: Record<string, unknown>):
         case 'sync':
         case 'refresh':
         case 'hardRefresh':
-        case 'viewInTree':
             return true;
         case 'navigateToResource':
             return (

@@ -22,7 +22,6 @@ interface ArgoCDApplicationViewProps {
     onSync: () => void;
     onRefresh: () => void;
     onHardRefresh: () => void;
-    onViewInTree: () => void;
     onNavigateToResource: (kind: string, name: string, namespace: string) => void;
     resourceGraph: ApplicationResourceGraph | null;
     graphError: string | null;
@@ -51,7 +50,6 @@ export function ArgoCDApplicationView({
     onSync,
     onRefresh,
     onHardRefresh,
-    onViewInTree,
     onNavigateToResource,
     resourceGraph,
     graphError,
@@ -97,12 +95,6 @@ export function ArgoCDApplicationView({
                 icon: 'codicon-clear-all',
                 onClick: onHardRefresh,
                 disabled: operationDisabled
-            },
-            {
-                label: 'View in Tree',
-                icon: 'codicon-list-tree',
-                onClick: onViewInTree,
-                disabled: operationDisabled
             }
         ];
 
@@ -147,7 +139,6 @@ export function ArgoCDApplicationView({
                         onSync={onSync}
                         onRefresh={onRefresh}
                         onHardRefresh={onHardRefresh}
-                        onViewInTree={onViewInTree}
                         onNavigateToResource={onNavigateToResource}
                         panelId={ARGOCD_APP_PANEL_IDS.details}
                         labelledBy={ARGOCD_APP_TAB_IDS.details}

@@ -192,10 +192,6 @@ export function ResourceGraphNodeTile({ data, selected }: NodeProps<Node<GraphNo
     };
 
     const handleOverflowSelect = (action: GraphOverflowAction): void => {
-        if (action.messageType === 'viewInTree') {
-            interaction.postViewInTree();
-            return;
-        }
         if (!dto.resourceKey) {
             return;
         }
