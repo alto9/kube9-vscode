@@ -112,12 +112,17 @@ Native Argo CD UI resource graphs use this API; kube9-vscode targets **visual pa
 | Item | Contract |
 |------|----------|
 | **When** | Operated mode; extension REST not configured or not authorized; operator present with `status.argocd.detected` and resource-tree capability |
+| **Client** | Dedicated `OperatorResourceTreeClient` invoked from `ApplicationResourceGraphBuilder` |
 | **Source** | `kubectl exec` → `kube9-operator query argocd resource-tree get <appName> --namespace=<appNamespace> [--format=json]` |
 | **Response use** | Raw Argo CD resource-tree JSON (`nodes[]`, `parentRefs[]`); extension reuses `buildResourceTreeApplicationResourceGraph` |
 | **Auth** | Operator authenticates to argocd-server with platform-supplied dedicated bearer token (Helm Secret); extension does not hold operator token |
-| **Preconditions** | Operator installed; Argo CD detected; operator `resourceTreeCapable` (or equivalent) true; extension exec RBAC |
-| **Failure** | Fall through to extension REST (if configured) → `kubernetes_owner_ref` → `crd_flat` |
-| **topologySource on success** | `argocd_resource_tree` (operator is transport only) |
+| **Preconditions** | Operator installed; Argo CD detected; `status.argocd.resourceTreeCapable === true`; extension pod exec RBAC. When capability is false or omitted, **hard-skip** the operator tier (no exec). |
+| **Timeout / cancel** | Host wait aligns with operator `ARGOCD_API_TIMEOUT_MS` default **30000** ms (no new vscode setting in v1). Cancel in-flight exec when the Application panel is disposed. |
+| **Failure** | Fall through to `kubernetes_owner_ref` → `crd_flat` (REST already skipped or failed for this load). Map structured stderr `code` to Output Channel only; set `limitedTopologyReason` for the webview affordance. |
+| **topologySource on success** | `argocd_resource_tree` (operator is transport only; do not emit `operator_snapshot`) |
+| **limitedTopologyReason on skip/fail** | `operator_not_capable` when capability false / token-missing class at status level; `enrichment_failed` when capability true but per-app CLI fails (`APPLICATION_NOT_FOUND`, per-app RBAC, `TIMEOUT`, parse error, exec error) |
+
+**Operator stderr → host log (do not show in webview):** Prefix lines with `[INFO] Argo CD resource-tree enrichment unavailable` and include the structured `code` when present (`ARGOCD_TOKEN_MISSING`, `ARGOCD_AUTH_FAILED`, `ARGOCD_RBAC_DENIED`, `APPLICATION_NOT_FOUND`, `TIMEOUT`, `ARGOCD_API_UNREACHABLE`, `ARGOCD_NOT_DETECTED`, `INVALID_ARGUMENT`, `INTERNAL_ERROR`). Never log the operator token or raw bearer material.
 
 See peer contract: `kube9-operator/.ai/integration/api_contracts.md` (resource-tree query).
 
@@ -180,7 +185,7 @@ JSON messages over `webview.postMessage` / `onDidReceiveMessage`. Types are stri
 | `applicationData` | `data: ArgoCDApplication` | Full CRD parse (existing) |
 | `updateStatus` | `syncStatus`, `healthStatus` | Partial status update |
 | `operationProgress` | `phase`, `message?` | Application-level sync/refresh |
-| `resourceGraph` | `graph`, `topologySource`, `topologyMode`, `structureVersion`, `refreshedAt`, optional `truncated` | Complete graph snapshot for React Flow merge |
+| `resourceGraph` | `graph` (`ApplicationResourceGraph` including `topologySource`, `topologyMode`, optional `limitedTopologyReason`), plus wire fields `topologySource`, `topologyMode`, `structureVersion`, `refreshedAt`, optional `truncated` as already shipped | Complete graph snapshot for React Flow merge |
 | `resourceActionProgress` | `actionId`, `phase`, `message?`, optional node ref | Tile action in flight |
 | `resourceActionResult` | `actionId`, `success`, `message`, optional node ref | Tile action terminal state |
 | `error` | `message` | User-visible failure |
@@ -278,4 +283,8 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 **Resolved (CRD-flat baseline):**
 
 - **Owner-reference enrichment** ships after CRD-flat completeness. Tier C is optional; when unavailable the host keeps Tier A (`crd_flat`) without failing the panel.
-- **Resource-tree fallback messaging:** When Tier B fails or is disabled, the webview shows the limited-topology affordance (`topologyMode: limited`) with user-facing copy that parent/child relationships may be incomplete. Raw upstream errors, endpoints, and credentials stay in the extension host output channel only, prefixed `[INFO] Argo CD resource-tree enrichment unavailable`.
+- **Resource-tree fallback messaging:** When Tier B / B2 fails or is disabled, the webview shows the limited-topology affordance (`topologyMode: limited`) with tiered copy from `limitedTopologyReason` (see presentation contract). Raw upstream errors, endpoints, and credentials stay in the extension host output channel only, prefixed `[INFO] Argo CD resource-tree enrichment unavailable`.
+
+**Resolved (operator Tier B2, issue #241):**
+
+- Dedicated `OperatorResourceTreeClient`; hard-skip when `resourceTreeCapable` is not true; cancel on panel dispose; 30s host wait default; success labels `argocd_resource_tree` / `full`; affordance reasons as in Tier B2 table above.

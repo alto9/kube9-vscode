@@ -117,10 +117,22 @@ The **Application resource graph** is a derived, directed view model for React F
 | `edges` | ResourceGraphEdge[] | Directed relationships for layout |
 | `topologySource` | TopologySource | How edges were produced (see below) |
 | `topologyMode` | `full` \| `limited` | **Full** Native Argo CD-style topology (resource-tree). **Limited** CRD-flat and best-effort edges; UI SHOULD show an affordance that topology may be incomplete. Derive consistently from `topologySource` (see below). |
+| `limitedTopologyReason` | LimitedTopologyReason (optional) | When `topologyMode` is `limited`, selects the user-facing affordance copy tier. Omit when `topologyMode` is `full`. |
 | `structureVersion` | string | Fingerprint that changes when the **set of node ids** or **edge endpoints** changes. Used with polling merge (see [consistency.md](./consistency.md)). Attribute-only sync/health updates do not bump it. |
 | `layoutHint` | optional object | Non-authoritative hints from the assembler (for example `{ "algorithm": "dagre-lr", "version": "1" }`). Webview ignores when `structureVersion` changes or may omit hints entirely. |
 | `observedAt` | ISO 8601 string | When this graph snapshot was assembled |
 | `truncated` | boolean (optional) | **Reserved; omit in v1.** Host must not use this flag to omit managed-resource nodes from `nodes[]`. Large-application kind grouping is a webview-only presentation transform (issue #222). If a future contract adds grouped DTO nodes, this field may signal presentation-limited delivery while preserving reachability through expansion, Details, or tree navigation. |
+
+### LimitedTopologyReason
+
+Closed enum for banner selection (issue #241). Exact copy strings live in `.ai/interface/presentation.md`.
+
+| Value | When the host sets it |
+|-------|------------------------|
+| `operator_not_capable` | Operated mode but `status.argocd.resourceTreeCapable` is false or omitted (token missing / cluster-wide capability demotion) |
+| `rest_unavailable` | Extension REST disabled or unauthorized, and operator path unavailable (basic mode or no operator) |
+| `enrichment_failed` | Enrichment was attempted or expected for this Application but failed or returned unusable data; graph is CRD-flat |
+| `owner_ref` | `topologySource` is `kubernetes_owner_ref` (may also be inferred from `topologySource` alone) |
 
 ### ResourceGraphNode
 

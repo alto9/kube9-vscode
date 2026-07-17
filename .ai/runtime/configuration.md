@@ -33,3 +33,7 @@ Separate from Kubernetes Application CRD RBAC. Credentials and base URL stay in 
 3. Load bearer token from SecretStorage for that context; missing token → skip Tier B with host-side warning (no fatal Application panel error).
 
 Timeouts for REST calls reuse `kube9.timeout.apiRequest` unless a dedicated Argo CD override is added later.
+
+## Operator resource-tree CLI (Tier B2, no user setting)
+
+Operator topology uses the peer CLI contract. The extension does **not** add a vscode setting for the operator token (platform-admin Helm / env on the operator). Host wait for `kubectl exec` aligns with operator `ARGOCD_API_TIMEOUT_MS` default **30000** ms. Capability gating reads `status.argocd.resourceTreeCapable` from the operator status ConfigMap (namespace from existing operator discovery / `kube9.operatorNamespace` patterns).

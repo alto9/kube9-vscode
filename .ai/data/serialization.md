@@ -158,9 +158,12 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 - **Large-application grouping (issue #222):** Remains an **interface-only transform** over the complete flat DTO node set in v1. Kind group tiles are synthetic webview nodes; they are not serialized in `ApplicationResourceGraph.nodes`. The host does not set `truncated: true` to omit managed-resource nodes.
 
-**Deferred (M17):**
+**Resolved (operator resource-tree read path, issue #241):**
 
-- Extension read path: dedicated `OperatorResourceTreeClient` vs inline exec in `ApplicationResourceGraphBuilder`.
-- In-memory memo keyed by `ApplicationKey` + fetch timestamp for same panel session.
-- CRD ↔ tree reconciliation edge cases for duplicate Application node in tree response.
+- **Client module:** Use a dedicated `OperatorResourceTreeClient` (not inline `kubectl exec` inside `ApplicationResourceGraphBuilder`). The builder orchestrates precedence; the client owns exec argv, stdout JSON parse, stderr envelope parse, cancellation token, and structured failure results.
+- **Session memo:** Optional in-memory memo keyed by `ApplicationKey` plus fetch timestamp for the open panel session. Invalidate on explicit `graphRefresh` with `bypassCache: true`, on panel dispose, and after terminal sync/refresh/hard refresh before the final graph rebuild. Memo must not outlive the panel.
+- **CRD ↔ tree duplicate Application node:** When the resource-tree payload includes an Application node that matches the panel Application identity, keep a single Application **root** from CRD/application metadata and do not emit a second managed-resource node for that Application. Prefer CRD sync/health for the root; use tree `parentRefs` for managed-resource edges only.
+
+**Deferred (M17, sibling #244):**
+
 - Graph filter webview state shape and selection-when-filtered behavior.

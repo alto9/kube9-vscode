@@ -37,9 +37,19 @@ Basic mode (no operator):
   3. crd_flat
 ```
 
-On operator or REST success, the host emits `topologySource: argocd_resource_tree` and `topologyMode: full` (operator is transport only). Enrichment failure falls back to lower tiers without failing the whole panel when the Application CRD remains readable. `resource.navigateTree` / `ClusterTreeProvider.revealTreeResource` must map managed resources to the correct **destination namespace** workloads, refresh the cluster tree before lookup, and surface actionable failure copy when reveal fails.
+On operator or REST success, the host emits `topologySource: argocd_resource_tree` and `topologyMode: full` (operator is transport only; do not emit `operator_snapshot`). Enrichment failure falls back to lower tiers without failing the whole panel when the Application CRD remains readable. `resource.navigateTree` / `ClusterTreeProvider.revealTreeResource` must map managed resources to the correct **destination namespace** workloads, refresh the cluster tree before lookup, and surface actionable failure copy when reveal fails.
 
-The graph data contract is `ApplicationResourceGraph`, a derived JSON-safe DTO with `applicationKey`, `nodes`, `edges`, `topologySource`, `topologyMode`, `structureVersion`, optional `layoutHint`, `observedAt`, and optional `truncated` (reserved; host omits in v1 — see [data_model.md](../data/data_model.md)). Stable identity is based on `ManagedResourceKey` and `GraphNodeId`, not visible labels or React Flow internals. `ArgoCDApplication.resources` remains the sync and health authority for CRD-backed resources.
+**Operator CLI path (issue #241):**
+
+- Host module `OperatorResourceTreeClient` runs `kubectl exec` → `kube9-operator query argocd resource-tree get <appName> --namespace=<appNamespace> [--format=json]` only when operated mode, Argo CD detected, extension REST is not available for this load, and `status.argocd.resourceTreeCapable === true`.
+- Hard-skip (no exec) when capability is false or omitted; set `limitedTopologyReason: operator_not_capable` if the resulting graph is limited.
+- Parse unmodified Argo CD JSON from stdout; on structured stderr failure, log `[INFO] Argo CD resource-tree enrichment unavailable` with the `code`, then fall through to owner-ref / CRD-flat with `limitedTopologyReason: enrichment_failed` (or `rest_unavailable` when REST was never an option and operator path is unavailable).
+- Cancel in-flight exec on Application panel dispose. Host wait aligns with operator default timeout **30000** ms.
+- Optional same-panel memo keyed by `ApplicationKey` + fetch timestamp; invalidate on `bypassCache` refresh, panel dispose, and terminal sync/refresh before final rebuild.
+- While enrichment is in flight, do not show an enrichment-pending banner; keep existing panel loading or prior graph until the next `resourceGraph` post.
+- Affordance copy tiers and exact strings are defined in `.ai/interface/presentation.md` (`operator_not_capable`, `rest_unavailable`, `enrichment_failed`, owner-ref).
+
+The graph data contract is `ApplicationResourceGraph`, a derived JSON-safe DTO with `applicationKey`, `nodes`, `edges`, `topologySource`, `topologyMode`, optional `limitedTopologyReason`, `structureVersion`, optional `layoutHint`, `observedAt`, and optional `truncated` (reserved; host omits in v1 — see [data_model.md](../data/data_model.md)). Stable identity is based on `ManagedResourceKey` and `GraphNodeId`, not visible labels or React Flow internals. `ArgoCDApplication.resources` remains the sync and health authority for CRD-backed resources. When the resource-tree includes a duplicate Application node matching the panel Application, keep a single Application root from CRD metadata and do not emit a second managed Application node.
 
 **CRD-flat baseline assembly (`topologySource: crd_flat`):**
 
@@ -126,14 +136,18 @@ Interface validation should include graph layout readability, selectable tiles, 
 | Parity | `argocdGraphNodeCapabilities.test.ts` | Webview navigate kinds still match host `NAVIGATE_TREE_SUPPORTED_KINDS`; Application root overflow no longer exposes `viewInTree` |
 | Manual | Extension Development Host + Argo CD cluster | Deployment tile Navigate reveals workload in destination namespace; Job tile has no overflow; wrong-context cluster shows context-mismatch message |
 
-**Operator topology test matrix (M17):**
+**Operator topology test matrix (issue #241):**
+
+Acceptance for #241 is **mocked operator CLI / fixtures** against the kube9-operator#151 contract. Live operated-cluster E2E is optional and must not block #241 (tracked after #151 ships; #152 does not block #241).
 
 | Area | Module / suite | Must prove |
 |------|----------------|------------|
-| Operator client | `OperatorResourceTreeClient.test.ts` (new) | Exec `query argocd resource-tree get`; parse raw JSON; structured error on CLI failure |
-| Assembler | `ApplicationResourceGraphAssembler.test.ts` | Operator-fed raw JSON → `topologySource: argocd_resource_tree`, `topologyMode: full`; pods/ReplicaSets visible under Deployment |
-| Precedence | `ApplicationResourceGraphBuilder.test.ts` | REST wins when `restEnabled` + authorized; operator path when REST not configured; fallback ladder on operator fail |
-| Affordance | `graphTopologyAffordances.test.ts` | Limited-topology suppressed on full topology; distinct copy tiers for `crd_flat`, `kubernetes_owner_ref`, enrichment-pending |
+| Operator client | `OperatorResourceTreeClient.test.ts` (new) | Builds argv for `query argocd resource-tree get`; parses raw stdout JSON; maps structured stderr `code` to failure result; respects cancellation |
+| Capability gate | `OperatorResourceTreeClient.test.ts` or builder tests | No exec when `resourceTreeCapable` is false/omitted |
+| Assembler | `ApplicationResourceGraphAssembler.test.ts` | Operator-fed raw JSON → `topologySource: argocd_resource_tree`, `topologyMode: full`; pods/ReplicaSets under Deployment; duplicate Application node collapsed to single root |
+| Precedence | `ApplicationResourceGraphBuilder.test.ts` | REST wins when `restEnabled` + authorized; operator path when REST not configured and capable; fallback ladder on operator fail; `limitedTopologyReason` set for skip/fail paths |
+| Affordance | `graphTopologyAffordances.test.ts` | Limited-topology suppressed on full topology; distinct copy for `operator_not_capable`, `rest_unavailable`, `enrichment_failed`, and `owner_ref`; no enrichment-pending banner path |
+| Lifecycle | Provider or client unit test | Panel dispose cancels in-flight operator fetch |
 
 **Graph filter test matrix (M17):**
 
