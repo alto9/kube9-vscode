@@ -13,7 +13,7 @@ See [api_contracts.md](./api_contracts.md#argo-cd-application-webview-protocol) 
 
 | Direction | Types | Purpose |
 |-----------|-------|---------|
-| Webview → host | `ready`, `sync`, `refresh`, `hardRefresh`, `viewInTree`, `navigateToResource` | Load signal, GitOps actions, tree navigation |
+| Webview → host | `ready`, `sync`, `refresh`, `hardRefresh`, `navigateToResource` | Load signal, GitOps actions, managed-resource tree navigation |
 | Host → webview | `applicationData`, `updateStatus`, `operationProgress`, `error` | CRD snapshot, status deltas, sync/refresh progress |
 
 `hardRefresh` requires host-side confirmation before patch.

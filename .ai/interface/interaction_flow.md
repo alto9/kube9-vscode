@@ -5,7 +5,7 @@
 1. **Inspect**: choose context -> expand namespace/resource -> open describe or YAML/logs.
 2. **Operate**: select resource -> execute scale/restart/delete/apply action -> refresh affected tree nodes.
 3. **Debug**: open events/logs -> correlate with resource health/status -> iterate on YAML or workload commands.
-4. **GitOps (application detail):** select Argo CD Application in the **tree** (unchanged list/category) -> webview opens on the **resource graph** -> scan topology and per-tile sync/health -> use tile overflow or header for sync/refresh/hard-refresh/view-in-tree -> optional **Details** tab for metadata and drift table -> graph refreshes after operations without closing the panel.
+4. **GitOps (application detail):** select Argo CD Application in the **tree** (unchanged list/category) -> webview opens on the **resource graph** -> scan topology and per-tile sync/health -> use header/sub-header for sync/refresh/hard-refresh and managed-resource tile overflow for **Navigate to resource in tree** -> optional **Details** tab for metadata and drift table -> graph refreshes after operations without closing the panel.
 5. **AI conformance readiness:** select operated cluster -> Reports -> Kubernetes AI Conformance -> webview opens with summary rollups and grouped requirements -> expand non-passing or evidence-needed rows -> refresh when operator status changes.
 
 ## Resource describe and YAML flows (reference for kube9-desktop)
@@ -51,7 +51,7 @@ The tree **does not** embed the graph; it continues to list applications with st
 
 ### Operate from tiles and header
 
-- **Application-level:** **Sync** and **Refresh** on the **primary webview header**; **Hard refresh** on the **sub-header row** directly below (disabled while an operation is in progress). Application-level View In Tree is removed or demoted in M17.
+- **Application-level:** **Sync** and **Refresh** on the **primary webview header**; **Hard refresh** on the **sub-header row** directly below (disabled while an operation is in progress). Application-level View In Tree is **removed** from the Application panel (issue #243).
 - **Per-resource overflow (⋮):** Actions are **kind-driven** via a capability registry (not ad hoc per screen). Initial set:
   - **Deployment:** restart rollout (pods), with progress/error feedback through existing extension notification patterns.
   - **Supported workload/kinds:** navigate to resource in tree; open describe where the extension already supports that kind.
@@ -97,7 +97,9 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 ### Tree navigation and reveal (M17)
 
-Managed-resource tree reveal is the primary graph-first navigation path. Application-level `viewInTree` is removed or demoted from sub-header and Application root overflow.
+Managed-resource tree reveal is the only in-panel graph-to-tree path. Application-level `viewInTree` is **removed** from sub-header, Application root overflow, Details Overview action buttons, and the accepted webview→host protocol (issue #243). Empty selection, Application-root-only selection, and non-navigable kinds do not offer an Application-reveal fallback in the panel. Users locate the Application in the cluster tree outside this panel.
+
+**Keyboard (in-panel tree navigation):** Select a navigable managed-resource tile → Context Menu or Shift+F10 → **Navigate to resource in tree**. Details drift navigate links remain keyboard-activable. There is no dedicated Application View In Tree shortcut and no Application-reveal control in the tab order.
 
 | Source | Message / action | Host behavior | User feedback |
 |--------|------------------|---------------|---------------|

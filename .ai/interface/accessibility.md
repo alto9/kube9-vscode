@@ -69,10 +69,17 @@ Manual acceptance before marking #224 done (full M16 packaging/high-contrast swe
 2. Tab through header actions → graph toolbar (Zoom in, Zoom out, Fit) → first tile → second tile. Confirm visible `:focus-visible` rings.
 3. Press **Enter** on a tile; confirm selected styling (`argocd-graph-node--selected`) without triggering a cluster mutation.
 4. On a Deployment tile, press **Shift+F10** (or Context Menu); confirm overflow opens, **ArrowDown** moves between items, **Escape** closes and focus returns to the tile.
-5. Activate **Navigate to resource in tree** from overflow; confirm focus moves to cluster tree when reveal succeeds (failure copy per #221).
+5. Activate **Navigate to resource in tree** from overflow; confirm focus moves to cluster tree when reveal succeeds (failure copy per #221 / #242).
 6. Trigger a denied action (for example restart without permission in a test cluster) or use unit-tested unknown `actionId` path; confirm the dismissible action-notice banner exposes non-empty text to assistive APIs (`role="status"`).
 7. Switch **Graph | Details** tabs with keyboard; confirm `aria-selected` on the active tab.
 8. In a high-contrast theme, confirm sync/health badges are not color-only (icon + visible label in accessible name on the tile group).
+
+**Resolved (Application View In Tree removal, issue #243):**
+
+- Sub-header and Details Overview must not expose Application View In Tree; Application root overflow is empty/hidden.
+- Tab order through header/sub-header must not include an Application-reveal control.
+- In-panel keyboard tree navigation is managed-resource overflow only (Context Menu / Shift+F10 → **Navigate to resource in tree**) plus Details drift navigate links. There is no dedicated Application View In Tree shortcut.
+- Empty selection or Application-root-only selection has no Application-reveal fallback in the panel.
 
 **Edge semantics:** Parent/child relationships do not require per-edge accessible descriptions in v1; tile accessible names plus **Details** drift table navigation are sufficient.
 

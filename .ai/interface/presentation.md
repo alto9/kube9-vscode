@@ -96,7 +96,7 @@ Tiles have separate focus and selected states. Primary activation selects the ti
 
 **Status iconography:** Sync and health badges reuse the **same visual language** as the tree and the existing drift table: codicon-based sync indicators, health-colored badge backgrounds mapped through `testing.iconPassed`, `testing.iconFailed`, `testing.iconQueued`, and related VS Code tokens. Unknown or missing health uses muted/description styling, not a false-positive green.
 
-**Application root tile:** Mirrors application-level sync and health on the tile; application-level **sync** and **refresh** sit on the **primary webview header**; **hard refresh** sits on the **sub-header row** under the primary header. Application-level View In Tree is removed or demoted in M17; managed-resource overflow remains the primary tree-navigation path.
+**Application root tile:** Mirrors application-level sync and health on the tile; application-level **sync** and **refresh** sit on the **primary webview header**; **hard refresh** sits on the **sub-header row** under the primary header. Application-level View In Tree is **removed** from the sub-header, Application root overflow, Details Overview action buttons, and all other Application panel chrome (issue #243). Managed-resource overflow **Navigate to resource in tree** is the only in-panel graph-to-tree path.
 
 ### Graph toolbar filters (M17)
 
@@ -181,6 +181,11 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 
 - Sync and health badges, kind icon, truncated name, and ⋮ overflow align with the **Graph tiles (nodes)** table above in this document.
 - **Limited-topology and large-application hints** — resolved under **Large applications** and **Limited-topology copy tiers** above (issues #222 and #241). Limited-topology affordance is **suppressed** when `topologyMode: full`. No enrichment-pending banner during in-flight operator/REST fetch.
+
+**Resolved (Application View In Tree removal, issue #243):**
+
+- Sub-header shows Hard Refresh only (no View In Tree). Application root overflow is empty/hidden. Details Overview action buttons omit View In Tree.
+- Managed-resource overflow remains the only in-panel tree-navigation path.
 
 **Deferred (M17 graph filters, sibling #244):**
 
