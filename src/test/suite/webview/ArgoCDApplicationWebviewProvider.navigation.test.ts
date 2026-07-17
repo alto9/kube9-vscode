@@ -208,6 +208,9 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
             refresh: () => {
                 /**/
             },
+            invalidateCachesBeforeTreeReveal: () => {
+                /**/
+            },
             isCurrentContext: async () => false,
             getKubeconfigPath: () => '/mock/kubeconfig',
             revealTreeApplication: async () => {
@@ -233,6 +236,9 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
     test('viewInTree shows warning when application is not found', async () => {
         mockTreeProvider = {
             refresh: () => {
+                /**/
+            },
+            invalidateCachesBeforeTreeReveal: () => {
                 /**/
             },
             isCurrentContext: async () => true,

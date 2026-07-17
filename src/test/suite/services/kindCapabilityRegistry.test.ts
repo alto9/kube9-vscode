@@ -124,6 +124,7 @@ suite('KindCapabilityRegistry', () => {
     }
 
     function loadDispatch() {
+        delete require.cache[require.resolve('../../../services/treeRevealHelper')];
         delete require.cache[require.resolve('../../../services/KindCapabilityRegistry')];
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         return require('../../../services/KindCapabilityRegistry')

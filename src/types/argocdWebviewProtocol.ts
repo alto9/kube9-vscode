@@ -190,6 +190,10 @@ function isNonEmptyString(value: unknown): value is string {
     return typeof value === 'string' && value.length > 0;
 }
 
+function isString(value: unknown): value is string {
+    return typeof value === 'string';
+}
+
 function isOptionalBoolean(value: unknown): boolean {
     return value === undefined || typeof value === 'boolean';
 }
@@ -245,7 +249,7 @@ function validateWebviewPayload(type: string, payload: Record<string, unknown>):
             return (
                 isNonEmptyString(payload.kind) &&
                 isNonEmptyString(payload.name) &&
-                isNonEmptyString(payload.namespace)
+                isString(payload.namespace)
             );
         case 'graphRefresh':
             return isOptionalBoolean(payload.bypassCache);
@@ -255,7 +259,7 @@ function validateWebviewPayload(type: string, payload: Record<string, unknown>):
                 isNonEmptyString(payload.actionId) &&
                 isNonEmptyString(payload.kind) &&
                 isNonEmptyString(payload.name) &&
-                isNonEmptyString(payload.namespace) &&
+                isString(payload.namespace) &&
                 isOptionalString(payload.group) &&
                 isOptionalString(payload.version)
             );
