@@ -76,12 +76,12 @@ Canonical key for a managed Kubernetes object referenced by an Application:
 
 | Property | Required | Notes |
 |----------|----------|-------|
-| `namespace` | yes | Empty string only for cluster-scoped kinds when CRD omits namespace |
+| `namespace` | yes | Workload / object namespace from the managed resource row (destination namespace). Empty string only for cluster-scoped kinds when CRD omits namespace. Distinct from `ApplicationKey.namespace` (Application CR location). |
 | `kind` | yes | Kubernetes kind string (e.g. `Deployment`, `Service`) |
 | `name` | yes | Resource name |
 | `apiGroup` | no | Include when known (CRDs, multi-version ambiguity); omit or empty for core group |
 
-Two `ArgoCDResource` rows match when `namespace`, `kind`, and `name` are equal and `apiGroup` matches when both sides provide it.
+Two `ArgoCDResource` rows match when `namespace`, `kind`, and `name` are equal and `apiGroup` matches when both sides provide it. Tree reveal and graph identity both use this key's namespace, not the Application CR namespace (see interaction_flow reveal rules, issue #242).
 
 ### ApplicationKey
 

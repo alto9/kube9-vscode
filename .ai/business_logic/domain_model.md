@@ -176,12 +176,14 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - **Managed-resource overflow labels (v1):** Deployment — **Restart rollout**, **Navigate to resource in tree**; other navigate-supported kinds — **Navigate to resource in tree** only. Labels match `graphNodeCapabilities.ts` and host `actionId` registry entries.
 - **Progressive disclosure for very large Applications** — resolved in `.ai/interface/presentation.md` and `.ai/data/consistency.md` (issue #222): webview kind-based grouping over complete DTO; threshold 40 managed resources.
 
-**Resolved (tree navigation, M17):**
+**Resolved (tree navigation, M17 / issue #242):**
 
 - **Application-level View In Tree** (`viewInTree` message) is **removed or demoted** from sub-header, Application root overflow, and related page-level chrome. It does not receive selection-aware behavior.
-- **Managed-resource navigation** routes through `resource.navigateTree` with the tile's `ManagedResourceKey`. The host maps supported kinds to cluster-tree categories via `ClusterTreeProvider.revealTreeResource`, using **destination namespace** for workload lookup where the managed resource key differs from the Application namespace. The host **refreshes the cluster tree before reveal lookup**.
-- **Details tab parity:** `navigateToResource` from the Details view uses the same reveal helper as `resource.navigateTree` for supported kinds.
-- **Failure is non-mutating:** When no tree item can be mapped, the extension reports navigation failure with user-facing copy; it must not create tree nodes or alter resource identity.
+- **Managed-resource navigation** routes through `resource.navigateTree` with the tile's `ManagedResourceKey`. The host maps supported kinds to cluster-tree categories via `ClusterTreeProvider.revealTreeResource`.
+- **Reveal namespace:** trimmed `ManagedResourceKey.namespace` is authoritative. Never use `ApplicationKey.namespace`. Do not override a non-empty resource namespace with Application `spec.destination.namespace`. Empty namespaced-kind namespace may fall back to `spec.destination.namespace`; cluster-scoped stays empty. Full rules in `.ai/interface/interaction_flow.md`.
+- **Refresh before reveal:** focus tree; invalidate resource cache and tree prefetch/category caches for the current context; fire tree data change; then await reveal lookup in the same async chain. No debounce. Do not depend on TreeView re-render for correctness.
+- **Details tab parity:** `navigateToResource` from the Details view uses the same reveal helper and namespace rules as `resource.navigateTree` for supported kinds.
+- **Failure is non-mutating:** When no tree item can be mapped, the extension reports navigation failure with user-facing copy; it must not create tree nodes or alter resource identity. False "not found in cluster tree" for a supported kind present under the resolved reveal namespace is a defect.
 
 **Resolved (operator topology affordances, issue #241):**
 
@@ -196,6 +198,6 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 **Deferred (M17):**
 
 - **Graph filter UX:** Widget shape (chips vs dropdown), zero-match empty state, selection-when-filtered behavior, filter visibility (hide vs de-emphasize), and a11y live-region announcements (sibling issue #244).
-- **Supported reveal kinds expansion:** Whether resource-tree-only kinds (ReplicaSet, etc.) gain overflow navigate actions (sibling issue #242).
+- **Supported reveal kinds expansion:** Whether resource-tree-only kinds (ReplicaSet, etc.) gain overflow navigate actions. **Out of scope for issue #242** (that issue fixes reveal for existing `NAVIGATE_TREE_SUPPORTED_KINDS` only). Defer until product expands the Kind Capability Registry.
 
 - **`resource.openDescribe` on graph tiles** — registry entry exists for future direct describe routing from `ManagedResourceKey`; v1 graph overflow does not expose it. Users open describe via tree reveal or Details tab navigate affordances.
