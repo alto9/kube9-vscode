@@ -171,12 +171,6 @@ function App(): React.JSX.Element {
         }
     };
 
-    const handleViewInTree = (): void => {
-        if (vscode) {
-            vscode.postMessage({ type: 'viewInTree' });
-        }
-    };
-
     const handleNavigateToResource = (kind: string, name: string, namespace: string): void => {
         if (vscode) {
             vscode.postMessage({ 
@@ -202,7 +196,6 @@ function App(): React.JSX.Element {
             onSync={handleSync}
             onRefresh={handleRefresh}
             onHardRefresh={handleHardRefresh}
-            onViewInTree={handleViewInTree}
             onNavigateToResource={handleNavigateToResource}
             resourceGraph={resourceGraph}
             graphError={graphError}

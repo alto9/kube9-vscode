@@ -4,7 +4,6 @@ interface ActionButtonsProps {
     onSync: () => void;
     onRefresh: () => void;
     onHardRefresh: () => void;
-    onViewInTree: () => void;
     syncing?: boolean;
     refreshing?: boolean;
 }
@@ -16,7 +15,6 @@ export function ActionButtons({
     onSync,
     onRefresh,
     onHardRefresh,
-    onViewInTree,
     syncing = false,
     refreshing = false
 }: ActionButtonsProps): React.JSX.Element {
@@ -51,14 +49,6 @@ export function ActionButtons({
         ...buttonBaseStyle,
         backgroundColor: 'var(--vscode-button-secondaryBackground)',
         color: 'var(--vscode-button-secondaryForeground)'
-    };
-
-    const linkButtonStyle: React.CSSProperties = {
-        ...buttonBaseStyle,
-        backgroundColor: 'transparent',
-        color: 'var(--vscode-textLink-foreground)',
-        textDecoration: 'underline',
-        padding: '6px 8px'
     };
 
     const disabledStyle: React.CSSProperties = {
@@ -116,16 +106,6 @@ export function ActionButtons({
             >
                 <span className="codicon codicon-clear-all" style={{ fontSize: '14px' }}></span>
                 Hard Refresh
-            </button>
-
-            <button
-                style={linkButtonStyle}
-                onClick={onViewInTree}
-                disabled={isDisabled}
-                title="Navigate to application in tree view"
-            >
-                <span className="codicon codicon-list-tree" style={{ fontSize: '14px' }}></span>
-                View in Tree
             </button>
         </div>
     );

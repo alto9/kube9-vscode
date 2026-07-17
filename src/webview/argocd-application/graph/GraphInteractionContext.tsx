@@ -6,7 +6,6 @@ export interface GraphInteractionContextValue {
     busyNodeKeys: ReadonlySet<string>;
     actionNotice: string | null;
     onDismissActionNotice: () => void;
-    postViewInTree: () => void;
     postResourceAction: (actionId: string, resourceKey: ManagedResourceKey) => void;
 }
 

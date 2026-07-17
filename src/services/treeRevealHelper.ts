@@ -99,26 +99,3 @@ export async function revealManagedResourceInTree(
         };
     }
 }
-
-export async function revealApplicationInTree(
-    treeProvider: ClusterTreeProvider,
-    applicationName: string,
-    applicationNamespace: string
-): Promise<{ success: boolean; notFound?: boolean; treeUnavailable?: boolean; error?: string }> {
-    if (!treeProvider.getKubeconfigPath()) {
-        return { success: false, treeUnavailable: true };
-    }
-
-    try {
-        await focusAndRefreshClusterTree(treeProvider);
-        const revealed = await treeProvider.revealTreeApplication(applicationName, applicationNamespace);
-        if (revealed) {
-            return { success: true };
-        }
-
-        return { success: false, notFound: true };
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        return { success: false, error: errorMessage };
-    }
-}

@@ -24,7 +24,7 @@ import {
     dispatchResourceAction,
     NAVIGATE_TREE_SUPPORTED_KINDS
 } from '../services/KindCapabilityRegistry';
-import { revealApplicationInTree, revealManagedResourceInTree } from '../services/treeRevealHelper';
+import { revealManagedResourceInTree } from '../services/treeRevealHelper';
 import { getHelpController } from '../extension';
 import { WebviewHelpHandler } from './WebviewHelpHandler';
 import { getWebviewHeaderStyleUri } from './webviewHeaderStyles';
@@ -792,15 +792,6 @@ export class ArgoCDApplicationWebviewProvider {
                         );
                         break;
                     
-                    case 'viewInTree':
-                        await ArgoCDApplicationWebviewProvider.handleViewInTree(
-                            treeProvider,
-                            applicationName,
-                            namespace,
-                            context
-                        );
-                        break;
-                    
                     case 'navigateToResource':
                         await ArgoCDApplicationWebviewProvider.handleNavigateToResource(
                             treeProvider,
@@ -1127,58 +1118,6 @@ export class ArgoCDApplicationWebviewProvider {
                 userFriendlyMessage,
                 'Hard refresh'
             );
-        }
-    }
-
-    /**
-     * Handle view in tree action from webview.
-     * Focuses the tree view and reveals the open Argo CD Application.
-     */
-    private static async handleViewInTree(
-        treeProvider: ClusterTreeProvider,
-        applicationName: string,
-        applicationNamespace: string,
-        panelContext: string
-    ): Promise<void> {
-        const contextMatches = await treeProvider.isCurrentContext(panelContext);
-        if (!contextMatches) {
-            vscode.window.showWarningMessage(
-                `Cannot reveal ${applicationName} in tree: active cluster context does not match this application`
-            );
-            return;
-        }
-
-        try {
-            const result = await revealApplicationInTree(
-                treeProvider,
-                applicationName,
-                applicationNamespace
-            );
-
-            if (result.success) {
-                return;
-            }
-
-            if (result.treeUnavailable) {
-                vscode.window.showErrorMessage(
-                    'Cannot reveal application in tree: cluster tree is unavailable'
-                );
-                return;
-            }
-
-            if (result.notFound) {
-                vscode.window.showWarningMessage(
-                    `Argo CD Application "${applicationName}" was not found in the cluster tree`
-                );
-                return;
-            }
-
-            vscode.window.showErrorMessage(
-                `Failed to view in tree: ${result.error ?? 'unknown error'}`
-            );
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            vscode.window.showErrorMessage(`Failed to view in tree: ${errorMessage}`);
         }
     }
 

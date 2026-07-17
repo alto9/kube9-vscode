@@ -4,7 +4,7 @@ import type { ResourceActionWebviewMessage } from '../../../types/argocdWebviewP
 export const ACTION_DEPLOYMENT_RESTART_ROLLOUT = 'deployment.restartRollout';
 export const ACTION_RESOURCE_NAVIGATE_TREE = 'resource.navigateTree';
 
-export type GraphOverflowMessageType = 'resourceAction' | 'viewInTree';
+export type GraphOverflowMessageType = 'resourceAction';
 
 export interface GraphOverflowAction {
     actionId: string;
@@ -30,13 +30,7 @@ export const GRAPH_NAVIGATE_TREE_KINDS = new Set([
 
 export function getOverflowActions(role: ResourceGraphNodeRole, kind: string): GraphOverflowAction[] {
     if (role === 'application') {
-        return [
-            {
-                actionId: 'viewInTree',
-                label: 'View in tree',
-                messageType: 'viewInTree'
-            }
-        ];
+        return [];
     }
 
     const actions: GraphOverflowAction[] = [];
@@ -82,25 +76,4 @@ export function nodeBusyKeyFromNode(dto: ResourceGraphNode): string | null {
         return nodeBusyKeyFromResourceKey(dto.resourceKey);
     }
     return null;
-}
-
-interface VsCodePostMessage {
-    postMessage(message: unknown): void;
-}
-
-export function postGraphOverflowAction(
-    vscode: VsCodePostMessage,
-    action: GraphOverflowAction,
-    node: ResourceGraphNode
-): void {
-    if (action.messageType === 'viewInTree') {
-        vscode.postMessage({ type: 'viewInTree' });
-        return;
-    }
-
-    if (!node.resourceKey) {
-        return;
-    }
-
-    vscode.postMessage(buildResourceActionPayload(action.actionId, node.resourceKey));
 }
