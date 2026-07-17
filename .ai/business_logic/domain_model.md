@@ -201,9 +201,11 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - Affordance is **suppressed** when `topologyMode: full`. Raw operator stderr codes, endpoints, and credentials stay in the Output Channel only.
 - **No enrichment-pending banner:** while operator/REST fetch is in flight, keep existing panel loading or the prior graph until the next `resourceGraph` post (success or fallback). Do not post an intermediate CRD-flat snapshot solely to show pending enrichment.
 
-**Deferred (M17):**
+**Resolved (graph toolbar filters, issue #244):**
 
-- **Graph filter UX:** Widget shape (chips vs dropdown), zero-match empty state, selection-when-filtered behavior, filter visibility (hide vs de-emphasize), and a11y live-region announcements (sibling issue #244).
+- **Graph filter UX:** Name search (300ms debounce), multi-select kind and sync toggle chips, AND semantics, hide non-matching managed-resource tiles, Application root always visible, filter zero-match affordance copy, kind-grouping interaction when >40 resources, selection clears when selected tile filtered out, polite live-region summaries, keyboard tab order after zoom controls. Authoritative detail in `.ai/interface/presentation.md` **Graph toolbar filters (presentation-only)** and `.ai/interface/interaction_flow.md` **Graph toolbar filters**.
+
+**Deferred (M17):**
 - **Supported reveal kinds expansion:** Whether resource-tree-only kinds (ReplicaSet, etc.) gain overflow navigate actions. **Out of scope for issue #242** (that issue fixes reveal for existing `NAVIGATE_TREE_SUPPORTED_KINDS` only). Defer until product expands the Kind Capability Registry.
 
 - **`resource.openDescribe` on graph tiles** — registry entry exists for future direct describe routing from `ManagedResourceKey`; v1 graph overflow does not expose it. Users open describe via tree reveal or Details tab navigate affordances.

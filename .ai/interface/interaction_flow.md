@@ -47,6 +47,7 @@ The tree **does not** embed the graph; it continues to list applications with st
 - **Glance:** Read sync and health from each tile and from the Application root without opening menus.
 - **Topology:** Follow dashed edges from parent to dependent resources.
 - **Selection:** Activate a tile to select it. Selection scopes resource-aware actions and should persist across refresh when the same `GraphNodeId` survives.
+- **Filter:** Use the canvas toolbar name search, kind chips, and sync-status chips to narrow visible managed-resource tiles (AND semantics). The Application root stays visible. **Clear filters** resets all dimensions. Changing filters clears selection when the selected tile is no longer visible.
 - **Deeper metadata or drift scan:** Switch to **Details** for overview sections and the filterable resource table (same navigate-to-tree behavior as the former drift tab).
 
 ### Operate from tiles and header
@@ -72,6 +73,15 @@ The tree **does not** embed the graph; it continues to list applications with st
 
 - Missing permissions, unreachable application, or empty resource set: show dedicated empty/error presentation on the graph or full-panel error (consistent with other webviews).
 - If topology cannot be built (integration provides a flat list only), graph still renders nodes with **no inferred edges** and surfaces a non-blocking hint that relationships are unavailable; **Details** drift table remains usable.
+
+### Graph toolbar filters (resolved, issue #244)
+
+1. User types in **Filter resources by name** (debounced) and/or toggles **kind** and **sync** chips on the canvas toolbar.
+2. Webview recomputes visible managed-resource tiles with AND semantics; non-matching tiles are omitted from the React Flow node set. Application root remains.
+3. When large-app kind grouping is active, kind summary tiles show when any member matches; expand reveals only matching members.
+4. If no managed resource matches, the affordance strip shows filter zero-match copy; Application root and zoom/fit controls remain usable.
+5. **Clear filters** or closing the panel session restores the full graph view. Filter inputs survive host `resourceGraph` refresh ticks for the same panel session.
+6. Filter changes do not post host messages and do not bump `structureVersion`.
 
 ## Open Implementation Decisions
 

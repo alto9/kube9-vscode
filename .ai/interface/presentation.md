@@ -74,7 +74,30 @@ The cluster **tree list** for Argo CD Applications is unchanged: sync and health
 
 - **Layout:** Directed graph flows **left to right**. The **Application** is the root node; child nodes represent managed resources and **dependency topology** (parent/child edges), not a flat list laid out as nodes without relationships.
 - **Edges:** Dependency relationships use **dashed** connectors distinct from node chrome so topology reads at a glance.
-- **Canvas toolbar:** A compact control strip on the graph viewport offers **zoom in**, **zoom out**, and **fit view** (re-center and scale to show all nodes). Pan is available on the canvas; toolbar actions are the primary zoom affordances for precision and reset.
+- **Canvas toolbar:** A compact control strip on the graph viewport offers **zoom in**, **zoom out**, and **fit view** (re-center and scale to show all nodes), then **presentation-only filters** (name search, kind chips, sync-status chips, and **Clear filters** when any filter is active). Pan is available on the canvas; toolbar actions are the primary zoom affordances for precision and reset. Filter controls sit on the same toolbar row as zoom/fit and wrap on narrow panel widths.
+
+### Graph toolbar filters (presentation-only)
+
+Filters narrow **visible managed-resource tiles** in the webview only. The host continues posting the complete `resourceGraph` DTO unchanged.
+
+| Control | Behavior |
+|---------|----------|
+| **Name search** | Text field; **300ms debounce**; case-insensitive substring match on managed-resource name. Empty field = no name constraint. |
+| **Kind** | Multi-select **toggle chips**, one per distinct kind in the current graph (sorted alphabetically). Empty selection = no kind constraint. |
+| **Sync status** | Multi-select toggle chips: **Synced**, **OutOfSync**, **Unknown** (`SyncStatusCode`). Empty selection = no sync constraint. |
+| **Clear filters** | Visible when any dimension is active; resets all filter inputs and restores full managed-resource visibility. |
+
+**Semantics:**
+
+- Active dimensions combine with **AND** logic (name AND kind AND sync).
+- Non-matching managed-resource tiles are **hidden** from the canvas (not opacity-de-emphasized).
+- The **Application root** tile is **always visible**, even when every managed resource is filtered out.
+- Resource-tree nodes without CRD sync use **Unknown** for sync-filter matching.
+- Filter state is **session-local** to the open Application panel (same boundary as layout cache); clearing filters or closing the panel restores the unfiltered view.
+
+**Zero-match (filters active, no managed resources visible):** Show a non-blocking message in the affordance strip (`GraphTopologyAffordances` region): _"No resources match the current filters. Clear filters or adjust your search."_ Do not use `GraphEmptyState` (that state is for Applications with zero managed resources in the DTO, not filter exhaustion).
+
+**Large-application kind grouping (#222):** When grouping is active, a kind summary tile stays visible if **at least one member** matches active filters. Expanded groups show **only matching members**. Member counts on kind summary tiles reflect **matching** members while filters are active. Collapsed groups with zero matching members are hidden.
 - **Theme:** Graph background, nodes, edges, and controls use **VS Code theme CSS variables** (`--vscode-*`) so light/dark and contrast follow the host editor.
 - **Completeness:** Every returned managed resource is reachable in the graph experience. If large-application grouping or collapse is used, the UI must make the grouped resources discoverable and keep Details/tree navigation available.
 
@@ -97,10 +120,6 @@ Tiles have separate focus and selected states. Primary activation selects the ti
 **Status iconography:** Sync and health badges reuse the **same visual language** as the tree and the existing drift table: codicon-based sync indicators, health-colored badge backgrounds mapped through `testing.iconPassed`, `testing.iconFailed`, `testing.iconQueued`, and related VS Code tokens. Unknown or missing health uses muted/description styling, not a false-positive green.
 
 **Application root tile:** Mirrors application-level sync and health on the tile; application-level **sync** and **refresh** sit on the **primary webview header**; **hard refresh** sits on the **sub-header row** under the primary header. Application-level View In Tree is **removed** from the sub-header, Application root overflow, Details Overview action buttons, and all other Application panel chrome (issue #243). Managed-resource overflow **Navigate to resource in tree** is the only in-panel graph-to-tree path.
-
-### Graph toolbar filters (M17)
-
-The canvas-adjacent toolbar (zoom in, zoom out, fit view) also hosts **graph filter controls**: resource name search, kind filter, and sync-status filter. Filters are **webview presentation only**; the host posts the complete `resourceGraph` on every refresh. Combined active filters use **AND** semantics. Topology-only nodes without a CRD sync value are treated as **Unknown** for sync filtering. Filter state is session-local to the open Application panel.
 
 ### Secondary: Details (overview and drift)
 
@@ -187,10 +206,6 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - Sub-header shows Hard Refresh only (no View In Tree). Application root overflow is empty/hidden. Details Overview action buttons omit View In Tree.
 - Managed-resource overflow remains the only in-panel tree-navigation path.
 
-**Deferred (M17 graph filters, sibling #244):**
+**Resolved (graph toolbar filters, issue #244):**
 
-- Filter control widgets (chips vs dropdown vs combobox), labels, placeholders, and clear/reset affordance placement.
-- Zero-match filter outcome (empty-filter state vs Application root only vs de-emphasized tiles).
-- Filter visibility model (hide non-matching tiles vs de-emphasize in place).
-- Filter + kind-grouping interaction when collapsed groups contain filtered-out members.
-- Live region announcements for filter match counts (a11y bar).
+- Filter widget shape, debounce, sync enum, hide-vs-de-emphasize, zero-match copy, kind-grouping interaction, selection-when-filtered, and a11y live-region behavior are defined under **Graph toolbar filters (presentation-only)** above.
