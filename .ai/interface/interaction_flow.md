@@ -101,10 +101,30 @@ Managed-resource tree reveal is the primary graph-first navigation path. Applica
 
 | Source | Message / action | Host behavior | User feedback |
 |--------|------------------|---------------|---------------|
-| Managed-resource tile overflow | `resourceAction` with `actionId: resource.navigateTree` | Kubeconfig available, active context matches panel context; focus tree, **refresh tree**, `revealTreeResource(kind, name, namespace)` using **destination namespace** for workload lookup when applicable | `resourceActionProgress` then terminal `resourceActionResult`; failures show dismissible graph action-notice banner |
+| Managed-resource tile overflow | `resourceAction` with `actionId: resource.navigateTree` | Kubeconfig available, active context matches panel context; run **refresh-before-reveal** then `revealTreeResource(kind, name, namespace)` with **resolved reveal namespace** | `resourceActionProgress` then terminal `resourceActionResult`; failures show dismissible graph action-notice banner |
 | Details tab navigate affordance | `navigateToResource` with `kind`, `name`, `namespace` | Delegate to the same reveal helper as `resource.navigateTree` for kinds in `NAVIGATE_TREE_SUPPORTED_KINDS` | Same messages as `resource.navigateTree` result text |
 
-**Identity for reveal:** Use `ManagedResourceKey.namespace` (trimmed; destination namespace for workloads in multi-destination apps), `kind`, and `name`. The host refreshes the cluster tree before lookup. Optional `apiGroup` is forwarded when present.
+#### Namespace resolution for reveal
+
+Reveal identity uses `kind`, `name`, and a **resolved reveal namespace** derived as follows (issue #242):
+
+1. Start from the managed resource's `ManagedResourceKey.namespace` (from the tile key / `resourceAction` / `navigateToResource` payload). Trim whitespace.
+2. **Never** substitute `ApplicationKey.namespace` (Application CR location, often `argocd`) for managed-resource reveal.
+3. When the trimmed resource namespace is **non-empty**, use it as-is. Do **not** override it with Application `spec.destination.namespace` (multi-namespace / multi-destination apps keep per-row namespaces).
+4. When the trimmed resource namespace is **empty** and the kind is namespaced and in `NAVIGATE_TREE_SUPPORTED_KINDS`, fall back to Application `spec.destination.namespace` when that field is non-empty after trim; otherwise leave empty and allow not-found.
+5. Cluster-scoped kinds keep empty namespace; match tree items whose namespace is empty. Do not apply destination fallback for cluster-scoped kinds.
+6. Optional `apiGroup` / wire `group` is forwarded when present; omitting it must not block core-kind reveal.
+
+#### Refresh before reveal
+
+User-initiated managed-resource navigate runs this **single async chain** (no debounce):
+
+1. Focus `kube9ClusterView`.
+2. Invalidate caches that feed category children for the current context: the shared resource cache pattern **and** any tree prefetch / category children cache used by `getCategoryChildren` (or equivalent).
+3. Fire tree data change so the visible tree stays consistent.
+4. Await `revealTreeResource(kind, name, resolvedNamespace)`, which loads children through provider APIs **after** invalidation.
+
+Correctness is provider-side fresh children after invalidation. The host must not require waiting for TreeView UI re-render, and must not look up against stale prefetch data from before the invalidate step.
 
 **Failure copy (managed resource, terminal result message):**
 
@@ -115,7 +135,7 @@ Managed-resource tree reveal is the primary graph-first navigation path. Applica
 | Supported kind, no matching tree item | false | `resource.navigateTree failed for {kind} {name}: resource not found in cluster tree` |
 | Reveal succeeded | true | `Focused {kind} {name} in cluster tree` |
 
-Mapping failure is a navigation limitation: the host must not fabricate tree items or resource identity. List RBAC gaps that prevent category expansion may surface as "not found in cluster tree" when no item can be resolved.
+Mapping failure is a navigation limitation: the host must not fabricate tree items or resource identity. List RBAC gaps that prevent category expansion may surface as "not found in cluster tree" when no item can be resolved. False not-found for a supported kind that exists under the resolved reveal namespace is a defect (issue #242).
 
 ## Kubernetes AI Conformance Flow
 

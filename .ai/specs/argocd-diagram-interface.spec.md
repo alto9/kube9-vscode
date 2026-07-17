@@ -37,7 +37,14 @@ Basic mode (no operator):
   3. crd_flat
 ```
 
-On operator or REST success, the host emits `topologySource: argocd_resource_tree` and `topologyMode: full` (operator is transport only; do not emit `operator_snapshot`). Enrichment failure falls back to lower tiers without failing the whole panel when the Application CRD remains readable. `resource.navigateTree` / `ClusterTreeProvider.revealTreeResource` must map managed resources to the correct **destination namespace** workloads, refresh the cluster tree before lookup, and surface actionable failure copy when reveal fails.
+On operator or REST success, the host emits `topologySource: argocd_resource_tree` and `topologyMode: full` (operator is transport only; do not emit `operator_snapshot`). Enrichment failure falls back to lower tiers without failing the whole panel when the Application CRD remains readable.
+
+**Managed-resource tree reveal (issue #242):** `resource.navigateTree` / `ClusterTreeProvider.revealTreeResource` must:
+
+- Resolve reveal namespace from the managed resource key per `.ai/interface/interaction_flow.md` (**Namespace resolution for reveal**): trimmed `ManagedResourceKey.namespace` is authoritative; never `ApplicationKey.namespace`; do not override a non-empty resource namespace with Application `spec.destination.namespace`; empty namespaced-kind namespace may fall back to destination namespace; cluster-scoped stays empty.
+- Run **refresh-before-reveal** in one async chain (focus → invalidate resource + prefetch/category caches → fire tree change → await reveal). No debounce. Lookup must use provider children loaded after invalidation, not stale prefetch data.
+- Surface existing failure copy for context mismatch, tree unavailable, and true not-found; do not emit false "resource not found in cluster tree" when a supported kind exists under the resolved reveal namespace.
+- Keep `NAVIGATE_TREE_SUPPORTED_KINDS` unchanged unless a reported failure requires a registry fix; kind expansion is out of scope for #242.
 
 **Operator CLI path (issue #241):**
 
@@ -126,15 +133,19 @@ Interface validation should include graph layout readability, selectable tiles, 
 
 **Implementation polish (#224):** Add tile `:hover` and `argocd-graph-node--overflow-open` styling; wire overflow-open class from `ResourceGraphNodeTile` when menu is open; suppress action-notice banner when result message is `Cancelled`.
 
-**Tree navigation test matrix (M17):**
+**Tree navigation test matrix (M17 / issue #242):**
 
 | Area | Module / suite | Must prove |
 |------|----------------|------------|
-| Registry (existing) | `kindCapabilityRegistry.test.ts` | `resource.navigateTree` success when `revealTreeResource` returns true; failure when false; context mismatch and tree-unavailable paths |
-| Tree provider | `ClusterTreeProvider.reveal.test.ts` (or extend existing tree suite) | `revealTreeResource` maps Deployment/Pod/Service/ConfigMap to correct categories using **destination namespace** for workload lookup; returns false when item missing after tree refresh |
-| Provider stubs | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | `navigateToResource` delegates to shared reveal helper; destination-namespace Deployment fixture (e.g. apisocial) reveals successfully |
-| Parity | `argocdGraphNodeCapabilities.test.ts` | Webview navigate kinds still match host `NAVIGATE_TREE_SUPPORTED_KINDS`; Application root overflow no longer exposes `viewInTree` |
-| Manual | Extension Development Host + Argo CD cluster | Deployment tile Navigate reveals workload in destination namespace; Job tile has no overflow; wrong-context cluster shows context-mismatch message |
+| Registry (existing) | `kindCapabilityRegistry.test.ts` | `resource.navigateTree` success when `revealTreeResource` returns true; failure when false; context mismatch and tree-unavailable paths; failure copy strings unchanged |
+| Tree provider | `ClusterTreeProvider.reveal.test.ts` (or extend existing tree suite) | `revealTreeResource` maps Deployment/Pod/Service/ConfigMap to correct categories; lookup uses **resolved reveal namespace** (resource key, not Application CR namespace); returns false when item missing after refresh-before-reveal invalidation |
+| Namespace resolution | `treeRevealHelper` tests or navigation suite | Non-empty resource namespace wins over Application CR namespace and over `spec.destination.namespace`; empty namespaced-kind namespace falls back to destination; Application CR namespace alone never used for Deployment reveal |
+| Destination-namespace fixture | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | Deployment **apisocial** (or equivalent) where Application CR namespace ≠ resource namespace reveals successfully via shared helper; wrong namespace (Application CR ns) must not be passed to `revealTreeResource` |
+| Multi-namespace | Tree reveal or helper unit test | Two Deployments in different namespaces under one Application each reveal with their own resource namespace |
+| Refresh before reveal | `treeRevealHelper` / provider unit test | Navigate path invalidates resource + prefetch/category caches before `revealTreeResource`; after seeding a stale miss, post-invalidate lookup finds the resource; no debounce timer |
+| Provider stubs | `ArgoCDApplicationWebviewProvider.navigation.test.ts` | `navigateToResource` delegates to same reveal helper and namespace rules as `resource.navigateTree` |
+| Parity | `argocdGraphNodeCapabilities.test.ts` | Webview navigate kinds still match host `NAVIGATE_TREE_SUPPORTED_KINDS`; Application root overflow no longer exposes `viewInTree` (covered by #243; #242 must not regress registry kinds) |
+| Manual | Extension Development Host + Argo CD cluster | Open Application that manages Deployment `apisocial` in destination namespace ≠ Application CR namespace; tile **Navigate to resource in tree** selects that Deployment in the cluster tree (not "resource not found"); Job tile has no overflow; wrong-context cluster shows context-mismatch message |
 
 **Operator topology test matrix (issue #241):**
 

@@ -257,7 +257,7 @@ The report does not shell out beyond the existing operator status read path. It 
 
 ### Tree reveal mapping (host)
 
-`ClusterTreeProvider.revealTreeResource(kind, name, namespace)` resolves existing tree items only:
+`ClusterTreeProvider.revealTreeResource(kind, name, namespace)` resolves existing tree items only. The `namespace` argument is the **resolved reveal namespace** from `.ai/interface/interaction_flow.md` (managed resource key; never Application CR namespace).
 
 | Kind | Tree path |
 |------|-----------|
@@ -265,6 +265,8 @@ The report does not shell out beyond the existing operator status read path. It 
 | Deployment, StatefulSet, DaemonSet, CronJob | Workloads → matching subcategory |
 | Service | Networking → Services |
 | ConfigMap, Secret | Configuration → ConfigMaps / Secrets |
+
+Before managed-resource reveal, the host focuses the cluster tree, invalidates the current-context resource cache and any prefetch/category children cache used by tree loading, fires tree data change, then awaits this lookup (issue #242). No debounce.
 
 `ClusterTreeProvider.revealTreeApplication(name, namespace)` resolves under **ArgoCD Applications** (`argocd` → `argocdApplication`) by matching `resourceName` and application namespace. Returns `false` when the category, application list, or matching item is unavailable.
 
