@@ -3,7 +3,7 @@ import { ArgoCDService } from '../services/ArgoCDService';
 import { ClusterTreeProvider } from '../tree/ClusterTreeProvider';
 import { ArgoCDNotFoundError, ArgoCDPermissionError } from '../types/argocd';
 import type { ApplicationKey, ApplicationResourceGraph, TopologySource } from '../types/applicationResourceGraph';
-import { buildApplicationResourceGraph, logAssemblyWarnings } from '../services/ApplicationResourceGraphBuilder';
+import { buildApplicationResourceGraph, logAssemblyWarnings, type OperatorResourceTreeMemo } from '../services/ApplicationResourceGraphBuilder';
 import {
     buildCrdFlatApplicationResourceGraph,
     hasSkippedInvalidResourceRows
@@ -48,6 +48,10 @@ interface PanelInfo {
     lastGraph?: ApplicationResourceGraph;
     /** Cancels in-flight operation polling for this panel */
     operationCancellation?: vscode.CancellationTokenSource;
+    /** Cancels in-flight operator resource-tree fetch for this panel */
+    graphFetchCancellation?: vscode.CancellationTokenSource;
+    /** Optional memo for operator resource-tree payloads for this panel session */
+    operatorTreeMemo?: OperatorResourceTreeMemo;
     /** True while sync or refresh polling is active */
     operationInProgress?: boolean;
 }
@@ -168,6 +172,11 @@ export class ArgoCDApplicationWebviewProvider {
         panel.onDidDispose(
             () => {
                 ArgoCDApplicationWebviewProvider.cancelPanelOperation(panelKey);
+                ArgoCDApplicationWebviewProvider.cancelGraphFetch(panelKey);
+                const disposedPanelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+                if (disposedPanelInfo) {
+                    disposedPanelInfo.operatorTreeMemo = undefined;
+                }
                 ArgoCDApplicationWebviewProvider.openPanels.delete(panelKey);
             },
             null,
@@ -248,7 +257,7 @@ export class ArgoCDApplicationWebviewProvider {
             namespace,
             context,
             panel,
-            { application: resolvedApplication }
+            { application: resolvedApplication, invalidateOperatorTreeMemo: true }
         );
     }
 
@@ -372,6 +381,33 @@ export class ArgoCDApplicationWebviewProvider {
         }
         if (panelInfo) {
             panelInfo.operationInProgress = false;
+        }
+    }
+
+    private static cancelGraphFetch(panelKey: string): void {
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+        if (panelInfo?.graphFetchCancellation) {
+            panelInfo.graphFetchCancellation.cancel();
+            panelInfo.graphFetchCancellation.dispose();
+            panelInfo.graphFetchCancellation = undefined;
+        }
+    }
+
+    private static beginGraphFetch(panelKey: string): vscode.CancellationToken {
+        ArgoCDApplicationWebviewProvider.cancelGraphFetch(panelKey);
+        const source = new vscode.CancellationTokenSource();
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+        if (panelInfo) {
+            panelInfo.graphFetchCancellation = source;
+        }
+        return source.token;
+    }
+
+    private static endGraphFetch(panelKey: string): void {
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+        if (panelInfo?.graphFetchCancellation) {
+            panelInfo.graphFetchCancellation.dispose();
+            panelInfo.graphFetchCancellation = undefined;
         }
     }
 
@@ -572,15 +608,28 @@ export class ArgoCDApplicationWebviewProvider {
         namespace: string,
         context: string,
         panel: vscode.WebviewPanel,
-        options?: { bypassCache?: boolean; application?: Awaited<ReturnType<ArgoCDService['getApplication']>> }
+        options?: {
+            bypassCache?: boolean;
+            application?: Awaited<ReturnType<ArgoCDService['getApplication']>>;
+            invalidateOperatorTreeMemo?: boolean;
+        }
     ): Promise<void> {
         const panelKey = ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName);
         const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
         const extensionContext = panelInfo?.extensionContext;
 
+        if (options?.invalidateOperatorTreeMemo && panelInfo) {
+            panelInfo.operatorTreeMemo = undefined;
+        }
+
+        const graphFetchToken = ArgoCDApplicationWebviewProvider.beginGraphFetch(panelKey);
+
         try {
             if (options?.bypassCache) {
                 argoCDService.invalidateCache(context);
+                if (panelInfo) {
+                    panelInfo.operatorTreeMemo = undefined;
+                }
             }
 
             const application =
@@ -598,12 +647,24 @@ export class ArgoCDApplicationWebviewProvider {
             let skippedInvalidResourceRows = false;
 
             if (extensionContext) {
-                const built = await buildApplicationResourceGraph({
-                    application,
-                    applicationKey,
-                    argoCDService,
-                    extensionContext
-                });
+                const built = await buildApplicationResourceGraph(
+                    {
+                        application,
+                        applicationKey,
+                        argoCDService,
+                        extensionContext,
+                        options: {
+                            cancellationToken: graphFetchToken,
+                            bypassOperatorCache: options?.bypassCache === true,
+                            operatorTreeMemo: panelInfo?.operatorTreeMemo ?? null,
+                            onOperatorTreeMemoUpdate: (memo) => {
+                                if (panelInfo) {
+                                    panelInfo.operatorTreeMemo = memo;
+                                }
+                            }
+                        }
+                    }
+                );
                 incoming = built.graph;
                 topologySource = built.topologySource;
                 skippedInvalidResourceRows = built.skippedInvalidResourceRows;
@@ -631,6 +692,10 @@ export class ArgoCDApplicationWebviewProvider {
                 skippedInvalidResourceRows
             });
         } catch (error) {
+            if (error instanceof vscode.CancellationError) {
+                return;
+            }
+
             const userFriendlyMessage = ArgoCDApplicationWebviewProvider.formatGraphRebuildErrorMessage(
                 error,
                 applicationName,
@@ -654,6 +719,8 @@ export class ArgoCDApplicationWebviewProvider {
                 type: 'graphError',
                 message: userFriendlyMessage
             } satisfies ExtensionToWebviewMessage);
+        } finally {
+            ArgoCDApplicationWebviewProvider.endGraphFetch(panelKey);
         }
     }
 

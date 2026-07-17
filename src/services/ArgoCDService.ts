@@ -200,6 +200,10 @@ export class ArgoCDService {
         private kubeconfigPath: string
     ) {}
 
+    getKubeconfigPath(): string {
+        return this.kubeconfigPath;
+    }
+
     /**
      * Checks if ArgoCD is installed in the specified cluster context.
      * 

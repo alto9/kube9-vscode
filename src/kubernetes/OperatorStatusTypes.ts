@@ -174,6 +174,20 @@ export interface ArgoCDStatus {
      * @example "2025-11-20T15:30:00Z"
      */
     lastChecked: string;
+
+    /**
+     * Whether on-demand resource-tree enrichment is available via operator CLI.
+     * Omitted when Argo CD is not detected.
+     */
+    resourceTreeCapable?: boolean;
+
+    /**
+     * Bounded last global demotion reason when resourceTreeCapable is false.
+     */
+    resourceTreeLastError?: {
+        code: string;
+        message: string;
+    };
 }
 
 /**

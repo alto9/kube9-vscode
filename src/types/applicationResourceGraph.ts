@@ -30,6 +30,12 @@ export type TopologySource =
 
 export type TopologyMode = 'full' | 'limited';
 
+export type LimitedTopologyReason =
+    | 'operator_not_capable'
+    | 'rest_unavailable'
+    | 'enrichment_failed'
+    | 'owner_ref';
+
 export type EdgeRelationship = 'manages' | 'owns' | 'depends_on';
 
 export type ResourceGraphNodeRole = 'application' | 'managed_resource';
@@ -62,6 +68,7 @@ export interface ApplicationResourceGraph {
     edges: ResourceGraphEdge[];
     topologySource: TopologySource;
     topologyMode: TopologyMode;
+    limitedTopologyReason?: LimitedTopologyReason;
     structureVersion: string;
     observedAt: string;
     layoutHint?: {
