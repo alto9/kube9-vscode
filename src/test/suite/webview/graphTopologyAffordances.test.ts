@@ -6,9 +6,11 @@ import {
     type ResourceGraphNode
 } from '../../../types/applicationResourceGraph';
 import {
+    ENRICHMENT_FAILED_AFFORDANCE_MESSAGE,
     LARGE_APP_GROUPING_AFFORDANCE_MESSAGE,
-    LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE,
+    OPERATOR_NOT_CAPABLE_AFFORDANCE_MESSAGE,
     OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE,
+    REST_UNAVAILABLE_AFFORDANCE_MESSAGE,
     countManagedResourceNodes,
     getLimitedTopologyAffordanceMessage,
     hasVisibleManagedTopology,
@@ -129,13 +131,12 @@ suite('graph topology affordances', () => {
     });
 
     test('limited topology copy explains incomplete relationships', () => {
-        assert.match(LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE, /parent\/child/i);
-        assert.match(LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE, /resource-tree/i);
-        assert.doesNotMatch(LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE, /fully equivalent/i);
+        assert.match(ENRICHMENT_FAILED_AFFORDANCE_MESSAGE, /parent\/child/i);
+        assert.match(ENRICHMENT_FAILED_AFFORDANCE_MESSAGE, /resource-tree enrichment was unavailable/i);
     });
 
     test('large-app grouping copy is distinct from limited topology copy', () => {
-        assert.notStrictEqual(LIMITED_TOPOLOGY_AFFORDANCE_MESSAGE, LARGE_APP_GROUPING_AFFORDANCE_MESSAGE);
+        assert.notStrictEqual(ENRICHMENT_FAILED_AFFORDANCE_MESSAGE, LARGE_APP_GROUPING_AFFORDANCE_MESSAGE);
         assert.match(LARGE_APP_GROUPING_AFFORDANCE_MESSAGE, /grouped by kind/i);
         assert.match(LARGE_APP_GROUPING_AFFORDANCE_MESSAGE, /Details tab/i);
     });
@@ -143,11 +144,37 @@ suite('graph topology affordances', () => {
     test('owner-ref topology uses inferred relationship copy', () => {
         const graph = {
             ...limitedGraphWithManagedResources(),
-            topologySource: 'kubernetes_owner_ref' as const
+            topologySource: 'kubernetes_owner_ref' as const,
+            limitedTopologyReason: 'owner_ref' as const
         };
         assert.strictEqual(getLimitedTopologyAffordanceMessage(graph), OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE);
         assert.match(OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE, /owner references/i);
         assert.match(OWNER_REF_TOPOLOGY_AFFORDANCE_MESSAGE, /inferred/i);
+    });
+
+    test('limitedTopologyReason selects exact affordance copy tiers', () => {
+        const base = limitedGraphWithManagedResources();
+        assert.strictEqual(
+            getLimitedTopologyAffordanceMessage({
+                ...base,
+                limitedTopologyReason: 'operator_not_capable'
+            }),
+            OPERATOR_NOT_CAPABLE_AFFORDANCE_MESSAGE
+        );
+        assert.strictEqual(
+            getLimitedTopologyAffordanceMessage({
+                ...base,
+                limitedTopologyReason: 'rest_unavailable'
+            }),
+            REST_UNAVAILABLE_AFFORDANCE_MESSAGE
+        );
+        assert.strictEqual(
+            getLimitedTopologyAffordanceMessage({
+                ...base,
+                limitedTopologyReason: 'enrichment_failed'
+            }),
+            ENRICHMENT_FAILED_AFFORDANCE_MESSAGE
+        );
     });
 
     test('shows assembly info banner only when invalid rows were skipped', () => {

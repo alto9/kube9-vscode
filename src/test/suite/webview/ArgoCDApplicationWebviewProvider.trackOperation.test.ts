@@ -146,6 +146,7 @@ suite('ArgoCDApplicationWebviewProvider trackOperation', () => {
         } as unknown as vscode.ExtensionContext;
 
         mockArgoCDService = {
+            getKubeconfigPath: () => '/mock/kubeconfig',
             getApplication: async () => {
                 getApplicationCallOrder.push('getApplication');
                 return currentApplication;
