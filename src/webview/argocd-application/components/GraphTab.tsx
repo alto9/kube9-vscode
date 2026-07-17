@@ -18,8 +18,20 @@ import {
     mergeGraphFlowState,
     type GraphLayoutCache
 } from '../graph/mergeGraphFlowState';
-import { applyNodeSelection, resolveSelectionAfterMerge } from '../graph/graphSelection';
+import { applyNodeSelection, resolveSelectionAfterPresentationChange } from '../graph/graphSelection';
 import type { FlowNodeData } from '../graph/types';
+import {
+    buildGraphFilterLiveRegionSummary,
+    createEmptyGraphFilterState,
+    GRAPH_FILTER_NAME_DEBOUNCE_MS,
+    type GraphFilterState
+} from '../graph/argocdGraphFilters';
+import {
+    GraphFilterToolbar,
+    toggleGraphFilterKind,
+    toggleGraphFilterSyncStatus
+} from '../graph/GraphFilterToolbar';
+import type { SyncStatusCode } from '../../../types/argocd';
 import {
     applicationKeyChanged,
     serializeApplicationKey,
@@ -82,11 +94,25 @@ interface GraphCanvasProps {
 function GraphToolbar({
     onZoomIn,
     onZoomOut,
-    onFitView
+    onFitView,
+    resourceGraph,
+    filters,
+    onNameQueryChange,
+    onToggleKind,
+    onToggleSyncStatus,
+    onClearFilters,
+    liveRegionSummary
 }: {
     onZoomIn: () => void;
     onZoomOut: () => void;
     onFitView: () => void;
+    resourceGraph: ApplicationResourceGraph;
+    filters: GraphFilterState;
+    onNameQueryChange: (value: string) => void;
+    onToggleKind: (kind: string) => void;
+    onToggleSyncStatus: (syncStatus: SyncStatusCode) => void;
+    onClearFilters: () => void;
+    liveRegionSummary: string;
 }): React.JSX.Element {
     return (
         <div className="argocd-graph-toolbar" data-testid="graph-toolbar">
@@ -117,6 +143,17 @@ function GraphToolbar({
             >
                 Fit
             </button>
+            <GraphFilterToolbar
+                resourceGraph={resourceGraph}
+                filters={filters}
+                onNameQueryChange={onNameQueryChange}
+                onToggleKind={onToggleKind}
+                onToggleSyncStatus={onToggleSyncStatus}
+                onClearFilters={onClearFilters}
+            />
+            <div className="argocd-graph-filter-live-region" aria-live="polite" aria-atomic="true">
+                {liveRegionSummary}
+            </div>
         </div>
     );
 }
@@ -139,8 +176,32 @@ function GraphCanvas({
     const viewportCacheRef = React.useRef<GraphViewport | null>(null);
     const selectedNodeIdRef = React.useRef<string | null>(null);
     const expandedKindsRef = React.useRef<Set<string>>(new Set());
+    const [filterState, setFilterState] = React.useState<GraphFilterState>(createEmptyGraphFilterState);
+    const [debouncedNameQuery, setDebouncedNameQuery] = React.useState('');
+    const [liveRegionSummary, setLiveRegionSummary] = React.useState('');
     const [nodes, setNodes] = React.useState<Node<FlowNodeData>[]>([]);
     const [edges, setEdges] = React.useState<Edge[]>([]);
+    const filtersInitializedRef = React.useRef(false);
+
+    const effectiveFilters = React.useMemo<GraphFilterState>(
+        () => ({
+            nameQuery: debouncedNameQuery,
+            selectedKinds: filterState.selectedKinds,
+            selectedSyncStatuses: filterState.selectedSyncStatuses
+        }),
+        [debouncedNameQuery, filterState.selectedKinds, filterState.selectedSyncStatuses]
+    );
+
+    React.useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setDebouncedNameQuery(filterState.nameQuery);
+        }, GRAPH_FILTER_NAME_DEBOUNCE_MS);
+        return () => window.clearTimeout(timer);
+    }, [filterState.nameQuery]);
+
+    React.useEffect(() => {
+        setLiveRegionSummary(buildGraphFilterLiveRegionSummary(resourceGraph, effectiveFilters));
+    }, [resourceGraph, effectiveFilters]);
 
     const persistViewport = React.useCallback(() => {
         viewportCacheRef.current = getViewport();
@@ -153,10 +214,12 @@ function GraphCanvas({
                 explicitFitView?: boolean;
                 autoFit?: boolean;
                 groupPresentationChanged?: boolean;
+                filterPresentationChanged?: boolean;
             }
         ) => {
             const explicitFitView = options?.explicitFitView ?? false;
             const groupPresentationChanged = options?.groupPresentationChanged ?? false;
+            const filterPresentationChanged = options?.filterPresentationChanged ?? false;
             const keyChanged = applicationKeyChanged(applicationKeyRef.current, graph.applicationKey);
 
             if (keyChanged) {
@@ -164,6 +227,8 @@ function GraphCanvas({
                 viewportCacheRef.current = null;
                 selectedNodeIdRef.current = null;
                 expandedKindsRef.current = new Set();
+                setFilterState(createEmptyGraphFilterState());
+                setDebouncedNameQuery('');
             }
             applicationKeyRef.current = serializeApplicationKey(graph.applicationKey);
 
@@ -172,16 +237,20 @@ function GraphCanvas({
                 cache: layoutCacheRef.current,
                 explicitFitView,
                 expandedKinds: expandedKindsRef.current,
-                groupPresentationChanged
+                groupPresentationChanged,
+                filters: effectiveFilters,
+                filterPresentationChanged
             });
             layoutCacheRef.current = merged.cache;
 
             const nextNodeIds = new Set(merged.nodes.map((node) => node.id));
             const dtoNodeIds = collectMappedDtoNodeIds(graph);
-            const nextSelectedId = resolveSelectionAfterMerge(
+            const nextSelectedId = resolveSelectionAfterPresentationChange(
                 selectedNodeIdRef.current,
                 nextNodeIds,
-                dtoNodeIds
+                dtoNodeIds,
+                graph,
+                effectiveFilters
             );
             selectedNodeIdRef.current = nextSelectedId;
 
@@ -204,7 +273,8 @@ function GraphCanvas({
                         explicitFitView,
                         cachedViewport
                     }) ||
-                    groupPresentationChanged
+                    groupPresentationChanged ||
+                    filterPresentationChanged
                 ) {
                     if (cachedViewport) {
                         setViewport(cachedViewport, { duration: zoomDuration });
@@ -212,12 +282,20 @@ function GraphCanvas({
                 }
             });
         },
-        [fitView, getViewport, setViewport, zoomDuration]
+        [effectiveFilters, fitView, getViewport, setViewport, zoomDuration]
     );
 
     React.useEffect(() => {
         applyGraph(resourceGraph);
     }, [applyGraph, resourceGraph]);
+
+    React.useEffect(() => {
+        if (!filtersInitializedRef.current) {
+            filtersInitializedRef.current = true;
+            return;
+        }
+        applyGraph(resourceGraph, { filterPresentationChanged: true });
+    }, [applyGraph, resourceGraph, effectiveFilters]);
 
     const handleFitView = React.useCallback(() => {
         applyGraph(resourceGraph, { explicitFitView: true, autoFit: true });
@@ -244,6 +322,27 @@ function GraphCanvas({
         []
     );
 
+    const handleClearFilters = React.useCallback(() => {
+        setFilterState(createEmptyGraphFilterState());
+        setDebouncedNameQuery('');
+        applyGraph(resourceGraph, { filterPresentationChanged: true });
+    }, [applyGraph, resourceGraph]);
+
+    const handleToggleKind = React.useCallback((kind: string) => {
+        setFilterState((current) => toggleGraphFilterKind(current, kind));
+    }, []);
+
+    const handleToggleSyncStatus = React.useCallback((syncStatus: SyncStatusCode) => {
+        setFilterState((current) => toggleGraphFilterSyncStatus(current, syncStatus));
+    }, []);
+
+    const handleNameQueryChange = React.useCallback((value: string) => {
+        setFilterState((current) => ({
+            ...current,
+            nameQuery: value
+        }));
+    }, []);
+
     return (
         <KindGroupActionsProvider value={{ onToggleKindGroup: handleToggleKindGroup }}>
             <div className="argocd-graph-tab" data-testid="graph-tab-canvas">
@@ -268,8 +367,19 @@ function GraphCanvas({
                 onZoomIn={() => zoomIn({ duration: zoomDuration })}
                 onZoomOut={() => zoomOut({ duration: zoomDuration })}
                 onFitView={handleFitView}
+                resourceGraph={resourceGraph}
+                filters={filterState}
+                onNameQueryChange={handleNameQueryChange}
+                onToggleKind={handleToggleKind}
+                onToggleSyncStatus={handleToggleSyncStatus}
+                onClearFilters={handleClearFilters}
+                liveRegionSummary={liveRegionSummary}
             />
-            <GraphTopologyAffordances resourceGraph={resourceGraph} hidden={hideAffordances} />
+            <GraphTopologyAffordances
+                resourceGraph={resourceGraph}
+                hidden={hideAffordances}
+                filters={effectiveFilters}
+            />
             <div className="argocd-graph-canvas">
                 <ReactFlow
                     nodes={nodes}

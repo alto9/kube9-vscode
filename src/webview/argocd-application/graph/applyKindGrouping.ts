@@ -43,10 +43,21 @@ function groupManagedByKind(managed: Node<GraphNodeData>[]): KindMemberGroup[] {
         .map(([kind, members]) => ({ kind, members }));
 }
 
+function filterGroupMembers(
+    members: Node<GraphNodeData>[],
+    memberMatchesFilter?: (node: Node<GraphNodeData>) => boolean
+): Node<GraphNodeData>[] {
+    if (!memberMatchesFilter) {
+        return members;
+    }
+    return members.filter(memberMatchesFilter);
+}
+
 export function applyKindGrouping(
     nodes: Node<GraphNodeData>[],
     edges: Edge[],
-    expandedKinds: ReadonlySet<string>
+    expandedKinds: ReadonlySet<string>,
+    memberMatchesFilter?: (node: Node<GraphNodeData>) => boolean
 ): {
     nodes: Node<FlowNodeData>[];
     edges: Edge[];
@@ -54,28 +65,43 @@ export function applyKindGrouping(
 } {
     const { root, managed } = partitionNodes(nodes);
     if (!root || !isKindGroupingActive(managed.length)) {
+        if (memberMatchesFilter && root) {
+            const filteredManaged = filterGroupMembers(managed, memberMatchesFilter);
+            const visibleIds = new Set([root.id, ...filteredManaged.map((node) => node.id)]);
+            const filteredEdges = edges.filter(
+                (edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target)
+            );
+            return { nodes: [root, ...filteredManaged], edges: filteredEdges, isGrouped: false };
+        }
         return { nodes, edges, isGrouped: false };
     }
 
-    const groups = groupManagedByKind(managed);
-    const kindGroupNodes: Node<KindGroupNodeData>[] = groups.map(({ kind, members }) => ({
+    const groups = groupManagedByKind(managed)
+        .map(({ kind, members }) => ({
+            kind,
+            members,
+            matchingMembers: filterGroupMembers(members, memberMatchesFilter)
+        }))
+        .filter(({ matchingMembers }) => matchingMembers.length > 0);
+
+    const kindGroupNodes: Node<KindGroupNodeData>[] = groups.map(({ kind, matchingMembers }) => ({
         id: buildKindGroupNodeId(kind),
         type: 'kindGroup',
         position: { x: 0, y: 0 },
         data: {
             kind,
-            memberCount: members.length,
+            memberCount: matchingMembers.length,
             expanded: expandedKinds.has(kind),
-            memberIds: members.map((member) => member.id)
+            memberIds: matchingMembers.map((member) => member.id)
         },
         draggable: false,
         selectable: true
     }));
 
     const visibleManaged: Node<GraphNodeData>[] = [];
-    for (const { kind, members } of groups) {
+    for (const { kind, matchingMembers } of groups) {
         if (expandedKinds.has(kind)) {
-            visibleManaged.push(...members);
+            visibleManaged.push(...matchingMembers);
         }
     }
 
@@ -83,7 +109,7 @@ export function applyKindGrouping(
     const visibleManagedIds = new Set(visibleManaged.map((node) => node.id));
     const flowEdges: Edge[] = [];
 
-    for (const { kind, members } of groups) {
+    for (const { kind, matchingMembers } of groups) {
         const groupId = buildKindGroupNodeId(kind);
         flowEdges.push({
             id: buildGroupEdgeId(root.id, groupId),
@@ -94,7 +120,7 @@ export function applyKindGrouping(
         });
 
         if (expandedKinds.has(kind)) {
-            for (const member of members) {
+            for (const member of matchingMembers) {
                 flowEdges.push({
                     id: buildGroupEdgeId(groupId, member.id),
                     source: groupId,

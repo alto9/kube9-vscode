@@ -8,10 +8,11 @@ export interface RelayoutDecisionInput {
     nextNodeCount: number;
     explicitFitView: boolean;
     groupPresentationChanged?: boolean;
+    filterPresentationChanged?: boolean;
 }
 
 export function shouldRelayout(input: RelayoutDecisionInput): boolean {
-    if (input.groupPresentationChanged) {
+    if (input.groupPresentationChanged || input.filterPresentationChanged) {
         return true;
     }
     if (input.isInitial || input.explicitFitView) {
