@@ -60,6 +60,9 @@ suite('KindCapabilityRegistry', () => {
         applyCalls = 0;
         watchCalls = 0;
 
+        delete require.cache[require.resolve('../../../services/treeRevealHelper')];
+        delete require.cache[require.resolve('../../../services/KindCapabilityRegistry')];
+
         (vscode.commands as unknown as { _registerCommand: (id: string, fn: () => Promise<void>) => void })
             ._registerCommand('kube9.treeView.focus', async () => {
                 /**/
@@ -98,6 +101,7 @@ suite('KindCapabilityRegistry', () => {
 
     teardown(() => {
         Module.prototype.require = originalRequire;
+        delete require.cache[require.resolve('../../../services/treeRevealHelper')];
         delete require.cache[require.resolve('../../../services/KindCapabilityRegistry')];
         (vscode.window as unknown as { _clearMessages(): void })._clearMessages();
     });
@@ -106,6 +110,9 @@ suite('KindCapabilityRegistry', () => {
         const treeProvider = {
             getKubeconfigPath: () => '/mock/kubeconfig',
             refresh: () => {
+                /**/
+            },
+            invalidateCachesBeforeTreeReveal: () => {
                 /**/
             },
             isCurrentContext: async () => true,
@@ -121,6 +128,7 @@ suite('KindCapabilityRegistry', () => {
     }
 
     function loadDispatch() {
+        delete require.cache[require.resolve('../../../services/treeRevealHelper')];
         delete require.cache[require.resolve('../../../services/KindCapabilityRegistry')];
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         return require('../../../services/KindCapabilityRegistry')

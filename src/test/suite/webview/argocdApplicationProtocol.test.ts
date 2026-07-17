@@ -47,6 +47,18 @@ suite('argocdApplicationProtocol', () => {
             );
         });
 
+        test('accepts navigateToResource with empty managed-resource namespace', () => {
+            assert.strictEqual(
+                isWebviewMessage({
+                    type: 'navigateToResource',
+                    kind: 'Deployment',
+                    name: 'api',
+                    namespace: ''
+                }),
+                true
+            );
+        });
+
         test('rejects navigateToResource with missing fields', () => {
             assert.strictEqual(
                 isWebviewMessage({

@@ -61,6 +61,27 @@ function sampleApplication(): ArgoCDApplication {
     };
 }
 
+function apisocialApplication(): ArgoCDApplication {
+    return {
+        ...sampleApplication(),
+        name: 'apisocial-app',
+        namespace: 'argocd',
+        destination: {
+            server: 'https://kubernetes.default.svc',
+            namespace: 'apisocial-ns'
+        },
+        resources: [
+            {
+                kind: 'Deployment',
+                name: 'apisocial',
+                namespace: 'apisocial-ns',
+                syncStatus: 'Synced',
+                healthStatus: 'Healthy'
+            }
+        ]
+    };
+}
+
 function getWebviewPanels(): vscode.WebviewPanel[] {
     return (vscode.window as unknown as { _getWebviewPanels(): vscode.WebviewPanel[] })._getWebviewPanels();
 }
@@ -90,11 +111,15 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
     let revealTreeApplicationCalls = 0;
     let revealTreeResourceCalls = 0;
     let focusCommandCalls = 0;
+    let invalidateNavigateCacheCalls = 0;
+    let lastRevealNamespace = '';
 
     setup(() => {
         revealTreeApplicationCalls = 0;
         revealTreeResourceCalls = 0;
         focusCommandCalls = 0;
+        invalidateNavigateCacheCalls = 0;
+        lastRevealNamespace = '';
 
         (vscode.commands as unknown as { _registerCommand: (id: string, fn: () => Promise<void>) => void })
             ._registerCommand('kube9ClusterView.focus', async () => {
@@ -124,14 +149,18 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
             refresh: () => {
                 /**/
             },
+            invalidateCachesBeforeTreeReveal: () => {
+                invalidateNavigateCacheCalls += 1;
+            },
             isCurrentContext: async () => true,
             getKubeconfigPath: () => '/mock/kubeconfig',
             revealTreeApplication: async () => {
                 revealTreeApplicationCalls += 1;
                 return true;
             },
-            revealTreeResource: async () => {
+            revealTreeResource: async (_kind: string, _name: string, namespace: string) => {
                 revealTreeResourceCalls += 1;
+                lastRevealNamespace = namespace;
                 return true;
             }
         } as unknown as ClusterTreeProvider;
@@ -179,6 +208,9 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
             refresh: () => {
                 /**/
             },
+            invalidateCachesBeforeTreeReveal: () => {
+                /**/
+            },
             isCurrentContext: async () => false,
             getKubeconfigPath: () => '/mock/kubeconfig',
             revealTreeApplication: async () => {
@@ -204,6 +236,9 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
     test('viewInTree shows warning when application is not found', async () => {
         mockTreeProvider = {
             refresh: () => {
+                /**/
+            },
+            invalidateCachesBeforeTreeReveal: () => {
                 /**/
             },
             isCurrentContext: async () => true,
@@ -237,8 +272,91 @@ suite('ArgoCDApplicationWebviewProvider navigation', () => {
 
         assert.strictEqual(revealTreeResourceCalls, 1);
         assert.strictEqual(focusCommandCalls, 1);
+        assert.strictEqual(invalidateNavigateCacheCalls, 1);
+        assert.strictEqual(lastRevealNamespace, 'guestbook');
         assert.strictEqual(getWarningMessages().length, 0);
         assert.strictEqual(getErrorMessages().length, 0);
+    });
+
+    test('navigateToResource reveals apisocial Deployment in resource namespace, not Application CR namespace', async () => {
+        mockArgoCDService = {
+            getApplication: async () => apisocialApplication(),
+            refreshApplication: async () => {
+                /**/
+            },
+            invalidateCache: () => {
+                /**/
+            }
+        } as unknown as ArgoCDService;
+
+        const panel = await openPanel();
+        const webview = panel.webview as unknown as MockWebviewWithFire;
+
+        webview._fireMessage({
+            type: 'navigateToResource',
+            kind: 'Deployment',
+            name: 'apisocial',
+            namespace: 'apisocial-ns'
+        });
+        await flushUntil(() => revealTreeResourceCalls === 1);
+
+        assert.strictEqual(revealTreeResourceCalls, 1);
+        assert.strictEqual(lastRevealNamespace, 'apisocial-ns');
+        assert.notStrictEqual(lastRevealNamespace, 'argocd');
+        assert.strictEqual(invalidateNavigateCacheCalls, 1);
+    });
+
+    test('navigateToResource falls back to destination namespace when resource namespace is empty', async () => {
+        mockArgoCDService = {
+            getApplication: async () => apisocialApplication(),
+            refreshApplication: async () => {
+                /**/
+            },
+            invalidateCache: () => {
+                /**/
+            }
+        } as unknown as ArgoCDService;
+
+        const panel = await openPanel();
+        const webview = panel.webview as unknown as MockWebviewWithFire;
+
+        webview._fireMessage({
+            type: 'navigateToResource',
+            kind: 'Deployment',
+            name: 'apisocial',
+            namespace: ''
+        });
+        await flushUntil(() => revealTreeResourceCalls === 1);
+
+        assert.strictEqual(lastRevealNamespace, 'apisocial-ns');
+    });
+
+    test('resource.navigateTree uses the same reveal namespace rules as navigateToResource', async () => {
+        mockArgoCDService = {
+            getApplication: async () => apisocialApplication(),
+            refreshApplication: async () => {
+                /**/
+            },
+            invalidateCache: () => {
+                /**/
+            }
+        } as unknown as ArgoCDService;
+
+        const panel = await openPanel();
+        const webview = panel.webview as unknown as MockWebviewWithFire;
+
+        webview._fireMessage({
+            type: 'resourceAction',
+            actionId: 'resource.navigateTree',
+            kind: 'Deployment',
+            name: 'apisocial',
+            namespace: 'apisocial-ns'
+        });
+        await flushUntil(() => revealTreeResourceCalls === 1);
+
+        assert.strictEqual(lastRevealNamespace, 'apisocial-ns');
+        assert.notStrictEqual(lastRevealNamespace, 'argocd');
+        assert.strictEqual(invalidateNavigateCacheCalls, 1);
     });
 
     test('navigateToResource shows error for unsupported kinds', async () => {

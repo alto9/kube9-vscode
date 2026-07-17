@@ -1455,24 +1455,33 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // Clear status caches to force re-check of connectivity and operator status
         this.clusterStatusCache.clear();
         this.operatorStatusCache.clear();
-        
-        // Invalidate cache for current context to ensure fresh data is fetched
+        this.invalidateResourceAndPrefetchCaches();
+        // Fire tree data change event to refresh the tree view
+        this._onDidChangeTreeData.fire();
+    }
+
+    /**
+     * Invalidate resource and prefetch caches before managed-resource tree reveal.
+     * Clears stale category children without forcing connectivity/operator re-checks.
+     */
+    public invalidateCachesBeforeTreeReveal(): void {
+        this.invalidateResourceAndPrefetchCaches();
+        this._onDidChangeTreeData.fire();
+    }
+
+    private invalidateResourceAndPrefetchCaches(): void {
         try {
             const apiClient = getKubernetesApiClient();
             const currentContext = apiClient.getCurrentContext();
-            
-            // Only invalidate if we have a current context
+
             if (currentContext) {
                 const cache = getResourceCache();
                 cache.invalidatePattern(new RegExp(`^${currentContext}:`));
+                this.clusterResourcesCache.delete(currentContext);
             }
         } catch (error) {
-            // Log error but don't block refresh - cache invalidation is best effort
-            console.warn('Failed to invalidate cache during refresh:', error);
+            console.warn('Failed to invalidate resource/prefetch caches:', error);
         }
-        
-        // Fire tree data change event to refresh the tree view
-        this._onDidChangeTreeData.fire();
     }
 
 

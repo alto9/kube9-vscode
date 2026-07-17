@@ -35,6 +35,8 @@ export interface ResourceActionContext {
     treeProvider: ClusterTreeProvider;
     panel: vscode.WebviewPanel;
     kubeconfigPath: string;
+    /** Application spec.destination.namespace for managed-resource reveal fallback. */
+    destinationNamespace?: string;
 }
 
 export type ResourceActionHandler = (
@@ -304,7 +306,8 @@ async function handleResourceNavigateTree(
         { treeProvider: ctx.treeProvider, panelContext: ctx.context },
         kind,
         name,
-        namespace
+        namespace,
+        { destinationNamespace: ctx.destinationNamespace }
     );
 
     if (result.success) {

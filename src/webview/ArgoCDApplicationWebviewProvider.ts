@@ -54,6 +54,8 @@ interface PanelInfo {
     operatorTreeMemo?: OperatorResourceTreeMemo;
     /** True while sync or refresh polling is active */
     operationInProgress?: boolean;
+    /** Application spec.destination.namespace from the last loaded snapshot. */
+    destinationNamespace?: string;
 }
 
 /**
@@ -245,6 +247,12 @@ export class ArgoCDApplicationWebviewProvider {
         const resolvedApplication =
             application ??
             (await argoCDService.getApplication(applicationName, namespace, context));
+
+        const panelKey = ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName);
+        const panelInfo = ArgoCDApplicationWebviewProvider.openPanels.get(panelKey);
+        if (panelInfo) {
+            panelInfo.destinationNamespace = resolvedApplication.destination.namespace ?? '';
+        }
 
         panel.webview.postMessage({
             type: 'applicationData',
@@ -799,7 +807,10 @@ export class ArgoCDApplicationWebviewProvider {
                             context,
                             message.kind,
                             message.name,
-                            message.namespace
+                            message.namespace,
+                            ArgoCDApplicationWebviewProvider.openPanels.get(
+                                ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName)
+                            )?.destinationNamespace
                         );
                         break;
 
@@ -819,7 +830,10 @@ export class ArgoCDApplicationWebviewProvider {
                             panel,
                             treeProvider,
                             context,
-                            message
+                            message,
+                            ArgoCDApplicationWebviewProvider.openPanels.get(
+                                ArgoCDApplicationWebviewProvider.panelKey(context, namespace, applicationName)
+                            )?.destinationNamespace
                         );
                         break;
                     
@@ -925,14 +939,16 @@ export class ArgoCDApplicationWebviewProvider {
         panel: vscode.WebviewPanel,
         treeProvider: ClusterTreeProvider,
         context: string,
-        message: ResourceActionWebviewMessage
+        message: ResourceActionWebviewMessage,
+        destinationNamespace?: string
     ): Promise<void> {
         await dispatchResourceAction(
             {
                 panel,
                 treeProvider,
                 context,
-                kubeconfigPath: treeProvider.getKubeconfigPath() ?? ''
+                kubeconfigPath: treeProvider.getKubeconfigPath() ?? '',
+                destinationNamespace
             },
             message
         );
@@ -1175,7 +1191,8 @@ export class ArgoCDApplicationWebviewProvider {
         panelContext: string,
         kind: string,
         name: string,
-        namespace: string
+        namespace: string,
+        destinationNamespace?: string
     ): Promise<void> {
         if (!NAVIGATE_TREE_SUPPORTED_KINDS.has(kind)) {
             vscode.window.showErrorMessage(
@@ -1188,7 +1205,8 @@ export class ArgoCDApplicationWebviewProvider {
             { treeProvider, panelContext },
             kind,
             name,
-            namespace
+            namespace,
+            { destinationNamespace }
         );
 
         if (result.success) {
