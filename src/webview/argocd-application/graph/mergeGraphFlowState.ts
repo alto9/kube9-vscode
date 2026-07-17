@@ -2,10 +2,11 @@ import type { Edge, Node } from '@xyflow/react';
 import type { ApplicationResourceGraph } from '../../../types/applicationResourceGraph';
 import { applyKindGrouping } from './applyKindGrouping';
 import { applyGraphLayout } from './applyDagreLayout';
+import { managedResourceMatchesFilters, type GraphFilterState } from './argocdGraphFilters';
 import { mapGraphDtoToFlow } from './mapGraphDtoToFlow';
 import { shouldRelayout } from './shouldRelayout';
 import { sortNodesForFocusOrder } from './focusOrder';
-import type { FlowNodeData, GraphLayoutCache, LayoutPosition } from './types';
+import type { FlowNodeData, GraphLayoutCache, GraphNodeData, LayoutPosition } from './types';
 
 export interface MergeGraphFlowStateInput {
     graph: ApplicationResourceGraph;
@@ -13,6 +14,8 @@ export interface MergeGraphFlowStateInput {
     explicitFitView?: boolean;
     expandedKinds?: ReadonlySet<string>;
     groupPresentationChanged?: boolean;
+    filters?: GraphFilterState;
+    filterPresentationChanged?: boolean;
 }
 
 export interface MergeGraphFlowStateResult {
@@ -45,10 +48,14 @@ export function mergeGraphFlowState(input: MergeGraphFlowStateInput): MergeGraph
         graph,
         explicitFitView = false,
         expandedKinds = new Set<string>(),
-        groupPresentationChanged = false
+        groupPresentationChanged = false,
+        filters = { nameQuery: '', selectedKinds: new Set(), selectedSyncStatuses: new Set() },
+        filterPresentationChanged = false
     } = input;
     const { nodes: mappedNodes, edges: mappedEdges } = mapGraphDtoToFlow(graph);
-    const grouped = applyKindGrouping(mappedNodes, mappedEdges, expandedKinds);
+    const memberMatchesFilter = (node: Node<GraphNodeData>): boolean =>
+        managedResourceMatchesFilters(node.data.dto, filters);
+    const grouped = applyKindGrouping(mappedNodes, mappedEdges, expandedKinds, memberMatchesFilter);
     const previousStructureVersion = input.cache.structureVersion;
     const structureVersionChanged =
         previousStructureVersion !== null && previousStructureVersion !== graph.structureVersion;
@@ -62,7 +69,8 @@ export function mergeGraphFlowState(input: MergeGraphFlowStateInput): MergeGraph
         previousNodeCount: input.cache.nodeCount,
         nextNodeCount: graph.nodes.length,
         explicitFitView,
-        groupPresentationChanged
+        groupPresentationChanged,
+        filterPresentationChanged
     });
 
     let nodes = grouped.nodes;
@@ -81,7 +89,7 @@ export function mergeGraphFlowState(input: MergeGraphFlowStateInput): MergeGraph
         nodes: sortNodesForFocusOrder(nodes),
         edges: grouped.edges,
         relayouted: relayout,
-        shouldAutoFit: (isInitial || explicitFitView) && !groupPresentationChanged,
+        shouldAutoFit: (isInitial || explicitFitView) && !groupPresentationChanged && !filterPresentationChanged,
         isGrouped: grouped.isGrouped,
         cache: {
             positions,

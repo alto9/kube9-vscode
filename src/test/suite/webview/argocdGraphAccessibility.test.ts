@@ -10,6 +10,10 @@ import {
     tabBarTabIndex
 } from '../../../webview/argocd-application/graph/tabBarA11y';
 import { graphZoomAnimationDuration } from '../../../webview/argocd-application/graph/graphMotion';
+import {
+    GRAPH_FILTER_CONTROL_ORDER,
+    graphFilterChipAriaPressed
+} from '../../../webview/argocd-application/graph/argocdGraphFilters';
 import type { GraphNodeData } from '../../../webview/argocd-application/graph/types';
 import type { Node } from '@xyflow/react';
 
@@ -80,5 +84,16 @@ suite('argocd graph accessibility', () => {
     test('graphZoomAnimationDuration honors reduced motion', () => {
         assert.strictEqual(graphZoomAnimationDuration(true), 0);
         assert.strictEqual(graphZoomAnimationDuration(false), 150);
+    });
+
+    test('graph filter controls expose chip aria-pressed and stable tab order ids', () => {
+        assert.strictEqual(graphFilterChipAriaPressed(true), 'true');
+        assert.strictEqual(graphFilterChipAriaPressed(false), 'false');
+        assert.deepStrictEqual(GRAPH_FILTER_CONTROL_ORDER, [
+            'name-search',
+            'kind-chips',
+            'sync-chips',
+            'clear-filters'
+        ]);
     });
 });
