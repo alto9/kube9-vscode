@@ -75,3 +75,14 @@ Manual acceptance before marking #224 done (full M16 packaging/high-contrast swe
 8. In a high-contrast theme, confirm sync/health badges are not color-only (icon + visible label in accessible name on the tile group).
 
 **Edge semantics:** Parent/child relationships do not require per-edge accessible descriptions in v1; tile accessible names plus **Details** drift table navigation are sufficient.
+
+**Resolved (#225 M16 close-out sweep):**
+
+Before the M16 Argo CD Application diagram is release-ready, run the full manual sweep below in the Extension Development Host against a running Argo CD Application (or a fixture cluster). This sweep supersedes the #224 tile pass as the release gate; it repeats the #224 steps and adds the packaging-era extras that only exist once graph filters, large-application grouping, and the packaged VSIX are in place:
+
+1. Repeat all eight #224 steps above (tab order through toolbar and tiles, Enter selection, overflow keyboard open/close, tree navigation, denied-action notice, tab switching, high-contrast badges).
+2. **Filter controls (when shipped):** Tab from the zoom controls into the filter toolbar (name search, kind, sync status). Confirm each control is reachable by keyboard, has a visible `:focus-visible` ring, and that applying a filter does not trap focus or require pointer interaction.
+3. **Large-application grouping (when shipped):** For an Application above the grouping threshold, confirm a collapsed kind group is keyboard-reachable, **Enter**/**Space** expands it, focus lands on a member tile after expand, and collapsing a group does not strand focus on a now-hidden tile.
+4. **Reduced motion:** With `prefers-reduced-motion: reduce` set in the OS/browser, trigger a data refresh that changes graph structure; confirm relayout is instant (no animated transition) per the Motion and density rule above.
+5. **High-contrast:** In a VS Code high-contrast theme, confirm sync/health badges on graph tiles and the Details table remain legible with visible icon + text label, and that filter/toolbar controls keep visible focus rings.
+6. Record sweep completion (steps 1-5, noting which of the conditional steps applied) as a checklist in the #225 PR description or issue comment; this is manual evidence, not a new automated suite.

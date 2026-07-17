@@ -159,6 +159,17 @@ Interface validation should include graph layout readability, selectable tiles, 
 
 Build and packaging checks should run the existing repository commands for the affected scope: `npm run compile`, `npm run build`, `npm run test:unit`, and `npm run package` as appropriate for implementation changes. Packaging review should confirm Argo CD webview scripts, CSS, React Flow styles, and shared webview header CSS are present in the VSIX, and bundle-size changes to `media/argocd-application/main.js` remain within the documented target or are explicitly justified.
 
+**M16 close-out validation matrix (issue #225):**
+
+| Area | Module / suite or command | Must prove |
+|------|----------------------|------------|
+| Automated suites | `npm run test:unit` | All existing graph unit/component suites pass (protocol, capabilities, accessibility helpers, layout, filters, grouping — see matrices above) |
+| Build | `npm run compile`, `npm run build` | Both invoke `build:webview`; Argo CD webview bundle and CSS rebuild without errors |
+| Packaging assets | `npm run package` then `scripts/verify-vsix-argocd-media.sh` (`npm run verify:vsix-argocd-media`) | VSIX contains `extension/media/argocd-application/main.js`, `style.css` (React Flow), and `styles.css` (application styles); CI runs this in the same job as `verify:vsix-header-css` |
+| Bundle size | `ls -lh media/argocd-application/main.js` after `npm run build` | Recorded in PR description when graph deps/webview source change; target ≤ 450 KB minified per `.ai/operations/build_packaging.md`; overage justified in PR and release notes, not CI-blocked |
+| Manual accessibility | Extension Development Host + Argo CD Application | Full sweep in `.ai/interface/accessibility.md` **Resolved (#225 M16 close-out sweep)**: #224 steps plus filters, large-app grouping keyboard path, reduced-motion, high-contrast |
+| Telemetry (optional) | `docs/telemetry-event-catalog.md` review + code review of graph action/navigation paths | Any new graph event keys/payloads are cataloged before emit; no cluster-identifying payloads (namespace, Application name, resource name, URL, kubeconfig, token) leave the extension via product telemetry |
+
 ## References
 
 - `.ai/business_logic/domain_model.md`
