@@ -118,11 +118,20 @@ When managed-resource count exceeds **40**, the graph enters **kind-based groupi
 
 **Affordance placement:** Limited-topology and large-application hints render in the `GraphTopologyAffordances` strip between the canvas toolbar and the React Flow viewport (same region as today). Large-application copy when grouping is active: _"Large application: resources are grouped by kind. Expand a group or open the Details tab to reach every managed resource."_
 
+**Limited-topology copy tiers (issue #241):** Suppress the limited-topology banner when `topologyMode: full`. Otherwise show exactly one of these short strings (host sets `limitedTopologyReason`; webview maps reason → copy). Never render raw CLI stderr codes, exit codes, tokens, or URLs in the banner.
+
+| Reason | Banner copy |
+|--------|-------------|
+| `operator_not_capable` | Limited topology: kube9-operator cannot fetch Argo CD resource-tree yet. Ask a platform admin to configure the operator Argo CD API token. Optionally enable kube9.argocd.restEnabled and set an extension API token for full topology. |
+| `rest_unavailable` | Limited topology: Argo CD resource-tree enrichment is not configured. Enable kube9.argocd.restEnabled and set an Argo CD API token, or use an operated cluster with resource-tree capability. |
+| `enrichment_failed` | Limited topology: this graph may not show every parent/child relationship. Full resource-tree enrichment was unavailable for this application. |
+| `owner_ref` (or `topologySource: kubernetes_owner_ref`) | Inferred topology: parent/child links come from Kubernetes owner references, not Argo CD resource-tree. Some relationships may be missing when reads fail or owners are outside this application. |
+
 **Empty and root-only graphs:** Zero managed resources show the explicit empty state (`GraphEmptyState`), not a blank canvas. A single managed resource renders a normal Application root plus one leaf tile without an extra banner.
 
 ### Loading and errors
 
-Loading and error states for the webview remain **full-panel** (blocking graph until data is available or a recoverable error is shown). In-graph partial updates during sync/refresh should not dismiss the panel.
+Loading and error states for the webview remain **full-panel** (blocking graph until data is available or a recoverable error is shown). In-graph partial updates during sync/refresh should not dismiss the panel. While operator or REST resource-tree enrichment is in flight, do **not** show a separate enrichment-pending banner; keep existing panel loading or the prior graph until the next `resourceGraph` post.
 
 ## Kubernetes AI Conformance Report (webview)
 
@@ -171,9 +180,9 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 | Overflow open | `argocd-graph-node--overflow-open` on tile; menu uses VS Code menu background tokens |
 
 - Sync and health badges, kind icon, truncated name, and ⋮ overflow align with the **Graph tiles (nodes)** table above in this document.
-- **Limited-topology and large-application hints** — resolved under **Large applications** in this document and in `graphTopologyAffordanceRules.ts` (issue #222). Limited-topology affordance is **suppressed** when `topologyMode: full`. Copy tiers distinguish `crd_flat`, `kubernetes_owner_ref`, and enrichment-pending/fallback states (exact strings TW).
+- **Limited-topology and large-application hints** — resolved under **Large applications** and **Limited-topology copy tiers** above (issues #222 and #241). Limited-topology affordance is **suppressed** when `topologyMode: full`. No enrichment-pending banner during in-flight operator/REST fetch.
 
-**Deferred (M17 graph filters):**
+**Deferred (M17 graph filters, sibling #244):**
 
 - Filter control widgets (chips vs dropdown vs combobox), labels, placeholders, and clear/reset affordance placement.
 - Zero-match filter outcome (empty-filter state vs Application root only vs de-emphasized tiles).

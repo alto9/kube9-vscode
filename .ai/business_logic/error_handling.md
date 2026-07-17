@@ -4,8 +4,9 @@ Failures resolve into stable user-visible outcomes. Raw transport or API errors 
 
 ## Topology source (tiered)
 
-- Prefer **resource-tree** when the Argo CD API path is usable per integration contracts (configured base URL, discovered server Service, ephemeral port-forward, or equivalent).
-- On **resource-tree** failure or inaccessibility, fall back to **limited topology** from the Application CR when that CR can still be read. Fallback is expected behavior, not a silent downgrade of accuracy: the user is informed of **limited topology** (see [error state](./error_state.md)).
+- Prefer **resource-tree** when the Argo CD API path is usable per integration contracts: extension REST when `kube9.argocd.restEnabled` and authorized, otherwise operator CLI when `resourceTreeCapable` is true.
+- On **resource-tree** failure, hard-skip, or inaccessibility, fall back to **limited topology** from the Application CR when that CR can still be read. Fallback is expected behavior, not a silent downgrade of accuracy: the user is informed via the limited-topology affordance tier (`limitedTopologyReason`; see [error state](./error_state.md) and presentation copy).
+- Operator structured stderr codes and REST transport details stay in the Output Channel (`[INFO] Argo CD resource-tree enrichment unavailable`); they must not appear in the webview banner.
 - If the Application CR cannot be read, the detail session resolves to **graph unavailable** with the same recovery patterns as other permission or connectivity failures.
 
 ## Graph refresh

@@ -13,6 +13,7 @@ When the panel fires `onDidDispose`:
 
 - Remove entry from `openPanels`.
 - Cancel in-flight polling tied to that panel (cancellation token or abort handle per operation).
+- Cancel in-flight operator resource-tree `kubectl exec` (and REST enrichment) for that panel; clear any per-panel operator tree memo.
 - Message handlers registered with `extensionContext.subscriptions` are disposed with the extension; per-panel timers must not outlive the panel.
 
 ## Extension-wide Teardown

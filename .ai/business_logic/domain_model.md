@@ -183,10 +183,19 @@ Implementation-level items not yet fully specified. `/refine-issue` resolves the
 - **Details tab parity:** `navigateToResource` from the Details view uses the same reveal helper as `resource.navigateTree` for supported kinds.
 - **Failure is non-mutating:** When no tree item can be mapped, the extension reports navigation failure with user-facing copy; it must not create tree nodes or alter resource identity.
 
+**Resolved (operator topology affordances, issue #241):**
+
+- **Limited-topology affordance copy** uses four distinct short banners (exact strings in `.ai/interface/presentation.md`). Selection uses host `limitedTopologyReason` (or equivalent) plus `topologySource` / `topologyMode`:
+  1. `operator_not_capable` — operated cluster but resource-tree capability false / token missing; platform-admin token onboarding first; extension REST as secondary optional path.
+  2. `rest_unavailable` — REST disabled or unauthorized and operator path unavailable (basic mode or operator absent).
+  3. `enrichment_failed` — generic CRD-flat after enrichment attempt failed or was skipped for a per-application reason.
+  4. `owner_ref` / `topologySource: kubernetes_owner_ref` — keep inferred owner-reference copy.
+- Affordance is **suppressed** when `topologyMode: full`. Raw operator stderr codes, endpoints, and credentials stay in the Output Channel only.
+- **No enrichment-pending banner:** while operator/REST fetch is in flight, keep existing panel loading or the prior graph until the next `resourceGraph` post (success or fallback). Do not post an intermediate CRD-flat snapshot solely to show pending enrichment.
+
 **Deferred (M17):**
 
-- **Graph filter UX:** Widget shape (chips vs dropdown), zero-match empty state, selection-when-filtered behavior, filter visibility (hide vs de-emphasize), and a11y live-region announcements (`/refine-issue`).
-- **Limited-topology affordance copy:** Per-`topologySource` strings for operator-absent, operator-degraded, REST-disabled, and enrichment-pending states (`/refine-issue`).
-- **Supported reveal kinds expansion:** Whether resource-tree-only kinds (ReplicaSet, etc.) gain overflow navigate actions (`/refine-issue`).
+- **Graph filter UX:** Widget shape (chips vs dropdown), zero-match empty state, selection-when-filtered behavior, filter visibility (hide vs de-emphasize), and a11y live-region announcements (sibling issue #244).
+- **Supported reveal kinds expansion:** Whether resource-tree-only kinds (ReplicaSet, etc.) gain overflow navigate actions (sibling issue #242).
 
 - **`resource.openDescribe` on graph tiles** — registry entry exists for future direct describe routing from `ManagedResourceKey`; v1 graph overflow does not expose it. Users open describe via tree reveal or Details tab navigate affordances.
