@@ -1,3 +1,19 @@
+# [1.38.0](https://github.com/alto9/kube9-vscode/compare/v1.37.0...v1.38.0) (2026-07-20)
+
+
+### Bug Fixes
+
+* **argocd:** allow empty wire namespace for host-side reveal resolution ([c2f01e0](https://github.com/alto9/kube9-vscode/commit/c2f01e06ec52671724f931b6bfb0ab83463eddf6))
+* **argocd:** remove application-level View In Tree from panel ([#243](https://github.com/alto9/kube9-vscode/issues/243)) ([ef183a1](https://github.com/alto9/kube9-vscode/commit/ef183a1972bff0b49dde6fd550a4f878b57651b7))
+* **argocd:** resolve reveal namespace and invalidate tree caches before navigate ([6483040](https://github.com/alto9/kube9-vscode/commit/6483040d0177967fa9fd9849af25105cdb9d3780))
+
+
+### Features
+
+* **argocd:** add graph toolbar filters for name, kind, and sync ([d64a643](https://github.com/alto9/kube9-vscode/commit/d64a643f23f1db6493a78cbfb9cc2a6c876b785e)), closes [#244](https://github.com/alto9/kube9-vscode/issues/244)
+* **argocd:** add operator resource-tree topology ladder for issue [#241](https://github.com/alto9/kube9-vscode/issues/241) ([3cfc8b1](https://github.com/alto9/kube9-vscode/commit/3cfc8b1c8fc10d7bafb03ec147e13feb6b067ffa))
+* **argocd:** add VSIX packaging assert for Argo CD webview media ([#225](https://github.com/alto9/kube9-vscode/issues/225)) ([8b3b928](https://github.com/alto9/kube9-vscode/commit/8b3b928c819c714f09750b9e2925670cd6ac6a67))
+
 # [1.37.0](https://github.com/alto9/kube9-vscode/compare/v1.36.0...v1.37.0) (2026-07-13)
 
 
